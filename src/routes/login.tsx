@@ -1,0 +1,82 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
+import { Compass } from "lucide-react";
+
+export const Route = createFileRoute("/login")({
+  head: () => ({ meta: [{ title: "Sign in — Travidz" }] }),
+  component: LoginPage,
+});
+
+function LoginPage() {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null); setLoading(true);
+    const fn = mode === "signin"
+      ? supabase.auth.signInWithPassword({ email, password })
+      : supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await fn;
+    setLoading(false);
+    if (error) return setError(error.message);
+    navigate({ to: "/" });
+  }
+
+  async function google() {
+    setError(null);
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    if (r.error) setError(r.error.message ?? "Sign-in failed");
+    else if (!r.redirected) navigate({ to: "/" });
+  }
+
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
+      <div className="mb-8 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+          <Compass className="h-6 w-6" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Travidz</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Discover travel through video.</p>
+      </div>
+
+      <button onClick={google} className="mb-5 w-full rounded-full border border-border bg-card py-3 text-sm font-semibold">
+        Continue with Google
+      </button>
+
+      <div className="mb-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={submit} className="space-y-3">
+        <input
+          type="email" required placeholder="Email" value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+        />
+        <input
+          type="password" required minLength={6} placeholder="Password" value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+        />
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <button disabled={loading} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+          {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
+        </button>
+      </form>
+
+      <button
+        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        className="mt-5 text-center text-xs text-muted-foreground"
+      >
+        {mode === "signin" ? "New to Travidz? Create an account" : "Already have an account? Sign in"}
+      </button>
+    </div>
+  );
+}
