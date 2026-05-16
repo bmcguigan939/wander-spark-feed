@@ -109,6 +109,126 @@ export const getFeed = createServerFn({ method: "GET" })
     return { videos: await fetchFeedRows(data.limit, data.offset) };
   });
 
+// ---------- For-You ranking ----------
+
+type RankRow = FeedVideo & { creator_id?: string };
+
+function hoursSince(iso: string) {
+  return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
+}
+
+function scoreVideo(
+  v: RankRow,
+  ctx: {
+    followedCreatorIds: Set<string>;
+    tagAffinity: Map<string, number>;
+    countryAffinity: Map<string, number>;
+    seenVideoIds: Set<string>;
+  },
+) {
+  if (ctx.seenVideoIds.has(v.id)) return -Infinity;
+  const age = hoursSince(v.created_at);
+  // freshness decays: 1.0 at 0h, ~0.5 at 48h, ~0.2 at 168h
+  const freshness = 1 / (1 + age / 48);
+  const engagement =
+    Math.log1p(v.like_count) * 1.0 +
+    Math.log1p(v.save_count) * 1.4 +
+    Math.log1p(v.comment_count) * 1.1 +
+    Math.log1p(v.view_count) * 0.25;
+  const creatorBoost =
+    v.creator_id && ctx.followedCreatorIds.has(v.creator_id) ? 3.5 : 0;
+  const tagBoost = (v.activity_tags ?? []).reduce(
+    (sum, t) => sum + (ctx.tagAffinity.get(t.toLowerCase()) ?? 0),
+    0,
+  );
+  const countryBoost = v.country
+    ? (ctx.countryAffinity.get(v.country.trim().toLowerCase()) ?? 0)
+    : 0;
+  const jitter = Math.random() * 0.4; // small variety
+  return (
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + jitter
+  );
+}
+
+async function buildAffinity(userId: string) {
+  const [likesRes, savesRes, followsRes] = await Promise.all([
+    supabaseAdmin.from("likes").select("video_id").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("saves").select("video_id").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("follows").select("creator_id").eq("follower_id", userId),
+  ]);
+  const interactedIds = Array.from(
+    new Set([
+      ...((likesRes.data ?? []).map((r: any) => r.video_id as string)),
+      ...((savesRes.data ?? []).map((r: any) => r.video_id as string)),
+    ]),
+  );
+  const tagAffinity = new Map<string, number>();
+  const countryAffinity = new Map<string, number>();
+  const seenVideoIds = new Set<string>(interactedIds);
+  if (interactedIds.length) {
+    const { data: vids } = await supabaseAdmin
+      .from("videos")
+      .select("activity_tags,country")
+      .in("id", interactedIds);
+    for (const v of vids ?? []) {
+      for (const t of ((v as any).activity_tags ?? []) as string[]) {
+        const k = t?.trim().toLowerCase();
+        if (k) tagAffinity.set(k, (tagAffinity.get(k) ?? 0) + 1);
+      }
+      const c = (v as any).country?.trim().toLowerCase();
+      if (c) countryAffinity.set(c, (countryAffinity.get(c) ?? 0) + 1);
+    }
+  }
+  const followedCreatorIds = new Set<string>(
+    (followsRes.data ?? []).map((r: any) => r.creator_id as string),
+  );
+  return { followedCreatorIds, tagAffinity, countryAffinity, seenVideoIds };
+}
+
+export const getForYouFeed = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z.object({
+      limit: z.number().min(1).max(50).default(20),
+      viewerId: z.string().uuid().nullable().optional(),
+    }).parse(input)
+  )
+  .handler(async ({ data }) => {
+    const userId = data.viewerId ?? null;
+
+    // Candidate pool: most recent ready, non-hidden videos
+    const POOL = 150;
+    const { data: rows, error } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+      )
+      .eq("status", "ready")
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: false })
+      .limit(POOL);
+    if (error) throw new Error(error.message);
+    const pool = ((rows ?? []) as unknown) as RankRow[];
+
+    const ctx = userId
+      ? await buildAffinity(userId)
+      : {
+          followedCreatorIds: new Set<string>(),
+          tagAffinity: new Map<string, number>(),
+          countryAffinity: new Map<string, number>(),
+          seenVideoIds: new Set<string>(),
+        };
+
+    const ranked = pool
+      .map((v) => ({ v, s: scoreVideo(v, ctx) }))
+      .filter((x) => Number.isFinite(x.s))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, data.limit)
+      .map((x) => x.v);
+
+    await attachMatchedDeals(ranked);
+    return { videos: ranked };
+  });
+
 export const getFollowingFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>

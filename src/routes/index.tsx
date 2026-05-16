@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { VideoCard } from "@/components/feed/VideoCard";
-import { getFeed, getFollowingFeed } from "@/lib/feed.functions";
+import { getForYouFeed, getFollowingFeed } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
@@ -21,7 +21,7 @@ function FeedPage() {
     queryFn: () =>
       tab === "following" && user
         ? getFollowingFeed({ data: { limit: 20, offset: 0 } })
-        : getFeed({ data: { limit: 20, offset: 0 } }),
+        : getForYouFeed({ data: { limit: 20, viewerId: user?.id ?? null } }),
   });
   const videos = data?.videos ?? [];
   const containerRef = useRef<HTMLDivElement>(null);
