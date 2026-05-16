@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Compass } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Travidz" }] }),
@@ -34,7 +35,8 @@ function LoginPage() {
       setLoading(false);
       if (err) return setError(err.message);
       if (data.session) {
-        navigate({ to: "/" });
+        try { localStorage.removeItem("travidz:welcomed"); } catch {}
+        navigate({ to: "/welcome" });
       } else {
         setInfo("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
@@ -47,6 +49,17 @@ function LoginPage() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
     if (r.error) setError(r.error.message ?? "Sign-in failed");
     else if (!r.redirected) navigate({ to: "/" });
+  }
+
+  async function forgot() {
+    setError(null); setInfo(null);
+    if (!email) return setError("Enter your email above first.");
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    if (err) return setError(err.message);
+    toast.success("Check your inbox for the reset link.");
+    setInfo("Check your inbox for the reset link.");
   }
 
   return (
@@ -99,6 +112,15 @@ function LoginPage() {
         <button disabled={loading} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={forgot}
+            className="mx-auto block text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </button>
+        )}
       </form>
     </div>
   );

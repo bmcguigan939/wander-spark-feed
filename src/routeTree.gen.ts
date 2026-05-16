@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
@@ -31,9 +33,19 @@ import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux
 import { Route as BusinessDealsIdIndexRouteImport } from './routes/business.deals.$id.index'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -145,7 +157,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
@@ -168,7 +182,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
@@ -191,7 +207,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
@@ -216,7 +234,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/profile'
+    | '/reset-password'
     | '/search'
+    | '/welcome'
     | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
@@ -239,7 +259,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/profile'
+    | '/reset-password'
     | '/search'
+    | '/welcome'
     | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
@@ -261,7 +283,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/profile'
+    | '/reset-password'
     | '/search'
+    | '/welcome'
     | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
@@ -285,7 +309,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
+  WelcomeRoute: typeof WelcomeRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
@@ -301,11 +327,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -484,7 +524,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
+  WelcomeRoute: WelcomeRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,

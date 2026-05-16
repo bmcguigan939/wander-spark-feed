@@ -1,44 +1,36 @@
-# Feed fixes + emoji support
+# Step 1 — Auth polish + role picker
 
-## Bug 1 — Comments sheet stuck on "Loading…"
+Working through the roadmap in order. This is item 1; we'll smoke-test it, then move to item 2.
 
-Root cause: `src/lib/comments.functions.ts` imports the browser Supabase client and uses it inside `listComments`:
+## What we're adding
 
-```ts
-import { supabase as anon } from "@/integrations/supabase/client";
-```
+1. **Role picker on first sign-in.** New users land on `/welcome` (instead of `/`) with three big cards: **Traveller** (default), **Creator**, **Business**. Choosing Creator self-assigns the `creator` role (existing RLS policy already allows this). Choosing Business sends them to `/business/apply`. Choosing Traveller proceeds straight to the feed. The picker only appears when the user has exactly the default `traveller` role and no others.
+2. **Forgot/reset password.** Add a "Forgot password?" link on `/login`. Add a `/reset-password` public route that detects the recovery hash, prompts for a new password, and calls `supabase.auth.updateUser({ password })`.
+3. **Branded auth emails (Lovable Emails).** Set up the project's email domain via the email setup dialog (if not already configured), then scaffold the six auth templates (signup confirmation, magic link, recovery, invite, email-change, reauthentication) styled to match Travidz (compass logo, primary color from `src/styles.css`, white body). Auth email hook is queue-based.
+4. **Sign-out polish.** Confirm dialog before sign-out from the profile edit sheet (already implemented per earlier turn — verify it still works and routes to `/login`).
 
-The browser client is configured for `localStorage` / `window` session persistence. On the TanStack server runtime (Cloudflare Worker) it fails at request time, so `listComments` rejects and React Query stays in `isLoading` forever. Every other public-read server fn in the project (`feed`, `destinations`, `deals`, `notifications`) uses `supabaseAdmin`.
+## What we're NOT changing
 
-Fix in `src/lib/comments.functions.ts`:
-- Replace the `anon` import with `import { supabaseAdmin } from "@/integrations/supabase/client.server"`.
-- Use `supabaseAdmin` in `listComments` only (comments are public read; existing RLS SELECT policy is `using (true)`).
-- Leave `postComment` / `deleteComment` untouched — they correctly use `context.supabase` from `requireSupabaseAuth`.
+- No schema changes. `user_roles` and the `users can self-assign creator role` policy already exist; the trigger seeds `traveller`. Business role still goes through the existing `business.apply.tsx` flow.
+- No Google OAuth changes (already wired via the Lovable broker).
+- No transactional/app emails yet — that's a separate roadmap item.
 
-## Bug 2 — No "back" affordance on Following tab
+## Technical details
 
-The Following / For-you pills at the top are the only switcher, and the Following empty state has no obvious way back. On mobile it reads as a dead end.
+- **`src/routes/welcome.tsx`** — new public route. `beforeLoad` redirects to `/login` if not signed in, and to `/` if the user already has a non-default role (creator/business/admin). Three cards using existing design tokens.
+- **`src/routes/__root.tsx`** — after `onAuthStateChange` fires for a new sign-in, if the user's only role is `traveller` AND they have no profile activity (no videos, no follows — cheap check: just rely on a flag), route them to `/welcome` once. Simpler approach: gate purely on roles — first-time users always have only `traveller` and will see `/welcome`; if they pick Traveller we navigate to `/` and they never see it again because we set a `localStorage` `travidz:welcomed` flag.
+- **`src/lib/roles.functions.ts`** — new server fn `selfAssignCreatorRole` (wraps existing `becomeCreator` logic from `mux.functions.ts` so onboarding doesn't depend on the Mux module). `mux.functions.ts` `becomeCreator` keeps working unchanged.
+- **`src/routes/reset-password.tsx`** — new public route. Reads `type=recovery` from `window.location.hash`, shows a single password input + confirm, calls `supabase.auth.updateUser`, then redirects to `/login` with a success toast.
+- **`src/routes/login.tsx`** — add "Forgot password?" link below the password field; clicking it prompts for email (inline) and calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`.
+- **Auth emails** — call `email_domain--check_email_domain_status`. If no domain, show the email setup dialog and pause. After the user completes setup, scaffold the six templates, apply brand styling (primary color from CSS variables, white body, Compass-inspired header), and let DNS verification finish in the background.
 
-Fix in `src/routes/index.tsx`:
-- In the Following empty-state branch, add a pill button **"Back to For you"** that calls `setTab("for-you")`.
-- Extend `FullEmptyState` with an optional `action` slot so the button renders cleanly inside the existing card.
+## Smoke test checklist (we'll run after build)
 
-## Feature — Emoji support in comments
+1. Sign out → sign up with a new email → see `/welcome` → pick **Creator** → land on `/create` ready to upload.
+2. Sign out → sign up again → pick **Traveller** → land on `/` → reload → don't see `/welcome` again.
+3. Sign out → sign up again → pick **Business** → land on `/business/apply`.
+4. Sign out → on `/login` click **Forgot password?** → enter email → see "check your inbox" toast.
+5. Click the recovery link in the email → land on `/reset-password` → set new password → redirected to `/login` → sign in with new password.
+6. Confirm branded auth emails arrive from the configured sender once DNS is green.
 
-Fix in `src/components/feed/CommentsSheet.tsx`:
-- Add a small emoji picker button (😊 icon, `Smile` from lucide) inside the comment input row, left of the Send button.
-- On click, open a lightweight popover with a curated grid of ~40 travel-friendly emojis (🌴✈️🏖️🗺️🌍❤️🔥👏😍🤩🙌💯⭐🌅🏔️🐬🍹📸 etc.). Tapping inserts the emoji at the current cursor position in the input, then closes the popover and refocuses the input.
-- Implementation: a tiny in-file component using `@/components/ui/popover` (already in shadcn). No new dependency — keep bundle small. The native OS keyboard already supports emoji entry on mobile, but the picker makes it one tap on desktop and discoverable on mobile.
-
-## Feature — Emoji support in video upload
-
-Fix in `src/routes/create.tsx` (the create/upload page):
-- Add the same emoji picker control next to the **Title** and **Description** inputs (small Smile button at the field's right edge).
-- Tapping inserts the emoji at the caret in that specific field.
-- Extract the picker into `src/components/ui/emoji-picker.tsx` so both `CommentsSheet` and `create.tsx` import it (single source of truth, ~50 lines).
-
-## Out of scope
-
-- No schema, RLS, or auth changes.
-- No third-party emoji library (e.g. `emoji-mart`) — keeps bundle lean and avoids SSR pitfalls. We can swap in a full picker later if the user wants search/skin tones.
-- No changes to post/delete comment flow or to the realtime channel.
+Once all six pass, I'll move to item 2 (Business onboarding + deals CRUD).
