@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { getAdminStats } from "@/lib/admin.functions";
+import { backfillEmbeddings } from "@/lib/feed.functions";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminOverview,
@@ -10,6 +12,13 @@ export const Route = createFileRoute("/admin/")({
 function AdminOverview() {
   const fn = useServerFn(getAdminStats);
   const { data, isLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => fn() });
+  const backfillFn = useServerFn(backfillEmbeddings);
+  const [last, setLast] = useState<string | null>(null);
+  const m = useMutation({
+    mutationFn: (kind: "videos" | "deals") => backfillFn({ data: { kind, limit: 25 } }),
+    onSuccess: (r, kind) => setLast(`${kind}: embedded ${r.ok}/${r.attempted}`),
+    onError: (e: any) => setLast(`error: ${e?.message ?? e}`),
+  });
 
   return (
     <div className="px-4 py-6 pb-28">
@@ -26,6 +35,29 @@ function AdminOverview() {
           <Stat label="Pending apps" value={data.appsPending} accent />
         </div>
       )}
+      <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+        <div className="text-sm font-semibold">Semantic search backfill</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Generate embeddings for items missing them (25 at a time).
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button
+            disabled={m.isPending}
+            onClick={() => m.mutate("videos")}
+            className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            Embed videos
+          </button>
+          <button
+            disabled={m.isPending}
+            onClick={() => m.mutate("deals")}
+            className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            Embed deals
+          </button>
+        </div>
+        {last && <p className="mt-2 text-xs text-muted-foreground">{last}</p>}
+      </div>
     </div>
   );
 }
