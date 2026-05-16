@@ -46,17 +46,18 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
     if (vErr || !video) throw new Error("Video not found");
     if (video.creator_id !== context.userId) throw new Error("Forbidden");
 
-    const tags = (video.activity_tags ?? []) as string[];
-    const place = video.city || video.destination || video.country;
-    const vCity = video.city;
-    const vCountry = video.country;
-    const vId = video.id;
+    const v = video!;
+    const tags = (v.activity_tags ?? []) as string[];
+    const place = v.city || v.destination || v.country;
+    const vCity = v.city;
+    const vCountry = v.country;
+    const vId = v.id;
 
     // Build a semantic similarity map (video.embedding -> deals) when available.
     async function semanticMap(): Promise<Map<string, number>> {
       const map = new Map<string, number>();
       let qvec: number[] | null = null;
-      const emb = (video as any).embedding;
+      const emb = (v as any).embedding;
       if (emb) {
         try {
           const arr = typeof emb === "string" ? (JSON.parse(emb) as number[]) : (emb as number[]);
@@ -64,7 +65,7 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
         } catch {}
       }
       if (!qvec) {
-        const text = [video.title, (video as any).description ?? "", place ?? "", tags.join(" ")]
+        const text = [v.title, (v as any).description ?? "", place ?? "", tags.join(" ")]
           .filter(Boolean)
           .join("\n");
         qvec = await embedText(text).catch(() => null);
