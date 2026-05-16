@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { embedText, embedVideo, embedDeal } from "@/lib/ai.functions";
 
 export type FeedVideo = {
   id: string;
@@ -346,6 +347,88 @@ export const searchVideos = createServerFn({ method: "GET" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    // Hybrid search: when a text query is present, fetch both keyword (tsv)
+    // and semantic (pgvector) candidates and merge with weighted scoring.
+    const hasText = !!(data.q && data.q.trim());
+    if (hasText) {
+      const qText = data.q!.trim();
+      const clean = qText.replace(/[^\w\s]/g, " ");
+      const tsQuery = clean.split(/\s+/).filter(Boolean).map((t) => `${t}:*`).join(" & ");
+
+      // Run keyword + semantic in parallel.
+      const [kwRes, semIds] = await Promise.all([
+        (async () => {
+          let kw = supabaseAdmin
+            .from("videos")
+            .select(
+              "id,title,thumbnail_url,mux_playback_id,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+            )
+            .eq("status", "ready")
+            .eq("is_draft", false)
+            .or("scheduled_at.is.null,scheduled_at.lte.now()");
+          if (data.country) kw = kw.eq("country", data.country);
+          if (data.budget) kw = kw.eq("budget_tag", data.budget);
+          if (data.tags && data.tags.length) kw = kw.contains("activity_tags", data.tags);
+          if (tsQuery) kw = kw.textSearch("search_tsv", tsQuery, { config: "simple" });
+          return await kw.limit(60);
+        })(),
+        (async () => {
+          const vec = await embedText(qText);
+          if (!vec) return [] as Array<{ id: string; similarity: number }>;
+          const { data: hits } = await supabaseAdmin.rpc("match_videos", {
+            query_embedding: `[${vec.join(",")}]` as any,
+            match_count: 60,
+            min_similarity: 0.25,
+          });
+          return (hits ?? []) as Array<{ id: string; similarity: number }>;
+        })(),
+      ]);
+
+      const kwRows = (kwRes.data ?? []) as any[];
+      const kwIds = new Set(kwRows.map((r) => r.id as string));
+
+      // Fetch metadata for semantic-only hits, honouring filters.
+      const newIds = semIds.map((s) => s.id).filter((id) => !kwIds.has(id));
+      let extraRows: any[] = [];
+      if (newIds.length) {
+        let extra = supabaseAdmin
+          .from("videos")
+          .select(
+            "id,title,thumbnail_url,mux_playback_id,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+          )
+          .in("id", newIds)
+          .eq("status", "ready")
+          .eq("is_draft", false)
+          .or("scheduled_at.is.null,scheduled_at.lte.now()");
+        if (data.country) extra = extra.eq("country", data.country);
+        if (data.budget) extra = extra.eq("budget_tag", data.budget);
+        if (data.tags && data.tags.length) extra = extra.contains("activity_tags", data.tags);
+        const { data: extraData } = await extra;
+        extraRows = (extraData ?? []) as any[];
+      }
+
+      const simById = new Map(semIds.map((s) => [s.id, s.similarity]));
+      const merged = [...kwRows, ...extraRows];
+      const ranked = merged
+        .map((r) => {
+          const sim = simById.get(r.id) ?? 0;
+          const kw = kwIds.has(r.id) ? 1 : 0;
+          const pop = Math.log1p(r.like_count ?? 0) * 0.15;
+          // Weight: keyword match is strong, semantic is supportive, then engagement.
+          const score =
+            data.sort === "popular"
+              ? pop * 1.5 + sim * 1.2 + kw * 0.6
+              : kw * 1.0 + sim * 1.5 + pop;
+          return { r, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 60)
+        .map((x) => x.r);
+
+      return { videos: ranked as unknown as FeedVideo[] };
+    }
+
+    // No text query → plain filtered listing.
     let q = supabaseAdmin
       .from("videos")
       .select(
@@ -358,11 +441,6 @@ export const searchVideos = createServerFn({ method: "GET" })
     if (data.country) q = q.eq("country", data.country);
     if (data.budget) q = q.eq("budget_tag", data.budget);
     if (data.tags && data.tags.length) q = q.contains("activity_tags", data.tags);
-    if (data.q && data.q.trim()) {
-      const clean = data.q.trim().replace(/[^\w\s]/g, " ");
-      const tsQuery = clean.split(/\s+/).filter(Boolean).map((t) => `${t}:*`).join(" & ");
-      if (tsQuery) q = q.textSearch("search_tsv", tsQuery, { config: "simple" });
-    }
 
     q =
       data.sort === "popular"
@@ -372,6 +450,50 @@ export const searchVideos = createServerFn({ method: "GET" })
     const { data: rows, error } = await q.limit(60);
     if (error) throw new Error(error.message);
     return { videos: (rows ?? []) as unknown as FeedVideo[] };
+  });
+
+// ---------- Backfill: admin-only ----------
+
+export const backfillEmbeddings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ kind: z.enum(["videos", "deals"]), limit: z.number().min(1).max(100).default(25) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!isAdmin) throw new Error("Forbidden");
+
+    if (data.kind === "videos") {
+      const { data: rows } = await supabaseAdmin
+        .from("videos")
+        .select("id")
+        .is("embedding", null)
+        .eq("status", "ready")
+        .eq("is_hidden", false)
+        .limit(data.limit);
+      let ok = 0;
+      for (const r of rows ?? []) {
+        try { await embedVideo((r as any).id); ok += 1; } catch { /* skip */ }
+      }
+      return { ok, attempted: rows?.length ?? 0 };
+    } else {
+      const { data: rows } = await supabaseAdmin
+        .from("deals")
+        .select("id")
+        .is("embedding", null)
+        .eq("is_active", true)
+        .limit(data.limit);
+      let ok = 0;
+      for (const r of rows ?? []) {
+        try { await embedDeal((r as any).id); ok += 1; } catch { /* skip */ }
+      }
+      return { ok, attempted: rows?.length ?? 0 };
+    }
   });
 
 export const getProfileByUsername = createServerFn({ method: "GET" })
