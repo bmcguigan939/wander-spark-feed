@@ -61,6 +61,8 @@ const upsertSchema = z.object({
   starts_at: z.string().datetime().optional(),
   ends_at: z.string().datetime().optional(),
   is_active: z.boolean().optional(),
+  lat: z.number().min(-90).max(90).optional().nullable(),
+  lng: z.number().min(-180).max(180).optional().nullable(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })
