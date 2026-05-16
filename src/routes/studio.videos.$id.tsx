@@ -15,6 +15,12 @@ import {
   FileText,
   Send,
   Trash2,
+  Building2,
+  Plus,
+  Copy,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import {
@@ -28,12 +34,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScheduleSheet } from "@/components/studio/ScheduleSheet";
+import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
 import {
   getVideoInsights,
   publishVideoNow,
   scheduleVideo,
   setVideoDraft,
 } from "@/lib/studio.functions";
+import { listInvitesForVideo, revokeInvite } from "@/lib/business-invites.functions";
+import { COMMISSION } from "@/lib/commission";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/studio/videos/$id")({
