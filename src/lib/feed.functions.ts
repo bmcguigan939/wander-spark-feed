@@ -154,6 +154,87 @@ export const searchAll = createServerFn({ method: "GET" })
     };
   });
 
+export type SearchFacets = {
+  countries: Array<{ value: string; count: number }>;
+  tags: Array<{ value: string; count: number }>;
+};
+
+let facetsCache: { at: number; facets: SearchFacets } | null = null;
+
+async function loadFacets(): Promise<SearchFacets> {
+  if (facetsCache && Date.now() - facetsCache.at < 60_000) return facetsCache.facets;
+  const { data } = await supabaseAdmin
+    .from("videos")
+    .select("country,activity_tags")
+    .eq("status", "ready")
+    .limit(2000);
+  const countryMap = new Map<string, number>();
+  const tagMap = new Map<string, number>();
+  for (const row of data ?? []) {
+    const c = (row as any).country?.trim();
+    if (c) countryMap.set(c, (countryMap.get(c) ?? 0) + 1);
+    for (const t of ((row as any).activity_tags ?? []) as string[]) {
+      const v = t?.trim().toLowerCase();
+      if (v) tagMap.set(v, (tagMap.get(v) ?? 0) + 1);
+    }
+  }
+  const facets: SearchFacets = {
+    countries: [...countryMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([value, count]) => ({ value, count })),
+    tags: [...tagMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([value, count]) => ({ value, count })),
+  };
+  facetsCache = { at: Date.now(), facets };
+  return facets;
+}
+
+export const getSearchFacets = createServerFn({ method: "GET" }).handler(async () => {
+  return await loadFacets();
+});
+
+export const searchVideos = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        q: z.string().max(200).optional(),
+        country: z.string().max(80).optional(),
+        tags: z.array(z.string().max(40)).max(8).optional(),
+        budget: z.enum(["$", "$$", "$$$"]).optional(),
+        sort: z.enum(["new", "popular"]).default("new"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    let q = supabaseAdmin
+      .from("videos")
+      .select(
+        "id,title,thumbnail_url,mux_playback_id,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+      )
+      .eq("status", "ready");
+
+    if (data.country) q = q.eq("country", data.country);
+    if (data.budget) q = q.eq("budget_tag", data.budget);
+    if (data.tags && data.tags.length) q = q.contains("activity_tags", data.tags);
+    if (data.q && data.q.trim()) {
+      const clean = data.q.trim().replace(/[^\w\s]/g, " ");
+      const tsQuery = clean.split(/\s+/).filter(Boolean).map((t) => `${t}:*`).join(" & ");
+      if (tsQuery) q = q.textSearch("search_tsv", tsQuery, { config: "simple" });
+    }
+
+    q =
+      data.sort === "popular"
+        ? q.order("like_count", { ascending: false }).order("created_at", { ascending: false })
+        : q.order("created_at", { ascending: false });
+
+    const { data: rows, error } = await q.limit(60);
+    if (error) throw new Error(error.message);
+    return { videos: (rows ?? []) as unknown as FeedVideo[] };
+  });
+
 export const getProfileByUsername = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({
