@@ -212,3 +212,68 @@ Return JSON: { "summary": string (2-3 sentences, evocative but practical),
     if (upErr) throw new Error(upErr.message);
     return row;
   });
+
+// Admin-only batch: find (country,city) pairs with >= minVideos and no/stale summary,
+// then generate up to `limit` of them. Best-effort, sequential to respect rate limits.
+export const backfillDestinationSummaries = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        limit: z.number().int().min(1).max(20).default(5),
+        minVideos: z.number().int().min(1).max(20).default(3),
+        staleDays: z.number().int().min(1).max(365).default(30),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await (supabaseAdmin as any).rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    // Aggregate video counts by (country, city) in memory (RLS-friendly admin scope).
+    const { data: rows } = await supabaseAdmin
+      .from("videos")
+      .select("country,city")
+      .eq("status", "ready")
+      .eq("is_draft", false)
+      .eq("is_hidden", false)
+      .not("country", "is", null)
+      .not("city", "is", null)
+      .limit(5000);
+    const counts = new Map<string, { country: string; city: string; n: number }>();
+    for (const r of rows ?? []) {
+      const key = `${(r.country ?? "").toLowerCase()}|${(r.city ?? "").toLowerCase()}`;
+      const e = counts.get(key) ?? { country: r.country as string, city: r.city as string, n: 0 };
+      e.n += 1;
+      counts.set(key, e);
+    }
+    const eligible = Array.from(counts.values())
+      .filter((e) => e.n >= data.minVideos)
+      .sort((a, b) => b.n - a.n);
+
+    const { data: existing } = await supabaseAdmin
+      .from("destination_summaries")
+      .select("country,city,generated_at");
+    const staleCutoff = Date.now() - data.staleDays * 86400000;
+    const fresh = new Set(
+      (existing ?? [])
+        .filter((e: any) => new Date(e.generated_at).getTime() >= staleCutoff)
+        .map((e: any) => `${e.country.toLowerCase()}|${e.city.toLowerCase()}`),
+    );
+
+    const todo = eligible.filter((e) => !fresh.has(`${e.country.toLowerCase()}|${e.city.toLowerCase()}`)).slice(0, data.limit);
+    const fn = generateDestinationOverview;
+    const results: Array<{ country: string; city: string; ok: boolean; error?: string }> = [];
+    for (const t of todo) {
+      try {
+        await fn({ data: { country: t.country, city: t.city } } as any);
+        results.push({ country: t.country, city: t.city, ok: true });
+      } catch (e: any) {
+        results.push({ country: t.country, city: t.city, ok: false, error: e?.message ?? String(e) });
+      }
+    }
+    return { attempted: todo.length, ok: results.filter((r) => r.ok).length, results };
+  });
