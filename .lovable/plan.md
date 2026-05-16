@@ -43,3 +43,8 @@ Ship **step 1** as its own turn (test + fixes only — small surface area, high 
 ## Recommendation
 
 Start with **step 1 (smoke test)** so we know the Phase 3 foundation actually works before layering on the player swap and analytics.
+
+## Status
+
+- ✅ **Step 1 (smoke test) complete.** FK + `profiles` join verified, click trigger verified, RLS public read verified, country casing matches across videos/deals. Seeded `business` role for the existing test user and one active "Surf lessons in Canggu" deal so the public surfaces have real data to render.
+- ⏭️ Next: **Step 2 — Mux player swap + caption toggle** in `src/components/feed/VideoCard.tsx` using `@mux/mux-player-react`.
