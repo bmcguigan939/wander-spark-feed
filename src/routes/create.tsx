@@ -5,8 +5,9 @@ import { useState, useEffect, useRef } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
+import { previewExternalVideo, importExternalVideo, type PreviewResult } from "@/lib/social.functions";
 import { toast } from "sonner";
-import { Upload, Video, Loader2, Sparkles, MapPin, Music, X } from "lucide-react";
+import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Globe } from "lucide-react";
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
@@ -43,10 +44,46 @@ function CreatePage() {
       </MobileShell>
     );
   }
-  return <UploadFlow />;
+  return <CreateTabs />;
+}
+
+function CreateTabs() {
+  const [tab, setTab] = useState<"upload" | "import">("upload");
+  return (
+    <MobileShell>
+      <div className="px-5 pb-32 pt-6">
+        <h1 className="text-2xl font-bold">Create</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Upload a new clip or import one you already shared elsewhere.</p>
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1">
+          {(["upload", "import"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-xl py-2 text-sm font-semibold capitalize transition ${tab === t ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground"}`}
+            >
+              {t === "upload" ? "Upload" : "Import from socials"}
+            </button>
+          ))}
+        </div>
+        {tab === "upload" ? <UploadFlowBody /> : <ImportFlow />}
+      </div>
+    </MobileShell>
+  );
 }
 
 function UploadFlow() {
+  return (
+    <MobileShell>
+      <div className="px-5 pb-32 pt-6">
+        <h1 className="text-2xl font-bold">Upload</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Vertical (9:16) videos perform best.</p>
+        <UploadFlowBody />
+      </div>
+    </MobileShell>
+  );
+}
+
+function UploadFlowBody() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const createUploadFn = useServerFn(createDirectUpload);
