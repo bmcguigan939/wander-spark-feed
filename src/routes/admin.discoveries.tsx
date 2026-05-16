@@ -85,6 +85,20 @@ function AdminDiscoveries() {
                 {Math.round((d.ai_confidence ?? 0) * 100)}%
               </span>
             </div>
+            {(d as any).quality_score != null && (
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  (d as any).quality_score >= 0.7 ? "bg-emerald-500/15 text-emerald-600"
+                  : (d as any).quality_score >= 0.5 ? "bg-amber-500/15 text-amber-600"
+                  : "bg-destructive/15 text-destructive"
+                }`}>
+                  Q {Math.round((d as any).quality_score * 100)}
+                </span>
+                {Array.isArray((d as any).quality_reasons) && (d as any).quality_reasons.map((r: string) => (
+                  <span key={r} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{r}</span>
+                ))}
+              </div>
+            )}
             {d.ai_summary && <p className="mt-1.5 line-clamp-3 text-xs text-muted-foreground">{d.ai_summary}</p>}
             <div className="mt-2 flex items-center gap-1.5">
               <a
