@@ -82,6 +82,7 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
       lng: z.number().min(-180).max(180).optional(),
       publish_mode: z.enum(["now", "draft", "schedule"]).default("now"),
       scheduled_at: z.string().datetime().nullable().optional(),
+      music_track_id: z.string().uuid().nullable().optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
@@ -114,6 +115,7 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
         is_draft: isDraft,
         scheduled_at: scheduledAt,
         published_at: publishedAt,
+        music_track_id: data.music_track_id ?? null,
       })
       .eq("id", data.videoId)
       .eq("creator_id", userId);
