@@ -66,9 +66,10 @@ function UploadFlow() {
     try {
       const res = await createUploadFn({ data: { title: f.name.replace(/\.[^.]+$/, "") } });
       setVideoId(res.videoId);
+      if (!res.uploadUrl) throw new Error("Upload URL not available");
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", res.uploadUrl);
+        xhr.open("PUT", res.uploadUrl!);
         xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100)); };
         xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
         xhr.onerror = () => reject(new Error("Network error"));

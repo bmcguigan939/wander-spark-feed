@@ -1,18 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { getProfileByUsername } from "@/lib/feed.functions";
+import { toggleFollow } from "@/lib/interactions.functions";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/u/$username")({
+  head: ({ params }) => ({
+    meta: [
+      { title: `@${params.username} — Travidz` },
+      { name: "description", content: `Travel videos and destinations by @${params.username} on Travidz.` },
+      { property: "og:title", content: `@${params.username} on Travidz` },
+      { property: "og:description", content: `Travel videos by @${params.username}.` },
+    ],
+  }),
   component: ProfilePage,
 });
 
 function ProfilePage() {
   const { username } = Route.useParams();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const followFn = useServerFn(toggleFollow);
   const { data, isLoading } = useQuery({
     queryKey: ["profile", username],
     queryFn: () => getProfileByUsername({ data: { username } }),
   });
+  const followM = useMutation({
+    mutationFn: () => followFn({ data: { creatorId: data!.profile!.id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
+    onError: (e: any) => toast(e.message ?? "Couldn't update follow"),
+  });
+  const isSelf = user?.id === data?.profile?.id;
 
   return (
     <MobileShell>
@@ -43,6 +64,18 @@ function ProfilePage() {
               <span><b>{data.followingCount}</b> <span className="text-muted-foreground">following</span></span>
               <span><b>{data.videos.length}</b> <span className="text-muted-foreground">videos</span></span>
             </div>
+            {!isSelf && (
+              <button
+                onClick={() => {
+                  if (!user) { window.location.href = "/login"; return; }
+                  followM.mutate();
+                }}
+                disabled={followM.isPending}
+                className="mt-5 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                Follow
+              </button>
+            )}
 
             <div className="mt-8 grid grid-cols-3 gap-1">
               {data.videos.map((v) => (

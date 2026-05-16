@@ -1,51 +1,52 @@
-## Phase 1 continuation — what I'll build next
+# Where we are
 
-Picking up from the foundation already in place (DB, auth, feed shell). After approval I'll request the three Mux secrets (`MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`) and then build everything below in one pass.
+Phase 1 scaffolding is in place:
 
-### 1. Mux upload pipeline (server-only)
-- `src/lib/mux.functions.ts`:
-  - `becomeCreator()` — adds `creator` role for current user (idempotent).
-  - `createDirectUpload()` — auth-protected, creator-only; mints a Mux Direct Upload URL, inserts a `videos` row (`status='uploading'`, `mux_upload_id`), returns `{ uploadUrl, videoId }`.
-  - `finalizeVideoMetadata({ videoId, title, description, destination, country, city, activity_tags, budget_tag })` — auth-protected; updates the creator's own row.
-- `src/routes/api/public/mux-webhook.ts` — HMAC-verifies `Mux-Signature` against `MUX_WEBHOOK_SECRET`; on `video.asset.ready` writes `mux_asset_id`, `mux_playback_id`, `thumbnail_url`, `duration_sec`, `status='ready'`; on `video.asset.errored` sets `status='errored'`. Uses `supabaseAdmin`.
-- Webhook URL to register in Mux: `https://project--144ee3b9-80e0-4ec8-883d-e0d5686cb4a1.lovable.app/api/public/mux-webhook`.
+- **DB**: `profiles`, `user_roles`, `videos`, `likes`, `saves`, `follows`, `collections`, `collection_items`, `video_views` with RLS. All tables currently empty.
+- **Auth**: AuthProvider + login route + role loading (`creator`/`admin` flag).
+- **Server fns**: `mux`, `interactions`, `collections`, `profile`, `feed` modules wired through `requireSupabaseAuth` + `attachSupabaseAuth`.
+- **Mux**: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET` all set. Webhook route `/api/public/mux-webhook` exists.
+- **Routes**: `/`, `/login`, `/create`, `/collections`, `/collections/$id`, `/profile`, `/u/$username`, `/search`.
 
-### 2. Create flow (`/create`)
-- Guarded: not signed in → `/login`; signed in but not creator → "Become a creator" CTA → `becomeCreator()`.
-- Step 1: pick file → `createDirectUpload()` → PUT to Mux with XHR progress bar.
-- Step 2: details form (title, description, destination, country, city, activity tag chips, budget tag) → `finalizeVideoMetadata()` → redirect to `/profile` with "processing" toast.
+What's missing or unverified: no end-to-end smoke test, no real uploads, feed is empty, no AI features, no deals, no business/admin surfaces.
 
-### 3. Feed interactions (`/`)
-Wire the right-rail buttons currently visual-only:
-- Like / Save toggles with optimistic React Query updates.
-- "Add to collection" sheet (list + inline new-collection).
-- Share via `navigator.share` with copy-link fallback.
-- Unauthenticated taps open a "Sign in to continue" sheet linking to `/login`.
+# Plan — next pass
 
-### 4. Collections (`/collections`, `/collections/$id`)
-- `/collections` grid of own collections + FAB to create.
-- `/collections/$id` header (title, visibility, edit, delete) + 3-col thumbnail grid; tap → feed at that video; long-press → remove.
-- Server fns: list/get/create/update/delete + `removeFromCollection`.
+## A. Verify & harden Phase 1 (quick)
 
-### 5. Profile (`/profile`, `/u/$username`)
-- `/profile` (own): avatar, display name, bio, role badges, edit sheet, tabs (My videos / Collections / Liked), sign-out, "Become a creator" CTA.
-- `/u/$username` (public): same minus edit/liked, plus Follow/Unfollow + follower/following counts.
-- Avatar upload via existing `avatars` bucket.
+1. **End-to-end smoke**: sign up → become creator → upload a short clip → confirm Mux webhook flips `status` to `ready` → confirm feed renders it → like/save/add-to-collection → public profile shows it. Fix any breakage found (most likely: webhook signature header parsing, RLS on insert, XHR upload CORS).
+2. **Empty states**: feed, collections list, profile tabs, search all need decent empty states + skeletons.
+3. **Mobile polish**: confirm `VideoCard` autoplay/intersection observer, right-rail tap targets, bottom-nav safe-area on iOS.
+4. **SEO/meta per route**: add `head()` to `/`, `/u/$username` (creator name), `/collections/$id`.
 
-### 6. Search (`/search`)
-- Sticky search bar + filter sheet (country, activity, budget, sort).
-- Tabs: Videos / Creators / Collections.
-- Extends existing `searchAll` with filters + cursor + collections. 250ms debounce.
+## B. Phase 2 — AI + content depth
 
-### 7. Auth polish
-- `_authenticated.tsx` pathless layout wrapping `/create`, `/collections`, `/profile` — redirects to `/login` if no session (avoids SSR-fetching protected data).
+1. **AI auto-tagging on upload** using Lovable AI Gateway (`google/gemini-2.5-flash`):
+   - On webhook `video.asset.ready`, kick off a server fn that pulls Mux thumbnail + title/description, asks the model for `{country, city, activity_tags[], budget_tag, suggested_title}`.
+   - Writes back to `videos`; creator can override in `/create` step 2 or from `/profile`.
+2. **Transcription + captions**: enable Mux auto-generated captions; surface as overlay toggle on `VideoCard`.
+3. **Destination pages** (`/d/$country`, `/d/$country/$city`): SSR-friendly, list videos + collections for that place. Good for SEO.
 
-### DB migration
-- Add `mux_upload_id` index on `videos` (column already exists).
+## C. Phase 3 — Deals + business
 
-### What I need from you
-1. Approve this plan.
-2. Provide the three Mux secrets when the secure form appears (Token ID, Token Secret, Webhook Signing Secret).
+1. **Deals table** (`deals`: creator_id, video_id, title, provider, url, price_cents, currency, valid_until) + RLS.
+2. Show "View deal" CTA on `VideoCard` when present; click logs to `deal_clicks` for analytics.
+3. **Business portal** (`/business`): role-gated, lets a business user attach deals to their own videos. (Stripe Connect deferred.)
 
-### Out of scope (Phase 2+)
-AI tagging/transcription, in-app editor, deals/Stripe, business portal, admin dashboard, map view, destination pages, PWA install.
+## D. Out of scope this round
+
+In-app video editor, map view, PWA install, admin moderation dashboard, Stripe payouts.
+
+## What I need from you
+
+Pick the starting point:
+
+- **(A) Verify & harden first** — recommended; we don't ship Phase 2 on top of unverified Phase 1.
+- **(B) Jump to AI auto-tagging** — assume Phase 1 works, fix as we go.
+- **(C) Jump to Deals/Business** — same assumption.
+
+## Technical notes
+
+- AI tagging runs inside the webhook handler as a fire-and-forget `ctx.waitUntil`-style call so webhook stays <1s.
+- Destination pages use `supabaseAdmin`-backed public server fns (no auth needed), so loaders are SSR-safe.
+- Deals RLS: creators insert/update/delete their own; public read where `valid_until > now()`.
