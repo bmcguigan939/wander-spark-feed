@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
-import { listMyDeals } from "@/lib/deals.functions";
+import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, Briefcase, Eye, Pencil } from "lucide-react";
+import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown } from "lucide-react";
+import { Sparkline } from "@/components/business/Sparkline";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -16,6 +17,7 @@ function BusinessDashboard() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
+  const fetchStats = useServerFn(getDealStats);
 
   useEffect(() => {
     if (loading) return;
@@ -29,6 +31,15 @@ function BusinessDashboard() {
     enabled: !!user && isBusiness,
   });
   const deals = data?.deals ?? [];
+
+  const statsQueries = useQueries({
+    queries: deals.map((d: any) => ({
+      queryKey: ["deal-stats", d.id, "7d"],
+      queryFn: () => fetchStats({ data: { dealId: d.id, range: "7d" as const } }),
+      enabled: !!user && isBusiness,
+      staleTime: 60_000,
+    })),
+  });
 
   if (!user || !isBusiness) return null;
 
@@ -52,14 +63,24 @@ function BusinessDashboard() {
           <p className="text-sm text-muted-foreground">No deals yet. Create your first one.</p>
         )}
         <ul className="space-y-3">
-          {deals.map((d: any) => (
+          {deals.map((d: any, i: number) => {
+            const s = statsQueries[i]?.data as
+              | { totals: { clicks: number; prevClicks: number }; daily: { day: string; clicks: number }[] }
+              | undefined;
+            const clicks7d = s?.totals.clicks ?? 0;
+            const prev = s?.totals.prevClicks ?? 0;
+            const delta = clicks7d - prev;
+            const series = s?.daily.map((x) => x.clicks) ?? [];
+            return (
             <li
               key={d.id}
               className="overflow-hidden rounded-2xl border border-border bg-card p-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h2 className="line-clamp-2 text-sm font-semibold">{d.title}</h2>
+                  <Link to="/business/deals/$id" params={{ id: d.id }}>
+                    <h2 className="line-clamp-2 text-sm font-semibold hover:text-primary">{d.title}</h2>
+                  </Link>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {[d.city, d.country].filter(Boolean).join(", ") || d.destination || "Anywhere"}
                   </p>
@@ -68,6 +89,20 @@ function BusinessDashboard() {
                     <span className={d.is_active ? "text-emerald-500" : "text-muted-foreground"}>
                       {d.is_active ? "Active" : "Paused"}
                     </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="text-primary">
+                      <Sparkline values={series.length ? series : [0]} />
+                    </div>
+                    <div className="text-xs">
+                      <div className="font-semibold">{clicks7d} <span className="text-muted-foreground font-normal">/ 7d</span></div>
+                      {prev > 0 || clicks7d > 0 ? (
+                        <div className={`inline-flex items-center gap-0.5 ${delta >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                          {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {delta >= 0 ? "+" : ""}{delta}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
                 <Link
@@ -79,7 +114,8 @@ function BusinessDashboard() {
                 </Link>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </MobileShell>
