@@ -1065,6 +1065,51 @@ export type Database = {
         }
         Relationships: []
       }
+      video_business_suggestions: {
+        Row: {
+          category: string | null
+          city: string | null
+          confidence: number | null
+          converted_invite_id: string | null
+          country: string | null
+          detected_at: string
+          id: string
+          name: string
+          source: string | null
+          status: string
+          video_id: string
+          website_guess: string | null
+        }
+        Insert: {
+          category?: string | null
+          city?: string | null
+          confidence?: number | null
+          converted_invite_id?: string | null
+          country?: string | null
+          detected_at?: string
+          id?: string
+          name: string
+          source?: string | null
+          status?: string
+          video_id: string
+          website_guess?: string | null
+        }
+        Update: {
+          category?: string | null
+          city?: string | null
+          confidence?: number | null
+          converted_invite_id?: string | null
+          country?: string | null
+          detected_at?: string
+          id?: string
+          name?: string
+          source?: string | null
+          status?: string
+          video_id?: string
+          website_guess?: string | null
+        }
+        Relationships: []
+      }
       video_deal_suggestions: {
         Row: {
           deal_id: string
