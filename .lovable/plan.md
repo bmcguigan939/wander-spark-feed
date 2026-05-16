@@ -1,35 +1,78 @@
-# Seed demo content for testing
+## Goal
 
-Populate the empty database with realistic travel content so the feed, deal-attach flow, and booking UI are all testable immediately.
+Make AI-generated itineraries actionable: each day should surface (a) **booking links** for suggested hotels/activities and (b) **related Travidz videos** from creators who've covered the same destination/activities.
 
-## What gets created
+## How it works
 
-- **8 demo creator profiles** (e.g. @balidreamer, @tokyobytes, @parisinframes) with avatars and bios
-- **~30 videos** across popular destinations (Bali, Tokyo, Paris, Rome, Bangkok, NYC, Lisbon, Cape Town, Reykjavik, Dubai), each with:
-  - Title, description, destination, country, city, activity tags
-  - Public sample MP4 + thumbnail (using free stock travel clips via Mux playback IDs or direct URLs in `embed_mode='link_card'`)
-  - Randomised view/like/comment counts so the feed looks alive
-  - `status='ready'`, `is_draft=false` so they show in the For You feed
-- **~25 deals** (hotels, tours, activities) tagged to those destinations with prices, images, supplier URLs, `status='approved'`, `source='seed'`
-- **~50 video↔deal attachments** so each video has 1–3 "Book this trip" cards
-- **~150 likes and ~80 comments** spread across videos for realism
-- A handful of **follow relationships** between creators
+### 1. Enrich the AI plan schema
 
-## How it runs
+Extend each day in the itinerary `plan` JSON to include structured suggestions instead of free-text only:
 
-A single SQL insert via the Supabase insert tool — no schema changes, no code edits. All rows tagged with `source='seed'` (deals) or a recognisable prefix on usernames so you can wipe them later with one DELETE.
-
-## Notes
-
-- Creator profiles are seeded directly into `profiles` + `user_roles` with synthetic UUIDs (no `auth.users` rows — they're display-only demo accounts, you won't be able to log in as them, which is the intended behaviour for seed data).
-- Videos use `embed_mode='link_card'` with public sample video URLs so they play without needing real Mux uploads.
-- After seeding I'll confirm counts and you can refresh the feed to see them.
-
-## Cleanup later
-
-One command will wipe all seeded data:
-```sql
-DELETE FROM videos WHERE creator_id IN (SELECT id FROM profiles WHERE username LIKE 'demo_%');
-DELETE FROM deals WHERE source = 'seed';
-DELETE FROM profiles WHERE username LIKE 'demo_%';
+```text
+day: {
+  day, title, summary,
+  morning/afternoon/evening: { text, suggestion_keys[] },
+  tips[],
+  suggestions: [
+    { key, kind: "hotel"|"activity"|"tour"|"restaurant",
+      title, query, tags[] }
+  ]
+}
 ```
+
+`query` + `tags` are what we match against our `deals` table and `videos` table. The AI is prompted to emit 3–6 suggestions per day with concrete names ("Uluwatu Temple sunset tour", "Hotel Indigo Bali Seminyak").
+
+### 2. Match suggestions to real deals
+
+In `generateItinerary` handler, after the AI returns the plan:
+- For each suggestion, query `deals` where `status='approved'` AND `is_active=true` AND (destination/city ILIKE OR activity tags overlap OR title ILIKE query).
+- Keep top 1–2 matches per suggestion, store their `id`, `title`, `price`, `image_url`, `affiliate_network` on the suggestion as `deal_matches[]`.
+- Booking link uses the existing `/api/public/d/$id` redirect (already wraps affiliate tracking).
+
+### 3. Match suggestions to related videos
+
+Same loop:
+- Query `videos` using the existing `search_tsv` full-text index with the suggestion's `query` + destination, filtered to `status='ready'`, `is_draft=false`.
+- Keep top 1–2 videos per suggestion, store `{ id, title, thumb_url, creator_username }` as `video_matches[]`.
+
+If no deal/video match exists, the suggestion still renders — just without buttons.
+
+### 4. UI changes — `itineraries.$id.tsx`
+
+Under each day's morning/afternoon/evening block, add a **Suggestions** section:
+
+```text
+┌─ Uluwatu Sunset Tour ─────────────┐
+│  [thumb] $45 · GetYourGuide       │
+│  [ Book → ]                       │
+│                                   │
+│  Watch: @balidreamer · Uluwatu… ▶ │
+└───────────────────────────────────┘
+```
+
+- Booking button → `/api/public/d/{deal_id}` (opens in new tab).
+- Video chip → navigates to the feed scrolled to that video (or `/u/$username` for now if no single-video route exists).
+- Empty-match suggestions show just the title + "Search Travidz" link → `/search?q=...`.
+
+### 5. Prompt update
+
+Tighten the system prompt so the AI:
+- Always names real, bookable places/tours (no vague "go to a beach").
+- Emits the `suggestions[]` array per day with stable `key` strings.
+- Mentions suggestion keys inside morning/afternoon/evening text so we can highlight them.
+
+## Files to change
+
+- `src/lib/itineraries.functions.ts` — extend `PlanSchema`, update prompt, add deal+video matching after AI call, store enriched plan.
+- `src/routes/itineraries.$id.tsx` — render new `suggestions` block with booking + video cards.
+- No DB migration needed (uses existing `plan jsonb` column).
+
+## Out of scope
+
+- "Blogs" as a separate content type — we don't have a blogs table. Videos are our equivalent and cover the same intent. If you want true blog posts later, that's a separate feature.
+- Editing/regenerating individual days.
+- Saving suggestions to a collection (could be a follow-up).
+
+## Open question
+
+Should the booking button link out immediately (current `/api/public/d/$id` 302 to supplier), or open an in-app deal detail page first (`/deals/$id`) so users see the full info + related videos before leaving? I'd recommend **in-app `/deals/$id`** — keeps users on Travidz longer and shows the affiliate context.
