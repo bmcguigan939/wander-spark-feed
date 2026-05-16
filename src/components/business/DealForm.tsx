@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, Loader2, X, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export type DealFormValues = {
@@ -13,6 +13,8 @@ export type DealFormValues = {
   city?: string;
   discount_label?: string;
   is_active: boolean;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export function DealForm({
@@ -36,8 +38,27 @@ export function DealForm({
     city: initial?.city ?? "",
     discount_label: initial?.discount_label ?? "",
     is_active: initial?.is_active ?? true,
+    lat: initial?.lat ?? null,
+    lng: initial?.lng ?? null,
   });
   const [uploading, setUploading] = useState(false);
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not available");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        setV((cur) => ({
+          ...cur,
+          lat: Number(pos.coords.latitude.toFixed(6)),
+          lng: Number(pos.coords.longitude.toFixed(6)),
+        })),
+      (err) => toast.error(err.message),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
 
   const handleUpload = async (file: File) => {
     if (!file) return;
@@ -147,6 +168,42 @@ export function DealForm({
       </div>
       {field("Destination label", "destination")}
       {field("Discount label (e.g. -20%)", "discount_label")}
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            Map location (optional)
+          </span>
+          <button
+            type="button"
+            onClick={useMyLocation}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground hover:border-primary"
+          >
+            <MapPin className="h-3 w-3" /> Use my location
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="number"
+            step="0.000001"
+            placeholder="Latitude"
+            value={v.lat ?? ""}
+            onChange={(e) =>
+              setV({ ...v, lat: e.target.value === "" ? null : Number(e.target.value) })
+            }
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          <input
+            type="number"
+            step="0.000001"
+            placeholder="Longitude"
+            value={v.lng ?? ""}
+            onChange={(e) =>
+              setV({ ...v, lng: e.target.value === "" ? null : Number(e.target.value) })
+            }
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </div>
+      </div>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
