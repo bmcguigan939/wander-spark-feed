@@ -47,7 +47,7 @@ function MapPage() {
   });
 
   const setLayer = (layer: "videos" | "deals" | "both") =>
-    navigate({ to: "/map", search: (p) => ({ ...p, layer }), replace: true });
+    navigate({ to: "/map", search: (p: any) => ({ ...p, layer }), replace: true });
 
   const onMoveEnd = useCallback(() => {
     const m = mapRef.current?.getMap();
@@ -58,7 +58,7 @@ function MapPage() {
       const z = m.getZoom();
       navigate({
         to: "/map",
-        search: (p) => ({
+        search: (p: any) => ({
           ...p,
           lng: Number(c.lng.toFixed(4)),
           lat: Number(c.lat.toFixed(4)),
