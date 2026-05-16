@@ -379,6 +379,7 @@ export type Database = {
           status: string
           thumbnail_url: string | null
           title: string
+          transcript: string | null
           view_count: number
         }
         Insert: {
@@ -402,6 +403,7 @@ export type Database = {
           status?: string
           thumbnail_url?: string | null
           title: string
+          transcript?: string | null
           view_count?: number
         }
         Update: {
@@ -425,6 +427,7 @@ export type Database = {
           status?: string
           thumbnail_url?: string | null
           title?: string
+          transcript?: string | null
           view_count?: number
         }
         Relationships: [
