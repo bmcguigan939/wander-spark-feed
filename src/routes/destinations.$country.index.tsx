@@ -4,6 +4,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getDestination } from "@/lib/destinations.functions";
 import { listDeals } from "@/lib/deals.functions";
 import { ArrowLeft, MapPin, Heart, Tag } from "lucide-react";
+import { CinematicHeader } from "@/components/ui/cinematic";
 
 export const Route = createFileRoute("/destinations/$country/")({
   head: ({ params }) => ({
@@ -28,18 +29,24 @@ function CountryPage() {
   const videos = data?.videos ?? [];
   const cities = data?.cities ?? [];
   const deals = dealsData?.deals ?? [];
+  const cover = videos[0]?.thumbnail_url ?? null;
 
   return (
     <MobileShell>
-      <div className="px-4 pt-6">
+      <CinematicHeader
+        height="h-56"
+        image={cover}
+        eyebrow="Destination"
+        title={country}
+        subtitle={`${videos.length} video${videos.length === 1 ? "" : "s"}${cities.length ? ` · ${cities.length} cit${cities.length === 1 ? "y" : "ies"}` : ""}`}
+      />
+      <div className="px-4 pt-5 pb-8">
         <Link to="/destinations" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ArrowLeft className="h-4 w-4" /> All destinations
         </Link>
-        <h1 className="text-2xl font-semibold">{country}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{videos.length} video{videos.length === 1 ? "" : "s"}</p>
 
         {cities.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {cities.map((c) => (
               <Link
                 key={c.city}

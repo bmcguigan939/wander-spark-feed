@@ -10,6 +10,7 @@ import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, S
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
+import { CinematicHeader } from "@/components/ui/cinematic";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -76,26 +77,31 @@ function ProfilePage() {
 
   return (
     <MobileShell>
-      <div className="px-5 pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <img src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
-              alt={p.username} className="h-20 w-20 rounded-full border border-border object-cover" />
-            <div>
-              <h1 className="text-xl font-bold">@{p.username}</h1>
-              {p.display_name && <p className="text-sm text-muted-foreground">{p.display_name}</p>}
-              <div className="mt-1 flex gap-1.5">
-                {data.roles.map((r) => (
-                  <span key={r} className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">{r}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <button onClick={openEdit} className="rounded-full border border-border bg-card p-2"><Settings className="h-4 w-4" /></button>
-          </div>
+      <CinematicHeader
+        height="h-56"
+        image={p.avatar_url ?? null}
+        eyebrow={data.roles.join(" · ")}
+        title={<span>@{p.username}</span>}
+        subtitle={p.display_name}
+        trailing={
+          <button
+            onClick={openEdit}
+            aria-label="Edit profile"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        }
+      />
+      <div className="px-5 pt-5">
+        <div className="flex items-center gap-4">
+          <img
+            src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
+            alt={p.username}
+            className="-mt-16 h-24 w-24 rounded-full border-4 border-background object-cover shadow-cinematic"
+          />
         </div>
-        {p.bio && <p className="mt-4 text-sm">{p.bio}</p>}
+        {p.bio && <p className="mt-4 text-sm text-foreground/90">{p.bio}</p>}
         <div className="mt-5 flex gap-6 text-sm">
           <span><b>{data.followerCount}</b> <span className="text-muted-foreground">followers</span></span>
           <span><b>{data.followingCount}</b> <span className="text-muted-foreground">following</span></span>

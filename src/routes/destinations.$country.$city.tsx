@@ -6,6 +6,7 @@ import { getDestinationOverview, generateDestinationOverview } from "@/lib/desti
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Heart, Sparkles, CalendarRange, Tag, MapPin, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { CinematicHeader, StatTile } from "@/components/ui/cinematic";
 
 export const Route = createFileRoute("/destinations/$country/$city")({
   head: ({ params }) => ({
@@ -32,6 +33,7 @@ function CityPage() {
   const topCreators = data?.topCreators ?? [];
   const summary = data?.summary ?? null;
   const stats = data?.stats ?? { videos: 0, creators: 0, likes: 0 };
+  const cover = videos[0]?.thumbnail_url ?? null;
 
   const gen = useMutation({
     mutationFn: () => genFn({ data: { country, city } }),
@@ -44,22 +46,23 @@ function CityPage() {
 
   return (
     <MobileShell>
-      <div className="px-4 pt-6 pb-8">
+      <CinematicHeader
+        height="h-64"
+        image={cover}
+        eyebrow={country}
+        title={city}
+        subtitle={`${stats.videos} videos · ${stats.creators} creators · ${stats.likes} likes`}
+      />
+      <div className="px-4 pt-5 pb-8">
         <Link to="/destinations/$country" params={{ country }} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ArrowLeft className="h-4 w-4" /> {country}
         </Link>
 
-        {/* Hero */}
-        <div className="rounded-3xl bg-gradient-to-br from-primary/15 via-card to-card p-5 ring-1 ring-border">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" /> {country}
-          </div>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">{city}</h1>
-          <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-            <span><b className="text-foreground">{stats.videos}</b> videos</span>
-            <span><b className="text-foreground">{stats.creators}</b> creators</span>
-            <span><b className="text-foreground">{stats.likes}</b> likes</span>
-          </div>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <StatTile icon={MapPin} label="Videos" value={stats.videos} />
+          <StatTile icon={Sparkles} label="Creators" value={stats.creators} />
+          <StatTile icon={Heart} label="Likes" value={stats.likes} />
         </div>
 
         {/* AI summary */}
