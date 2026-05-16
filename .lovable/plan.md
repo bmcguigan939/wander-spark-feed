@@ -1,4 +1,4 @@
-## Step 5: Transcript-driven re-tagging
+## Step 5: Transcript-driven re-tagging — DONE
 
 Now that Mux auto-captions are wired up (Step 2), we can use the finished transcript to produce better city/country/activity tags than the creator's manual title alone.
 
