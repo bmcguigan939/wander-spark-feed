@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type FeedVideo = {
   id: string;
@@ -32,13 +33,22 @@ export type FeedVideo = {
   } | null;
 };
 
-async function fetchFeedRows(limit: number, offset: number): Promise<FeedVideo[]> {
-  const { data, error } = await supabaseAdmin
+async function fetchFeedRows(
+  limit: number,
+  offset: number,
+  creatorIds?: string[],
+): Promise<FeedVideo[]> {
+  let q = supabaseAdmin
     .from("videos")
     .select(
       "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
     )
-    .eq("status", "ready")
+    .eq("status", "ready");
+  if (creatorIds) {
+    if (creatorIds.length === 0) return [];
+    q = q.in("creator_id", creatorIds);
+  }
+  const { data, error } = await q
     .order("like_count", { ascending: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
