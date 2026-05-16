@@ -6,7 +6,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2 } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag } from "@/lib/ai.functions";
@@ -107,6 +107,14 @@ function ProfilePage() {
         >
           <Briefcase className="h-4 w-4" /> {isBusiness ? "Business portal" : "List travel deals"}
         </Link>
+        {isCreator && (
+          <Link
+            to="/creator/applications"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold"
+          >
+            <Send className="h-4 w-4" /> My deal applications
+          </Link>
+        )}
         <div className="mt-6 flex gap-1 rounded-full bg-card p-1">
           {([["videos", Video, "Videos"], ["collections", Bookmark, "Saved"], ["liked", Heart, "Liked"]] as const).map(([k, Icon, label]) => (
             <button key={k} onClick={() => setTab(k)}
