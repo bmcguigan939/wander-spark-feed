@@ -8,6 +8,12 @@ import { ArrowLeft, Globe, Lock, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/collections/$id")({
+  head: () => ({
+    meta: [
+      { title: "Collection — Travidz" },
+      { name: "description", content: "A curated collection of travel videos on Travidz." },
+    ],
+  }),
   component: CollectionDetail,
 });
 
