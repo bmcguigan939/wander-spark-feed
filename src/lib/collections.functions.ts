@@ -100,16 +100,21 @@ export const getCollection = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: collection } = await supabaseAdmin
       .from("collections")
-      .select("id,owner_id,title,description,visibility,created_at,owner:profiles!collections_owner_id_fkey(username,display_name,avatar_url)")
+      .select("id,owner_id,title,description,visibility,created_at")
       .eq("id", data.id).maybeSingle();
-    if (!collection) return { collection: null, videos: [] };
-    const { data: items } = await supabaseAdmin
-      .from("collection_items")
-      .select("video:videos!collection_items_video_id_fkey(id,title,thumbnail_url,mux_playback_id,like_count,creator_id), added_at")
-      .eq("collection_id", data.id)
-      .order("added_at", { ascending: false });
-    return {
-      collection,
-      videos: (items ?? []).map((i: any) => i.video).filter(Boolean),
-    };
+    if (!collection) return { collection: null, owner: null, videos: [] };
+    const [{ data: owner }, { data: items }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("username,display_name,avatar_url").eq("id", collection.owner_id).maybeSingle(),
+      supabaseAdmin.from("collection_items").select("video_id,added_at").eq("collection_id", data.id).order("added_at", { ascending: false }),
+    ]);
+    const ids = (items ?? []).map((i) => i.video_id);
+    let videos: any[] = [];
+    if (ids.length) {
+      const { data: vids } = await supabaseAdmin
+        .from("videos")
+        .select("id,title,thumbnail_url,mux_playback_id,like_count,creator_id")
+        .in("id", ids);
+      videos = vids ?? [];
+    }
+    return { collection, owner, videos };
   });
