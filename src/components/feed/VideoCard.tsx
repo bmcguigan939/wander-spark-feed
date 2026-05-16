@@ -10,10 +10,12 @@ import { toggleLike, toggleSave } from "@/lib/interactions.functions";
 import { logDealClick } from "@/lib/deals.functions";
 import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
+import { CommentsSheet } from "@/components/feed/CommentsSheet";
 
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
   const [muted, setMuted] = useState(true);
   const [collectionOpen, setCollectionOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const playerRef = useRef<any>(null);
   const [ccAvailable, setCcAvailable] = useState(false);
   const [ccOn, setCcOn] = useState<boolean>(() => {
@@ -157,12 +159,13 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       {/* Right rail */}
       <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
         <Action icon={Heart} count={video.like_count} onClick={() => requireAuth(() => likeM.mutate())} />
-        <Action icon={MessageCircle} count={0} onClick={() => toast("Comments coming soon")} />
+        <Action icon={MessageCircle} count={video.comment_count ?? 0} onClick={() => setCommentsOpen(true)} />
         <Action icon={Bookmark} count={video.save_count} onClick={() => requireAuth(() => saveM.mutate())} />
         <Action icon={Share2} count={0} onClick={share} />
         <button onClick={() => requireAuth(() => setCollectionOpen(true))} className="text-[10px] font-semibold uppercase tracking-wide text-white/80">+Collection</button>
       </div>
       <AddToCollectionSheet open={collectionOpen} onOpenChange={setCollectionOpen} videoId={video.id} />
+      <CommentsSheet open={commentsOpen} onOpenChange={setCommentsOpen} videoId={video.id} />
 
       {/* Bottom overlay */}
       <div className="absolute inset-x-0 bottom-4 px-4 text-white">
