@@ -109,6 +109,19 @@ export const getFeed = createServerFn({ method: "GET" })
     return { videos: await fetchFeedRows(data.limit, data.offset) };
   });
 
+export const getFollowingFeed = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ limit: z.number().min(1).max(50).default(20), offset: z.number().min(0).default(0) }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: follows } = await supabaseAdmin
+      .from("follows").select("creator_id").eq("follower_id", userId);
+    const ids = (follows ?? []).map((r: any) => r.creator_id as string);
+    return { videos: await fetchFeedRows(data.limit, data.offset, ids) };
+  });
+
 export const searchAll = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ q: z.string().min(1).max(200) }).parse(input)
