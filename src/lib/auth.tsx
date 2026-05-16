@@ -13,6 +13,7 @@ interface AuthState {
   refreshRoles: () => Promise<void>;
   isCreator: boolean;
   isBusiness: boolean;
+  isAdmin: boolean;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     isCreator: roles.includes("creator") || roles.includes("admin"),
     isBusiness: roles.includes("business") || roles.includes("admin"),
+    isAdmin: roles.includes("admin"),
     signOut: async () => { await supabase.auth.signOut(); },
     refreshRoles: async () => { await loadRoles(session?.user?.id); },
   };
