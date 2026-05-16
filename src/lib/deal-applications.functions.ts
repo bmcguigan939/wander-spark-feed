@@ -88,7 +88,7 @@ export const decideApplication = createServerFn({ method: "POST" })
       if (data.approvedCode !== undefined) patch.approved_code = data.approvedCode;
       if (data.commissionPct !== undefined) patch.commission_pct = data.commissionPct;
     }
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("deal_applications")
       .update(patch)
       .eq("id", data.id)
