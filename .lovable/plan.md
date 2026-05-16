@@ -1,92 +1,86 @@
-## Travidz — Phase 1 MVP
+## Phase 1 — Continue: Mux upload, webhook, and remaining functional pages
 
-A mobile-first responsive web app (TanStack Start + Lovable Cloud) that opens directly into a TikTok-style vertical travel video feed. This plan covers **Phase 1 only** — the core social loop. AI, Creator Studio, deals, and payments are out of scope and will be planned separately after Phase 1 ships.
+Building on the foundation already in place (DB, auth, feed shell, design system), this round wires up the full video lifecycle and fills out the remaining tabs so the app is usable end-to-end.
 
-### What we're building
+### 1. Mux integration (server-only)
 
-**Five-tab mobile-first shell** (bottom nav): Feed · Search · Create · Collections · Profile. App opens on Feed (no landing page).
+**Secrets**: request `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET` via the secrets tool before writing code.
 
-**1. Vertical video feed** (`/`)
-- Full-screen, snap-scroll vertical pager (one video per viewport)
-- Autoplay current video, pause others, tap to mute/unmute
-- Right-rail action stack: like, save, add-to-collection, share, follow
-- Bottom overlay: creator avatar + handle, destination, location pin, activity tags, budget tag, caption
-- Mux Player for HLS playback
-- Personalized ordering (Phase 1: simple — follows first, then trending by like/save/watch counts; AI re-ranking deferred to Phase 2)
+**`src/lib/mux.functions.ts`** — server functions, never called from client directly:
+- `createDirectUpload()` — protected by `requireSupabaseAuth`; verifies caller has `creator` role via `has_role`; calls Mux SDK to mint a signed Direct Upload URL; inserts a `videos` row with `status = 'uploading'` and the returned `upload_id`; returns `{ uploadUrl, videoId }`.
+- `finalizeVideoMetadata({ videoId, title, description, destination, country, city, activity_tags, budget_tag })` — protected; updates the creator's own row with form metadata.
+- `becomeCreator()` — protected; inserts `('creator')` into `user_roles` for the current user (idempotent).
 
-**2. Auth & roles** (`/login`, `/signup`)
-- Email/password + Google via Lovable Cloud
-- `profiles` table auto-created via trigger
-- Separate `user_roles` table (enum: `traveller`, `creator`, `business`, `admin`) — never on profiles
-- Default role on signup: `traveller`; "Become a creator" flow upgrades role
+**`src/routes/api/public/mux-webhook.ts`** — TanStack server route:
+- Verifies `Mux-Signature` HMAC against `MUX_WEBHOOK_SECRET` (timing-safe).
+- On `video.asset.ready`: looks up the video by `mux_upload_id` (or `mux_asset_id`), sets `status = 'ready'`, `mux_playback_id`, `thumbnail_url` (Mux image URL), `duration_sec`.
+- On `video.asset.errored`: sets `status = 'errored'`.
+- Uses `supabaseAdmin` (RLS bypass) since webhook has no user session.
 
-**3. Search** (`/search`)
-- Single search bar + filter sheet (destination, country, activity, budget, travel style, season)
-- Tabs for results: Videos · Creators · Destinations · Collections
-- Phase 1: Postgres full-text search across `videos.title/description/tags` and `profiles.username/bio`. Vector/AI search deferred to Phase 2.
+**DB migration**: add `mux_upload_id text` to `videos` if missing; add index on it.
 
-**4. Create / Upload** (`/create`, creator role only)
-- Pick video file → upload to Mux via signed Direct Upload URL (server fn)
-- Form: title, description, destination, country, city, activity tags, budget tag
-- Poll Mux webhook → set `videos.status = ready` + store playback ID + thumbnail
-- No in-app editing in Phase 1 (Creator Studio = separate phase)
+### 2. Create flow (`/create`)
 
-**5. Collections** (`/collections`, `/collections/$id`)
-- Create folder (title, description, public/private)
-- Add/remove videos via "+" action on any feed card
-- Grid view of saved videos inside a folder
+- Guarded: if not signed in → redirect `/login`. If signed in but not a creator → "Become a creator" CTA that calls `becomeCreator()`.
+- Two-step UI:
+  1. **Pick file** → call `createDirectUpload()` → PUT file to returned `uploadUrl` with `XMLHttpRequest` for progress bar.
+  2. **Add details** form (title, description, destination, country, city, activity tags chips, budget tag select) → calls `finalizeVideoMetadata()` → redirects to `/profile` with a "processing" toast.
+- Mobile-first: full-screen, large drop zone, sticky bottom CTA.
 
-**6. Profile** (`/profile`, `/u/$username`)
-- Own profile: avatar, bio, edit, role badge, my videos, my collections, followers/following counts
-- Public creator profile: same minus edit, plus Follow button and video grid
+### 3. Feed interactions (`/`)
 
-**7. Seed content**
-- You'll supply ~20–30 stock travel clips + cover images
-- I'll seed creators + videos via SQL so the feed feels alive on first open
+Wire the right-rail buttons that are currently visual-only:
+- **Like / Save toggle** — server fns `toggleLike` / `toggleSave` (auth required); optimistic update via React Query.
+- **Add to collection** — sheet listing user's collections + "New collection" inline; server fn `addToCollection`.
+- **Share** — `navigator.share` with fallback to copy link.
+- **Follow** on creator avatar tap-through (lives on profile page).
+- Unauthenticated taps open a "Sign in to continue" sheet that links to `/login`.
 
-### Data model (Lovable Cloud / Postgres)
+### 4. Collections (`/collections`, `/collections/$id`)
 
-```text
-profiles(id PK→auth.users, username UNIQUE, display_name, bio, avatar_url, created_at)
-user_roles(id, user_id→auth.users, role app_role, UNIQUE(user_id,role))
-videos(id, creator_id→profiles, title, description, mux_asset_id, mux_playback_id,
-       thumbnail_url, duration_sec, destination, country, city, activity_tags text[],
-       budget_tag, status, like_count, save_count, view_count, created_at)
-follows(follower_id, creator_id, PK(follower_id,creator_id))
-likes(user_id, video_id, PK(user_id,video_id))
-saves(user_id, video_id, PK(user_id,video_id))         -- quick-save (separate from collections)
-video_views(id, user_id NULL, video_id, watch_ms, created_at)  -- for trending sort
-collections(id, owner_id→profiles, title, description, visibility, cover_video_id, created_at)
-collection_items(collection_id, video_id, added_at, PK(collection_id,video_id))
-```
+- `/collections` — grid of user's collections (cover thumb, title, count). FAB "+" opens create sheet.
+- `/collections/$id` — header (title, description, visibility toggle, edit, delete) + 3-col video thumb grid. Tap thumb → opens single-video view at `/?v=<id>` (feed scrolled to that video). Long-press → remove from collection.
+- Server fns: `listMyCollections`, `getCollection(id)`, `createCollection`, `updateCollection`, `deleteCollection`, `removeFromCollection`.
 
-RLS on every table. Counters (`like_count`, `save_count`, `view_count`) maintained by triggers. `has_role(uid, role)` SECURITY DEFINER helper for policies.
+### 5. Profile (`/profile`, `/u/$username`)
 
-### Mux integration
+- `/profile` (own): avatar, display name, bio, role badges, edit profile sheet, tabs (My videos / My collections / Liked), sign-out, "Become a creator" button if not yet a creator.
+- `/u/$username` (public): same minus edit/liked, plus Follow/Unfollow button (server fn `toggleFollow`) and follower/following counts.
+- Server fns: `getMyProfile`, `updateMyProfile({ display_name, bio, avatar_url })`, `toggleFollow(creatorId)`, `getMyVideos`, `getMyLikedVideos`.
+- Avatar upload uses existing `avatars` storage bucket (public).
 
-- Server fns (`src/lib/mux.functions.ts`) — never call Mux from the client:
-  - `createDirectUpload()` → returns signed upload URL + upload ID
-  - `getAsset(assetId)` → polled by creator after upload
-- Public webhook route `src/routes/api/public/mux-webhook.ts` — verifies Mux signature, updates `videos.status`, `mux_playback_id`, `thumbnail_url`, `duration_sec`
-- Secrets needed: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`
-- Client uses `@mux/mux-player-react` for HLS playback
+### 6. Search (`/search`)
 
-### Design direction
+- Sticky search bar + filter sheet (country, activity tag chips, budget tag, sort: trending/recent).
+- Tabs: Videos · Creators · Collections.
+- Server fn `searchAll({ q, filters, tab, cursor })` uses Postgres FTS over `videos.search_tsv` and `profiles.username || display_name`. Debounce 250ms on the client.
+- Empty state with trending tags pulled from a simple aggregate.
 
-Dark-mode-first, cinematic, mobile-led. Full-bleed video, floating glass action stack (subtle backdrop-blur), generous gradient scrim at top/bottom for legibility, restrained micro-motion (spring on like, snap-scroll feel). Tokens defined in `src/styles.css` as oklch. I'll propose a palette + type pair when we start building — no separate design-direction prototype round needed for a video-first UI where composition is fully constrained.
+### 7. Auth polish
 
-### Out of scope (Phase 2+)
+- `_authenticated.tsx` pathless layout that redirects to `/login` if no session — wrap `create`, `collections`, `profile`.
+- `/login` already exists; add `/signup` route (or keep toggle inside `/login`, which it already does).
 
-AI transcription/tagging/summaries, AI search, AI itinerary builder, in-app video editor, music library, business portal, deals, discount codes, Stripe Connect splits, creator storefronts, map view, destination auto-pages, admin dashboard, native mobile app, PWA install.
+### 8. Wiring & misc
+
+- Confirm `attachSupabaseAuth` is in `src/start.ts` `functionMiddleware` (already done — verify).
+- Add `onAuthStateChange` root listener (already done — verify).
+- Ensure root `Outlet` is present (it is).
+- Mobile bottom nav already exists; show it on all top-level routes, hide on `/login` and immersive feed.
 
 ### Technical notes
 
-- **Stack**: TanStack Start (this template), Lovable Cloud (Supabase under the hood), Mux for video, Tailwind v4 tokens
-- **Routes** under `src/routes/`: `index.tsx` (feed), `search.tsx`, `create.tsx`, `collections.tsx`, `collections.$id.tsx`, `profile.tsx`, `u.$username.tsx`, `login.tsx`, `signup.tsx`, `_authenticated.tsx` (guard for create/collections/profile)
-- **Server fns** in `src/lib/*.functions.ts`; `requireSupabaseAuth` middleware for user-scoped ops
-- **What I need from you before building**:
-  1. Confirm enabling **Lovable Cloud** (required for auth + DB + storage)
-  2. Your **Mux account** API token ID + secret + webhook signing secret (I'll request via secrets tool when we start)
-  3. A **zip or drive link** of ~20–30 sample vertical travel clips (≤60s each) with rough metadata (destination, creator handle to assign)
+- Use `@mux/mux-node` server-side only (already installed).
+- React Query for all server-fn calls; `useServerFn` from `@tanstack/react-start` in components for mutations.
+- All new tables/columns via `supabase--migration`; all new server fns follow the `.functions.ts` + `requireSupabaseAuth` pattern documented in the server-side knowledge file.
+- Mux webhook URL to register in Mux dashboard: `https://project--144ee3b9-80e0-4ec8-883d-e0d5686cb4a1.lovable.app/api/public/mux-webhook` (I'll surface this after deploy).
 
-Ready to build once you approve.
+### What I need from you before building
+
+1. Approve this plan.
+2. Provide **Mux** credentials when prompted (Token ID, Token Secret, Webhook Signing Secret). I'll request via the secure secrets form.
+3. Sample seed videos can come later — flow works with creator uploads.
+
+### Out of scope (still Phase 2+)
+
+AI tagging/transcription/search, in-app editor, deals/codes/Stripe, business portal, admin dashboard, map view, destination pages, PWA install.
