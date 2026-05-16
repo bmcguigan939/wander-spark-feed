@@ -1,12 +1,13 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag } from "lucide-react";
 import { useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleLike, toggleSave } from "@/lib/interactions.functions";
+import { logDealClick } from "@/lib/deals.functions";
 import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 
@@ -17,6 +18,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const qc = useQueryClient();
   const likeFn = useServerFn(toggleLike);
   const saveFn = useServerFn(toggleSave);
+  const logDealClickFn = useServerFn(logDealClick);
 
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
@@ -36,6 +38,18 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     const url = `${window.location.origin}/?v=${video.id}`;
     if (navigator.share) { try { await navigator.share({ title: video.title, url }); } catch {} }
     else { await navigator.clipboard.writeText(url); toast("Link copied"); }
+  }
+
+  function onDealClick() {
+    if (!video.matchedDeal) return;
+    // fire-and-forget attribution
+    logDealClickFn({
+      data: {
+        dealId: video.matchedDeal.id,
+        referrerVideoId: video.id,
+        userId: user?.id,
+      },
+    }).catch(() => {});
   }
 
   const styleAny: any = {
@@ -98,6 +112,40 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         </Link>
 
         <h2 className="mt-3 text-base font-semibold leading-snug">{video.title}</h2>
+
+        {video.matchedDeal && (
+          <Link
+            to="/deals/$id"
+            params={{ id: video.matchedDeal.id }}
+            onClick={onDealClick}
+            className="mt-3 flex items-center gap-2 rounded-2xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur-md transition hover:bg-black/55"
+          >
+            {video.matchedDeal.image_url ? (
+              <img
+                src={video.matchedDeal.image_url}
+                alt=""
+                className="h-9 w-9 flex-shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                <Tag className="h-4 w-4" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[11px] uppercase tracking-wide text-white/70">
+                Deal nearby
+              </div>
+              <div className="truncate text-sm font-semibold">
+                {video.matchedDeal.title}
+              </div>
+            </div>
+            {video.matchedDeal.discount_label && (
+              <span className="flex-shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                {video.matchedDeal.discount_label}
+              </span>
+            )}
+          </Link>
+        )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {video.country ? (
