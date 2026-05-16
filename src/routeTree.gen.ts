@@ -23,6 +23,7 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
+import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
@@ -106,6 +107,11 @@ const DealsIdRoute = DealsIdRouteImport.update({
   path: '/deals/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorApplicationsRoute = CreatorApplicationsRouteImport.update({
+  id: '/creator/applications',
+  path: '/creator/applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business': typeof BusinessIndexRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business/'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business/'
@@ -350,6 +362,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
+  CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -463,6 +476,13 @@ declare module '@tanstack/react-router' {
       path: '/deals/$id'
       fullPath: '/deals/$id'
       preLoaderRoute: typeof DealsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator/applications': {
+      id: '/creator/applications'
+      path: '/creator/applications'
+      fullPath: '/creator/applications'
+      preLoaderRoute: typeof CreatorApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collections/$id': {
@@ -589,6 +609,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   WelcomeRoute: WelcomeRoute,
   BusinessApplyRoute: BusinessApplyRoute,
+  CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
