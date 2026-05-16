@@ -11,6 +11,18 @@ const DaySchema = z.object({
   afternoon: z.string().optional().default(""),
   evening: z.string().optional().default(""),
   tips: z.array(z.string()).optional().default([]),
+  suggestions: z
+    .array(
+      z.object({
+        key: z.string(),
+        kind: z.enum(["hotel", "activity", "tour", "restaurant", "experience"]),
+        title: z.string(),
+        query: z.string(),
+        tags: z.array(z.string()).optional().default([]),
+      }),
+    )
+    .optional()
+    .default([]),
 });
 
 const PlanSchema = z.object({
@@ -32,8 +44,26 @@ async function generatePlan(input: z.infer<typeof InputSchema>) {
   const prompt = `Build a ${input.days}-day travel itinerary for ${input.destination}.
 Interests: ${input.interests.length ? input.interests.join(", ") : "general sightseeing"}.
 Budget: ${input.budget_tag ?? "mid-range"}.
-Return JSON: { "summary": string, "days": [{ "day": number, "title": string, "summary": string, "morning": string, "afternoon": string, "evening": string, "tips": string[] }] }.
-Make each day distinct, realistic for the destination, and include 2-3 short practical tips per day.`;
+Return JSON matching this schema:
+{
+  "summary": string,
+  "days": [{
+    "day": number, "title": string, "summary": string,
+    "morning": string, "afternoon": string, "evening": string,
+    "tips": string[],
+    "suggestions": [{
+      "key": string,            // short stable id like "palma-cathedral"
+      "kind": "hotel"|"activity"|"tour"|"restaurant"|"experience",
+      "title": string,          // concrete name, e.g. "Uluwatu Sunset Kecak Tour"
+      "query": string,          // 2-5 keyword search string for matching against bookings/videos
+      "tags": string[]          // 2-4 lowercase tags, e.g. ["sunset","temple","bali"]
+    }]
+  }]
+}
+Rules:
+- Each day MUST include 3-5 suggestions covering bookable things (1 hotel/stay + 2-4 activities or tours).
+- Use REAL, specific, bookable place/tour names (no vague "go to a beach" — name the beach or operator).
+- Each day distinct. Include 2-3 short practical tips per day.`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -60,12 +90,121 @@ Make each day distinct, realistic for the destination, and include 2-3 short pra
   return PlanSchema.parse(JSON.parse(raw));
 }
 
+type Suggestion = {
+  key: string;
+  kind: string;
+  title: string;
+  query: string;
+  tags: string[];
+  deal_matches?: Array<{
+    id: string;
+    title: string;
+    image_url: string | null;
+    price_cents: number | null;
+    currency: string | null;
+    affiliate_network: string | null;
+  }>;
+  video_matches?: Array<{
+    id: string;
+    title: string;
+    thumbnail_url: string | null;
+    username: string | null;
+  }>;
+};
+
+function tsQuery(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+    .slice(0, 5)
+    .join(" | ");
+}
+
+async function enrichSuggestion(
+  s: Suggestion,
+  destination: string,
+): Promise<Suggestion> {
+  const ilike = `%${s.query.split(/\s+/)[0] ?? s.title}%`;
+  const dest = `%${destination.split(",")[0].trim()}%`;
+
+  // Find matching deals (approved + active, matching destination + query/tags)
+  const [{ data: dealsByText }, { data: dealsByTag }] = await Promise.all([
+    supabaseAdmin
+      .from("deals")
+      .select("id,title,image_url,price_cents,currency,affiliate_network")
+      .eq("status", "approved")
+      .eq("is_active", true)
+      .or(`title.ilike.${ilike},description.ilike.${ilike}`)
+      .or(`destination.ilike.${dest},city.ilike.${dest},country.ilike.${dest}`)
+      .limit(2),
+    s.tags.length
+      ? supabaseAdmin
+          .from("deals")
+          .select("id,title,image_url,price_cents,currency,affiliate_network")
+          .eq("status", "approved")
+          .eq("is_active", true)
+          .or(`destination.ilike.${dest},city.ilike.${dest},country.ilike.${dest}`)
+          .or(s.tags.map((t) => `title.ilike.%${t}%`).join(","))
+          .limit(2)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const dealMap = new Map<string, any>();
+  for (const d of [...(dealsByText ?? []), ...(dealsByTag ?? [])]) dealMap.set(d.id, d);
+  const deal_matches = Array.from(dealMap.values()).slice(0, 2);
+
+  // Find matching videos via full-text search
+  const tsq = tsQuery(`${s.query} ${destination}`);
+  let video_matches: Suggestion["video_matches"] = [];
+  if (tsq) {
+    const { data: vids } = await supabaseAdmin
+      .from("videos")
+      .select("id,title,thumbnail_url,creator_id")
+      .eq("status", "ready")
+      .eq("is_draft", false)
+      .eq("is_hidden", false)
+      .textSearch("search_tsv", tsq, { config: "simple" })
+      .limit(2);
+    if (vids && vids.length) {
+      const creatorIds = Array.from(new Set(vids.map((v) => v.creator_id)));
+      const { data: profs } = await supabaseAdmin
+        .from("profiles")
+        .select("id,username")
+        .in("id", creatorIds);
+      const userMap = new Map((profs ?? []).map((p) => [p.id, p.username]));
+      video_matches = vids.map((v) => ({
+        id: v.id,
+        title: v.title,
+        thumbnail_url: v.thumbnail_url,
+        username: userMap.get(v.creator_id) ?? null,
+      }));
+    }
+  }
+
+  return { ...s, deal_matches, video_matches };
+}
+
+async function enrichPlan(days: any[], destination: string): Promise<any[]> {
+  return Promise.all(
+    days.map(async (d) => {
+      const suggestions: Suggestion[] = Array.isArray(d.suggestions) ? d.suggestions : [];
+      const enriched = await Promise.all(
+        suggestions.map((s) => enrichSuggestion(s, destination).catch(() => s)),
+      );
+      return { ...d, suggestions: enriched };
+    }),
+  );
+}
+
 export const generateItinerary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const plan = await generatePlan(data);
+    const enrichedDays = await enrichPlan(plan.days, data.destination);
     const title = `${data.days}-day ${data.destination}`;
     const { data: row, error } = await supabaseAdmin
       .from("itineraries")
@@ -77,7 +216,7 @@ export const generateItinerary = createServerFn({ method: "POST" })
         interests: data.interests,
         budget_tag: data.budget_tag ?? null,
         summary: plan.summary,
-        plan: plan.days,
+        plan: enrichedDays,
       })
       .select("id")
       .single();
