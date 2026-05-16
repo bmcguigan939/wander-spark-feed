@@ -9,7 +9,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const [{ data: profile }, { data: roles }, videos, liked, followers, following] = await Promise.all([
       supabase.from("profiles").select("id,username,display_name,bio,avatar_url,created_at").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
-      supabase.from("videos").select("id,title,thumbnail_url,status,mux_playback_id,like_count,created_at").eq("creator_id", userId).order("created_at", { ascending: false }),
+      supabase.from("videos").select("id,title,thumbnail_url,status,mux_playback_id,like_count,created_at,ai_analyzed_at,ai_suggested_title,activity_tags").eq("creator_id", userId).order("created_at", { ascending: false }),
       supabase.from("likes").select("video_id, videos!inner(id,title,thumbnail_url,mux_playback_id,like_count,creator_id)").eq("user_id", userId).order("created_at", { ascending: false }).limit(60),
       supabase.from("follows").select("follower_id", { count: "exact", head: true }).eq("creator_id", userId),
       supabase.from("follows").select("creator_id", { count: "exact", head: true }).eq("follower_id", userId),

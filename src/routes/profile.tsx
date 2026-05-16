@@ -6,10 +6,10 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { rerunAutoTag } from "@/lib/ai.functions";
+import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -26,10 +26,16 @@ function ProfilePage() {
   const updateFn = useServerFn(updateMyProfile);
   const becomeFn = useServerFn(becomeCreator);
   const rerunFn = useServerFn(rerunAutoTag);
+  const applyTitleFn = useServerFn(applyAiSuggestedTitle);
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
     onError: (e: any) => toast(e?.message ?? "Failed to re-tag"),
+  });
+  const applyTitleM = useMutation({
+    mutationFn: (videoId: string) => applyTitleFn({ data: { videoId } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Title updated"); },
+    onError: (e: any) => toast(e?.message ?? "Failed to apply title"),
   });
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/login" }); }, [loading, user, navigate]);
@@ -129,6 +135,8 @@ function ProfilePage() {
             emptyMsg={isCreator ? "Upload your first travel video." : "You're not a creator yet."}
             onRerun={isCreator ? (id) => rerunM.mutate(id) : undefined}
             pendingId={rerunM.isPending ? (rerunM.variables as string | undefined) : undefined}
+            onApplyTitle={isCreator ? (id) => applyTitleM.mutate(id) : undefined}
+            applyTitlePendingId={applyTitleM.isPending ? (applyTitleM.variables as string | undefined) : undefined}
           />
         )}
         {tab === "liked" && <Grid items={data.liked as any} emptyMsg="No likes yet — explore the feed." />}
@@ -168,11 +176,15 @@ function Grid({
   emptyMsg,
   onRerun,
   pendingId,
+  onApplyTitle,
+  applyTitlePendingId,
 }: {
-  items: Array<{ id: string; title: string; thumbnail_url: string | null }>;
+  items: Array<{ id: string; title: string; thumbnail_url: string | null; status?: string; ai_analyzed_at?: string | null; ai_suggested_title?: string | null }>;
   emptyMsg: string;
   onRerun?: (videoId: string) => void;
   pendingId?: string;
+  onApplyTitle?: (videoId: string) => void;
+  applyTitlePendingId?: string;
 }) {
   if (!items.length) return <p className="mt-10 text-center text-sm text-muted-foreground">{emptyMsg}</p>;
   return (
@@ -180,6 +192,27 @@ function Grid({
       {items.map((v) => (
         <div key={v.id} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
           {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>}
+          {/* AI status pill */}
+          {onRerun && v.status === "ready" && !v.ai_analyzed_at && (
+            <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+              <Wand2 className="h-3 w-3 animate-pulse" /> AI…
+            </span>
+          )}
+          {onRerun && v.ai_analyzed_at && !v.ai_suggested_title && (
+            <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/80 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+              <CheckCircle2 className="h-3 w-3" />
+            </span>
+          )}
+          {onApplyTitle && v.ai_suggested_title && (
+            <button
+              onClick={() => onApplyTitle(v.id)}
+              disabled={applyTitlePendingId === v.id}
+              title={`Suggested: ${v.ai_suggested_title}`}
+              className="absolute inset-x-1 bottom-1 truncate rounded-md bg-primary/85 px-1.5 py-1 text-[10px] font-semibold text-primary-foreground backdrop-blur-md"
+            >
+              ✨ {applyTitlePendingId === v.id ? "Saving…" : "Use AI title"}
+            </button>
+          )}
           {onRerun && (
             <button
               onClick={() => onRerun(v.id)}
