@@ -6,9 +6,10 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { rerunAutoTag } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -24,6 +25,12 @@ function ProfilePage() {
   const getFn = useServerFn(getMyProfile);
   const updateFn = useServerFn(updateMyProfile);
   const becomeFn = useServerFn(becomeCreator);
+  const rerunFn = useServerFn(rerunAutoTag);
+  const rerunM = useMutation({
+    mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
+    onError: (e: any) => toast(e?.message ?? "Failed to re-tag"),
+  });
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/login" }); }, [loading, user, navigate]);
 
@@ -100,7 +107,14 @@ function ProfilePage() {
             </button>
           ))}
         </div>
-        {tab === "videos" && <Grid items={data.videos as any} emptyMsg={isCreator ? "Upload your first travel video." : "You're not a creator yet."} />}
+        {tab === "videos" && (
+          <Grid
+            items={data.videos as any}
+            emptyMsg={isCreator ? "Upload your first travel video." : "You're not a creator yet."}
+            onRerun={isCreator ? (id) => rerunM.mutate(id) : undefined}
+            pendingId={rerunM.isPending ? (rerunM.variables as string | undefined) : undefined}
+          />
+        )}
         {tab === "liked" && <Grid items={data.liked as any} emptyMsg="No likes yet — explore the feed." />}
         {tab === "collections" && <div className="mt-4"><Link to="/collections" className="text-sm font-semibold text-primary">Open collections →</Link></div>}
       </div>
@@ -126,13 +140,34 @@ function ProfilePage() {
   );
 }
 
-function Grid({ items, emptyMsg }: { items: Array<{ id: string; title: string; thumbnail_url: string | null }>; emptyMsg: string }) {
+function Grid({
+  items,
+  emptyMsg,
+  onRerun,
+  pendingId,
+}: {
+  items: Array<{ id: string; title: string; thumbnail_url: string | null }>;
+  emptyMsg: string;
+  onRerun?: (videoId: string) => void;
+  pendingId?: string;
+}) {
   if (!items.length) return <p className="mt-10 text-center text-sm text-muted-foreground">{emptyMsg}</p>;
   return (
     <div className="mt-4 grid grid-cols-3 gap-1.5">
       {items.map((v) => (
-        <div key={v.id} className="aspect-[9/14] overflow-hidden rounded-md bg-card">
+        <div key={v.id} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
           {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>}
+          {onRerun && (
+            <button
+              onClick={() => onRerun(v.id)}
+              disabled={pendingId === v.id}
+              aria-label="Re-run AI tagging"
+              className="absolute right-1 top-1 flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition hover:bg-black/75 disabled:opacity-60"
+            >
+              <Wand2 className="h-3 w-3" />
+              {pendingId === v.id ? "…" : "AI"}
+            </button>
+          )}
         </div>
       ))}
     </div>
