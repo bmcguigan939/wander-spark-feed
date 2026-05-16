@@ -19,6 +19,9 @@ export type FeedVideo = {
   view_count: number;
   comment_count: number;
   created_at: string;
+  source_platform?: string | null;
+  source_url?: string | null;
+  embed_mode?: string | null;
   creator: {
     id: string;
     username: string;
