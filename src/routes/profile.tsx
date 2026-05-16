@@ -6,7 +6,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/profile")({
 type Tab = "videos" | "collections" | "liked";
 
 function ProfilePage() {
-  const { user, loading, signOut, refreshRoles, isCreator } = useAuth();
+  const { user, loading, signOut, refreshRoles, isCreator, isBusiness } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const getFn = useServerFn(getMyProfile);
@@ -86,6 +86,12 @@ function ProfilePage() {
             <Sparkles className="h-4 w-4" /> Become a creator
           </button>
         )}
+        <Link
+          to={isBusiness ? "/business" : "/business/apply"}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold"
+        >
+          <Briefcase className="h-4 w-4" /> {isBusiness ? "Business portal" : "List travel deals"}
+        </Link>
         <div className="mt-6 flex gap-1 rounded-full bg-card p-1">
           {([["videos", Video, "Videos"], ["collections", Bookmark, "Saved"], ["liked", Heart, "Liked"]] as const).map(([k, Icon, label]) => (
             <button key={k} onClick={() => setTab(k)}
