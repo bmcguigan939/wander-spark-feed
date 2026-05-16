@@ -1,64 +1,172 @@
-# Section P — Creator Studio polish
 
-All server logic (`src/lib/studio.functions.ts`) and schema fields (`is_draft`, `scheduled_at`, `published_at`) are already in place. The remaining gap is the **UI**: `/studio` currently shows a layout shell with tabs pointing to `/studio/videos` and `/studio/schedule`, but those route files don't exist, and there's no per-video insights page.
+# Travidz AI Deal Engine — Legitimate v2
 
-## What to build
+Two complementary surfaces, sharing one AI discovery pipeline:
 
-### 1. `src/routes/studio.index.tsx` — Overview
-- Calls `getStudioOverview`.
-- 4 KPI cards (Views / Likes / Saves / Followers, last 7d).
-- "Content health" row: chips for live / scheduled / draft / processing / hidden counts.
-- "Up next" queue list (drafts + scheduled), each row links to `/studio/videos/$id`.
-- Empty state with CTA to `/create`.
+1. **Background discovery** — cron-driven, fills `/deals` and the global feed.
+2. **Inline "Smart Deals for this video"** — when a creator posts, AI instantly finds matching bookable deals for that destination so the creator can attach them in one tap. Viewers see a *Book this trip* row directly under the video.
 
-### 2. `src/routes/studio.videos.tsx` — Library
-- Calls `listMyVideos({ filter, q })`.
-- Sticky filter pills (All / Live / Scheduled / Draft / Processing) with counts.
-- Search input (debounced 300ms) bound to `q`.
-- Card rows: thumbnail, title, state badge, mini-stats (views/likes/saves), kebab menu with actions:
-  - Open insights (`/studio/videos/$id`)
-  - Publish now (`publishVideoNow`)
-  - Save as draft (`setVideoDraft true/false`)
-  - Schedule… (opens sheet with datetime picker → `scheduleVideo`)
-  - Delete (existing creator RLS delete via supabase client + AlertDialog)
-- Optimistic invalidate of `["studio","videos"]` and `["studio","overview"]` after each mutation.
+This is the addition that makes it *appealing* — every video becomes shoppable, with zero work for the creator.
 
-### 3. `src/routes/studio.schedule.tsx` — Schedule
-- Reuses `listMyVideos({ filter: "scheduled" })` plus drafts.
-- Grouped by date (Today / Tomorrow / This week / Later).
-- Each row: thumbnail, title, scheduled time, "Reschedule" + "Publish now" buttons.
-- Empty state: "Nothing scheduled — schedule a video from your library."
+```text
+Creator uploads video ─▶ AI tags destination (existing)
+                              │
+                              ▼
+                ┌──────────────────────────────┐
+                │ findDealsForVideo()          │  ← new
+                │  • check existing approved   │
+                │    deals matching dest/tags  │
+                │  • if <3 hits, live-search   │
+                │    Perplexity + Firecrawl    │
+                │  • rank, dedupe, wrap with   │
+                │    Travidz affiliate IDs     │
+                └──────────────┬───────────────┘
+                               ▼
+                ┌──────────────────────────────┐
+                │ Create screen → "Suggested   │
+                │ deals" sheet. Creator toggles│
+                │ which to attach (default all │
+                │ on, max 3).                  │
+                └──────────────┬───────────────┘
+                               ▼
+                video_deals(video_id, deal_id, position)
+                               │
+                               ▼
+        VideoCard shows "Book this trip" row
+        with per-deal "Book now" → /api/public/go/...
+```
 
-### 4. `src/routes/studio.videos.$id.tsx` — Insights
-- Calls `getVideoInsights({ videoId, days: 14 })`.
-- Header: thumbnail + title + state badge + back link.
-- 6 stat tiles: Views, Likes, Saves, Comments, Watch time (mm:ss), Deal clicks.
-- 14-day sparkline chart (views/likes/saves) using Recharts (already in deps).
-- "Recent comments" list (up to 8) with avatar + body.
-- Action bar: Publish now / Save as draft / Schedule / Delete (same mutations as library).
+---
 
-### 5. Wire schedule sheet
-- Small reusable `<ScheduleSheet videoId currentScheduledAt onClose />` component (`src/components/studio/ScheduleSheet.tsx`) — datetime-local input + Save / Clear schedule buttons. Used by both library and insights.
+## 1. Database (one migration)
 
-### 6. Create-flow integration
-- `src/routes/create.tsx`: after a successful upload, add a small "Save as draft" toggle and a "Schedule for…" datetime field. On submit, call `setVideoDraft` or `scheduleVideo` immediately after the video row is created.
+Extend `deals`:
+- `source text` — `'manual' | 'ai_discovered' | 'affiliate_import'`
+- `status text` — `'pending_review' | 'approved' | 'rejected' | 'expired'`
+- `affiliate_network text` — `'booking' | 'getyourguide' | 'viator' | 'tiqets' | 'klook' | 'expedia' | null`
+- `original_url text` — supplier URL pre-wrapping
+- `ai_confidence numeric`
+- `ai_summary text`
+- `discovered_at timestamptz`
+- `last_seen_at timestamptz`
+- `business_id` becomes nullable (AI rows have no business owner)
 
-## Out of scope (deferred)
+New tables:
+- `video_deals(video_id, deal_id, position, attached_at, attached_by)` — many-to-many linking videos to attached deals. RLS: creator can manage rows for their own videos; public read when both video and deal are public/approved.
+- `deal_discovery_runs(id, started_at, finished_at, query, candidates_found, inserted, skipped_duplicate, errors jsonb)` — observability.
+- `affiliate_partners(network unique, display_name, commission_pct, tracking_param, tracking_value, enabled)` — admin-managed.
+- `video_deal_suggestions(video_id, deal_id, score, suggested_at)` — caches the AI's top picks per video so the Create screen sheet loads instantly and the same picks survive a refresh.
 
-- A pg_cron job to flip `published_at` when `scheduled_at` passes — feed RLS already gates visibility by `scheduled_at <= now()`, so videos go live automatically. We can add a cron later only if we want a precise `published_at` timestamp.
-- Bulk actions, CSV export.
-- Per-day Mux delivery analytics (would need Mux Data API).
+RLS:
+- `deals` public read where `status='approved' AND is_active`.
+- `video_deals` public read when the parent video is publicly readable.
+- AI-discovered deals are insertable only by service role (cron + serverFn).
 
-## Files
+## 2. Server functions / routes
 
-Create:
-- `src/routes/studio.index.tsx`
-- `src/routes/studio.videos.tsx`
-- `src/routes/studio.videos.$id.tsx`
-- `src/routes/studio.schedule.tsx`
-- `src/components/studio/ScheduleSheet.tsx`
+| File | Purpose |
+|---|---|
+| `src/lib/discovery.functions.ts` | `runDiscoveryCycle()` — cron orchestrator |
+| `src/lib/discovery.functions.ts` | admin: `listPendingDeals`, `approveDeal`, `rejectDeal`, `bulkApprove` |
+| `src/lib/video-deals.functions.ts` | `suggestDealsForVideo({videoId})` — main new fn |
+| `src/lib/video-deals.functions.ts` | `attachDealToVideo`, `detachDealFromVideo`, `reorderVideoDeals` |
+| `src/lib/affiliate-wrapper.ts` | `wrapWithAffiliate(url, network)` |
+| `src/routes/api/public/cron/discover-deals.ts` | pg_cron entrypoint (apikey-authed) |
+| `src/routes/admin.discoveries.tsx` | moderation queue |
 
-Edit:
-- `src/routes/create.tsx` — draft/schedule controls on submit.
+### `suggestDealsForVideo` flow (the new magic)
 
-No DB migration, no new secrets.
+1. Load video — require `destination`, `country`, `city`, `activity_tags`. If missing, return empty list with a friendly "We'll suggest deals once we know the destination" state (auto-tag already runs on upload, so this is rare).
+2. Query existing `deals` where `status='approved'` and ANY of:
+   - `city ILIKE video.city`
+   - `country ILIKE video.country` and activity overlap
+   - `destination` fuzzy-matches
+   Sort by activity-tag overlap × freshness × `ai_confidence`. Take top 5.
+3. If fewer than 3 hits, **live-search**: run a targeted Perplexity query scoped to affiliate-friendly suppliers for `{city}`, scrape with Firecrawl, validate with Lovable AI (`Output.object`), and insert as `status='approved'` only if `ai_confidence ≥ 0.75` (high bar for inline-suggested deals; weaker candidates fall back to the moderation queue). Otherwise insert as `pending_review`.
+4. Cache the final top-3 in `video_deal_suggestions`.
+5. Return `{ suggestions: Deal[], reusedExisting: boolean }`.
+
+Rate guard: max 1 live-search per video, max 60 live-searches/hour globally. Suggestions older than 24h are recomputed on next view.
+
+## 3. Create screen integration (`src/routes/create.tsx`)
+
+After Mux upload completes and auto-tag finishes (existing flow):
+
+```text
+┌──────────────────────────────────────────┐
+│  ✨ Smart deals for Lisbon               │
+│  We found 3 bookable experiences         │
+│  travelers might want from your video.   │
+│                                          │
+│  ☑ Lisbon Food Tour — €45  [GetYourGuide]│
+│  ☑ Sintra Day Trip — €89   [Viator]      │
+│  ☑ Tagus Sunset Sail — €35 [Tiqets]      │
+│                                          │
+│  Earn ~6% commission on bookings • [?]   │
+│  [Skip]            [Attach selected]     │
+└──────────────────────────────────────────┘
+```
+
+- Sheet opens automatically once `destination` is resolved; non-blocking — creator can skip and post immediately.
+- "Earn ~6% commission" — only shown if the creator has the `creator` role and the deal has a network with commission_share enabled. Existing `deal_applications` flow handles split tracking via `creator_id` on `deal_clicks`.
+- Default all suggestions checked (research shows opt-out attach rates 5–10× higher than opt-in for this pattern).
+- Tapping a card opens a preview drawer (price, supplier, image, full URL) so the creator can vet before attaching.
+- Manual override: "Search for a different deal" → small search input that re-runs `suggestDealsForVideo` with a custom keyword.
+
+## 4. Viewer experience (`VideoCard.tsx`)
+
+Below the existing creator strip, add a **Book this trip** row when `video_deals` exist:
+
+```text
+🎒 Book this trip
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Food Tour│ │ Sintra   │ │ Sunset   │
+│  €45     │ │  €89     │ │  €35     │
+│ [Book →] │ │ [Book →] │ │ [Book →] │
+└──────────┘ └──────────┘ └──────────┘
+        Travidz earns commission · ⓘ
+```
+
+- Horizontal scroll, swipe-native, matches existing card aesthetics.
+- "Book →" hits `/api/public/go/$id?v={videoId}` → existing redirector → supplier site. Click logged in `deal_clicks` with `referrer_video_id` so creator analytics and deal analytics already work.
+- Tap ⓘ → small disclosure sheet: *"Prices set by the supplier. Travidz may earn a commission. We never add fees."*
+
+## 5. Background discovery (unchanged from v1)
+
+Same `runDiscoveryCycle()` cron every 4 hours filling `/deals`, but now it also benefits the inline flow: as the catalog grows, fewer videos need live-searches, lowering API spend.
+
+## 6. Compliance (unchanged)
+
+- No price modification.
+- Affiliate disclosure on `/deals`, on video Book-this-trip row, and in `/legal/affiliate-disclosure`.
+- All inline-suggested deals must hit `ai_confidence ≥ 0.75`; weaker ones go to admin queue.
+- We never claim supplier inventory or process payment ourselves.
+
+## 7. Secrets
+
+- `PERPLEXITY_API_KEY` (request via `add_secret`)
+- `FIRECRAWL_API_KEY` (request via `add_secret`)
+- `LOVABLE_API_KEY` (present)
+- Per-network IDs as we get approved: `BOOKING_AFFILIATE_ID`, `GETYOURGUIDE_PARTNER_ID`, `VIATOR_MCID` — `affiliate_partners` table holds whichever are set; missing ones simply don't wrap and the link goes through bare (still legal, just no commission).
+
+## 8. Costs guard
+
+Live-search per video: ~$0.01 (1 Perplexity + 2 Firecrawl scrapes + 1 Gemini call). Cap at 60/hour = $14/day worst case. Cached suggestions + growing approved catalog drive this toward zero.
+
+## 9. What we are NOT doing
+
+- No price markup, hidden or otherwise.
+- No auto-attach without creator confirmation (v1) — creator always sees the sheet and taps "Attach selected".
+- No auto-publish of AI deals to global `/deals` without admin approval (v1); inline-attached deals are auto-approved because the creator implicitly vetted them.
+
+## 10. Build order (7 atomic steps)
+
+1. **Migration:** `deals` columns + `video_deals` + `video_deal_suggestions` + `deal_discovery_runs` + `affiliate_partners` + RLS.
+2. **Affiliate wrapper** + seed `affiliate_partners` (Booking, GetYourGuide, Viator placeholders).
+3. **Request secrets:** `PERPLEXITY_API_KEY`, `FIRECRAWL_API_KEY` via `add_secret`.
+4. **`discovery.functions.ts`** + `/api/public/cron/discover-deals.ts` + pg_cron job.
+5. **`video-deals.functions.ts`** with `suggestDealsForVideo` (existing-catalog path first; add live-search second).
+6. **Create-screen "Smart deals" sheet** + manual search fallback.
+7. **Viewer "Book this trip" row** in `VideoCard` + `AffiliateDisclosure` component + `/legal/affiliate-disclosure` route + admin `/admin/discoveries` moderation queue.
+
+Steps 1–4 deliver the catalog. Steps 5–7 deliver the appealing creator+viewer experience.

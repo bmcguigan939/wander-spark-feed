@@ -30,6 +30,7 @@ export const applyForDeal = createServerFn({ method: "POST" })
     if (dealErr) throw new Error(dealErr.message);
     if (!deal) throw new Error("Deal not found");
     if (!deal.is_active) throw new Error("Deal is not active");
+    if (!deal.business_id) throw new Error("This deal cannot accept applications");
     if (deal.business_id === userId) throw new Error("You can't apply to your own deal");
 
     const { data: row, error } = await supabase

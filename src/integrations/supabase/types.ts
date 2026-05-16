@@ -110,6 +110,42 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_partners: {
+        Row: {
+          commission_pct: number | null
+          created_at: string
+          display_name: string
+          enabled: boolean
+          id: string
+          network: string
+          tracking_param: string | null
+          tracking_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          commission_pct?: number | null
+          created_at?: string
+          display_name: string
+          enabled?: boolean
+          id?: string
+          network: string
+          tracking_param?: string | null
+          tracking_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          commission_pct?: number | null
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          id?: string
+          network?: string
+          tracking_param?: string | null
+          tracking_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       collection_items: {
         Row: {
           added_at: string
@@ -317,6 +353,39 @@ export type Database = {
           },
         ]
       }
+      deal_discovery_runs: {
+        Row: {
+          candidates_found: number
+          errors: Json
+          finished_at: string | null
+          id: string
+          inserted: number
+          query: string | null
+          skipped_duplicate: number
+          started_at: string
+        }
+        Insert: {
+          candidates_found?: number
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          query?: string | null
+          skipped_duplicate?: number
+          started_at?: string
+        }
+        Update: {
+          candidates_found?: number
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          inserted?: number
+          query?: string | null
+          skipped_duplicate?: number
+          started_at?: string
+        }
+        Relationships: []
+      }
       deal_impressions: {
         Row: {
           created_at: string
@@ -364,7 +433,10 @@ export type Database = {
       }
       deals: {
         Row: {
-          business_id: string
+          affiliate_network: string | null
+          ai_confidence: number | null
+          ai_summary: string | null
+          business_id: string | null
           city: string | null
           click_count: number
           country: string | null
@@ -373,20 +445,28 @@ export type Database = {
           description: string | null
           destination: string | null
           discount_label: string | null
+          discovered_at: string | null
           ends_at: string | null
           id: string
           image_url: string | null
           is_active: boolean
+          last_seen_at: string | null
           lat: number | null
           lng: number | null
+          original_url: string | null
           price_cents: number | null
+          source: string
           starts_at: string | null
+          status: string
           title: string
           updated_at: string
           url: string
         }
         Insert: {
-          business_id: string
+          affiliate_network?: string | null
+          ai_confidence?: number | null
+          ai_summary?: string | null
+          business_id?: string | null
           city?: string | null
           click_count?: number
           country?: string | null
@@ -395,20 +475,28 @@ export type Database = {
           description?: string | null
           destination?: string | null
           discount_label?: string | null
+          discovered_at?: string | null
           ends_at?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          last_seen_at?: string | null
           lat?: number | null
           lng?: number | null
+          original_url?: string | null
           price_cents?: number | null
+          source?: string
           starts_at?: string | null
+          status?: string
           title: string
           updated_at?: string
           url: string
         }
         Update: {
-          business_id?: string
+          affiliate_network?: string | null
+          ai_confidence?: number | null
+          ai_summary?: string | null
+          business_id?: string | null
           city?: string | null
           click_count?: number
           country?: string | null
@@ -417,14 +505,19 @@ export type Database = {
           description?: string | null
           destination?: string | null
           discount_label?: string | null
+          discovered_at?: string | null
           ends_at?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          last_seen_at?: string | null
           lat?: number | null
           lng?: number | null
+          original_url?: string | null
           price_cents?: number | null
+          source?: string
           starts_at?: string | null
+          status?: string
           title?: string
           updated_at?: string
           url?: string
@@ -871,6 +964,51 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      video_deal_suggestions: {
+        Row: {
+          deal_id: string
+          score: number
+          suggested_at: string
+          video_id: string
+        }
+        Insert: {
+          deal_id: string
+          score?: number
+          suggested_at?: string
+          video_id: string
+        }
+        Update: {
+          deal_id?: string
+          score?: number
+          suggested_at?: string
+          video_id?: string
+        }
+        Relationships: []
+      }
+      video_deals: {
+        Row: {
+          attached_at: string
+          attached_by: string
+          deal_id: string
+          position: number
+          video_id: string
+        }
+        Insert: {
+          attached_at?: string
+          attached_by: string
+          deal_id: string
+          position?: number
+          video_id: string
+        }
+        Update: {
+          attached_at?: string
+          attached_by?: string
+          deal_id?: string
+          position?: number
+          video_id?: string
         }
         Relationships: []
       }
