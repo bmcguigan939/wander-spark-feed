@@ -1,46 +1,55 @@
-## Next step: Click analytics dashboard for businesses (Step 3)
+## What's left
 
-The Deal CTA on the feed now generates attributed `deal_clicks` rows with `referrer_video_id`. Time to make that data useful to businesses with a real analytics dashboard.
+Two queued items from the original roadmap:
+
+- **Step 2 — Mux Player + caption toggle** (recommended next)
+- **Step 5 — Transcript-driven re-tagging** (depends on captions existing)
+
+Step 2 unblocks Step 5 (captions/transcripts come from Mux), so it should ship first.
+
+## Step 2: Mux Player + caption toggle
 
 ### Scope
 
-1. **New server fn** `getDealStats({ dealId, range })` in `src/lib/deals.functions.ts`
-   - `range`: `"7d"` | `"30d"` (default `"7d"`).
-   - Uses `requireSupabaseAuth` and the user-scoped supabase client so RLS on `deal_clicks owner read` enforces ownership automatically.
-   - Returns:
-     - `totals`: `{ clicks, uniqueUsers }` over the range.
-     - `daily`: array of `{ day: ISO date, clicks }` (zero-filled for missing days, client-side).
-     - `topVideos`: top 5 referring videos with `{ videoId, title, thumbnail_url, creator_username, clicks }` — joined client-side from a second query against `videos` + `profiles`.
-   - One SELECT on `deal_clicks` with `clicked_at >= now() - interval`, group/aggregate in JS to keep the query simple.
+1. **Swap the feed video element** in `src/components/feed/VideoCard.tsx`
+   - Replace the raw `<video>` tag with `@mux/mux-player-react`'s `<MuxPlayer>` (lazy variant).
+   - Drive it from `playback_id` instead of the HLS URL. Keep current autoplay-when-visible, mute/unmute, and tap-to-pause behavior.
+   - Preserve poster/thumbnail handling.
 
-2. **`/business` dashboard upgrade** (`src/routes/business.index.tsx`)
-   - For each deal row, fetch stats in parallel (`useQueries`) and show:
-     - 7-day click total + delta vs. previous 7 days.
-     - Tiny inline sparkline (SVG path, no chart lib needed).
-   - Keep current "Active/Paused" + edit link.
+2. **Caption toggle**
+   - Add a small CC button next to the mute control.
+   - When captions exist on the active text track, toggle `mode = "showing" | "hidden"`.
+   - Hide the button entirely when the video has no text track.
+   - Persist the user's choice in `localStorage` so it sticks across videos.
 
-3. **New per-deal detail route** `src/routes/business.deals.$id.tsx`
-   - Header: deal title, location, status, edit/delete shortcuts.
-   - Range toggle (7d / 30d).
-   - Larger daily time-series chart (SVG area chart, hand-rolled, theme tokens).
-   - "Top referring videos" list with thumbnail, creator @handle, click count, link to creator profile.
-   - Gracefully empty-state when no clicks yet.
+3. **Backend: request auto-captions from Mux**
+   - In `src/lib/mux.functions.ts` (asset creation path), add `input[].generated_subtitles: [{ language_code: "en", name: "English (auto)" }]`.
+   - No schema change — Mux delivers captions as a text track on the same playback ID.
 
-4. **Verify**
-   - With seeded Canggu deal: navigate `/business`, see 0–1 clicks reflected after tapping the feed CTA.
-   - Per-deal page renders chart + top videos.
-   - Non-owner cannot read stats (RLS blocks; server fn throws cleanly).
+4. **Webhook awareness** (`src/routes/api/public/mux-webhook.ts`)
+   - Existing `video.asset.ready` handler stays as-is.
+   - Optionally log `video.asset.track.ready` for visibility; no DB writes needed for Step 2.
 
-### Out of scope
+5. **Verify**
+   - Existing videos: player loads, autoplay + mute behavior unchanged, CC button hidden (no tracks yet).
+   - New upload after the change: caption track appears within ~1 min of `ready`; CC button shows; toggle works; preference persists.
 
-- CSV export (can be a one-line follow-up later).
-- Real-time updates / websocket subscriptions.
-- Mux Player caption toggle (Step 2 — still queued).
+### Out of scope for Step 2
+
+- Storing the transcript in our DB (that's Step 5).
+- Translating captions to other languages.
+- Custom caption styling beyond Mux Player defaults.
 
 ### Technical notes
 
-- All aggregation in JS keeps the migration count at zero. If volumes grow we can swap to a SECURITY DEFINER SQL function later.
-- Sparkline: 60×20 SVG, one `<path d="M…L…">` plus a baseline; no external dep.
-- `topVideos` join: collect distinct `referrer_video_id`s, then `supabaseAdmin.from('videos').select('id,title,thumbnail_url,creator:profiles!videos_creator_id_fkey(username)').in('id', ids)`. Aggregate counts in JS.
-- Route file `business.deals.$id.tsx` collides with nothing — sibling `business.deals.$id.edit.tsx` is `/business/deals/:id/edit`, this becomes `/business/deals/:id`.
-- All new fns continue using `createServerFn` + `requireSupabaseAuth`. No schema or RLS changes.
+- `@mux/mux-player-react` is not yet a dependency — needs `bun add`.
+- `MuxPlayer` exposes `textTracks` via a ref; the CC button reads/sets `mode` on the first subtitles track.
+- Mux's `generated_subtitles` is free for standard-tier assets and runs async after ingest.
+
+---
+
+## Step 5 preview (after Step 2 lands)
+
+Pull the finished transcript from Mux, store it on `videos.transcript`, and re-run the deal-matching/tag extraction against the transcript text so videos get better city/country/keyword matches than the creator's manual caption alone. Triggered from the `video.asset.track.ready` webhook.
+
+Say the word and I'll implement Step 2.
