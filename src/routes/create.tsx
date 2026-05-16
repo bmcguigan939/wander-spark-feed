@@ -1,23 +1,154 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState, useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
+import { useAuth } from "@/lib/auth";
+import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
+import { toast } from "sonner";
+import { Upload, Video, Loader2, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/create")({
-  head: () => ({ meta: [{ title: "Travidz — create" }] }),
-  component: Page,
+  head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
+  component: CreatePage,
 });
 
-function Page() {
+const BUDGETS = ["budget", "mid", "luxury"] as const;
+const inputCls = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary";
+
+function CreatePage() {
+  const { user, loading, isCreator, refreshRoles } = useAuth();
+  const navigate = useNavigate();
+  const becomeFn = useServerFn(becomeCreator);
+  const becomeM = useMutation({ mutationFn: () => becomeFn({ data: undefined as any }), onSuccess: () => refreshRoles() });
+
+  useEffect(() => { if (!loading && !user) navigate({ to: "/login" }); }, [loading, user, navigate]);
+  if (loading || !user) return <MobileShell><div className="px-5 pt-10 text-sm text-muted-foreground">Loading…</div></MobileShell>;
+
+  if (!isCreator) {
+    return (
+      <MobileShell>
+        <div className="flex h-dvh flex-col items-center justify-center px-8 text-center">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/15 text-primary"><Video className="h-7 w-7" /></div>
+          <h1 className="text-2xl font-bold">Become a creator</h1>
+          <p className="mt-2 max-w-xs text-sm text-muted-foreground">Share your trips with travellers around the world.</p>
+          <button onClick={() => becomeM.mutate()} disabled={becomeM.isPending}
+            className="mt-8 flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+            <Sparkles className="h-4 w-4" /> {becomeM.isPending ? "Activating…" : "Activate creator account"}
+          </button>
+        </div>
+      </MobileShell>
+    );
+  }
+  return <UploadFlow />;
+}
+
+function UploadFlow() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const createUploadFn = useServerFn(createDirectUpload);
+  const finalizeFn = useServerFn(finalizeVideoMetadata);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [destination, setDestination] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+  const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
+
+  async function startUpload(f: File) {
+    setFile(f); setUploading(true); setProgress(0);
+    try {
+      const res = await createUploadFn({ data: { title: f.name.replace(/\.[^.]+$/, "") } });
+      setVideoId(res.videoId);
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", res.uploadUrl);
+        xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100)); };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send(f);
+      });
+      setTitle(f.name.replace(/\.[^.]+$/, ""));
+      toast("Upload complete — add details");
+    } catch (e: any) {
+      toast(e.message ?? "Upload failed"); setFile(null); setVideoId(null);
+    } finally { setUploading(false); }
+  }
+
+  const finalizeM = useMutation({
+    mutationFn: () => finalizeFn({ data: {
+      videoId: videoId!, title,
+      description: description || undefined, destination: destination || undefined,
+      country: country || undefined, city: city || undefined,
+      activity_tags: tagsInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean),
+      budget_tag: budget || undefined,
+    } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast("Video saved — processing in the background");
+      navigate({ to: "/profile" });
+    },
+    onError: (e: any) => toast(e.message ?? "Failed to save"),
+  });
+
   return (
     <MobileShell>
-      <div className="flex h-dvh flex-col items-center justify-center px-8 text-center">
-        <h1 className="text-2xl font-bold capitalize">create</h1>
-        <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-          Coming next. The feed is live — sign in to start saving videos and following creators.
-        </p>
-        <Link to="/login" className="mt-6 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
-          Sign in
-        </Link>
+      <div className="px-5 pb-32 pt-6">
+        <h1 className="text-2xl font-bold">Upload</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Vertical (9:16) videos perform best.</p>
+
+        {!file && (
+          <label className="mt-6 flex h-64 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-card text-center">
+            <Upload className="mb-3 h-8 w-8 text-primary" />
+            <span className="text-sm font-semibold">Choose a video</span>
+            <span className="mt-1 text-xs text-muted-foreground">MP4, MOV up to 2 GB</span>
+            <input type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) startUpload(f); }} />
+          </label>
+        )}
+
+        {file && uploading && (
+          <div className="mt-6 rounded-3xl border border-border bg-card p-5">
+            <div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin text-primary" /><span className="text-sm font-medium">Uploading {file.name}</span></div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>
+            <p className="mt-2 text-right text-xs text-muted-foreground">{progress}%</p>
+          </div>
+        )}
+
+        {file && !uploading && videoId && (
+          <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) finalizeM.mutate(); }} className="mt-6 space-y-3">
+            <Field label="Title"><input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} /></Field>
+            <Field label="Description"><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Country"><input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} /></Field>
+              <Field label="City"><input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} /></Field>
+            </div>
+            <Field label="Destination / place"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} /></Field>
+            <Field label="Activity tags (comma separated)"><input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="beach, hiking, food" className={inputCls} /></Field>
+            <Field label="Budget">
+              <div className="flex gap-2">
+                {BUDGETS.map((b) => (
+                  <button type="button" key={b} onClick={() => setBudget(budget === b ? "" : b)}
+                    className={`flex-1 rounded-xl border px-3 py-2 text-sm capitalize ${budget === b ? "border-primary bg-primary/10 text-primary" : "border-border bg-card"}`}>{b}</button>
+                ))}
+              </div>
+            </Field>
+            <button disabled={finalizeM.isPending || !title.trim()} className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+              {finalizeM.isPending ? "Saving…" : "Publish"}
+            </button>
+          </form>
+        )}
       </div>
     </MobileShell>
   );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (<label className="block"><span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>{children}</label>);
 }
