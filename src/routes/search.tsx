@@ -17,6 +17,7 @@ const searchSchema = z.object({
   sort: fallback(z.enum(["new", "popular"]), "new").default("new"),
   view: fallback(z.enum(["videos", "creators"]), "videos").default("videos"),
 });
+type SearchState = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/search")({
   validateSearch: zodValidator(searchSchema),
@@ -49,7 +50,7 @@ function SearchPage() {
   }, [qText]);
   useEffect(() => {
     if (debounced !== search.q) {
-      navigate({ search: (prev) => ({ ...prev, q: debounced }), replace: true });
+      navigate({ search: (prev: SearchState) => ({ ...prev, q: debounced }), replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
@@ -84,22 +85,22 @@ function SearchPage() {
   const creators = creatorsQ.data?.creators ?? [];
 
   function setSort(sort: "new" | "popular") {
-    navigate({ search: (prev) => ({ ...prev, sort }), replace: true });
+    navigate({ search: (prev: SearchState) => ({ ...prev, sort }), replace: true });
     setSheet(null);
   }
   function setBudget(budget?: "$" | "$$" | "$$$") {
-    navigate({ search: (prev) => ({ ...prev, budget }), replace: true });
+    navigate({ search: (prev: SearchState) => ({ ...prev, budget }), replace: true });
     setSheet(null);
   }
   function setCountry(country?: string) {
-    navigate({ search: (prev) => ({ ...prev, country }), replace: true });
+    navigate({ search: (prev: SearchState) => ({ ...prev, country }), replace: true });
     setSheet(null);
   }
   function toggleTag(tag: string) {
     navigate({
-      search: (prev) => ({
+      search: (prev: SearchState) => ({
         ...prev,
-        tags: prev.tags.includes(tag) ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag].slice(0, 8),
+        tags: prev.tags.includes(tag) ? prev.tags.filter((t: string) => t !== tag) : [...prev.tags, tag].slice(0, 8),
       }),
       replace: true,
     });
@@ -108,7 +109,7 @@ function SearchPage() {
     navigate({ search: { q: search.q, view: search.view, sort: "new", tags: [] }, replace: true });
   }
   function setView(view: "videos" | "creators") {
-    navigate({ search: (prev) => ({ ...prev, view }), replace: true });
+    navigate({ search: (prev: SearchState) => ({ ...prev, view }), replace: true });
   }
 
   return (
@@ -133,7 +134,7 @@ function SearchPage() {
         {/* Filter chips */}
         <div className="mt-3 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Chip icon={MapPin} label={search.country ?? "Country"} active={!!search.country} onClick={() => setSheet("country")} onClear={search.country ? () => setCountry(undefined) : undefined} />
-          <Chip icon={Sparkles} label={search.tags.length ? `Activities (${search.tags.length})` : "Activities"} active={search.tags.length > 0} onClick={() => setSheet("tags")} onClear={search.tags.length ? () => navigate({ search: (p) => ({ ...p, tags: [] }), replace: true }) : undefined} />
+          <Chip icon={Sparkles} label={search.tags.length ? `Activities (${search.tags.length})` : "Activities"} active={search.tags.length > 0} onClick={() => setSheet("tags")} onClear={search.tags.length ? () => navigate({ search: (p: SearchState) => ({ ...p, tags: [] }), replace: true }) : undefined} />
           <Chip icon={DollarSign} label={search.budget ?? "Budget"} active={!!search.budget} onClick={() => setSheet("budget")} onClear={search.budget ? () => setBudget(undefined) : undefined} />
           <Chip icon={ArrowDownUp} label={search.sort === "popular" ? "Popular" : "Newest"} active={search.sort !== "new"} onClick={() => setSheet("sort")} />
           {hasFilters && (
