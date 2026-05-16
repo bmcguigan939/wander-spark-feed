@@ -4,7 +4,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { listDestinations } from "@/lib/destinations.functions";
 import { Globe2, MapPin } from "lucide-react";
 
-export const Route = createFileRoute("/destinations")({
+export const Route = createFileRoute("/destinations/")({
   head: () => ({
     meta: [
       { title: "Destinations — Travidz" },

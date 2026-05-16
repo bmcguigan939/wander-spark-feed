@@ -12,13 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DestinationsRouteImport } from './routes/destinations'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
-import { Route as DestinationsCountryRouteImport } from './routes/destinations.$country'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 
@@ -37,11 +37,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DestinationsRoute = DestinationsRouteImport.update({
-  id: '/destinations',
-  path: '/destinations',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
   path: '/create',
@@ -57,21 +52,27 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DestinationsIndexRoute = DestinationsIndexRouteImport.update({
+  id: '/destinations/',
+  path: '/destinations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DestinationsCountryRoute = DestinationsCountryRouteImport.update({
-  id: '/$country',
-  path: '/$country',
-  getParentRoute: () => DestinationsRoute,
 } as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const DestinationsCountryIndexRoute =
+  DestinationsCountryIndexRouteImport.update({
+    id: '/destinations/$country/',
+    path: '/destinations/$country/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
   id: '/$city',
   path: '/$city',
@@ -87,44 +88,44 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
-  '/destinations': typeof DestinationsRouteWithChildren
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
-  '/destinations/$country': typeof DestinationsCountryRouteWithChildren
   '/u/$username': typeof UUsernameRoute
+  '/destinations/': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/destinations/$country/': typeof DestinationsCountryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
-  '/destinations': typeof DestinationsRouteWithChildren
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
-  '/destinations/$country': typeof DestinationsCountryRouteWithChildren
   '/u/$username': typeof UUsernameRoute
+  '/destinations': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/destinations/$country': typeof DestinationsCountryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
-  '/destinations': typeof DestinationsRouteWithChildren
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
-  '/destinations/$country': typeof DestinationsCountryRouteWithChildren
   '/u/$username': typeof UUsernameRoute
+  '/destinations/': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/destinations/$country/': typeof DestinationsCountryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,55 +133,56 @@ export interface FileRouteTypes {
     | '/'
     | '/collections'
     | '/create'
-    | '/destinations'
     | '/login'
     | '/profile'
     | '/search'
     | '/collections/$id'
-    | '/destinations/$country'
     | '/u/$username'
+    | '/destinations/'
     | '/api/public/mux-webhook'
     | '/destinations/$country/$city'
+    | '/destinations/$country/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/collections'
     | '/create'
-    | '/destinations'
     | '/login'
     | '/profile'
     | '/search'
     | '/collections/$id'
-    | '/destinations/$country'
     | '/u/$username'
+    | '/destinations'
     | '/api/public/mux-webhook'
     | '/destinations/$country/$city'
+    | '/destinations/$country'
   id:
     | '__root__'
     | '/'
     | '/collections'
     | '/create'
-    | '/destinations'
     | '/login'
     | '/profile'
     | '/search'
     | '/collections/$id'
-    | '/destinations/$country'
     | '/u/$username'
+    | '/destinations/'
     | '/api/public/mux-webhook'
     | '/destinations/$country/$city'
+    | '/destinations/$country/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
-  DestinationsRoute: typeof DestinationsRouteWithChildren
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
   UUsernameRoute: typeof UUsernameRoute
+  DestinationsIndexRoute: typeof DestinationsIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
+  DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -206,13 +208,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/destinations': {
-      id: '/destinations'
-      path: '/destinations'
-      fullPath: '/destinations'
-      preLoaderRoute: typeof DestinationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/create': {
       id: '/create'
       path: '/create'
@@ -234,6 +229,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/destinations/': {
+      id: '/destinations/'
+      path: '/destinations'
+      fullPath: '/destinations/'
+      preLoaderRoute: typeof DestinationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/u/$username': {
       id: '/u/$username'
       path: '/u/$username'
@@ -241,19 +243,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/destinations/$country': {
-      id: '/destinations/$country'
-      path: '/$country'
-      fullPath: '/destinations/$country'
-      preLoaderRoute: typeof DestinationsCountryRouteImport
-      parentRoute: typeof DestinationsRoute
-    }
     '/collections/$id': {
       id: '/collections/$id'
       path: '/$id'
       fullPath: '/collections/$id'
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
+    }
+    '/destinations/$country/': {
+      id: '/destinations/$country/'
+      path: '/destinations/$country'
+      fullPath: '/destinations/$country/'
+      preLoaderRoute: typeof DestinationsCountryIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
@@ -284,40 +286,28 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
 
-interface DestinationsCountryRouteChildren {
-  DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
-}
-
-const DestinationsCountryRouteChildren: DestinationsCountryRouteChildren = {
-  DestinationsCountryCityRoute: DestinationsCountryCityRoute,
-}
-
-const DestinationsCountryRouteWithChildren =
-  DestinationsCountryRoute._addFileChildren(DestinationsCountryRouteChildren)
-
-interface DestinationsRouteChildren {
-  DestinationsCountryRoute: typeof DestinationsCountryRouteWithChildren
-}
-
-const DestinationsRouteChildren: DestinationsRouteChildren = {
-  DestinationsCountryRoute: DestinationsCountryRouteWithChildren,
-}
-
-const DestinationsRouteWithChildren = DestinationsRoute._addFileChildren(
-  DestinationsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
-  DestinationsRoute: DestinationsRouteWithChildren,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
   UUsernameRoute: UUsernameRoute,
+  DestinationsIndexRoute: DestinationsIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
+  DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

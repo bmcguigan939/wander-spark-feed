@@ -4,7 +4,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getDestination } from "@/lib/destinations.functions";
 import { ArrowLeft, MapPin, Heart } from "lucide-react";
 
-export const Route = createFileRoute("/destinations/$country")({
+export const Route = createFileRoute("/destinations/$country/")({
   head: ({ params }) => ({
     meta: [
       { title: `${params.country} travel videos — Travidz` },
