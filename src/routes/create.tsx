@@ -71,18 +71,6 @@ function CreateTabs() {
   );
 }
 
-function UploadFlow() {
-  return (
-    <MobileShell>
-      <div className="px-5 pb-32 pt-6">
-        <h1 className="text-2xl font-bold">Upload</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Vertical (9:16) videos perform best.</p>
-        <UploadFlowBody />
-      </div>
-    </MobileShell>
-  );
-}
-
 function UploadFlowBody() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -158,11 +146,7 @@ function UploadFlowBody() {
   });
 
   return (
-    <MobileShell>
-      <div className="px-5 pb-32 pt-6">
-        <h1 className="text-2xl font-bold">Upload</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Vertical (9:16) videos perform best.</p>
-
+    <div className="mt-6">
         {!file && (
           <label className="mt-6 flex h-64 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-card text-center">
             <Upload className="mb-3 h-8 w-8 text-primary" />
@@ -288,11 +272,172 @@ function UploadFlowBody() {
           selectedId={track?.id ?? null}
           onSelect={(t) => { setTrack(t); setMusicOpen(false); }}
         />
-      </div>
-    </MobileShell>
+    </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (<label className="block"><span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>{children}</label>);
+}
+
+// ---------- Import from socials ----------
+
+const PLATFORM_META: Record<string, { label: string; hint: string; Icon: typeof Link2 }> = {
+  youtube: { label: "YouTube", hint: "youtube.com/watch?v=…  or  /shorts/…", Icon: Youtube },
+  tiktok: { label: "TikTok", hint: "tiktok.com/@user/video/…", Icon: Link2 },
+  instagram: { label: "Instagram", hint: "instagram.com/reel/…", Icon: Link2 },
+  x: { label: "X (Twitter)", hint: "x.com/user/status/…", Icon: Link2 },
+};
+
+function ImportFlow() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const previewFn = useServerFn(previewExternalVideo);
+  const importFn = useServerFn(importExternalVideo);
+
+  const [url, setUrl] = useState("");
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [destination, setDestination] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+  const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
+  const [ownership, setOwnership] = useState(false);
+
+  const previewM = useMutation({
+    mutationFn: (u: string) => previewFn({ data: { url: u } }),
+    onSuccess: (p) => {
+      setPreview(p);
+      setTitle(p.title);
+      setDescription(p.description ?? "");
+    },
+    onError: (e: any) => toast(e.message ?? "Couldn't read that link"),
+  });
+
+  const importM = useMutation({
+    mutationFn: () => importFn({ data: {
+      url: preview!.sourceUrl,
+      title,
+      description: description || undefined,
+      thumbnail: preview!.thumbnail ?? undefined,
+      destination: destination || undefined,
+      country: country || undefined,
+      city: city || undefined,
+      activity_tags: tagsInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean),
+      budget_tag: budget || undefined,
+      ownership_confirmed: ownership,
+    } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["studio-videos"] });
+      toast("Published to Travidz");
+      navigate({ to: "/studio/videos", search: { filter: "all" } });
+    },
+    onError: (e: any) => toast(e.message ?? "Import failed"),
+  });
+
+  return (
+    <div className="mt-6 space-y-4">
+      {!preview && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            {(["youtube", "tiktok", "instagram", "x"] as const).map((p) => {
+              const M = PLATFORM_META[p];
+              return (
+                <div key={p} className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                    <M.Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold leading-tight">{M.label}</div>
+                    <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">supported</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paste a link</label>
+            <div className="mt-2 flex gap-2">
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://youtube.com/shorts/…"
+                className={inputCls}
+              />
+              <button
+                onClick={() => url.trim() && previewM.mutate(url.trim())}
+                disabled={previewM.isPending || !url.trim()}
+                className="rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {previewM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Preview"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              We'll fetch the title, description and thumbnail and embed the original video. Your followers can play it without leaving Travidz.
+            </p>
+          </div>
+        </>
+      )}
+
+      {preview && (
+        <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) importM.mutate(); }} className="space-y-3">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card">
+            {preview.thumbnail && (
+              <img src={preview.thumbnail} alt="" className="h-44 w-full object-cover" />
+            )}
+            <div className="flex items-center justify-between gap-2 p-3">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                {preview.platform === "youtube" ? <Youtube className="h-3.5 w-3.5" /> : <Globe className="h-3 w-3" />}
+                {preview.platform}
+              </div>
+              {preview.authorName && (
+                <span className="truncate text-xs text-muted-foreground">by {preview.authorName}</span>
+              )}
+              <button type="button" onClick={() => { setPreview(null); setUrl(""); }} className="text-xs font-semibold text-muted-foreground">
+                Change link
+              </button>
+            </div>
+          </div>
+
+          <Field label="Title">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} />
+          </Field>
+          <Field label="Description">
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Country"><input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} /></Field>
+            <Field label="City"><input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} /></Field>
+          </div>
+          <Field label="Destination / place"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} /></Field>
+          <Field label="Activity tags (comma separated)">
+            <input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="beach, hiking, food" className={inputCls} />
+          </Field>
+          <Field label="Budget">
+            <div className="flex gap-2">
+              {BUDGETS.map((b) => (
+                <button type="button" key={b} onClick={() => setBudget(budget === b ? "" : b)}
+                  className={`flex-1 rounded-xl border px-3 py-2 text-sm capitalize ${budget === b ? "border-primary bg-primary/10 text-primary" : "border-border bg-card"}`}>{b}</button>
+              ))}
+            </div>
+          </Field>
+
+          <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
+            <input type="checkbox" checked={ownership} onChange={(e) => setOwnership(e.target.checked)} className="mt-0.5" />
+            <span>I own this content or have rights to republish it on Travidz.</span>
+          </label>
+
+          <button
+            disabled={importM.isPending || !title.trim() || !ownership}
+            className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
+          >
+            {importM.isPending ? "Publishing…" : "Publish to Travidz"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
 }
