@@ -256,7 +256,7 @@ async function ingestCandidates(
       }
       const network = inferNetwork(hit.url);
       const status = extracted.ai_confidence >= threshold ? "approved" : "pending_review";
-      const { data: inserted, error } = await supabaseAdmin.from("deals").insert({
+      const { data: insertedRow, error } = await supabaseAdmin.from("deals").insert({
         title: extracted.title,
         description: extracted.description,
         url: hit.url,
@@ -282,8 +282,8 @@ async function ingestCandidates(
         continue;
       }
       inserted += 1;
-      if (inserted) {
-        try { await embedDeal((inserted as any).id); } catch (e) { /* non-fatal */ }
+      if (insertedRow) {
+        try { await embedDeal((insertedRow as any).id); } catch (e) { /* non-fatal */ }
       }
     } catch (e: any) {
       errors.push(String(e?.message ?? e).slice(0, 200));
