@@ -1,93 +1,135 @@
-## I. Destination page enrichment (§15)
+## K. Admin dashboard (§18)
 
-Turn `/destinations/$country/$city` from a plain video grid into a true destination hub with AI overview, top creators, deals, and a one-tap itinerary CTA. Reuses existing AI gateway + itinerary builder — no new secrets.
+Adds an admin-only `/admin` route to moderate the platform. Builds on the existing `admin` role in `app_role` (already used by `has_role` and one RLS policy on `user_roles`). No new secrets.
 
 ### 1. Database migration
 
-New cache table so the AI summary is generated once per destination, not on every page view.
+Add moderation columns + the missing admin RLS policies that let admins act across tables.
 
 ```sql
-create table public.destination_summaries (
+-- Moderation flags on videos
+alter table public.videos
+  add column if not exists is_hidden boolean not null default false,
+  add column if not exists is_featured boolean not null default false,
+  add column if not exists moderated_at timestamptz,
+  add column if not exists moderated_by uuid;
+
+-- Hide videos from public when is_hidden = true (creator can still see own)
+drop policy if exists "videos public read ready" on public.videos;
+create policy "videos public read ready"
+  on public.videos for select
+  using (
+    (status = 'ready' and is_hidden = false)
+    or creator_id = auth.uid()
+    or has_role(auth.uid(), 'admin')
+  );
+
+-- Admins can update/delete any video, deal, application
+create policy "admins update any video" on public.videos
+  for update using (has_role(auth.uid(), 'admin'));
+create policy "admins delete any video" on public.videos
+  for delete using (has_role(auth.uid(), 'admin'));
+
+create policy "admins read all deals" on public.deals
+  for select using (has_role(auth.uid(), 'admin'));
+create policy "admins update any deal" on public.deals
+  for update using (has_role(auth.uid(), 'admin'));
+create policy "admins delete any deal" on public.deals
+  for delete using (has_role(auth.uid(), 'admin'));
+
+create policy "admins read all applications" on public.deal_applications
+  for select using (has_role(auth.uid(), 'admin'));
+
+-- Admin role management
+create policy "admins insert roles" on public.user_roles
+  for insert with check (has_role(auth.uid(), 'admin'));
+create policy "admins delete roles" on public.user_roles
+  for delete using (has_role(auth.uid(), 'admin'));
+
+-- Audit log
+create table public.admin_actions (
   id uuid primary key default gen_random_uuid(),
-  country text not null,
-  city text not null,
-  summary text not null,
-  highlights jsonb not null default '[]'::jsonb,  -- ["Old Town","Beach…"]
-  best_time text,
-  generated_at timestamptz not null default now(),
-  unique (country, city)
+  admin_id uuid not null,
+  action text not null,            -- 'hide_video','feature_video','delete_deal','grant_role','revoke_role',...
+  target_type text not null,       -- 'video' | 'deal' | 'user'
+  target_id uuid not null,
+  notes text,
+  created_at timestamptz not null default now()
 );
-alter table public.destination_summaries enable row level security;
-create policy "destination_summaries public read"
-  on public.destination_summaries for select using (true);
--- writes via service role only (no insert/update policy)
+alter table public.admin_actions enable row level security;
+create policy "admins read actions" on public.admin_actions
+  for select using (has_role(auth.uid(), 'admin'));
+-- inserts only via service role (server functions)
 ```
 
-### 2. Server function — `getDestinationOverview`
+### 2. Server functions — `src/lib/admin.functions.ts`
 
-Single round-trip the page can call. In `src/lib/destinations.functions.ts` add:
+All `.middleware([requireSupabaseAuth])` + a small `assertAdmin(supabase, userId)` helper that throws if not admin. All writes log to `admin_actions` via `supabaseAdmin`.
 
-```ts
-getDestinationOverview({ country, city }) → {
-  summary: { text, highlights[], best_time } | null,
-  videos: <existing top videos, 24>,
-  topCreators: [{ id, username, display_name, avatar_url, video_count, total_likes }] // top 6
-  deals: [{ id, title, image_url, discount_label, url }]  // up to 6 active
-  stats: { videos, creators, likes }
-}
-```
+- `getAdminStats()` → counts: users, creators, businesses, videos (ready/pending/hidden), deals (active), applications (pending).
+- `listAdminVideos({ filter: 'all'|'pending'|'hidden'|'featured', q?, cursor? })` → 30 rows w/ creator profile.
+- `listAdminDeals({ filter: 'all'|'active'|'inactive', q? })` → 30 rows w/ business profile.
+- `listAdminUsers({ q?, role? })` → profiles + roles[].
+- `setVideoModeration({ videoId, hidden?, featured? })` → updates videos, audit log.
+- `deleteVideo({ videoId })` → admin delete + audit.
+- `setDealActive({ dealId, active })` + `deleteDeal({ dealId })`.
+- `grantRole({ userId, role })` / `revokeRole({ userId, role })` — guards: cannot revoke own admin, cannot leave system with zero admins.
 
-- `topCreators`: aggregate by `creator_id` from the destination videos query, join `profiles`, sort by total likes desc.
-- `deals`: `supabaseAdmin.from('deals')` filter by `ilike country` and `ilike city` (when city set), active + within window, limit 6.
-- `summary`: read from `destination_summaries`; if missing, return null (don't block). UI shows a "Generate overview" button gated on auth.
-
-### 3. Server function — `generateDestinationOverview` (auth-required)
-
-Uses Lovable AI (same pattern as `itineraries.functions.ts`): `google/gemini-3-flash-preview`, JSON response, schema `{ summary: string, highlights: string[3..6], best_time: string }`. Feeds the model the top 12 video titles + activity tags for grounding. Upserts into `destination_summaries`. Returns the new row.
-
-Rationale for auth-gating: prevents drive-by AI spend on arbitrary `/destinations/anywhere/anything` URLs. After first user generates it, all visitors see the cached version.
-
-### 4. UI — `/destinations/$country/$city`
-
-New layout (still inside `MobileShell`):
+### 3. Routes
 
 ```text
-[back]
-[Hero card] city · country · stats (videos/creators/likes)
-[AI summary block]
-  - if null → "Generate AI overview" button (signed-in users only)
-  - if present → 2-line summary, "Best time: …", highlight chips
-[Plan a trip] → /itineraries/new?destination=City,Country
-[Top creators] horizontal scroll of 6 avatars + name
-[Deals] horizontal scroll, links to /deals/$id (skip section if empty)
-[Videos] existing 2-col grid (unchanged)
+src/routes/admin.tsx                     # layout: guard + tab strip + <Outlet/>
+src/routes/admin.index.tsx               # stats overview
+src/routes/admin.videos.tsx              # moderation queue
+src/routes/admin.deals.tsx               # deal moderation
+src/routes/admin.users.tsx               # users + role management
 ```
 
-- "Plan a trip" prefills the itinerary form via search params (small tweak to `/itineraries/new`: read `?destination=` and seed the field).
-- Wrap the AI generation in `useMutation`; on success `queryClient.invalidateQueries(['destination-overview', country, city])`.
-- Empty states: no deals → hide section; no top creators (single uploader) → hide section; no videos → existing "No videos here yet" message.
+Layout (`admin.tsx`): reads `useAuth()`, checks `isAdmin` (new flag on the auth hook — see step 4). Non-admins → redirect `/`. Renders top tab bar (Overview / Videos / Deals / Users) and `<Outlet />` inside `MobileShell`.
 
-### 5. Small support tweaks
+Each list page:
+- Filter pills + search input.
+- Card rows w/ inline action buttons (Hide/Unhide, Feature/Unfeature, Delete confirm) using `useMutation` + `queryClient.invalidateQueries`.
+- For users: chips for current roles, add/remove role buttons (creator / business / admin).
 
-- `src/routes/itineraries.new.tsx`: add `validateSearch` for optional `?destination=string` and seed the form's destination state.
-- No changes to `/destinations/$country` country index page in this slice.
+### 4. Auth hook tweak — `src/lib/auth.ts`
 
-### 6. Test checklist
+Add `isAdmin` alongside existing `isBusiness`. Single extra `.has_role(uid,'admin')` check (or reuse the existing user_roles fetch).
 
-- Visit a city with videos → grid still renders, summary shows "Generate" button.
-- Click Generate (signed in) → spinner ≤ 10s → summary, highlights, best time appear.
-- Refresh → summary persists (loaded from `destination_summaries`).
-- Signed-out user on same page → sees cached summary read-only.
-- "Plan a trip" navigates to `/itineraries/new` with destination prefilled.
-- City with active deals → deals strip renders and tapping a deal opens its page.
-- City with multiple uploaders → top creators strip renders; single uploader → hidden.
-- Brand-new city (no cache, no signed-in user) → page still works, just no summary.
+### 5. Navigation surfacing
+
+- `/profile`: if `isAdmin`, show an "Admin" link to `/admin` (avoid touching the 6-slot bottom nav).
+- Optional: tiny shield icon next to admin badges in their profile header.
+
+### 6. Bootstrap an admin
+
+`user_roles` does not let normal users self-assign admin (RLS only allows creator self-assign). Plan ships a one-off SQL helper in the migration the user can run from the SQL editor:
+
+```sql
+-- Grant admin to a user by email (run manually once)
+-- insert into public.user_roles (user_id, role)
+-- select id, 'admin' from auth.users where email = 'you@example.com';
+```
+
+Leave this commented in the migration so it's documented but doesn't run by accident. The user runs it from the Cloud SQL editor with their own email.
+
+### 7. Test checklist
+
+- Non-admin hits `/admin` → bounced to `/`.
+- Admin sees Overview with non-zero counts.
+- Hide a video → public feed no longer shows it; creator still sees in profile.
+- Feature a video → appears with a featured chip (UI hook only in admin list for v1).
+- Toggle deal active → `/deals/:id` reflects new state.
+- Grant `business` role to a user → that user can access `/business`.
+- Cannot revoke your own admin role.
+- All actions create rows in `admin_actions`.
 
 ### Out of scope (follow-ups)
 
-- Weather widget (needs OpenWeather key — confirm with user before adding).
-- Per-destination map preview (could embed the `/map` view filtered to country/city later).
-- Auto-regenerate summaries when new videos appear (manual refresh button is enough for v1).
+- Featured carousel on the feed (separate UI work).
+- Bulk actions / CSV export.
+- Comment moderation (no public report system yet).
+- Email notification to affected creators when content is hidden.
 
 ---
 

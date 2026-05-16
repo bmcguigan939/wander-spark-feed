@@ -18,11 +18,13 @@ import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ItinerariesIndexRouteImport } from './routes/itineraries.index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
@@ -34,6 +36,9 @@ import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
+import { Route as AdminVideosRouteImport } from './routes/admin.videos'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
@@ -90,6 +95,11 @@ const CollectionsRoute = CollectionsRouteImport.update({
   path: '/collections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -114,6 +124,11 @@ const BusinessIndexRoute = BusinessIndexRouteImport.update({
   id: '/business/',
   path: '/business/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
@@ -170,6 +185,21 @@ const BusinessApplicationsRoute = BusinessApplicationsRouteImport.update({
   path: '/business/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVideosRoute = AdminVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDealsRoute = AdminDealsRouteImport.update({
+  id: '/deals',
+  path: '/deals',
+  getParentRoute: () => AdminRoute,
+} as any)
 const DestinationsCountryIndexRoute =
   DestinationsCountryIndexRouteImport.update({
     id: '/destinations/$country/',
@@ -225,6 +255,7 @@ const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
@@ -234,6 +265,9 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/deals': typeof AdminDealsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -245,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
@@ -271,6 +306,9 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/deals': typeof AdminDealsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -282,6 +320,7 @@ export interface FileRoutesByTo {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
@@ -299,6 +338,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
@@ -308,6 +348,9 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/deals': typeof AdminDealsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -319,6 +362,7 @@ export interface FileRoutesById {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
@@ -338,6 +382,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/collections'
     | '/create'
     | '/login'
@@ -347,6 +392,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/admin/deals'
+    | '/admin/users'
+    | '/admin/videos'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -358,6 +406,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
+    | '/admin/'
     | '/business/'
     | '/deals/'
     | '/destinations/'
@@ -384,6 +433,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/admin/deals'
+    | '/admin/users'
+    | '/admin/videos'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -395,6 +447,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
+    | '/admin'
     | '/business'
     | '/deals'
     | '/destinations'
@@ -411,6 +464,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/collections'
     | '/create'
     | '/login'
@@ -420,6 +474,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/admin/deals'
+    | '/admin/users'
+    | '/admin/videos'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -431,6 +488,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
+    | '/admin/'
     | '/business/'
     | '/deals/'
     | '/destinations/'
@@ -449,6 +507,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
@@ -547,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -581,6 +647,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/business/'
       preLoaderRoute: typeof BusinessIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/u/$username': {
       id: '/u/$username'
@@ -659,6 +732,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/videos': {
+      id: '/admin/videos'
+      path: '/videos'
+      fullPath: '/admin/videos'
+      preLoaderRoute: typeof AdminVideosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/deals': {
+      id: '/admin/deals'
+      path: '/deals'
+      fullPath: '/admin/deals'
+      preLoaderRoute: typeof AdminDealsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/destinations/$country/': {
       id: '/destinations/$country/'
       path: '/destinations/$country'
@@ -732,6 +826,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminDealsRoute: typeof AdminDealsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminVideosRoute: typeof AdminVideosRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminDealsRoute: AdminDealsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminVideosRoute: AdminVideosRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface CollectionsRouteChildren {
   CollectionsIdRoute: typeof CollectionsIdRoute
 }
@@ -760,6 +870,7 @@ const BusinessDealsIdRouteWithChildren = BusinessDealsIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
