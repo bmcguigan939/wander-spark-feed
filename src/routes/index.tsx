@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { VideoCard } from "@/components/feed/VideoCard";
-import { getFeed } from "@/lib/feed.functions";
+import { getFeed, getFollowingFeed } from "@/lib/feed.functions";
+import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -12,9 +13,14 @@ export const Route = createFileRoute("/")({
 });
 
 function FeedPage() {
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"for-you" | "following">("for-you");
   const { data, isLoading } = useQuery({
-    queryKey: ["feed"],
-    queryFn: () => getFeed({ data: { limit: 20, offset: 0 } }),
+    queryKey: ["feed", tab, user?.id ?? null],
+    queryFn: () =>
+      tab === "following" && user
+        ? getFollowingFeed({ data: { limit: 20, offset: 0 } })
+        : getFeed({ data: { limit: 20, offset: 0 } }),
   });
   const videos = data?.videos ?? [];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,12 +42,27 @@ function FeedPage() {
 
   return (
     <MobileShell>
+      <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/40 px-1 py-1 text-xs backdrop-blur-md">
+          <TabBtn active={tab === "following"} onClick={() => {
+            if (!user) { window.location.href = "/login"; return; }
+            setTab("following");
+          }}>Following</TabBtn>
+          <TabBtn active={tab === "for-you"} onClick={() => setTab("for-you")}>For you</TabBtn>
+        </div>
+      </div>
       <div ref={containerRef} className="feed-scroll h-dvh overflow-y-scroll">
         {isLoading && <FullEmptyState title="Loading feed…" />}
-        {!isLoading && videos.length === 0 && (
+        {!isLoading && videos.length === 0 && tab === "for-you" && (
           <FullEmptyState
             title="Your feed is empty"
             body="Travidz is just getting started. Sign up as a creator to upload the first travel video."
+          />
+        )}
+        {!isLoading && videos.length === 0 && tab === "following" && (
+          <FullEmptyState
+            title="No videos from people you follow yet"
+            body="Follow creators to see their latest travel videos here."
           />
         )}
         {videos.map((v, i) => (
@@ -51,6 +72,19 @@ function FeedPage() {
         ))}
       </div>
     </MobileShell>
+  );
+}
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-4 py-1.5 font-semibold transition ${
+        active ? "bg-white text-black" : "text-white/80 hover:text-white"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
