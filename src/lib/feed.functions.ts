@@ -23,6 +23,12 @@ export type FeedVideo = {
     display_name: string | null;
     avatar_url: string | null;
   };
+  matchedDeal?: {
+    id: string;
+    title: string;
+    discount_label: string | null;
+    image_url: string | null;
+  } | null;
 };
 
 async function fetchFeedRows(limit: number, offset: number): Promise<FeedVideo[]> {
@@ -36,7 +42,52 @@ async function fetchFeedRows(limit: number, offset: number): Promise<FeedVideo[]
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as FeedVideo[];
+  const videos = (data ?? []) as unknown as FeedVideo[];
+  await attachMatchedDeals(videos);
+  return videos;
+}
+
+function locKey(country?: string | null, city?: string | null) {
+  return `${(country ?? "").trim().toLowerCase()}|${(city ?? "").trim().toLowerCase()}`;
+}
+
+async function attachMatchedDeals(videos: FeedVideo[]) {
+  const countries = Array.from(
+    new Set(videos.map((v) => v.country?.trim()).filter(Boolean) as string[])
+  );
+  if (countries.length === 0) return;
+  const { data: deals } = await supabaseAdmin
+    .from("deals")
+    .select("id,title,discount_label,image_url,country,city,created_at")
+    .eq("is_active", true)
+    .in("country", countries)
+    .or("starts_at.is.null,starts_at.lte.now()")
+    .or("ends_at.is.null,ends_at.gte.now()")
+    .order("created_at", { ascending: false });
+  if (!deals?.length) return;
+  // index: prefer city+country match, fallback to country-only
+  const byCityCountry = new Map<string, (typeof deals)[number]>();
+  const byCountry = new Map<string, (typeof deals)[number]>();
+  for (const d of deals) {
+    const ck = locKey(d.country, d.city);
+    if (d.city && !byCityCountry.has(ck)) byCityCountry.set(ck, d);
+    const cck = locKey(d.country, null);
+    if (!byCountry.has(cck)) byCountry.set(cck, d);
+  }
+  for (const v of videos) {
+    if (!v.country) continue;
+    const match =
+      (v.city && byCityCountry.get(locKey(v.country, v.city))) ||
+      byCountry.get(locKey(v.country, null));
+    if (match) {
+      v.matchedDeal = {
+        id: match.id,
+        title: match.title,
+        discount_label: match.discount_label,
+        image_url: match.image_url,
+      };
+    }
+  }
 }
 
 export const getFeed = createServerFn({ method: "GET" })
