@@ -154,3 +154,101 @@ export const getMyRoles = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return { roles: (data ?? []).map((r) => r.role as string) };
   });
+
+const statsSchema = z.object({
+  dealId: z.string().uuid(),
+  range: z.enum(["7d", "30d"]).default("7d"),
+});
+
+export const getDealStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => statsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const days = data.range === "30d" ? 30 : 7;
+    // verify ownership (also returns deal meta)
+    const { data: deal, error: dealErr } = await supabase
+      .from("deals")
+      .select("id,title,country,city,destination,is_active,click_count,business_id")
+      .eq("id", data.dealId)
+      .eq("business_id", userId)
+      .maybeSingle();
+    if (dealErr) throw new Error(dealErr.message);
+    if (!deal) throw new Error("Not found");
+
+    const since = new Date(Date.now() - days * 86_400_000);
+    const sinceIso = since.toISOString();
+    const prevSinceIso = new Date(since.getTime() - days * 86_400_000).toISOString();
+
+    const { data: clicks, error: clickErr } = await supabase
+      .from("deal_clicks")
+      .select("clicked_at,user_id,referrer_video_id")
+      .eq("deal_id", data.dealId)
+      .gte("clicked_at", prevSinceIso)
+      .order("clicked_at", { ascending: true });
+    if (clickErr) throw new Error(clickErr.message);
+
+    const rows = clicks ?? [];
+    const inRange = rows.filter((r) => r.clicked_at >= sinceIso);
+    const prevRange = rows.filter((r) => r.clicked_at < sinceIso);
+
+    // zero-filled daily series
+    const daily: Array<{ day: string; clicks: number }> = [];
+    const dayMap = new Map<string, number>();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+      dayMap.set(d, 0);
+    }
+    for (const r of inRange) {
+      const k = r.clicked_at.slice(0, 10);
+      if (dayMap.has(k)) dayMap.set(k, (dayMap.get(k) ?? 0) + 1);
+    }
+    for (const [day, n] of dayMap) daily.push({ day, clicks: n });
+
+    const uniqueUsers = new Set(inRange.map((r) => r.user_id).filter(Boolean)).size;
+
+    // top referring videos
+    const videoCounts = new Map<string, number>();
+    for (const r of inRange) {
+      if (!r.referrer_video_id) continue;
+      videoCounts.set(r.referrer_video_id, (videoCounts.get(r.referrer_video_id) ?? 0) + 1);
+    }
+    let topVideos: Array<{
+      videoId: string;
+      title: string;
+      thumbnail_url: string | null;
+      creator_username: string | null;
+      clicks: number;
+    }> = [];
+    if (videoCounts.size > 0) {
+      const ids = Array.from(videoCounts.keys());
+      const { data: vids } = await supabaseAdmin
+        .from("videos")
+        .select(
+          "id,title,thumbnail_url,creator:profiles!videos_creator_id_fkey(username)"
+        )
+        .in("id", ids);
+      topVideos = (vids ?? [])
+        .map((v: any) => ({
+          videoId: v.id,
+          title: v.title,
+          thumbnail_url: v.thumbnail_url,
+          creator_username: v.creator?.username ?? null,
+          clicks: videoCounts.get(v.id) ?? 0,
+        }))
+        .sort((a, b) => b.clicks - a.clicks)
+        .slice(0, 5);
+    }
+
+    return {
+      deal,
+      range: data.range,
+      totals: {
+        clicks: inRange.length,
+        prevClicks: prevRange.length,
+        uniqueUsers,
+      },
+      daily,
+      topVideos,
+    };
+  });

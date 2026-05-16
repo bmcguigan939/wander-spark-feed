@@ -1,44 +1,46 @@
-## Status
+## Next step: Click analytics dashboard for businesses (Step 3)
 
-- ✅ Step 1 smoke test
-- ✅ Step 4 (this turn): "View deal" CTA on feed videos with attributed clicks
-- ⏭️ Next: Step 2 Mux Player caption toggle, Step 3 click analytics dashboard
-
-## Last shipped: Deal CTA on feed videos
-
-Surface a tappable "View deal" pill on each `VideoCard` in the feed when the video's location matches an active deal. Tapping logs an attributed click (with the referring video ID) and opens the deal.
+The Deal CTA on the feed now generates attributed `deal_clicks` rows with `referrer_video_id`. Time to make that data useful to businesses with a real analytics dashboard.
 
 ### Scope
 
-1. **New server fn** `listDealsForLocations(pairs)` in `src/lib/deals.functions.ts`
-   - Input: array of `{ country, city }` pairs from the current feed page.
-   - Returns a map keyed by `"country|city"` → top active deal (id, title, discount_label, url, image_url).
-   - One batched query (`is_active=true`, public RLS already allows), grouped client-side. Avoids N+1.
+1. **New server fn** `getDealStats({ dealId, range })` in `src/lib/deals.functions.ts`
+   - `range`: `"7d"` | `"30d"` (default `"7d"`).
+   - Uses `requireSupabaseAuth` and the user-scoped supabase client so RLS on `deal_clicks owner read` enforces ownership automatically.
+   - Returns:
+     - `totals`: `{ clicks, uniqueUsers }` over the range.
+     - `daily`: array of `{ day: ISO date, clicks }` (zero-filled for missing days, client-side).
+     - `topVideos`: top 5 referring videos with `{ videoId, title, thumbnail_url, creator_username, clicks }` — joined client-side from a second query against `videos` + `profiles`.
+   - One SELECT on `deal_clicks` with `clicked_at >= now() - interval`, group/aggregate in JS to keep the query simple.
 
-2. **Wire into the feed**
-   - In `src/lib/feed.functions.ts` (or the feed route loader/query), after fetching videos, call `listDealsForLocations` with the page's `(country, city)` pairs and attach `matchedDeal` onto each video.
-   - If matching only by `country` is needed as a fallback when `city` is null, handle it in the same lookup.
+2. **`/business` dashboard upgrade** (`src/routes/business.index.tsx`)
+   - For each deal row, fetch stats in parallel (`useQueries`) and show:
+     - 7-day click total + delta vs. previous 7 days.
+     - Tiny inline sparkline (SVG path, no chart lib needed).
+   - Keep current "Active/Paused" + edit link.
 
-3. **`VideoCard.tsx` UI**
-   - When `video.matchedDeal` exists, render a compact pill near the bottom-right action stack: tag icon + "View deal" + optional `discount_label`.
-   - Style with existing design tokens (semi-transparent dark chip, primary accent for discount).
-   - On tap:
-     - call `logDealClick({ dealId, referrerVideoId: video.id, userId: user?.id })` (already exists, just pass `referrer_video_id`).
-     - open `/deals/$id` via `<Link>` (in-app) rather than the external URL — keeps users in the feed and lets the deal detail page handle the outbound click.
+3. **New per-deal detail route** `src/routes/business.deals.$id.tsx`
+   - Header: deal title, location, status, edit/delete shortcuts.
+   - Range toggle (7d / 30d).
+   - Larger daily time-series chart (SVG area chart, hand-rolled, theme tokens).
+   - "Top referring videos" list with thumbnail, creator @handle, click count, link to creator profile.
+   - Gracefully empty-state when no clicks yet.
 
 4. **Verify**
-   - Seeded Canggu/Indonesia deal shows the pill on the matching video in the feed.
-   - Tap inserts a `deal_clicks` row with `referrer_video_id` populated and increments `deals.click_count`.
-   - Videos with no matching deal render unchanged.
+   - With seeded Canggu deal: navigate `/business`, see 0–1 clicks reflected after tapping the feed CTA.
+   - Per-deal page renders chart + top videos.
+   - Non-owner cannot read stats (RLS blocks; server fn throws cleanly).
 
 ### Out of scope
 
-- Multiple deals per location (show only the most recent for now).
-- Per-deal analytics dashboard (still Step 3 on the roadmap).
-- Mux Player swap (still Step 2 — can come after).
+- CSV export (can be a one-line follow-up later).
+- Real-time updates / websocket subscriptions.
+- Mux Player caption toggle (Step 2 — still queued).
 
 ### Technical notes
 
-- `deal_clicks.referrer_video_id` column already exists; `logDealClick` already accepts it — no schema change.
-- Public `deals` SELECT RLS already filters to active + within date window, so the batched query is safe with the anon client.
-- Matching key normalization: lowercase + trim both sides to avoid casing drift between `videos.country/city` and `deals.country/city`.
+- All aggregation in JS keeps the migration count at zero. If volumes grow we can swap to a SECURITY DEFINER SQL function later.
+- Sparkline: 60×20 SVG, one `<path d="M…L…">` plus a baseline; no external dep.
+- `topVideos` join: collect distinct `referrer_video_id`s, then `supabaseAdmin.from('videos').select('id,title,thumbnail_url,creator:profiles!videos_creator_id_fkey(username)').in('id', ids)`. Aggregate counts in JS.
+- Route file `business.deals.$id.tsx` collides with nothing — sibling `business.deals.$id.edit.tsx` is `/business/deals/:id/edit`, this becomes `/business/deals/:id`.
+- All new fns continue using `createServerFn` + `requireSupabaseAuth`. No schema or RLS changes.
