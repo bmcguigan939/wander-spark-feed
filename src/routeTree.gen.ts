@@ -22,6 +22,7 @@ import { Route as DestinationsIndexRouteImport } from './routes/destinations.ind
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
@@ -102,6 +103,11 @@ const BusinessIndexRoute = BusinessIndexRouteImport.update({
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business': typeof BusinessIndexRoute
   '/deals': typeof DealsIndexRoute
@@ -265,6 +273,7 @@ export interface FileRoutesById {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/r/$code'
     | '/u/$username'
     | '/business/'
     | '/deals/'
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/r/$code'
     | '/u/$username'
     | '/business'
     | '/deals'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/r/$code'
     | '/u/$username'
     | '/business/'
     | '/deals/'
@@ -390,6 +402,7 @@ export interface RootRouteChildren {
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
+  RCodeRoute: typeof RCodeRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
   DealsIndexRoute: typeof DealsIndexRoute
@@ -495,6 +508,13 @@ declare module '@tanstack/react-router' {
       path: '/u/$username'
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -653,6 +673,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
+  RCodeRoute: RCodeRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
   DealsIndexRoute: DealsIndexRoute,
