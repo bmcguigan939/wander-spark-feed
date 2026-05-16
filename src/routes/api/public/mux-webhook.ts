@@ -77,6 +77,7 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
         } else if (event.type === "video.asset.track.ready") {
           // Auto-generated subtitle track is ready — fetch VTT, store transcript, re-tag.
           const track = event.data as { id?: string; type?: string; asset_id?: string; status?: string };
+          console.log("[mux-webhook] track.ready", { type: track?.type, asset_id: track?.asset_id, status: track?.status });
           if (track?.type === "text" && track.asset_id && track.id && (track.status ?? "ready") === "ready") {
             const { data: row } = await supabaseAdmin
               .from("videos")
@@ -89,9 +90,11 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
                 const vttRes = await fetch(
                   `https://stream.mux.com/${row.mux_playback_id}/text/${track.id}.vtt`
                 );
+                console.log("[mux-webhook] vtt fetch", { ok: vttRes.ok, status: vttRes.status, playback_id: row.mux_playback_id });
                 if (vttRes.ok) {
                   const vtt = await vttRes.text();
                   transcript = vttToPlainText(vtt);
+                  console.log("[mux-webhook] transcript stored", { video_id: row.id, chars: transcript.length });
                 }
               } catch (e) {
                 console.error("[mux-webhook] fetch vtt failed", e);
