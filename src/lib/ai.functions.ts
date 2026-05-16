@@ -131,3 +131,23 @@ export const rerunAutoTag = createServerFn({ method: "POST" })
     await runAutoTag(data.videoId, { useTranscript: !!row.transcript });
     return { ok: true };
   });
+
+export const applyAiSuggestedTitle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ videoId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: row } = await supabaseAdmin
+      .from("videos")
+      .select("id,creator_id,ai_suggested_title")
+      .eq("id", data.videoId)
+      .maybeSingle();
+    if (!row || row.creator_id !== userId) throw new Error("Not allowed");
+    if (!row.ai_suggested_title) throw new Error("No suggestion available");
+    const { error } = await supabaseAdmin
+      .from("videos")
+      .update({ title: row.ai_suggested_title, ai_suggested_title: null })
+      .eq("id", data.videoId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
