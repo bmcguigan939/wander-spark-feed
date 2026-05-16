@@ -44,6 +44,7 @@ import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
 import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
@@ -237,6 +238,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminModerationRoute = AdminModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDiscoveriesRoute = AdminDiscoveriesRouteImport.update({
   id: '/discoveries',
   path: '/discoveries',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -503,6 +512,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/moderation'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -555,6 +565,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/moderation'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -608,6 +619,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/moderation'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -937,6 +949,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/moderation': {
+      id: '/admin/moderation'
+      path: '/moderation'
+      fullPath: '/admin/moderation'
+      preLoaderRoute: typeof AdminModerationRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/discoveries': {
       id: '/admin/discoveries'
       path: '/discoveries'
@@ -1062,6 +1081,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminDealsRoute: typeof AdminDealsRoute
   AdminDiscoveriesRoute: typeof AdminDiscoveriesRoute
+  AdminModerationRoute: typeof AdminModerationRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVideosRoute: typeof AdminVideosRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1070,6 +1090,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDealsRoute: AdminDealsRoute,
   AdminDiscoveriesRoute: AdminDiscoveriesRoute,
+  AdminModerationRoute: AdminModerationRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVideosRoute: AdminVideosRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -1176,3 +1197,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
