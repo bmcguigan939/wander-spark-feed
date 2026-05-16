@@ -136,6 +136,7 @@ function scoreVideo(
     tagAffinity: Map<string, number>;
     countryAffinity: Map<string, number>;
     seenVideoIds: Set<string>;
+    semanticAffinity: Map<string, number>;
   },
 ) {
   if (ctx.seenVideoIds.has(v.id)) return -Infinity;
@@ -156,9 +157,11 @@ function scoreVideo(
   const countryBoost = v.country
     ? (ctx.countryAffinity.get(v.country.trim().toLowerCase()) ?? 0)
     : 0;
+  // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
+  const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + jitter
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + jitter
   );
 }
 
@@ -177,11 +180,13 @@ async function buildAffinity(userId: string) {
   const tagAffinity = new Map<string, number>();
   const countryAffinity = new Map<string, number>();
   const seenVideoIds = new Set<string>(interactedIds);
+  let tasteVector: number[] | null = null;
   if (interactedIds.length) {
     const { data: vids } = await supabaseAdmin
       .from("videos")
-      .select("activity_tags,country")
-      .in("id", interactedIds);
+      .select("activity_tags,country,embedding")
+      .in("id", interactedIds.slice(0, 50));
+    const vecs: number[][] = [];
     for (const v of vids ?? []) {
       for (const t of ((v as any).activity_tags ?? []) as string[]) {
         const k = t?.trim().toLowerCase();
@@ -189,12 +194,28 @@ async function buildAffinity(userId: string) {
       }
       const c = (v as any).country?.trim().toLowerCase();
       if (c) countryAffinity.set(c, (countryAffinity.get(c) ?? 0) + 1);
+      const emb = (v as any).embedding;
+      if (emb) {
+        // pgvector returns as string like "[0.1,0.2,...]" via PostgREST.
+        const parsed = typeof emb === "string" ? JSON.parse(emb) : emb;
+        if (Array.isArray(parsed) && parsed.length === 1536) vecs.push(parsed as number[]);
+      }
+    }
+    if (vecs.length > 0) {
+      const sum = new Array(1536).fill(0);
+      for (const v of vecs) for (let i = 0; i < 1536; i++) sum[i] += v[i];
+      // L2-normalize (cosine-friendly)
+      let norm = 0;
+      for (let i = 0; i < 1536; i++) { sum[i] /= vecs.length; norm += sum[i] * sum[i]; }
+      norm = Math.sqrt(norm) || 1;
+      for (let i = 0; i < 1536; i++) sum[i] /= norm;
+      tasteVector = sum;
     }
   }
   const followedCreatorIds = new Set<string>(
     (followsRes.data ?? []).map((r: any) => r.creator_id as string),
   );
-  return { followedCreatorIds, tagAffinity, countryAffinity, seenVideoIds };
+  return { followedCreatorIds, tagAffinity, countryAffinity, seenVideoIds, tasteVector };
 }
 
 export const getForYouFeed = createServerFn({ method: "GET" })
@@ -209,11 +230,12 @@ export const getForYouFeed = createServerFn({ method: "GET" })
 
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
+    const baseSelect =
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+    ;
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
-      .select(
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
-      )
+      .select(baseSelect)
       .eq("status", "ready")
     .eq("is_draft", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()")
@@ -223,14 +245,41 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const pool = ((rows ?? []) as unknown) as RankRow[];
 
-    const ctx = userId
+    const affinity = userId
       ? await buildAffinity(userId)
       : {
           followedCreatorIds: new Set<string>(),
           tagAffinity: new Map<string, number>(),
           countryAffinity: new Map<string, number>(),
           seenVideoIds: new Set<string>(),
+          tasteVector: null as number[] | null,
         };
+
+    // Semantic candidates: pull top matches against viewer's taste vector
+    // and merge into the pool so older-but-relevant videos can surface.
+    const semanticAffinity = new Map<string, number>();
+    if (affinity.tasteVector) {
+      const { data: hits } = await supabaseAdmin.rpc("match_videos", {
+        query_embedding: `[${affinity.tasteVector.join(",")}]` as any,
+        match_count: 60,
+        min_similarity: 0.2,
+      });
+      const havePoolIds = new Set(pool.map((p) => p.id));
+      const extraIds: string[] = [];
+      for (const h of (hits ?? []) as Array<{ id: string; similarity: number }>) {
+        semanticAffinity.set(h.id, h.similarity);
+        if (!havePoolIds.has(h.id)) extraIds.push(h.id);
+      }
+      if (extraIds.length > 0) {
+        const { data: extras } = await supabaseAdmin
+          .from("videos")
+          .select(baseSelect)
+          .in("id", extraIds.slice(0, 40));
+        for (const r of (extras ?? []) as unknown as RankRow[]) pool.push(r);
+      }
+    }
+
+    const ctx = { ...affinity, semanticAffinity };
 
     const ranked = pool
       .map((v) => ({ v, s: scoreVideo(v, ctx) }))
