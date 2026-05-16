@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { getCreatorAnalytics } from "@/lib/analytics.functions";
-import { BarChart3, Eye, Heart, Bookmark, MessageCircle, Users, Clock, Video } from "lucide-react";
+import { BarChart3, Eye, Heart, Bookmark, MessageCircle, Users, Clock, Video, MousePointerClick } from "lucide-react";
 
 export const Route = createFileRoute("/creator/analytics")({
   head: () => ({ meta: [{ title: "Creator analytics — Travidz" }] }),
@@ -52,6 +52,13 @@ function AnalyticsPage() {
               <Stat icon={Users} label="Followers" value={data.totals.followers} />
               <Stat icon={Clock} label="Watch time" value={`${Math.round(data.totals.watchMs / 60000)}m`} />
             </div>
+
+            <Section title="Deal tracking links">
+              <div className="grid grid-cols-2 gap-3">
+                <Stat icon={MousePointerClick} label="Total clicks" value={data.totals.dealClicks} />
+                <Stat icon={MousePointerClick} label="Last 30 days" value={data.totals.dealClicks30d} />
+              </div>
+            </Section>
 
             <Section title="Views — last 14 days">
               <DailyBars daily={data.daily} />
