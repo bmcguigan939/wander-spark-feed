@@ -143,74 +143,77 @@ const OverviewSchema = z.object({
   best_time: z.string().min(2).max(120),
 });
 
-export const generateDestinationOverview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => OverviewInput.parse(input))
-  .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("AI is not configured");
-    const { country, city } = data;
+async function buildAndStoreOverview(country: string, city: string) {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("AI is not configured");
 
-    const { data: vids } = await supabaseAdmin
-      .from("videos")
-      .select("title,activity_tags")
-      .eq("status", "ready")
-      .ilike("country", country)
-      .ilike("city", city)
-      .order("like_count", { ascending: false })
-      .limit(12);
+  const { data: vids } = await supabaseAdmin
+    .from("videos")
+    .select("title,activity_tags")
+    .eq("status", "ready")
+    .ilike("country", country)
+    .ilike("city", city)
+    .order("like_count", { ascending: false })
+    .limit(12);
 
-    const context = (vids ?? [])
-      .map((v: any) => `- ${v.title}${v.activity_tags?.length ? ` [${v.activity_tags.join(", ")}]` : ""}`)
-      .join("\n");
+  const ctx = (vids ?? [])
+    .map((v: any) => `- ${v.title}${v.activity_tags?.length ? ` [${v.activity_tags.join(", ")}]` : ""}`)
+    .join("\n");
 
-    const prompt = `Write a concise traveler overview for ${city}, ${country}.
-${context ? `Recent traveler videos there:\n${context}\n` : ""}
+  const prompt = `Write a concise traveler overview for ${city}, ${country}.
+${ctx ? `Recent traveler videos there:\n${ctx}\n` : ""}
 Return JSON: { "summary": string (2-3 sentences, evocative but practical),
 "highlights": string[] (3-6 short tags like "Old Town", "Rice terraces"),
 "best_time": string (e.g. "Apr-Jun & Sep-Oct") }`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Lovable-API-Key": key,
-        "X-Lovable-AIG-SDK": "raw-fetch",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "You are a travel guide editor. Reply ONLY with valid JSON matching the schema." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (res.status === 429) throw new Error("AI is rate-limited. Try again in a moment.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings.");
-    if (!res.ok) throw new Error(`AI error ${res.status}`);
-    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = json.choices?.[0]?.message?.content;
-    if (!raw) throw new Error("AI returned no content");
-    const parsed = OverviewSchema.parse(JSON.parse(raw));
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "raw-fetch",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: "You are a travel guide editor. Reply ONLY with valid JSON matching the schema." },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (res.status === 429) throw new Error("AI is rate-limited. Try again in a moment.");
+  if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings.");
+  if (!res.ok) throw new Error(`AI error ${res.status}`);
+  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = json.choices?.[0]?.message?.content;
+  if (!raw) throw new Error("AI returned no content");
+  const parsed = OverviewSchema.parse(JSON.parse(raw));
 
-    const { data: row, error: upErr } = await supabaseAdmin
-      .from("destination_summaries")
-      .upsert(
-        {
-          country,
-          city,
-          summary: parsed.summary,
-          highlights: parsed.highlights,
-          best_time: parsed.best_time,
-          generated_at: new Date().toISOString(),
-        },
-        { onConflict: "country,city" }
-      )
-      .select("summary,highlights,best_time,generated_at")
-      .single();
-    if (upErr) throw new Error(upErr.message);
-    return row;
+  const { data: row, error: upErr } = await supabaseAdmin
+    .from("destination_summaries")
+    .upsert(
+      {
+        country,
+        city,
+        summary: parsed.summary,
+        highlights: parsed.highlights,
+        best_time: parsed.best_time,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: "country,city" },
+    )
+    .select("summary,highlights,best_time,generated_at")
+    .single();
+  if (upErr) throw new Error(upErr.message);
+  return row;
+}
+
+export const generateDestinationOverview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => OverviewInput.parse(input))
+  .handler(async ({ data }) => {
+    return buildAndStoreOverview(data.country, data.city);
   });
 
 // Admin-only batch: find (country,city) pairs with >= minVideos and no/stale summary,
@@ -265,11 +268,10 @@ export const backfillDestinationSummaries = createServerFn({ method: "POST" })
     );
 
     const todo = eligible.filter((e) => !fresh.has(`${e.country.toLowerCase()}|${e.city.toLowerCase()}`)).slice(0, data.limit);
-    const fn = generateDestinationOverview;
     const results: Array<{ country: string; city: string; ok: boolean; error?: string }> = [];
     for (const t of todo) {
       try {
-        await fn({ data: { country: t.country, city: t.city } } as any);
+        await buildAndStoreOverview(t.country, t.city);
         results.push({ country: t.country, city: t.city, ok: true });
       } catch (e: any) {
         results.push({ country: t.country, city: t.city, ok: false, error: e?.message ?? String(e) });
