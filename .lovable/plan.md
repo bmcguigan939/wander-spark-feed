@@ -1,50 +1,38 @@
-## Where we are
+## Next step: Deal CTA on feed videos
 
-Phase 1 (auth, upload, feed, social, search, SEO) and Phase 2 (AI auto-tagging, destinations) shipped. Phase 3 infrastructure (deals schema, business portal, public deals surface) shipped but **not yet smoke-tested end-to-end**. Caption UI on `VideoCard` is still deferred.
+Surface a tappable "View deal" pill on each `VideoCard` in the feed when the video's location matches an active deal. Tapping logs an attributed click (with the referring video ID) and opens the deal.
 
-## Next steps (in order)
+### Scope
 
-### 1. Smoke test Phase 3 end-to-end (do this first)
-Validate the business + deals flow before stacking more features on top.
-- Sign in → `/business/apply` → confirm `business` role granted, redirect to `/business`.
-- Create a deal via `/business/deals/new` with `country=Indonesia`, `city=Canggu` to match existing test video.
-- Verify it appears on `/deals`, `/deals/$id`, and the "Deals" strip on `/destinations/Indonesia`.
-- Click the CTA on `/deals/$id` → confirm `deal_clicks` row inserted and `deals.click_count` incremented by the trigger.
-- Edit + delete from `/business/deals/$id/edit`.
-- Fix anything that breaks (most likely candidates: RLS on `listMyDeals`, role refresh after apply, deal strip filter casing).
+1. **New server fn** `listDealsForLocations(pairs)` in `src/lib/deals.functions.ts`
+   - Input: array of `{ country, city }` pairs from the current feed page.
+   - Returns a map keyed by `"country|city"` → top active deal (id, title, discount_label, url, image_url).
+   - One batched query (`is_active=true`, public RLS already allows), grouped client-side. Avoids N+1.
 
-### 2. Mux player swap + caption toggle (close Phase 2)
-- Add `@mux/mux-player-react` and replace the raw `<video>` in `src/components/feed/VideoCard.tsx`.
-- Wire native CC controls; default off, surface when `videos.captions_ready=true`.
-- Keep autoplay/mute behavior and creator overlay intact.
+2. **Wire into the feed**
+   - In `src/lib/feed.functions.ts` (or the feed route loader/query), after fetching videos, call `listDealsForLocations` with the page's `(country, city)` pairs and attach `matchedDeal` onto each video.
+   - If matching only by `country` is needed as a fallback when `city` is null, handle it in the same lookup.
 
-### 3. Click analytics dashboard for businesses
-- New server fn `getDealStats(dealId, range: '7d'|'30d')` aggregating `deal_clicks` by day.
-- Add a small sparkline + 7d/30d totals to each row on `/business`.
-- Per-deal detail page `/business/deals/$id` with the time series + top referrer videos.
+3. **`VideoCard.tsx` UI**
+   - When `video.matchedDeal` exists, render a compact pill near the bottom-right action stack: tag icon + "View deal" + optional `discount_label`.
+   - Style with existing design tokens (semi-transparent dark chip, primary accent for discount).
+   - On tap:
+     - call `logDealClick({ dealId, referrerVideoId: video.id, userId: user?.id })` (already exists, just pass `referrer_video_id`).
+     - open `/deals/$id` via `<Link>` (in-app) rather than the external URL — keeps users in the feed and lets the deal detail page handle the outbound click.
 
-### 4. Video → Deal attribution CTA
-- On `VideoCard`, when video has `country`+`city` matching an active deal, show a "View deal" pill.
-- Tap calls `logDealClick({ dealId, referrerVideoId })` then opens deal URL — gives businesses attribution back to the creator's video.
+4. **Verify**
+   - Seeded Canggu/Indonesia deal shows the pill on the matching video in the feed.
+   - Tap inserts a `deal_clicks` row with `referrer_video_id` populated and increments `deals.click_count`.
+   - Videos with no matching deal render unchanged.
 
-### 5. Transcript-driven re-tagging (optional polish)
-- When `captions_ready` flips true, re-run `inferVideoTagsFromText` with the transcript appended for higher city/activity precision.
+### Out of scope
 
-## Suggested split
+- Multiple deals per location (show only the most recent for now).
+- Per-deal analytics dashboard (still Step 3 on the roadmap).
+- Mux Player swap (still Step 2 — can come after).
 
-Ship **step 1** as its own turn (test + fixes only — small surface area, high risk if skipped). Then step 2 as its own turn. Steps 3–5 can be one larger turn or split per appetite.
+### Technical notes
 
-## Technical notes
-
-- All new server fns continue using `requireSupabaseAuth`; no edge functions.
-- For step 3, use a SQL `date_trunc('day', clicked_at)` group-by inside a SECURITY DEFINER function or rely on RLS (`deal_clicks owner read` already covers it).
-- For step 4, prefer a single `listDealsForLocations(pairs)` server fn batched per feed page to avoid N+1 queries.
-
-## Recommendation
-
-Start with **step 1 (smoke test)** so we know the Phase 3 foundation actually works before layering on the player swap and analytics.
-
-## Status
-
-- ✅ **Step 1 (smoke test) complete.** FK + `profiles` join verified, click trigger verified, RLS public read verified, country casing matches across videos/deals. Seeded `business` role for the existing test user and one active "Surf lessons in Canggu" deal so the public surfaces have real data to render.
-- ⏭️ Next: **Step 2 — Mux player swap + caption toggle** in `src/components/feed/VideoCard.tsx` using `@mux/mux-player-react`.
+- `deal_clicks.referrer_video_id` column already exists; `logDealClick` already accepts it — no schema change.
+- Public `deals` SELECT RLS already filters to active + within date window, so the batched query is safe with the anon client.
+- Matching key normalization: lowercase + trim both sides to avoid casing drift between `videos.country/city` and `deals.country/city`.
