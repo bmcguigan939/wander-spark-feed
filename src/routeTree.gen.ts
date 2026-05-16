@@ -24,6 +24,7 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
@@ -114,6 +115,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
+  id: '/itineraries/new',
+  path: '/itineraries/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business': typeof BusinessIndexRoute
@@ -281,6 +289,7 @@ export interface FileRoutesById {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business/'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business/'
@@ -414,6 +426,7 @@ export interface RootRouteChildren {
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
+  ItinerariesNewRoute: typeof ItinerariesNewRoute
   RCodeRoute: typeof RCodeRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -535,6 +548,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/itineraries/new': {
+      id: '/itineraries/new'
+      path: '/itineraries/new'
+      fullPath: '/itineraries/new'
+      preLoaderRoute: typeof ItinerariesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -693,6 +713,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
+  ItinerariesNewRoute: ItinerariesNewRoute,
   RCodeRoute: RCodeRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
