@@ -6,11 +6,12 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { CinematicHeader } from "@/components/ui/cinematic";
+import { getMySocials, upsertMySocials } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -28,6 +29,8 @@ function ProfilePage() {
   const becomeFn = useServerFn(becomeCreator);
   const rerunFn = useServerFn(rerunAutoTag);
   const applyTitleFn = useServerFn(applyAiSuggestedTitle);
+  const getSocialsFn = useServerFn(getMySocials);
+  const upsertSocialsFn = useServerFn(upsertMySocials);
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
@@ -50,6 +53,40 @@ function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [socialsOpen, setSocialsOpen] = useState(false);
+  const [socials, setSocials] = useState({
+    youtube_handle: "",
+    tiktok_handle: "",
+    instagram_handle: "",
+    x_handle: "",
+    website_url: "",
+  });
+
+  const socialsQ = useQuery({
+    queryKey: ["my-socials"],
+    queryFn: () => getSocialsFn({ data: undefined as any }),
+    enabled: !!user,
+  });
+  useEffect(() => {
+    if (socialsQ.data) {
+      setSocials({
+        youtube_handle: socialsQ.data.youtube_handle ?? "",
+        tiktok_handle: socialsQ.data.tiktok_handle ?? "",
+        instagram_handle: socialsQ.data.instagram_handle ?? "",
+        x_handle: socialsQ.data.x_handle ?? "",
+        website_url: socialsQ.data.website_url ?? "",
+      });
+    }
+  }, [socialsQ.data]);
+  const saveSocialsM = useMutation({
+    mutationFn: () => upsertSocialsFn({ data: socials as any }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-socials"] });
+      setSocialsOpen(false);
+      toast("Social links saved");
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't save links"),
+  });
 
   const updateM = useMutation({
     mutationFn: () => updateFn({ data: { display_name: displayName || undefined, bio: bio || undefined } }),
@@ -125,6 +162,14 @@ function ProfilePage() {
         >
           <Map className="h-4 w-4" /> My itineraries
         </Link>
+        <button
+          type="button"
+          onClick={() => setSocialsOpen(true)}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold"
+        >
+          <Link2 className="h-4 w-4" /> Link my socials
+        </button>
+        <SocialChips s={socialsQ.data ?? null} />
         {isCreator && (
           <Link
             to="/creator/applications"
@@ -203,7 +248,76 @@ function ProfilePage() {
           </button>
         </SheetContent>
       </Sheet>
+      <Sheet open={socialsOpen} onOpenChange={setSocialsOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>Link your other platforms</SheetTitle>
+          </SheetHeader>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Show your YouTube, TikTok, Instagram and more on your Travidz profile.
+          </p>
+          <form
+            onSubmit={(e) => { e.preventDefault(); saveSocialsM.mutate(); }}
+            className="mt-4 space-y-3"
+          >
+            {[
+              { key: "youtube_handle", label: "YouTube", icon: Youtube, placeholder: "@yourchannel" },
+              { key: "tiktok_handle", label: "TikTok", icon: Video, placeholder: "@yourhandle" },
+              { key: "instagram_handle", label: "Instagram", icon: Instagram, placeholder: "@yourhandle" },
+              { key: "x_handle", label: "X / Twitter", icon: Link2, placeholder: "@yourhandle" },
+              { key: "website_url", label: "Website", icon: Globe, placeholder: "https://…" },
+            ].map((f) => (
+              <label key={f.key} className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+                <f.icon className="h-4 w-4 text-muted-foreground" />
+                <span className="w-24 shrink-0 text-xs font-semibold text-muted-foreground">{f.label}</span>
+                <input
+                  value={(socials as any)[f.key]}
+                  onChange={(e) => setSocials((s) => ({ ...s, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  maxLength={f.key === "website_url" ? 300 : 80}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                />
+              </label>
+            ))}
+            <button
+              disabled={saveSocialsM.isPending}
+              className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {saveSocialsM.isPending ? "Saving…" : "Save links"}
+            </button>
+            <p className="text-center text-[11px] text-muted-foreground">
+              Tip: tap <b>+ Import</b> on Create to pull a specific post over to Travidz.
+            </p>
+          </form>
+        </SheetContent>
+      </Sheet>
     </MobileShell>
+  );
+}
+
+function SocialChips({ s }: { s: { youtube_handle: string | null; tiktok_handle: string | null; instagram_handle: string | null; x_handle: string | null; website_url: string | null } | null }) {
+  if (!s) return null;
+  const chips: Array<{ label: string; href: string; icon: any }> = [];
+  if (s.youtube_handle) chips.push({ label: s.youtube_handle, href: `https://youtube.com/@${s.youtube_handle}`, icon: Youtube });
+  if (s.tiktok_handle) chips.push({ label: s.tiktok_handle, href: `https://tiktok.com/@${s.tiktok_handle}`, icon: Video });
+  if (s.instagram_handle) chips.push({ label: s.instagram_handle, href: `https://instagram.com/${s.instagram_handle}`, icon: Instagram });
+  if (s.x_handle) chips.push({ label: s.x_handle, href: `https://x.com/${s.x_handle}`, icon: Link2 });
+  if (s.website_url) chips.push({ label: s.website_url.replace(/^https?:\/\//, ""), href: s.website_url, icon: Globe });
+  if (!chips.length) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {chips.map((c) => (
+        <a
+          key={c.label}
+          href={c.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground/80 hover:text-foreground"
+        >
+          <c.icon className="h-3 w-3" /> {c.label}
+        </a>
+      ))}
+    </div>
   );
 }
 
