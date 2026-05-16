@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
@@ -68,6 +69,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DealsIdRoute = DealsIdRouteImport.update({
+  id: '/deals/$id',
+  path: '/deals/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/collections/$id'
+    | '/deals/$id'
     | '/u/$username'
     | '/deals/'
     | '/destinations/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/collections/$id'
+    | '/deals/$id'
     | '/u/$username'
     | '/deals'
     | '/destinations'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/collections/$id'
+    | '/deals/$id'
     | '/u/$username'
     | '/deals/'
     | '/destinations/'
@@ -191,6 +203,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
+  DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   DealsIndexRoute: typeof DealsIndexRoute
   DestinationsIndexRoute: typeof DestinationsIndexRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/deals/$id': {
+      id: '/deals/$id'
+      path: '/deals/$id'
+      fullPath: '/deals/$id'
+      preLoaderRoute: typeof DealsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections/$id': {
       id: '/collections/$id'
       path: '/$id'
@@ -313,6 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
+  DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,
   DealsIndexRoute: DealsIndexRoute,
   DestinationsIndexRoute: DestinationsIndexRoute,
