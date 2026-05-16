@@ -1,5 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Send, Trash2 } from "lucide-react";
+import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 
@@ -38,6 +39,7 @@ export function CommentsSheet({
   const postFn = useServerFn(postComment);
   const delFn = useServerFn(deleteComment);
   const [body, setBody] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const queryKey = ["comments", videoId];
   const { data, isLoading } = useQuery({
@@ -155,11 +157,25 @@ export function CommentsSheet({
               className="flex items-center gap-2"
             >
               <input
+                ref={inputRef}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Add a comment…"
                 maxLength={2000}
                 className="flex-1 rounded-full border border-border bg-card px-4 py-2 text-sm outline-none focus:border-primary"
+              />
+              <EmojiPicker
+                onPick={(emoji) => {
+                  const { next, caret } = insertAtCursor(inputRef.current, body, emoji);
+                  setBody(next);
+                  requestAnimationFrame(() => {
+                    const el = inputRef.current;
+                    if (el) {
+                      el.focus();
+                      el.setSelectionRange(caret, caret);
+                    }
+                  });
+                }}
               />
               <button
                 type="submit"
