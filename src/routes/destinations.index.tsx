@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listDestinations } from "@/lib/destinations.functions";
-import { Globe2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { CinematicHeader, SectionTitle } from "@/components/ui/cinematic";
 
 export const Route = createFileRoute("/destinations/")({
   head: () => ({
@@ -23,16 +24,20 @@ function DestinationsPage() {
 
   return (
     <MobileShell>
-      <div className="px-4 pt-6">
-        <div className="mb-5 flex items-center gap-2">
-          <Globe2 className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold">Destinations</h1>
-        </div>
+      <CinematicHeader
+        height="h-52"
+        image={countries[0]?.cover ?? null}
+        eyebrow="Travidz Atlas"
+        title="Destinations"
+        subtitle="Short films from every corner of the map — pick a country to dive in."
+      />
+      <div className="px-4 pt-5 pb-8">
+        <SectionTitle eyebrow={`${countries.length} countries`} title="Browse the world" />
         {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {!isLoading && countries.length === 0 && (
-          <p className="text-sm text-muted-foreground">No tagged destinations yet. Upload a video to get started.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No tagged destinations yet. Upload a video to get started.</p>
         )}
-        <ul className="grid grid-cols-2 gap-3">
+        <ul className="mt-4 grid grid-cols-2 gap-3">
           {countries.map((c) => (
             <li key={c.country}>
               <Link
