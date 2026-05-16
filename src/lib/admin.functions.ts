@@ -145,7 +145,10 @@ export const setVideoModeration = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const patch: Record<string, unknown> = {
+    const patch: {
+      moderated_at: string; moderated_by: string;
+      is_hidden?: boolean; is_featured?: boolean;
+    } = {
       moderated_at: new Date().toISOString(),
       moderated_by: context.userId,
     };
