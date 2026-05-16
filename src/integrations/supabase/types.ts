@@ -162,6 +162,30 @@ export type Database = {
           },
         ]
       }
+      deal_impressions: {
+        Row: {
+          created_at: string
+          deal_id: string
+          id: string
+          referrer_video_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          id?: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          id?: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           business_id: string

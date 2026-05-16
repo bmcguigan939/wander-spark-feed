@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleLike, toggleSave } from "@/lib/interactions.functions";
-import { logDealClick } from "@/lib/deals.functions";
+import { logDealClick, logDealImpression } from "@/lib/deals.functions";
 import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 import { CommentsSheet } from "@/components/feed/CommentsSheet";
@@ -27,6 +27,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const likeFn = useServerFn(toggleLike);
   const saveFn = useServerFn(toggleSave);
   const logDealClickFn = useServerFn(logDealClick);
+  const logDealImpressionFn = useServerFn(logDealImpression);
 
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
@@ -111,6 +112,23 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       },
     }).catch(() => {});
   }
+
+  // Log a single impression per video+deal per session when the card becomes active.
+  useEffect(() => {
+    if (!active || !video.matchedDeal) return;
+    const key = `travidz:imp:${video.id}:${video.matchedDeal.id}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {}
+    logDealImpressionFn({
+      data: {
+        dealId: video.matchedDeal.id,
+        referrerVideoId: video.id,
+        userId: user?.id,
+      },
+    }).catch(() => {});
+  }, [active, video.id, video.matchedDeal?.id, user?.id, logDealImpressionFn]);
 
   const styleAny: any = {
     width: "100%", height: "100%",
