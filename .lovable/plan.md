@@ -1,5 +1,17 @@
 ## Remaining AI/LLM improvements — sequenced rollout
 
+**Shipped:** #2 Auto-tag videos · Phase A (#1 quality scoring, #6 moderation) · **Phase B #7 Semantic search (pgvector hybrid)**.
+
+Phase B notes (just shipped):
+- pgvector enabled; `embedding vector(1536)` on `videos` and `deals` with ivfflat cosine index.
+- `embedText` / `embedVideo` / `embedDeal` in `ai.functions.ts` using `openai/text-embedding-3-small` via Lovable AI Gateway.
+- New videos auto-embed after `runAutoTag` (post-transcript pass). Discovery-ingested deals auto-embed on insert.
+- `match_videos` / `match_deals` SQL RPCs return cosine-sim ranked ids respecting visibility rules.
+- `searchVideos` is now hybrid: keyword (tsv) + semantic candidates merged with weighted score.
+- Admin overview has a backfill button (25 rows/click) for legacy rows missing embeddings.
+
+**Still open in Phase B:** richer personalized ranking using embeddings (extend `getForYouFeed`'s `scoreVideo` with semantic affinity from liked/saved video embeddings).
+
 We've shipped **#2 Auto-tag videos**. Here's a proposed order for the remaining 9, grouped so each phase unlocks the next.
 
 ### Phase A — Quality & Trust (next up)
