@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
-import { getDealStats } from "@/lib/deals.functions";
+import { getDealStats, updateDeal } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Pencil, MapPin, Eye, Users, MousePointerClick, Percent } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/business/deals/$id/")({
   head: () => ({ meta: [{ title: "Deal analytics — Travidz" }] }),
@@ -17,7 +19,10 @@ function DealAnalyticsPage() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const fetchStats = useServerFn(getDealStats);
+  const updateFn = useServerFn(updateDeal);
+  const qc = useQueryClient();
   const [range, setRange] = useState<"7d" | "30d">("7d");
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -74,6 +79,33 @@ function DealAnalyticsPage() {
               <span className={deal.is_active ? "text-emerald-500" : ""}>
                 · {deal.is_active ? "Active" : "Paused"}
               </span>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2">
+              <div className="text-xs">
+                <div className="font-medium">{deal.is_active ? "Live" : "Paused"}</div>
+                <div className="text-muted-foreground">
+                  {deal.is_active ? "Visible on the public deals page." : "Hidden from public — still in your dashboard."}
+                </div>
+              </div>
+              <Switch
+                checked={deal.is_active}
+                disabled={toggling}
+                onCheckedChange={async (next) => {
+                  setToggling(true);
+                  try {
+                    await updateFn({ data: { id, patch: { is_active: next } } });
+                    await qc.invalidateQueries({ queryKey: ["deal-stats", id] });
+                    await qc.invalidateQueries({ queryKey: ["my-deals"] });
+                    await qc.invalidateQueries({ queryKey: ["deals", "all"] });
+                    toast.success(next ? "Deal is live" : "Deal paused");
+                  } catch (e: any) {
+                    toast.error(e?.message ?? "Failed");
+                  } finally {
+                    setToggling(false);
+                  }
+                }}
+              />
             </div>
 
             <div className="mt-4 inline-flex rounded-full border border-border p-0.5 text-xs">
