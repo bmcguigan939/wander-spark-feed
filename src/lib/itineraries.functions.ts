@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { embedText } from "./ai.functions";
 
 const DaySchema = z.object({
   day: z.number().int().min(1),
@@ -129,6 +130,31 @@ async function enrichSuggestion(
   const ilike = `%${s.query.split(/\s+/)[0] ?? s.title}%`;
   const dest = `%${destination.split(",")[0].trim()}%`;
 
+  // Semantic: embed the suggestion + destination once and use match_deals/match_videos.
+  const semText = [s.title, s.query, s.tags.join(" "), destination].filter(Boolean).join(" ");
+  const qvec = await embedText(semText).catch(() => null);
+  const qlit = qvec ? `[${qvec.join(",")}]` : null;
+
+  const [semDealsRes, semVidsRes] = await Promise.all([
+    qlit
+      ? (supabaseAdmin as any).rpc("match_deals", {
+          query_embedding: qlit,
+          match_count: 6,
+          min_similarity: 0.2,
+          only_active: true,
+        })
+      : Promise.resolve({ data: [] as any[] }),
+    qlit
+      ? (supabaseAdmin as any).rpc("match_videos", {
+          query_embedding: qlit,
+          match_count: 6,
+          min_similarity: 0.2,
+        })
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const semDealIds = ((semDealsRes.data ?? []) as Array<{ id: string }>).map((r) => r.id);
+  const semVidIds = ((semVidsRes.data ?? []) as Array<{ id: string }>).map((r) => r.id);
+
   // Find matching deals (approved + active, matching destination + query/tags)
   const [{ data: dealsByText }, { data: dealsByTag }] = await Promise.all([
     supabaseAdmin
@@ -151,23 +177,47 @@ async function enrichSuggestion(
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
+  const semDeals = semDealIds.length
+    ? (await supabaseAdmin
+        .from("deals")
+        .select("id,title,image_url,price_cents,currency,affiliate_network")
+        .in("id", semDealIds)
+        .eq("status", "approved")
+        .eq("is_active", true)).data ?? []
+    : [];
+
   const dealMap = new Map<string, any>();
-  for (const d of [...(dealsByText ?? []), ...(dealsByTag ?? [])]) dealMap.set(d.id, d);
-  const deal_matches = Array.from(dealMap.values()).slice(0, 2);
+  for (const d of [...(dealsByText ?? []), ...(dealsByTag ?? []), ...semDeals]) dealMap.set(d.id, d);
+  const deal_matches = Array.from(dealMap.values()).slice(0, 3);
 
   // Find matching videos via full-text search
   const tsq = tsQuery(`${s.query} ${destination}`);
   let video_matches: Suggestion["video_matches"] = [];
-  if (tsq) {
-    const { data: vids } = await supabaseAdmin
-      .from("videos")
-      .select("id,title,thumbnail_url,creator_id")
-      .eq("status", "ready")
-      .eq("is_draft", false)
-      .eq("is_hidden", false)
-      .textSearch("search_tsv", tsq, { config: "simple" })
-      .limit(2);
-    if (vids && vids.length) {
+  if (tsq || semVidIds.length) {
+    const vidMap = new Map<string, any>();
+    if (tsq) {
+      const { data: tsvids } = await supabaseAdmin
+        .from("videos")
+        .select("id,title,thumbnail_url,creator_id")
+        .eq("status", "ready")
+        .eq("is_draft", false)
+        .eq("is_hidden", false)
+        .textSearch("search_tsv", tsq, { config: "simple" })
+        .limit(2);
+      for (const v of tsvids ?? []) vidMap.set(v.id, v);
+    }
+    if (semVidIds.length) {
+      const { data: semvids } = await supabaseAdmin
+        .from("videos")
+        .select("id,title,thumbnail_url,creator_id")
+        .in("id", semVidIds)
+        .eq("status", "ready")
+        .eq("is_draft", false)
+        .eq("is_hidden", false);
+      for (const v of semvids ?? []) if (!vidMap.has(v.id)) vidMap.set(v.id, v);
+    }
+    const vids = Array.from(vidMap.values()).slice(0, 3);
+    if (vids.length) {
       const creatorIds = Array.from(new Set(vids.map((v) => v.creator_id)));
       const { data: profs } = await supabaseAdmin
         .from("profiles")
