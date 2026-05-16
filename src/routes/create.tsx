@@ -63,6 +63,8 @@ function UploadFlow() {
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
+  const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
+  const [scheduleAt, setScheduleAt] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
@@ -96,12 +98,19 @@ function UploadFlow() {
       budget_tag: budget || undefined,
       lat: lat === "" ? undefined : Number(lat),
       lng: lng === "" ? undefined : Number(lng),
+      publish_mode: publishMode,
+      scheduled_at: publishMode === "schedule" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
     } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feed"] });
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast("Video saved — processing in the background");
-      navigate({ to: "/profile" });
+      qc.invalidateQueries({ queryKey: ["studio-videos"] });
+      qc.invalidateQueries({ queryKey: ["studio-overview"] });
+      toast(
+        publishMode === "now" ? "Published — processing in the background" :
+        publishMode === "draft" ? "Saved as draft" : "Scheduled"
+      );
+      navigate({ to: "/studio/videos", search: { filter: "all" } });
     },
     onError: (e: any) => toast(e.message ?? "Failed to save"),
   });
@@ -183,8 +192,32 @@ function UploadFlow() {
                 ))}
               </div>
             </Field>
-            <button disabled={finalizeM.isPending || !title.trim()} className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-              {finalizeM.isPending ? "Saving…" : "Publish"}
+            <Field label="When to post">
+              <div className="grid grid-cols-3 gap-2">
+                {(["now", "draft", "schedule"] as const).map((m) => (
+                  <button type="button" key={m} onClick={() => setPublishMode(m)}
+                    className={`rounded-xl border px-2 py-2 text-xs font-semibold capitalize ${publishMode === m ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground/80"}`}>
+                    {m === "now" ? "Publish now" : m === "draft" ? "Save draft" : "Schedule"}
+                  </button>
+                ))}
+              </div>
+              {publishMode === "schedule" && (
+                <input
+                  type="datetime-local"
+                  required
+                  value={scheduleAt}
+                  onChange={(e) => setScheduleAt(e.target.value)}
+                  className={`mt-2 ${inputCls}`}
+                />
+              )}
+            </Field>
+            <button
+              disabled={finalizeM.isPending || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
+              className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
+            >
+              {finalizeM.isPending ? "Saving…" :
+                publishMode === "now" ? "Publish" :
+                publishMode === "draft" ? "Save draft" : "Schedule"}
             </button>
           </form>
         )}

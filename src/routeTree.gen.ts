@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -53,6 +54,11 @@ import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/studio': typeof StudioRoute
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/studio': typeof StudioRoute
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/studio': typeof StudioRoute
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
+    | '/studio'
     | '/welcome'
     | '/admin/deals'
     | '/admin/users'
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
+    | '/studio'
     | '/welcome'
     | '/admin/deals'
     | '/admin/users'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
+    | '/studio'
     | '/welcome'
     | '/admin/deals'
     | '/admin/users'
@@ -516,6 +528,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
+  StudioRoute: typeof StudioRoute
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
@@ -548,6 +561,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -879,6 +899,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
+  StudioRoute: StudioRoute,
   WelcomeRoute: WelcomeRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
