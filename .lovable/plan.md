@@ -59,4 +59,20 @@ B. Phase 3 schema + public deals surface.
 C. Business portal + apply flow.
 D. Click analytics dashboard.
 
-Tell me to start with A, or skip straight to B if captions can wait.
+## Status (this turn)
+
+- ✅ Destinations tab added to BottomNav (Map icon).
+- ✅ Mux auto-captions enabled on uploads; webhook flips `videos.captions_ready` on `video.asset.track.ready`.
+- ⏭️ Caption UI toggle on `VideoCard` deferred — needs a switch to `@mux/mux-player-react` for native CC controls. Track ID flows are wired data-side.
+- ✅ Phase 3 schema shipped: `deals`, `deal_clicks`, `business` role, click-count trigger, `deal-images` storage bucket + RLS.
+- ✅ Deals server fns (`src/lib/deals.functions.ts`): list/get/create/update/delete/listMine/logClick/applyForBusiness/getMyRoles.
+- ✅ Public surfaces: `/deals` index, `/deals/$id` detail (logs a click on CTA).
+- ✅ Business portal: `/business` dashboard, `/business/apply` self-serve role grant, `/business/deals/new`, `/business/deals/$id/edit`.
+- ✅ Deal strip on `/destinations/$country`.
+- ✅ Profile page link to Business portal / apply.
+
+## Next up
+
+- Mux player swap for native CC + per-track URL.
+- Click analytics dashboard (last 7/30 days time series in `/business`).
+- Smoke test: apply as business → create a deal → verify it appears on `/deals` and on a matching destination page → CTA click increments counter.
