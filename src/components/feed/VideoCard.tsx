@@ -100,12 +100,21 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         <h2 className="mt-3 text-base font-semibold leading-snug">{video.title}</h2>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {video.destination && (
+          {video.country ? (
+            <Link
+              to={video.city ? "/destinations/$country/$city" : "/destinations/$country"}
+              params={video.city ? { country: video.country, city: video.city } : { country: video.country }}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] backdrop-blur hover:bg-white/25"
+            >
+              <MapPin className="h-3 w-3" />
+              {video.destination ?? video.city ?? video.country}{video.country && (video.destination || video.city) ? `, ${video.country}` : ""}
+            </Link>
+          ) : video.destination ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] backdrop-blur">
               <MapPin className="h-3 w-3" />
-              {video.destination}{video.country ? `, ${video.country}` : ""}
+              {video.destination}
             </span>
-          )}
+          ) : null}
           {video.budget_tag && (
             <span className="rounded-full bg-primary/90 px-2.5 py-1 text-[11px] font-medium text-primary-foreground">
               {video.budget_tag}
