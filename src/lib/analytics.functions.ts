@@ -62,7 +62,7 @@ export const getCreatorAnalytics = createServerFn({ method: "GET" })
         : Promise.resolve({ data: [] as Array<{ created_at: string; watch_ms: number }> }),
       supabaseAdmin
         .from("follows")
-        .select("follower_id,created_at,profiles!follows_follower_id_fkey(id,username,display_name,avatar_url)")
+        .select("follower_id,created_at")
         .eq("creator_id", userId)
         .order("created_at", { ascending: false })
         .limit(8),
@@ -85,9 +85,15 @@ export const getCreatorAnalytics = createServerFn({ method: "GET" })
       .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
       .slice(0, 5);
 
-    const recentFollowers = ((followersRes.data ?? []) as any[])
+    const followerRows = ((followersRes as { data: Array<{ follower_id: string; created_at: string }> | null }).data) ?? [];
+    const followerIds = followerRows.map((r) => r.follower_id);
+    const { data: followerProfiles } = followerIds.length
+      ? await supabaseAdmin.from("profiles").select("id,username,display_name,avatar_url").in("id", followerIds)
+      : { data: [] as Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }> };
+    const pMap = new Map((followerProfiles ?? []).map((p) => [p.id, p]));
+    const recentFollowers = followerRows
       .map((r) => {
-        const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+        const p = pMap.get(r.follower_id);
         return p ? { ...p, created_at: r.created_at } : null;
       })
       .filter(Boolean) as CreatorAnalytics["recentFollowers"];
