@@ -92,6 +92,44 @@ export type Database = {
           },
         ]
       }
+      comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_clicks: {
         Row: {
           clicked_at: string
@@ -363,6 +401,7 @@ export type Database = {
           budget_tag: string | null
           captions_ready: boolean
           city: string | null
+          comment_count: number
           country: string | null
           created_at: string
           creator_id: string
@@ -387,6 +426,7 @@ export type Database = {
           budget_tag?: string | null
           captions_ready?: boolean
           city?: string | null
+          comment_count?: number
           country?: string | null
           created_at?: string
           creator_id: string
@@ -411,6 +451,7 @@ export type Database = {
           budget_tag?: string | null
           captions_ready?: boolean
           city?: string | null
+          comment_count?: number
           country?: string | null
           created_at?: string
           creator_id?: string
