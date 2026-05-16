@@ -1,32 +1,28 @@
-# Fix sign-in flow and "kicks me out" of protected pages
+# Two profile bugs
 
-## Root causes
+## Bug 1 — "Become a creator" does nothing
 
-**1. "Can't sign back in after signup"** — Email confirmation is required on the project. Auth logs confirm `400: Invalid login credentials` after a signup attempt. The flow is: user signs up → Supabase creates a pending user (no session) → user tries to sign in → rejected as unconfirmed → looks like the password is wrong. They then "create the account again" which actually re-sends a confirmation email but still gives no session.
+Root cause: `public.user_roles` has SELECT policies but **no INSERT policy**. The `becomeCreator` server function runs as the authenticated user (RLS applies), so its insert is rejected. The mutation in `src/routes/profile.tsx` has no `onError`, so the failure is silent and the user sees no change.
 
-**2. "Following / Saved / Profile kick me out"** — Same underlying issue. Because signup returns no session, `useAuth().user` is `null` on every protected page, so `/profile` and `/collections` immediately `navigate({ to: "/login" })` and the Feed's Following tab does `window.location.href = "/login"`.
+Fix:
+- **Migration** — add an INSERT policy on `public.user_roles` that lets a logged-in user insert a row only for themselves and only with `role = 'creator'`. Admin/business roles stay non-self-assignable.
+  ```sql
+  create policy "users can self-assign creator role"
+    on public.user_roles for insert to authenticated
+    with check (auth.uid() = user_id and role = 'creator');
+  ```
+- **`src/routes/profile.tsx`** — add `onError` to `becomeM` showing a `toast` with the error message, and a success toast ("You're a creator now") so the state change is visible while `refreshRoles()` settles.
 
-**3. "There is no setup new account option"** — The signup toggle exists at the bottom of `/login` but renders as small muted text most users miss.
+## Bug 2 — "Arrow facing right" in the top-right kicks you out
 
-## Fix
+That icon is the `LogOut` button (rectangle + arrow exiting right) sitting next to the gear. It's being mistaken for a "next / go" affordance, so a single tap signs you out and the auth-guard redirects to `/login` — exactly the "kicks me out" symptom.
 
-### A. Backend — enable auto-confirm email signups
-Call `supabase--configure_auth` with `auto_confirm_email: true` (other flags unchanged). This is appropriate for an app in active development/testing with no email infra yet. The new-user trigger (`handle_new_user`) already creates a profile + assigns the `traveller` role, so confirmed accounts work end-to-end immediately.
+Fix in `src/routes/profile.tsx` (presentation only):
+- Remove the top-right `LogOut` icon button.
+- Move sign-out into the **Edit profile** sheet as a clearly labelled destructive row at the bottom (`Sign out`, muted-foreground border, `LogOut` icon + text), with a `confirm("Sign out of Travidz?")` guard before calling `signOut()`.
+- Keep the gear button in the header (now alone) — it opens the same sheet.
 
-### B. Frontend — `src/routes/login.tsx` only (UI fix)
-- Replace the tiny muted toggle at the bottom with a **segmented control at the top of the form**: two equal pills `Sign in` | `Create account`, active = primary bg.
-- Update submit button label to match the active mode.
-- Add a small post-signup success path: when `signUp` returns a session, navigate to `/`; when it returns no session (confirmation still required for any future tightening), show "Check your email to confirm, then sign in" and flip to the Sign in tab. (Defensive — once auto-confirm is on, this branch won't normally fire.)
-- Trim the duplicated `error` shadowing in `submit()`.
+## Out of scope
 
-### C. No business-logic or RLS changes
-Leaving `useEffect` redirects on `/profile` and `/collections` as-is — they behave correctly once auto-confirm gives the user a session immediately on signup.
-
-## Files touched
-- Auth setting (via tool) — `auto_confirm_email: true`
-- `src/routes/login.tsx` — UI + post-signup branching
-
-## Out of scope (next milestone)
-Real transactional email (Lovable Emails) + email-verification flow lives in Step 2 of the broader plan already approved.
-
-Approve and I'll ship.
+- No changes to `becomeCreator` server fn, auth flow, or any other route.
+- The other top-right area items elsewhere in the app (feed, business) are untouched.
