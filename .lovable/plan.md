@@ -1,78 +1,45 @@
-# Next build phases
+## Where we are
 
-Phase 1 (DB/auth/upload/feed/social/search/SEO) and most of Phase 2 (AI auto-tagging, destination browsing) are shipped and smoke-tested. Two tracks remain.
+Phase 1 (auth, upload, feed, social, search, SEO) and Phase 2 (AI auto-tagging, destinations) shipped. Phase 3 infrastructure (deals schema, business portal, public deals surface) shipped but **not yet smoke-tested end-to-end**. Caption UI on `VideoCard` is still deferred.
 
-## Phase 2 polish — finish the discovery layer
+## Next steps (in order)
 
-1. **Global nav entry for Destinations**
-   - Add a "Destinations" link to the top nav next to Search so the new `/destinations` tree is reachable without typing the URL.
-   - Active state via `activeProps`.
+### 1. Smoke test Phase 3 end-to-end (do this first)
+Validate the business + deals flow before stacking more features on top.
+- Sign in → `/business/apply` → confirm `business` role granted, redirect to `/business`.
+- Create a deal via `/business/deals/new` with `country=Indonesia`, `city=Canggu` to match existing test video.
+- Verify it appears on `/deals`, `/deals/$id`, and the "Deals" strip on `/destinations/Indonesia`.
+- Click the CTA on `/deals/$id` → confirm `deal_clicks` row inserted and `deals.click_count` incremented by the trigger.
+- Edit + delete from `/business/deals/$id/edit`.
+- Fix anything that breaks (most likely candidates: RLS on `listMyDeals`, role refresh after apply, deal strip filter casing).
 
-2. **Mux auto-captions + caption toggle**
-   - Enable Mux auto-generated English captions on asset creation (set `generated_subtitles` on the input in `getMuxUpload`).
-   - Store `captions_ready: boolean` on `videos` (migration) and flip it on `video.asset.track.ready` webhook events for `text` tracks.
-   - Add a CC toggle button on `VideoCard` that, when on, renders a `<track kind="subtitles">` pointing at `https://stream.mux.com/{playbackId}/text/{trackId}.vtt` or uses the Mux player's built-in captions if we switch to `@mux/mux-player-react`.
+### 2. Mux player swap + caption toggle (close Phase 2)
+- Add `@mux/mux-player-react` and replace the raw `<video>` in `src/components/feed/VideoCard.tsx`.
+- Wire native CC controls; default off, surface when `videos.captions_ready=true`.
+- Keep autoplay/mute behavior and creator overlay intact.
 
-3. **Transcript-driven tagging upgrade (optional, gated on #2)**
-   - When captions become ready, re-run the AI tag pass with the transcript text appended to title+description for higher accuracy on city/activity tags.
+### 3. Click analytics dashboard for businesses
+- New server fn `getDealStats(dealId, range: '7d'|'30d')` aggregating `deal_clicks` by day.
+- Add a small sparkline + 7d/30d totals to each row on `/business`.
+- Per-deal detail page `/business/deals/$id` with the time series + top referrer videos.
 
-## Phase 3 — Deals + Business portal
+### 4. Video → Deal attribution CTA
+- On `VideoCard`, when video has `country`+`city` matching an active deal, show a "View deal" pill.
+- Tap calls `logDealClick({ dealId, referrerVideoId })` then opens deal URL — gives businesses attribution back to the creator's video.
 
-1. **Schema (`supabase--migration`)**
-   - `deals` table: `business_id` (fk profiles), `title`, `description`, `destination`, `country`, `city`, `discount_label`, `price_cents`, `currency`, `url`, `image_url`, `starts_at`, `ends_at`, `is_active`.
-   - `deal_clicks` table: `deal_id`, `user_id` (nullable), `clicked_at`, `referrer_video_id` (nullable) — for attribution from a video CTA.
-   - Add `business` value to `app_role` enum.
-   - RLS: deals are publicly readable when `is_active` and within date window; only the owning business (or admin) can insert/update/delete; clicks are insert-only for anyone, readable only by the deal's business.
+### 5. Transcript-driven re-tagging (optional polish)
+- When `captions_ready` flips true, re-run `inferVideoTagsFromText` with the transcript appended for higher city/activity precision.
 
-2. **Server functions (`src/lib/deals.functions.ts`)**
-   - `listDeals({ country?, city?, destination? })` — public.
-   - `getDeal(id)` — public.
-   - `createDeal`, `updateDeal`, `deleteDeal` — `requireSupabaseAuth`, verify caller has `business` role and owns the row.
-   - `logDealClick({ dealId, referrerVideoId? })` — public, rate-limited by IP+dealId per minute.
-   - `listMyDeals` and `getDealStats(dealId)` for the portal.
+## Suggested split
 
-3. **Public surfaces**
-   - Surface a "Deals nearby" strip on `/destinations/$country` and `/destinations/$country/$city`.
-   - Optional CTA on `VideoCard`: when the video has a matched `destination`+`city` and there is an active deal, show a "View deal" button that calls `logDealClick` then opens the deal URL.
-
-4. **Business portal (`/business`)**
-   - Pathless layout `src/routes/_business.tsx` that calls `requireSupabaseAuth` and checks the `business` role; redirects others to `/business/apply`.
-   - `/business` dashboard: list my deals + click counts (last 7/30 days).
-   - `/business/deals/new` and `/business/deals/$id/edit` forms.
-   - `/business/apply` self-serve: writes a `user_roles` row with `business` (or a `business_applications` table if we want admin approval — default: instant grant for now, can add review later).
-
-5. **SEO + nav**
-   - Add `/deals` index route listing active deals, plus per-deal pages with proper `head()` meta and JSON-LD `Offer`.
-   - Nav entry for "Deals" (public) and "Business" (only when role present).
+Ship **step 1** as its own turn (test + fixes only — small surface area, high risk if skipped). Then step 2 as its own turn. Steps 3–5 can be one larger turn or split per appetite.
 
 ## Technical notes
 
-- All new server fns use `requireSupabaseAuth` middleware; admin client only inside the Mux/Stripe-style webhooks if any.
-- No edge functions — stay on `createServerFn` + `src/routes/api/public/*`.
-- Reuse existing destination chip + AI tag normalization so Deals filter cleanly on the same `country`/`city` casing.
-- Keep deal images in the existing Supabase storage bucket pattern; add a `deal-images` bucket with public read.
+- All new server fns continue using `requireSupabaseAuth`; no edge functions.
+- For step 3, use a SQL `date_trunc('day', clicked_at)` group-by inside a SECURITY DEFINER function or rely on RLS (`deal_clicks owner read` already covers it).
+- For step 4, prefer a single `listDealsForLocations(pairs)` server fn batched per feed page to avoid N+1 queries.
 
-## Suggested order
+## Recommendation
 
-A. Phase 2 polish (nav + captions) — ~small, unblocks discovery UX.
-B. Phase 3 schema + public deals surface.
-C. Business portal + apply flow.
-D. Click analytics dashboard.
-
-## Status (this turn)
-
-- ✅ Destinations tab added to BottomNav (Map icon).
-- ✅ Mux auto-captions enabled on uploads; webhook flips `videos.captions_ready` on `video.asset.track.ready`.
-- ⏭️ Caption UI toggle on `VideoCard` deferred — needs a switch to `@mux/mux-player-react` for native CC controls. Track ID flows are wired data-side.
-- ✅ Phase 3 schema shipped: `deals`, `deal_clicks`, `business` role, click-count trigger, `deal-images` storage bucket + RLS.
-- ✅ Deals server fns (`src/lib/deals.functions.ts`): list/get/create/update/delete/listMine/logClick/applyForBusiness/getMyRoles.
-- ✅ Public surfaces: `/deals` index, `/deals/$id` detail (logs a click on CTA).
-- ✅ Business portal: `/business` dashboard, `/business/apply` self-serve role grant, `/business/deals/new`, `/business/deals/$id/edit`.
-- ✅ Deal strip on `/destinations/$country`.
-- ✅ Profile page link to Business portal / apply.
-
-## Next up
-
-- Mux player swap for native CC + per-track URL.
-- Click analytics dashboard (last 7/30 days time series in `/business`).
-- Smoke test: apply as business → create a deal → verify it appears on `/deals` and on a matching destination page → CTA click increments counter.
+Start with **step 1 (smoke test)** so we know the Phase 3 foundation actually works before layering on the player swap and analytics.
