@@ -78,6 +78,8 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
       city: z.string().max(80).optional(),
       activity_tags: z.array(z.string().min(1).max(40)).max(10).default([]),
       budget_tag: z.enum(["budget", "mid", "luxury"]).optional(),
+      lat: z.number().min(-90).max(90).optional(),
+      lng: z.number().min(-180).max(180).optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
@@ -92,6 +94,8 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
         city: data.city ?? null,
         activity_tags: data.activity_tags,
         budget_tag: data.budget_tag ?? null,
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
       })
       .eq("id", data.videoId)
       .eq("creator_id", userId);
