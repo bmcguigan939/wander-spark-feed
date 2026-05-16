@@ -39,7 +39,18 @@ export const createDirectUpload = createServerFn({ method: "POST" })
     const mux = await muxClient();
     const upload = await mux.video.uploads.create({
       cors_origin: "*",
-      new_asset_settings: { playback_policies: ["public"], video_quality: "basic" },
+      new_asset_settings: {
+        playback_policies: ["public"],
+        video_quality: "basic",
+        // Auto-generate English subtitles for accessibility & richer AI tagging
+        input: [
+          {
+            generated_subtitles: [
+              { language_code: "en", name: "English (auto)" },
+            ],
+          },
+        ],
+      } as any,
     });
 
     const { data: video, error } = await supabase
