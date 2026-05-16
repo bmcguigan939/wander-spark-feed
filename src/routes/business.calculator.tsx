@@ -63,7 +63,7 @@ function CalculatorPage() {
 
   return (
     <MobileShell>
-      <div className="px-4 pt-6 pb-8">
+      <div className="px-4 pt-6 pb-28">
         <Link to="/business" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ArrowLeft className="h-4 w-4" /> Dashboard
         </Link>
