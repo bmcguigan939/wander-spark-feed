@@ -28,6 +28,8 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as StudioVideosRouteImport } from './routes/studio.videos'
+import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
@@ -149,6 +151,16 @@ const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StudioVideosRoute = StudioVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioScheduleRoute = StudioScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => StudioRoute,
 } as any)
 const StudioLinksRoute = StudioLinksRouteImport.update({
   id: '/links',
@@ -311,6 +323,8 @@ export interface FileRoutesByFullPath {
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
+  '/studio/schedule': typeof StudioScheduleRoute
+  '/studio/videos': typeof StudioVideosRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -356,6 +370,8 @@ export interface FileRoutesByTo {
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
+  '/studio/schedule': typeof StudioScheduleRoute
+  '/studio/videos': typeof StudioVideosRoute
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
@@ -403,6 +419,8 @@ export interface FileRoutesById {
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
+  '/studio/schedule': typeof StudioScheduleRoute
+  '/studio/videos': typeof StudioVideosRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -452,6 +470,8 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
+    | '/studio/schedule'
+    | '/studio/videos'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -497,6 +517,8 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
+    | '/studio/schedule'
+    | '/studio/videos'
     | '/u/$username'
     | '/admin'
     | '/business'
@@ -543,6 +565,8 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
+    | '/studio/schedule'
+    | '/studio/videos'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -736,6 +760,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/studio/videos': {
+      id: '/studio/videos'
+      path: '/videos'
+      fullPath: '/studio/videos'
+      preLoaderRoute: typeof StudioVideosRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/schedule': {
+      id: '/studio/schedule'
+      path: '/schedule'
+      fullPath: '/studio/schedule'
+      preLoaderRoute: typeof StudioScheduleRouteImport
+      parentRoute: typeof StudioRoute
     }
     '/studio/links': {
       id: '/studio/links'
@@ -952,11 +990,15 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
 
 interface StudioRouteChildren {
   StudioLinksRoute: typeof StudioLinksRoute
+  StudioScheduleRoute: typeof StudioScheduleRoute
+  StudioVideosRoute: typeof StudioVideosRoute
   StudioIndexRoute: typeof StudioIndexRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioLinksRoute: StudioLinksRoute,
+  StudioScheduleRoute: StudioScheduleRoute,
+  StudioVideosRoute: StudioVideosRoute,
   StudioIndexRoute: StudioIndexRoute,
 }
 
@@ -1018,3 +1060,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
