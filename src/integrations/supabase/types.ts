@@ -625,6 +625,8 @@ export type Database = {
       videos: {
         Row: {
           activity_tags: string[]
+          ai_analyzed_at: string | null
+          ai_suggested_title: string | null
           budget_tag: string | null
           captions_ready: boolean
           city: string | null
@@ -650,6 +652,8 @@ export type Database = {
         }
         Insert: {
           activity_tags?: string[]
+          ai_analyzed_at?: string | null
+          ai_suggested_title?: string | null
           budget_tag?: string | null
           captions_ready?: boolean
           city?: string | null
@@ -675,6 +679,8 @@ export type Database = {
         }
         Update: {
           activity_tags?: string[]
+          ai_analyzed_at?: string | null
+          ai_suggested_title?: string | null
           budget_tag?: string | null
           captions_ready?: boolean
           city?: string | null
