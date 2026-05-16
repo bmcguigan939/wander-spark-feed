@@ -146,6 +146,104 @@ export type Database = {
         }
         Relationships: []
       }
+      business_invites: {
+        Row: {
+          accepted_business_id: string | null
+          accepted_deal_id: string | null
+          business_name: string
+          city: string | null
+          commission_pct: number
+          contact_email: string
+          contact_phone: string | null
+          created_at: string
+          creator_id: string
+          creator_share_pct: number
+          decline_reason: string | null
+          existing_business_id: string | null
+          expires_at: string
+          id: string
+          platform_share_pct: number
+          status: string
+          token: string
+          updated_at: string
+          video_id: string
+          website_url: string
+        }
+        Insert: {
+          accepted_business_id?: string | null
+          accepted_deal_id?: string | null
+          business_name: string
+          city?: string | null
+          commission_pct?: number
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string
+          creator_id: string
+          creator_share_pct?: number
+          decline_reason?: string | null
+          existing_business_id?: string | null
+          expires_at?: string
+          id?: string
+          platform_share_pct?: number
+          status?: string
+          token: string
+          updated_at?: string
+          video_id: string
+          website_url: string
+        }
+        Update: {
+          accepted_business_id?: string | null
+          accepted_deal_id?: string | null
+          business_name?: string
+          city?: string | null
+          commission_pct?: number
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string
+          creator_id?: string
+          creator_share_pct?: number
+          decline_reason?: string | null
+          existing_business_id?: string | null
+          expires_at?: string
+          id?: string
+          platform_share_pct?: number
+          status?: string
+          token?: string
+          updated_at?: string
+          video_id?: string
+          website_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_invites_accepted_business_id_fkey"
+            columns: ["accepted_business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_accepted_deal_id_fkey"
+            columns: ["accepted_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_existing_business_id_fkey"
+            columns: ["existing_business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_items: {
         Row: {
           added_at: string
