@@ -1,7 +1,7 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag } from "lucide-react";
-import { useState } from "react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,12 @@ import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
   const [muted, setMuted] = useState(true);
   const [collectionOpen, setCollectionOpen] = useState(false);
+  const playerRef = useRef<any>(null);
+  const [ccAvailable, setCcAvailable] = useState(false);
+  const [ccOn, setCcOn] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("travidz:cc") === "1";
+  });
   const { user } = useAuth();
   const qc = useQueryClient();
   const likeFn = useServerFn(toggleLike);
@@ -40,6 +46,58 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     else { await navigator.clipboard.writeText(url); toast("Link copied"); }
   }
 
+  // Find the first subtitles/captions track on the underlying media element.
+  function getSubsTrack(): TextTrack | null {
+    const el = playerRef.current as any;
+    const tracks: TextTrackList | undefined = el?.textTracks;
+    if (!tracks) return null;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      if (t.kind === "subtitles" || t.kind === "captions") return t;
+    }
+    return null;
+  }
+
+  function applyCcMode(on: boolean) {
+    const t = getSubsTrack();
+    if (!t) return;
+    t.mode = on ? "showing" : "hidden";
+  }
+
+  // Detect caption tracks once they're attached and sync with preference.
+  useEffect(() => {
+    if (!video.mux_playback_id) return;
+    const el = playerRef.current as any;
+    if (!el) return;
+    const check = () => {
+      const t = getSubsTrack();
+      if (t) {
+        setCcAvailable(true);
+        t.mode = ccOn ? "showing" : "hidden";
+      } else {
+        setCcAvailable(false);
+      }
+    };
+    check();
+    const tracks: TextTrackList | undefined = el.textTracks;
+    tracks?.addEventListener?.("addtrack", check);
+    tracks?.addEventListener?.("change", check);
+    el.addEventListener?.("loadedmetadata", check);
+    return () => {
+      tracks?.removeEventListener?.("addtrack", check);
+      tracks?.removeEventListener?.("change", check);
+      el.removeEventListener?.("loadedmetadata", check);
+    };
+  }, [video.mux_playback_id, ccOn]);
+
+  function toggleCc(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !ccOn;
+    setCcOn(next);
+    try { window.localStorage.setItem("travidz:cc", next ? "1" : "0"); } catch {}
+    applyCcMode(next);
+  }
+
   function onDealClick() {
     if (!video.matchedDeal) return;
     // fire-and-forget attribution
@@ -62,6 +120,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       {video.mux_playback_id ? (
         <div className="absolute inset-0" onClick={() => setMuted((m) => !m)}>
           <MuxPlayer
+            ref={playerRef}
             streamType="on-demand"
             playbackId={video.mux_playback_id}
             autoPlay={active ? "muted" : false}
@@ -84,6 +143,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
       <div className="scrim-top pointer-events-none absolute inset-x-0 top-0 h-32" />
       <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 h-64" />
+
+      {ccAvailable && (
+        <button
+          onClick={toggleCc}
+          aria-label={ccOn ? "Hide captions" : "Show captions"}
+          className="absolute right-3 top-4 z-10 rounded-full bg-black/40 p-2 text-white backdrop-blur-md transition hover:bg-black/60"
+        >
+          {ccOn ? <Captions className="h-5 w-5" /> : <CaptionsOff className="h-5 w-5" />}
+        </button>
+      )}
 
       {/* Right rail */}
       <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
