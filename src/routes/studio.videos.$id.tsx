@@ -42,6 +42,11 @@ import {
   setVideoDraft,
 } from "@/lib/studio.functions";
 import { listInvitesForVideo, revokeInvite } from "@/lib/business-invites.functions";
+import {
+  listSuggestionsForVideo,
+  dismissSuggestion,
+  markSuggestionConverted,
+} from "@/lib/business-suggestions.functions";
 import { COMMISSION } from "@/lib/commission";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -74,6 +79,12 @@ function InsightsPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
+  const [tagInitial, setTagInitial] = useState<{
+    businessName?: string;
+    websiteUrl?: string;
+    city?: string;
+    suggestionId?: string;
+  } | null>(null);
 
   const invitesFn = useServerFn(listInvitesForVideo);
   const revokeFn = useServerFn(revokeInvite);
@@ -87,6 +98,18 @@ function InsightsPage() {
       qc.invalidateQueries({ queryKey: ["business-invites", id] });
       toast("Invite removed");
     },
+  });
+
+  const suggestionsFn = useServerFn(listSuggestionsForVideo);
+  const dismissFn = useServerFn(dismissSuggestion);
+  const markConvertedFn = useServerFn(markSuggestionConverted);
+  const { data: suggestions } = useQuery({
+    queryKey: ["business-suggestions", id],
+    queryFn: () => suggestionsFn({ data: { videoId: id } }),
+  });
+  const dismissM = useMutation({
+    mutationFn: (sid: string) => dismissFn({ data: { id: sid } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-suggestions", id] }),
   });
 
   const invalidate = () => {
@@ -196,7 +219,7 @@ function InsightsPage() {
       <div className="mt-8 flex items-center justify-between">
         <h3 className="font-display text-base font-semibold">Businesses featured</h3>
         <button
-          onClick={() => setTagOpen(true)}
+          onClick={() => { setTagInitial(null); setTagOpen(true); }}
           className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-soft"
         >
           <Plus className="h-3.5 w-3.5" /> Tag a business
@@ -205,6 +228,60 @@ function InsightsPage() {
       <p className="mt-1 text-[11px] text-muted-foreground">
         Invite businesses you featured. They get a {COMMISSION.totalPct}% offer; you earn on every sale.
       </p>
+      {suggestions && suggestions.length > 0 ? (
+        <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <Sparkles className="h-3 w-3" /> AI-detected from this video
+          </div>
+          <ul className="space-y-2">
+            {suggestions.map((s) => (
+              <li
+                key={s.id}
+                className="flex items-center gap-2 rounded-xl bg-background/70 p-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold">{s.name}</span>
+                    {s.category ? (
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                        {s.category}
+                      </span>
+                    ) : null}
+                  </div>
+                  {s.website_guess || s.city ? (
+                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {s.website_guess ?? ""}{s.website_guess && s.city ? " · " : ""}{s.city ?? ""}
+                    </div>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTagInitial({
+                      businessName: s.name,
+                      websiteUrl: s.website_guess ?? "",
+                      city: s.city ?? "",
+                      suggestionId: s.id,
+                    });
+                    setTagOpen(true);
+                  }}
+                  className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground"
+                >
+                  Tag
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dismissM.mutate(s.id)}
+                  aria-label="Dismiss"
+                  className="rounded-full p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {!invites?.length ? (
         <div className="mt-3 rounded-2xl border border-dashed border-border bg-card/40 p-5 text-center text-sm text-muted-foreground">
           No invites yet. Tag a business to start earning on this video.
@@ -334,7 +411,19 @@ function InsightsPage() {
         onSave={(iso) => scheduleM.mutate(iso)}
       />
 
-      <TagBusinessSheet videoId={id} open={tagOpen} onOpenChange={setTagOpen} />
+      <TagBusinessSheet
+        videoId={id}
+        open={tagOpen}
+        onOpenChange={setTagOpen}
+        initial={tagInitial}
+        onCreated={(inviteId) => {
+          if (tagInitial?.suggestionId) {
+            markConvertedFn({ data: { id: tagInitial.suggestionId, inviteId } })
+              .then(() => qc.invalidateQueries({ queryKey: ["business-suggestions", id] }))
+              .catch(() => {});
+          }
+        }}
+      />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
