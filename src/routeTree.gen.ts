@@ -51,6 +51,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
+import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -264,6 +265,11 @@ const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => BusinessDealsIdRoute,
 } as any)
+const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
+  id: '/api/public/go/$id',
+  path: '/api/public/go/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -345,6 +352,7 @@ export interface FileRoutesByTo {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -562,6 +574,7 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -863,6 +876,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessDealsIdEditRouteImport
       parentRoute: typeof BusinessDealsIdRoute
     }
+    '/api/public/go/$id': {
+      id: '/api/public/go/$id'
+      path: '/api/public/go/$id'
+      fullPath: '/api/public/go/$id'
+      preLoaderRoute: typeof ApiPublicGoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -941,6 +961,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
