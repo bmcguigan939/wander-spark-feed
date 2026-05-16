@@ -48,7 +48,16 @@ function ProfilePage() {
     mutationFn: () => updateFn({ data: { display_name: displayName || undefined, bio: bio || undefined } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); setEditOpen(false); toast("Profile updated"); },
   });
-  const becomeM = useMutation({ mutationFn: () => becomeFn({ data: undefined as any }), onSuccess: () => refreshRoles() });
+  const becomeM = useMutation({
+    mutationFn: () => becomeFn({ data: undefined as any }),
+    onSuccess: () => { refreshRoles(); toast("You're a creator now"); },
+    onError: (e: any) => toast(e?.message ?? "Couldn't enable creator mode"),
+  });
+
+  function handleSignOut() {
+    if (typeof window !== "undefined" && !window.confirm("Sign out of Travidz?")) return;
+    signOut();
+  }
 
   function openEdit() {
     setDisplayName(data?.profile?.display_name ?? "");
@@ -78,7 +87,6 @@ function ProfilePage() {
           </div>
           <div className="flex gap-1">
             <button onClick={openEdit} className="rounded-full border border-border bg-card p-2"><Settings className="h-4 w-4" /></button>
-            <button onClick={signOut} className="rounded-full border border-border bg-card p-2"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
         {p.bio && <p className="mt-4 text-sm">{p.bio}</p>}
@@ -134,6 +142,13 @@ function ProfilePage() {
             </label>
             <button disabled={updateM.isPending} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">Save</button>
           </form>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-destructive/40 bg-destructive/5 py-3 text-sm font-semibold text-destructive"
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
         </SheetContent>
       </Sheet>
     </MobileShell>
