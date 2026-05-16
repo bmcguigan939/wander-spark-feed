@@ -1,55 +1,42 @@
-## What's left
+## Step 5: Transcript-driven re-tagging — DONE
 
-Two queued items from the original roadmap:
-
-- **Step 2 — Mux Player + caption toggle** (recommended next)
-- **Step 5 — Transcript-driven re-tagging** (depends on captions existing)
-
-Step 2 unblocks Step 5 (captions/transcripts come from Mux), so it should ship first.
-
-## Step 2: Mux Player + caption toggle
+Now that Mux auto-captions are wired up (Step 2), we can use the finished transcript to produce better city/country/activity tags than the creator's manual title alone.
 
 ### Scope
 
-1. **Swap the feed video element** in `src/components/feed/VideoCard.tsx`
-   - Replace the raw `<video>` tag with `@mux/mux-player-react`'s `<MuxPlayer>` (lazy variant).
-   - Drive it from `playback_id` instead of the HLS URL. Keep current autoplay-when-visible, mute/unmute, and tap-to-pause behavior.
-   - Preserve poster/thumbnail handling.
+1. **Schema** — add `transcript TEXT` column to `videos` (nullable). `captions_ready BOOLEAN` already exists from Step 2.
 
-2. **Caption toggle**
-   - Add a small CC button next to the mute control.
-   - When captions exist on the active text track, toggle `mode = "showing" | "hidden"`.
-   - Hide the button entirely when the video has no text track.
-   - Persist the user's choice in `localStorage` so it sticks across videos.
+2. **Fetch transcript on `video.asset.track.ready`** in `src/routes/api/public/mux-webhook.ts`:
+   - When `track.type === "text"` and `status === "ready"`, fetch the WebVTT from `https://stream.mux.com/{playback_id}/text/{track_id}.vtt`.
+   - Strip VTT timestamps/cues down to plain text.
+   - Store on `videos.transcript`, set `captions_ready = true`.
+   - Then call `runAutoTag(videoId, { useTranscript: true })`.
 
-3. **Backend: request auto-captions from Mux**
-   - In `src/lib/mux.functions.ts` (asset creation path), add `input[].generated_subtitles: [{ language_code: "en", name: "English (auto)" }]`.
-   - No schema change — Mux delivers captions as a text track on the same playback ID.
+3. **Upgrade `runAutoTag`** in `src/lib/ai.functions.ts`:
+   - Accept optional flag; when true, include the transcript in the LLM prompt alongside title/description.
+   - Keep the existing JSON-schema response (country/city/activity_tags/budget_tag).
+   - Only overwrite fields the creator hasn't manually set (preserve human edits made between upload and transcript-ready).
 
-4. **Webhook awareness** (`src/routes/api/public/mux-webhook.ts`)
-   - Existing `video.asset.ready` handler stays as-is.
-   - Optionally log `video.asset.track.ready` for visibility; no DB writes needed for Step 2.
+4. **Re-run deal matching** after tags update — reuse whatever the existing `runAutoTag` flow already triggers; no new code path.
 
-5. **Verify**
-   - Existing videos: player loads, autoplay + mute behavior unchanged, CC button hidden (no tracks yet).
-   - New upload after the change: caption track appears within ~1 min of `ready`; CC button shows; toggle works; preference persists.
+### Out of scope
 
-### Out of scope for Step 2
-
-- Storing the transcript in our DB (that's Step 5).
-- Translating captions to other languages.
-- Custom caption styling beyond Mux Player defaults.
+- Exposing transcript text in the UI (search/captions display).
+- Multi-language transcripts.
+- Manual "re-run AI" button.
 
 ### Technical notes
 
-- `@mux/mux-player-react` is not yet a dependency — needs `bun add`.
-- `MuxPlayer` exposes `textTracks` via a ref; the CC button reads/sets `mode` on the first subtitles track.
-- Mux's `generated_subtitles` is free for standard-tier assets and runs async after ingest.
+- Mux WebVTT URL is public (same playback policy as the video) — no signed URL needed for public playback.
+- VTT parsing: strip `WEBVTT` header, timestamp lines (`00:00:00.000 --> ...`), and blank lines; join remaining text.
+- Webhook handler stays under the 30s Worker budget — transcript fetch + LLM call is sequential but small.
+- "Preserve human edits" check: only update a field if the current DB value equals what `runAutoTag` previously wrote (or is null). Simplest version: skip update if the creator has touched `finalizeVideoMetadata` after upload — track via `metadata_edited_at` or just check whether values are non-null.
 
----
+### Files touched
 
-## Step 5 preview (after Step 2 lands)
+- `supabase/migrations/<new>.sql` — add `transcript` column
+- `src/routes/api/public/mux-webhook.ts` — fetch + store transcript, trigger re-tag
+- `src/lib/ai.functions.ts` — accept transcript input
+- `.lovable/plan.md` — mark Step 5 done
 
-Pull the finished transcript from Mux, store it on `videos.transcript`, and re-run the deal-matching/tag extraction against the transcript text so videos get better city/country/keyword matches than the creator's manual caption alone. Triggered from the `video.asset.track.ready` webhook.
-
-Say the word and I'll implement Step 2.
+Say the word and I'll implement.

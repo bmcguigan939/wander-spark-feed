@@ -75,13 +75,36 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
             await supabaseAdmin.from("videos").update({ mux_asset_id: assetId, status: "processing" }).eq("mux_upload_id", uploadId);
           }
         } else if (event.type === "video.asset.track.ready") {
-          // Auto-generated subtitle track is ready
-          const track = event.data as { type?: string; asset_id?: string };
-          if (track?.type === "text" && track.asset_id) {
+          // Auto-generated subtitle track is ready — fetch VTT, store transcript, re-tag.
+          const track = event.data as { id?: string; type?: string; asset_id?: string; status?: string };
+          if (track?.type === "text" && track.asset_id && track.id && (track.status ?? "ready") === "ready") {
+            const { data: row } = await supabaseAdmin
+              .from("videos")
+              .select("id, mux_playback_id")
+              .eq("mux_asset_id", track.asset_id)
+              .maybeSingle();
+            let transcript: string | null = null;
+            if (row?.mux_playback_id) {
+              try {
+                const vttRes = await fetch(
+                  `https://stream.mux.com/${row.mux_playback_id}/text/${track.id}.vtt`
+                );
+                if (vttRes.ok) {
+                  const vtt = await vttRes.text();
+                  transcript = vttToPlainText(vtt);
+                }
+              } catch (e) {
+                console.error("[mux-webhook] fetch vtt failed", e);
+              }
+            }
             await supabaseAdmin
               .from("videos")
-              .update({ captions_ready: true })
+              .update({ captions_ready: true, transcript })
               .eq("mux_asset_id", track.asset_id);
+            if (row?.id && transcript) {
+              try { await runAutoTag(row.id, { useTranscript: true }); }
+              catch (e) { console.error("[mux-webhook] transcript re-tag failed", e); }
+            }
           }
         }
 
@@ -90,3 +113,20 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
     },
   },
 });
+
+function vttToPlainText(vtt: string): string {
+  const lines = vtt.split(/\r?\n/);
+  const out: string[] = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t === "WEBVTT") continue;
+    if (t.startsWith("NOTE")) continue;
+    if (/-->/g.test(t)) continue;
+    // Skip pure cue identifiers (numeric or short token before a timestamp line)
+    if (/^\d+$/.test(t)) continue;
+    // Strip inline tags like <v Speaker> or <c.class>
+    out.push(t.replace(/<[^>]+>/g, ""));
+  }
+  return out.join(" ").replace(/\s+/g, " ").trim();
+}
