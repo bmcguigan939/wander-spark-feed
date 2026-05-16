@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { runAutoTag } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/api/public/mux-webhook")({
   server: {
@@ -49,6 +50,16 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
           else query = query.eq("mux_asset_id", assetId);
           const { error } = await query;
           if (error) console.error("[mux-webhook] update ready failed:", error.message);
+
+          // Look up the video id, then run AI auto-tag (best-effort, awaited so Worker doesn't kill it)
+          const { data: row } = await supabaseAdmin
+            .from("videos")
+            .select("id")
+            .eq(uploadId ? "mux_upload_id" : "mux_asset_id", uploadId ?? assetId)
+            .maybeSingle();
+          if (row?.id) {
+            try { await runAutoTag(row.id); } catch (e) { console.error("[mux-webhook] auto-tag failed", e); }
+          }
         } else if (event.type === "video.asset.errored" || event.type === "video.upload.errored") {
           const uploadId = event.data?.upload_id as string | undefined;
           const assetId = event.data?.asset_id ?? event.data?.id;
