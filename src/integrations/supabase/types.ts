@@ -553,6 +553,8 @@ export type Database = {
           lng: number | null
           original_url: string | null
           price_cents: number | null
+          quality_reasons: Json | null
+          quality_score: number | null
           source: string
           starts_at: string | null
           status: string
@@ -583,6 +585,8 @@ export type Database = {
           lng?: number | null
           original_url?: string | null
           price_cents?: number | null
+          quality_reasons?: Json | null
+          quality_score?: number | null
           source?: string
           starts_at?: string | null
           status?: string
@@ -613,6 +617,8 @@ export type Database = {
           lng?: number | null
           original_url?: string | null
           price_cents?: number | null
+          quality_reasons?: Json | null
+          quality_score?: number | null
           source?: string
           starts_at?: string | null
           status?: string
@@ -853,6 +859,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      moderation_flags: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          label: string
+          reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          id?: string
+          label: string
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          label?: string
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
       }
       music_tracks: {
         Row: {

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { moderateComment } from "@/lib/moderation.functions";
 
 export type CommentRow = {
   id: string;
@@ -76,6 +77,8 @@ export const postComment = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
+    // Best-effort async moderation; do not block the response.
+    try { await moderateComment(row.id); } catch (e) { console.error("[comments] moderation failed", e); }
     return { id: row.id };
   });
 

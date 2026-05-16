@@ -134,6 +134,57 @@ round-up, a home page), set ai_confidence below 0.4.`;
   }
 }
 
+// ----------------------------------------------------------------------------
+// Quality grader. Scores price competitiveness, photo/media richness, review
+// signals, refundability, and clarity. Returns a 0..1 score + list of reasons.
+// ----------------------------------------------------------------------------
+type QualityResult = {
+  quality_score: number;
+  reasons: string[];
+};
+
+async function gradeQuality(hit: SearchHit, extracted: Extracted): Promise<QualityResult | null> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) return null;
+  const md = (hit.markdown ?? hit.description ?? "").slice(0, 4000);
+  if (md.length < 80) return null;
+  const sys = `You score the quality of a travel deal landing page on a 0..1 scale.
+Consider: price competitiveness vs. typical market, photo/media richness, review
+count and rating, free cancellation / refundability, clarity of what's included.
+Return ONLY JSON: {"quality_score": number, "reasons": string[]} where reasons
+are short tags like "no_reviews", "free_cancellation", "high_rating", "expensive",
+"rich_photos", "vague_inclusions". Max 5 reasons.`;
+  const user = `TITLE: ${extracted.title}\nPRICE: ${extracted.price_cents ?? "unknown"} ${extracted.currency ?? ""}\nCITY: ${extracted.city ?? ""}\n\nPAGE:\n${md}`;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) return null;
+  const json: any = await res.json().catch(() => null);
+  const txt: string | undefined = json?.choices?.[0]?.message?.content;
+  if (!txt) return null;
+  try {
+    const parsed = JSON.parse(txt);
+    return {
+      quality_score: Math.max(0, Math.min(1, Number(parsed.quality_score) || 0)),
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons.slice(0, 5).map((r: unknown) => String(r).slice(0, 40)) : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Pre-reject deals scoring below this; they never enter the admin queue.
+const QUALITY_REJECT_THRESHOLD = 0.3;
+
 // Canonicalise URL for dedupe: strip query + trailing slash.
 function canon(url: string): string {
   try {
@@ -196,6 +247,12 @@ async function ingestCandidates(
       }
       const extracted = await extractDeal(hit);
       if (!extracted || extracted.ai_confidence < 0.4) continue;
+      // Grade quality. Skip if below reject threshold.
+      const quality = await gradeQuality(hit, extracted);
+      if (quality && quality.quality_score < QUALITY_REJECT_THRESHOLD) {
+        skippedDuplicate += 0; // not a dup; just track silently
+        continue;
+      }
       const network = inferNetwork(hit.url);
       const status = extracted.ai_confidence >= threshold ? "approved" : "pending_review";
       const { error } = await supabaseAdmin.from("deals").insert({
@@ -213,6 +270,8 @@ async function ingestCandidates(
         affiliate_network: network,
         ai_confidence: extracted.ai_confidence,
         ai_summary: extracted.ai_summary,
+        quality_score: quality?.quality_score ?? null,
+        quality_reasons: quality?.reasons ?? [],
         discovered_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
         is_active: true,
@@ -295,10 +354,10 @@ export const listPendingDiscoveries = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data, error } = await supabaseAdmin
       .from("deals")
-      .select("id,title,description,url,original_url,city,country,destination,price_cents,currency,affiliate_network,ai_confidence,ai_summary,discovered_at")
+      .select("id,title,description,url,original_url,city,country,destination,price_cents,currency,affiliate_network,ai_confidence,ai_summary,quality_score,quality_reasons,discovered_at")
       .eq("source", "ai_discovered")
       .eq("status", "pending_review")
-      .order("ai_confidence", { ascending: false })
+      .order("quality_score", { ascending: false, nullsFirst: false })
       .limit(100);
     if (error) throw new Error(error.message);
     return { deals: data ?? [] };
