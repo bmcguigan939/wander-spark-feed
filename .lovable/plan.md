@@ -1,4 +1,10 @@
-## Next step: Deal CTA on feed videos
+## Status
+
+- ✅ Step 1 smoke test
+- ✅ Step 4 (this turn): "View deal" CTA on feed videos with attributed clicks
+- ⏭️ Next: Step 2 Mux Player caption toggle, Step 3 click analytics dashboard
+
+## Last shipped: Deal CTA on feed videos
 
 Surface a tappable "View deal" pill on each `VideoCard` in the feed when the video's location matches an active deal. Tapping logs an attributed click (with the referring video ID) and opens the deal.
 
