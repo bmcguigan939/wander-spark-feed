@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type NotificationRow = {
   id: string;
-  type: "like" | "comment" | "follow" | "reply";
+  type: "like" | "comment" | "follow" | "reply" | "deal_application" | "deal_application_decided";
   video_id: string | null;
   comment_id: string | null;
   deal_id: string | null;
