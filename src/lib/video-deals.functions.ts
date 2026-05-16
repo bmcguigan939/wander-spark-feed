@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { discoverForVideo } from "./discovery.functions";
+import { embedText } from "./ai.functions";
 
 export type SuggestedDeal = {
   id: string;
@@ -39,7 +40,7 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: video, error: vErr } = await supabaseAdmin
       .from("videos")
-      .select("id,creator_id,city,country,destination,activity_tags")
+      .select("id,creator_id,city,country,destination,activity_tags,title,description,embedding")
       .eq("id", data.videoId)
       .maybeSingle();
     if (vErr || !video) throw new Error("Video not found");
@@ -51,25 +52,71 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
     const vCountry = video.country;
     const vId = video.id;
 
+    // Build a semantic similarity map (video.embedding -> deals) when available.
+    async function semanticMap(): Promise<Map<string, number>> {
+      const map = new Map<string, number>();
+      let qvec: number[] | null = null;
+      const emb = (video as any).embedding;
+      if (emb) {
+        try {
+          const arr = typeof emb === "string" ? (JSON.parse(emb) as number[]) : (emb as number[]);
+          if (Array.isArray(arr) && arr.length > 100) qvec = arr;
+        } catch {}
+      }
+      if (!qvec) {
+        const text = [video.title, (video as any).description ?? "", place ?? "", tags.join(" ")]
+          .filter(Boolean)
+          .join("\n");
+        qvec = await embedText(text).catch(() => null);
+      }
+      if (!qvec) return map;
+      const { data: rows } = await (supabaseAdmin as any).rpc("match_deals", {
+        query_embedding: `[${qvec.join(",")}]`,
+        match_count: 25,
+        min_similarity: 0.15,
+        only_active: true,
+      });
+      for (const r of (rows ?? []) as Array<{ id: string; similarity: number }>) {
+        map.set(r.id, r.similarity);
+      }
+      return map;
+    }
+
     async function loadMatches(): Promise<SuggestedDeal[]> {
+      const semantic = await semanticMap();
       let q = supabaseAdmin
         .from("deals")
         .select("id,title,description,city,country,price_cents,currency,affiliate_network,ai_confidence,image_url,discovered_at")
         .eq("status", "approved")
         .eq("is_active", true)
-        .limit(50);
+        .limit(60);
       if (vCity) q = q.ilike("city", vCity);
       else if (vCountry) q = q.ilike("country", vCountry);
       const { data: rows } = await q;
-      const list = (rows ?? []).map((d) => {
+      const byId = new Map<string, any>();
+      for (const d of rows ?? []) byId.set(d.id, d);
+      // Pull semantic-only candidates that geo filter missed.
+      const missing = Array.from(semantic.keys()).filter((id) => !byId.has(id));
+      if (missing.length) {
+        const { data: extras } = await supabaseAdmin
+          .from("deals")
+          .select("id,title,description,city,country,price_cents,currency,affiliate_network,ai_confidence,image_url,discovered_at")
+          .in("id", missing.slice(0, 20))
+          .eq("status", "approved")
+          .eq("is_active", true);
+        for (const d of extras ?? []) byId.set(d.id, d);
+      }
+      const list = Array.from(byId.values()).map((d) => {
         const overlap = tags.filter((t) => (d.description ?? "").toLowerCase().includes(t)).length;
+        const base = scoreDeal(d, { city: vCity, country: vCountry, tags }, overlap);
+        const sim = semantic.get(d.id) ?? 0;
         return {
           ...d,
-          score: scoreDeal(d, { city: vCity, country: vCountry, tags }, overlap),
+          score: base + sim * 2.5,
         } as SuggestedDeal;
       });
       list.sort((a, b) => b.score - a.score);
-      return list.slice(0, 5);
+      return list.slice(0, 6);
     }
 
     let suggestions = await loadMatches();
