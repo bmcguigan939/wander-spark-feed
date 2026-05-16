@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { getDestination } from "@/lib/destinations.functions";
-import { ArrowLeft, MapPin, Heart } from "lucide-react";
+import { listDeals } from "@/lib/deals.functions";
+import { ArrowLeft, MapPin, Heart, Tag } from "lucide-react";
 
 export const Route = createFileRoute("/destinations/$country/")({
   head: ({ params }) => ({
@@ -20,8 +21,13 @@ function CountryPage() {
     queryKey: ["destination", country],
     queryFn: () => getDestination({ data: { country } }),
   });
+  const { data: dealsData } = useQuery({
+    queryKey: ["deals", "country", country],
+    queryFn: () => listDeals({ data: { country } }),
+  });
   const videos = data?.videos ?? [];
   const cities = data?.cities ?? [];
+  const deals = dealsData?.deals ?? [];
 
   return (
     <MobileShell>
@@ -44,6 +50,37 @@ function CountryPage() {
                 <MapPin className="h-3 w-3" /> {c.city} <span className="text-muted-foreground">({c.count})</span>
               </Link>
             ))}
+          </div>
+        )}
+
+        {deals.length > 0 && (
+          <div className="mt-5">
+            <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+              <Tag className="h-4 w-4 text-primary" /> Deals in {country}
+            </div>
+            <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+              {deals.slice(0, 8).map((d: any) => (
+                <li key={d.id} className="w-44 flex-shrink-0">
+                  <Link
+                    to="/deals/$id"
+                    params={{ id: d.id }}
+                    className="block overflow-hidden rounded-2xl border border-border bg-card"
+                  >
+                    <div className="aspect-video w-full bg-muted">
+                      {d.image_url && <img src={d.image_url} alt={d.title} className="h-full w-full object-cover" />}
+                    </div>
+                    <div className="p-2">
+                      <p className="line-clamp-2 text-xs font-medium">{d.title}</p>
+                      {d.discount_label && (
+                        <span className="mt-1 inline-block rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                          {d.discount_label}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

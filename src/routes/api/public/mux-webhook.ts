@@ -74,6 +74,15 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
           if (uploadId && assetId) {
             await supabaseAdmin.from("videos").update({ mux_asset_id: assetId, status: "processing" }).eq("mux_upload_id", uploadId);
           }
+        } else if (event.type === "video.asset.track.ready") {
+          // Auto-generated subtitle track is ready
+          const track = event.data as { type?: string; asset_id?: string };
+          if (track?.type === "text" && track.asset_id) {
+            await supabaseAdmin
+              .from("videos")
+              .update({ captions_ready: true })
+              .eq("mux_asset_id", track.asset_id);
+          }
         }
 
         return new Response("ok", { status: 200 });

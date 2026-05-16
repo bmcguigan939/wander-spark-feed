@@ -92,6 +92,109 @@ export type Database = {
           },
         ]
       }
+      deal_clicks: {
+        Row: {
+          clicked_at: string
+          deal_id: string
+          id: string
+          referrer_video_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          deal_id: string
+          id?: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          deal_id?: string
+          id?: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_clicks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          business_id: string
+          city: string | null
+          click_count: number
+          country: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          destination: string | null
+          discount_label: string | null
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          price_cents: number | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          business_id: string
+          city?: string | null
+          click_count?: number
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          destination?: string | null
+          discount_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price_cents?: number | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          business_id?: string
+          city?: string | null
+          click_count?: number
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          destination?: string | null
+          discount_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price_cents?: number | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -258,6 +361,7 @@ export type Database = {
         Row: {
           activity_tags: string[]
           budget_tag: string | null
+          captions_ready: boolean
           city: string | null
           country: string | null
           created_at: string
@@ -280,6 +384,7 @@ export type Database = {
         Insert: {
           activity_tags?: string[]
           budget_tag?: string | null
+          captions_ready?: boolean
           city?: string | null
           country?: string | null
           created_at?: string
@@ -302,6 +407,7 @@ export type Database = {
         Update: {
           activity_tags?: string[]
           budget_tag?: string | null
+          captions_ready?: boolean
           city?: string | null
           country?: string | null
           created_at?: string
