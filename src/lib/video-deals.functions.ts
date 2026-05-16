@@ -47,6 +47,9 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
 
     const tags = (video.activity_tags ?? []) as string[];
     const place = video.city || video.destination || video.country;
+    const vCity = video.city;
+    const vCountry = video.country;
+    const vId = video.id;
 
     async function loadMatches(): Promise<SuggestedDeal[]> {
       let q = supabaseAdmin
@@ -55,14 +58,14 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
         .eq("status", "approved")
         .eq("is_active", true)
         .limit(50);
-      if (video.city) q = q.ilike("city", video.city);
-      else if (video.country) q = q.ilike("country", video.country);
+      if (vCity) q = q.ilike("city", vCity);
+      else if (vCountry) q = q.ilike("country", vCountry);
       const { data: rows } = await q;
       const list = (rows ?? []).map((d) => {
         const overlap = tags.filter((t) => (d.description ?? "").toLowerCase().includes(t)).length;
         return {
           ...d,
-          score: scoreDeal(d, { city: video.city, country: video.country, tags }, overlap),
+          score: scoreDeal(d, { city: vCity, country: vCountry, tags }, overlap),
         } as SuggestedDeal;
       });
       list.sort((a, b) => b.score - a.score);
@@ -73,8 +76,8 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
     if (suggestions.length < 3 && place) {
       try {
         await discoverForVideo({
-          city: video.city,
-          country: video.country,
+          city: vCity,
+          country: vCountry,
           destination: video.destination,
           tags,
         });
@@ -87,9 +90,9 @@ export const suggestDealsForVideo = createServerFn({ method: "POST" })
 
     // Cache top picks for instant re-open (best-effort).
     if (suggestions.length) {
-      await supabaseAdmin.from("video_deal_suggestions").delete().eq("video_id", video.id);
+      await supabaseAdmin.from("video_deal_suggestions").delete().eq("video_id", vId);
       await supabaseAdmin.from("video_deal_suggestions").insert(
-        suggestions.map((s) => ({ video_id: video.id, deal_id: s.id, score: s.score })),
+        suggestions.map((s) => ({ video_id: vId, deal_id: s.id, score: s.score })),
       );
     }
 
