@@ -14,6 +14,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
@@ -66,6 +67,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/map'
     | '/notifications'
     | '/profile'
     | '/reset-password'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/map'
     | '/notifications'
     | '/profile'
     | '/reset-password'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/map'
     | '/notifications'
     | '/profile'
     | '/reset-password'
@@ -428,6 +440,7 @@ export interface RootRouteChildren {
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
+  MapRoute: typeof MapRoute
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -491,6 +504,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -723,6 +743,7 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
+  MapRoute: MapRoute,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,

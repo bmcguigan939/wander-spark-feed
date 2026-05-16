@@ -281,6 +281,8 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          lat: number | null
+          lng: number | null
           price_cents: number | null
           starts_at: string | null
           title: string
@@ -301,6 +303,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          lat?: number | null
+          lng?: number | null
           price_cents?: number | null
           starts_at?: string | null
           title: string
@@ -321,6 +325,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          lat?: number | null
+          lng?: number | null
           price_cents?: number | null
           starts_at?: string | null
           title?: string
@@ -710,7 +716,9 @@ export type Database = {
           destination: string | null
           duration_sec: number | null
           id: string
+          lat: number | null
           like_count: number
+          lng: number | null
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
@@ -737,7 +745,9 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          lat?: number | null
           like_count?: number
+          lng?: number | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
@@ -764,7 +774,9 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          lat?: number | null
           like_count?: number
+          lng?: number | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null

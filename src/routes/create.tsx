@@ -6,7 +6,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
 import { toast } from "sonner";
-import { Upload, Video, Loader2, Sparkles } from "lucide-react";
+import { Upload, Video, Loader2, Sparkles, MapPin } from "lucide-react";
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 
 export const Route = createFileRoute("/create")({
@@ -61,6 +61,8 @@ function UploadFlow() {
   const [city, setCity] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
+  const [lat, setLat] = useState<string>("");
+  const [lng, setLng] = useState<string>("");
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
@@ -92,6 +94,8 @@ function UploadFlow() {
       country: country || undefined, city: city || undefined,
       activity_tags: tagsInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean),
       budget_tag: budget || undefined,
+      lat: lat === "" ? undefined : Number(lat),
+      lng: lng === "" ? undefined : Number(lng),
     } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feed"] });
@@ -157,6 +161,20 @@ function UploadFlow() {
             </div>
             <Field label="Destination / place"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} /></Field>
             <Field label="Activity tags (comma separated)"><input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="beach, hiking, food" className={inputCls} /></Field>
+            <Field label="Map location (optional)">
+              <div className="grid grid-cols-2 gap-3">
+                <input type="number" step="0.000001" placeholder="Latitude" value={lat} onChange={(e) => setLat(e.target.value)} className={inputCls} />
+                <input type="number" step="0.000001" placeholder="Longitude" value={lng} onChange={(e) => setLng(e.target.value)} className={inputCls} />
+              </div>
+              <button type="button" onClick={() => {
+                if (!navigator.geolocation) return toast("Geolocation not available");
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => { setLat(pos.coords.latitude.toFixed(6)); setLng(pos.coords.longitude.toFixed(6)); },
+                  (err) => toast(err.message), { enableHighAccuracy: true, timeout: 8000 });
+              }} className="mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary">
+                <MapPin className="h-3 w-3" /> Use my location
+              </button>
+            </Field>
             <Field label="Budget">
               <div className="flex gap-2">
                 {BUDGETS.map((b) => (
