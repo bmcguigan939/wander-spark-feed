@@ -26,6 +26,7 @@ import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
+import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
@@ -122,6 +123,11 @@ const BusinessApplyRoute = BusinessApplyRouteImport.update({
   path: '/business/apply',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BusinessApplicationsRoute = BusinessApplicationsRouteImport.update({
+  id: '/business/applications',
+  path: '/business/applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DestinationsCountryIndexRoute =
   DestinationsCountryIndexRouteImport.update({
     id: '/destinations/$country/',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
     | '/creator/applications'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
     | '/creator/applications'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
     | '/creator/applications'
@@ -361,6 +373,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   WelcomeRoute: typeof WelcomeRoute
+  BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
@@ -499,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessApplyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/business/applications': {
+      id: '/business/applications'
+      path: '/business/applications'
+      fullPath: '/business/applications'
+      preLoaderRoute: typeof BusinessApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/destinations/$country/': {
       id: '/destinations/$country/'
       path: '/destinations/$country'
@@ -608,6 +628,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   WelcomeRoute: WelcomeRoute,
+  BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
