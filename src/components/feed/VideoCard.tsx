@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleLike, toggleSave } from "@/lib/interactions.functions";
 import { logDealClick, logDealImpression } from "@/lib/deals.functions";
+import { listVideoDeals } from "@/lib/video-deals.functions";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 import { CommentsSheet } from "@/components/feed/CommentsSheet";
@@ -28,6 +30,13 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const saveFn = useServerFn(toggleSave);
   const logDealClickFn = useServerFn(logDealClick);
   const logDealImpressionFn = useServerFn(logDealImpression);
+  const listVideoDealsFn = useServerFn(listVideoDeals);
+  const { data: attachedDealsData } = useQuery({
+    queryKey: ["video-deals", video.id],
+    queryFn: () => listVideoDealsFn({ data: { videoId: video.id } }),
+    staleTime: 60_000,
+  });
+  const attachedDeals = attachedDealsData?.deals ?? [];
 
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
@@ -262,6 +271,40 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
               </span>
             )}
           </Link>
+        )}
+
+        {attachedDeals.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-white/70">Book this trip</div>
+            {attachedDeals.slice(0, 3).map((d: any) => (
+              <a
+                key={d.id}
+                href={`/api/public/d/${d.id}?v=${video.id}`}
+                target="_blank"
+                rel="noopener sponsored"
+                className="flex items-center gap-2 rounded-2xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur-md transition hover:bg-black/55"
+              >
+                {d.image_url ? (
+                  <img src={d.image_url} alt="" className="h-9 w-9 flex-shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                    <Tag className="h-4 w-4" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{d.title}</div>
+                  <div className="truncate text-[11px] text-white/70">
+                    {[d.city, d.country].filter(Boolean).join(", ")}
+                    {d.affiliate_network ? ` · via ${d.affiliate_network}` : ""}
+                  </div>
+                </div>
+                <span className="flex-shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
+                  Book →
+                </span>
+              </a>
+            ))}
+            <div className="text-[9px] text-white/50">Sponsored · Travidz may earn a commission</div>
+          </div>
         )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">

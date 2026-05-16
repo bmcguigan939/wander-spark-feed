@@ -57,6 +57,8 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
+import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
+import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -300,6 +302,17 @@ const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
   path: '/api/public/go/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDIdRoute = ApiPublicDIdRouteImport.update({
+  id: '/api/public/d/$id',
+  path: '/api/public/d/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronDiscoverDealsRoute =
+  ApiPublicCronDiscoverDealsRouteImport.update({
+    id: '/api/public/cron/discover-deals',
+    path: '/api/public/cron/discover-deals',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -344,6 +357,8 @@ export interface FileRoutesByFullPath {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -391,6 +406,8 @@ export interface FileRoutesByTo {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -442,6 +459,8 @@ export interface FileRoutesById {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -494,6 +513,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -541,6 +562,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -591,6 +614,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -632,6 +657,8 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
+  ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -976,6 +1003,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/d/$id': {
+      id: '/api/public/d/$id'
+      path: '/api/public/d/$id'
+      fullPath: '/api/public/d/$id'
+      preLoaderRoute: typeof ApiPublicDIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/discover-deals': {
+      id: '/api/public/cron/discover-deals'
+      path: '/api/public/cron/discover-deals'
+      fullPath: '/api/public/cron/discover-deals'
+      preLoaderRoute: typeof ApiPublicCronDiscoverDealsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1083,6 +1124,8 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
+  ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
