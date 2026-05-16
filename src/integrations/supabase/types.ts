@@ -343,6 +343,36 @@ export type Database = {
           },
         ]
       }
+      destination_summaries: {
+        Row: {
+          best_time: string | null
+          city: string
+          country: string
+          generated_at: string
+          highlights: Json
+          id: string
+          summary: string
+        }
+        Insert: {
+          best_time?: string | null
+          city: string
+          country: string
+          generated_at?: string
+          highlights?: Json
+          id?: string
+          summary: string
+        }
+        Update: {
+          best_time?: string | null
+          city?: string
+          country?: string
+          generated_at?: string
+          highlights?: Json
+          id?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string

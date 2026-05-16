@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { generateItinerary } from "@/lib/itineraries.functions";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +11,8 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/itineraries/new")({
   head: () => ({ meta: [{ title: "New Itinerary — Travidz" }] }),
+  validateSearch: (search: Record<string, unknown>) =>
+    z.object({ destination: z.string().min(1).max(120).optional() }).parse(search),
   component: NewItineraryPage,
 });
 
@@ -22,9 +25,10 @@ function NewItineraryPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const genFn = useServerFn(generateItinerary);
+  const { destination: destParam } = Route.useSearch();
   useEffect(() => { if (!loading && !user) navigate({ to: "/login" }); }, [loading, user, navigate]);
 
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(destParam ?? "");
   const [days, setDays] = useState(5);
   const [budget, setBudget] = useState<"budget" | "mid-range" | "luxury">("mid-range");
   const [interests, setInterests] = useState<string[]>([]);
