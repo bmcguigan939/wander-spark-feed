@@ -99,3 +99,25 @@ export const autoTagVideo = createServerFn({ method: "POST" })
     await runAutoTag(data.videoId);
     return { ok: true };
   });
+
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+export const rerunAutoTag = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ videoId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: row } = await supabaseAdmin
+      .from("videos")
+      .select("id,creator_id,transcript")
+      .eq("id", data.videoId)
+      .maybeSingle();
+    if (!row || row.creator_id !== userId) throw new Error("Not allowed");
+    // Clear current tags so the model can re-fill them, then re-run with transcript if available.
+    await supabaseAdmin
+      .from("videos")
+      .update({ activity_tags: [], destination: null, country: null, city: null, budget_tag: null })
+      .eq("id", data.videoId);
+    await runAutoTag(data.videoId, { useTranscript: !!row.transcript });
+    return { ok: true };
+  });
