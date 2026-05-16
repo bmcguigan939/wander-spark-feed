@@ -187,16 +187,13 @@ async function buildAffinity(userId: string) {
 
 export const getForYouFeed = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
-    z.object({ limit: z.number().min(1).max(50).default(20) }).parse(input)
+    z.object({
+      limit: z.number().min(1).max(50).default(20),
+      viewerId: z.string().uuid().nullable().optional(),
+    }).parse(input)
   )
   .handler(async ({ data }) => {
-    // Determine viewer (optional)
-    let userId: string | null = null;
-    try {
-      const { getSupabaseUser } = await import("@/integrations/supabase/auth-middleware");
-      const u = await getSupabaseUser().catch(() => null);
-      userId = u?.id ?? null;
-    } catch { /* anonymous */ }
+    const userId = data.viewerId ?? null;
 
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
