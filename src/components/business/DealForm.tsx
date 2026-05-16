@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
 export type DealFormValues = {
   title: string;
@@ -34,6 +37,37 @@ export function DealForm({
     discount_label: initial?.discount_label ?? "",
     is_active: initial?.is_active ?? true,
   });
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please pick an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth.user?.id;
+      if (!userId) throw new Error("Not signed in");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("deal-images")
+        .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("deal-images").getPublicUrl(path);
+      setV((cur) => ({ ...cur, image_url: pub.publicUrl }));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const field = (label: string, key: keyof DealFormValues, type = "text", required = false) => (
     <label className="block">
@@ -67,7 +101,46 @@ export function DealForm({
         />
       </label>
       {field("Link URL", "url", "url", true)}
-      {field("Image URL", "image_url", "url")}
+      <div>
+        <span className="mb-1 block text-xs font-medium text-muted-foreground">Cover image</span>
+        {v.image_url ? (
+          <div className="relative overflow-hidden rounded-xl border border-border">
+            <img src={v.image_url} alt="" className="aspect-video w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setV({ ...v, image_url: "" })}
+              className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-xs text-foreground shadow"
+            >
+              <X className="h-3 w-3" /> Remove
+            </button>
+          </div>
+        ) : (
+          <label className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 text-xs text-muted-foreground hover:border-primary hover:text-primary">
+            {uploading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <ImagePlus className="h-5 w-5" />
+                Tap to upload (JPG/PNG, ≤5 MB)
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleUpload(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         {field("Country", "country")}
         {field("City", "city")}
@@ -84,7 +157,7 @@ export function DealForm({
       </label>
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || uploading}
         className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 disabled:opacity-60"
       >
         {busy ? "Saving…" : submitLabel}

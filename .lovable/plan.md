@@ -1,46 +1,57 @@
-Now that the project is published and `notify.travidz.com` is verified, here's what's next.
+# Travidz brief — what's left to build
 
-## Smoke test (you do this — Step 1 is live)
+Status check against your 25-section brief, based on the current codebase. Three buckets: **Done**, **Partial**, **Not started**.
 
-Run through these on the published URL. Tell me which (if any) fail.
+## Done (shipped and wired)
 
-1. Sign out → sign up new email → see `/welcome` → pick **Creator** → land on `/create`.
-2. Sign out → sign up again → pick **Traveller** → land on `/` → reload → no `/welcome` again.
-3. Sign out → sign up again → pick **Business** → land on `/business/apply`.
-4. On `/login` click **Forgot password?** → toast appears, recovery email arrives.
-5. Open the recovery link → set a new password on `/reset-password` → redirected to `/login` → sign in works.
+- **Auth & roles** (Section 2) — sign up / login, role picker on `/welcome`, three roles (Traveller, Creator, Business), role-routed redirects, password reset flow, `user_roles` table with `has_role()`.
+- **Bottom nav & shell** (Section 3) — Feed / Search / Create / Collections / Profile, app opens straight into the feed.
+- **Vertical video feed** (Section 4) — `VideoCard` with like / save / comment / share / add-to-collection, follow button, destination + tags, Mux playback, view tracking.
+- **Search** (Section 5, basic) — `/search` route with text search via Postgres `search_tsv`.
+- **Create / upload** (Section 7, basic) — `/create` with Mux direct upload, title/description/tags, destination fields.
+- **Collections** (Section 9, basic) — create / view / add-to / public+private visibility, RLS in place.
+- **Comments & notifications** (supporting) — comments sheet, notifications route, bell with unread count.
+- **Destination pages skeleton** (Section 15) — `/destinations`, `/destinations/$country`, `/destinations/$country/$city`.
+- **Business onboarding + deals scaffold** (Sections 11, partial) — `business.apply`, `business.index`, deals CRUD routes, `DealForm`, `deals` + `deal_clicks` + `deal_impressions` tables with RLS.
+- **Email infrastructure** (supporting) — `notify.travidz.com` verified, pgmq queue + cron dispatcher live, 6 branded auth email templates scaffolded.
+- **Creator storefront entry point** (Section 10, basic) — `/u/$username` profile page.
 
-## What I'll do next (in this order)
+## Partial (started but not finished)
 
-### A. Branded auth emails (finishes Step 1)
-Domain is verified, so I'll:
-1. Scaffold the six auth email templates (signup confirm, magic link, recovery, invite, email-change, reauthentication) with Travidz styling — Compass mark, primary color from `src/styles.css`, white body, dark accents.
-2. Re-run the email infra setup so the pg_cron dispatcher is registered against the published `process-email-queue` route (the route is now deployed, so cron can activate).
-3. You verify by triggering a signup or forgot-password and confirming the email arrives from `notify@travidz.com` with Travidz branding (check Cloud → Emails for queue status).
+- **Business deals CRUD** — needs image upload (currently URL field), active/inactive toggle, delete confirm, dashboard empty/loading/error states, public `/deals` polish.
+- **Feed personalisation** (Section 4) — feed exists but is chronological; no AI ranking from watch time / likes / saves / follows yet.
+- **Search filters** (Section 5) — text search works; no country / activity / budget / season filters.
+- **AI video analysis** (Section 6) — Mux webhook + `ai.functions.ts` exist; auto transcript / tagging / summary on upload not wired.
+- **Creator studio** (Section 7) — only upload + basic metadata; no in-app trim, captions, overlays, music, or AI title/hook/hashtag generation.
 
-### B. Step 2 — Business onboarding + deals CRUD
-Most of this is already scaffolded (`business.apply.tsx`, `business.index.tsx`, `business.deals.*` routes, `DealForm.tsx`, `deals` table with proper RLS). I'll audit and finish:
-- Image upload to the existing `deal-images` bucket from `DealForm` (currently it's a URL field).
-- Empty/loading/error states on the business dashboard.
-- Active vs inactive toggle + delete confirm on the deal detail page.
-- Public `/deals` index + `/deals/$id` polish, click tracking already wired via `deal_clicks`.
+## Not started
 
-Smoke test for Step 2 (we'll run after I build):
-1. As a Business user, create a deal with image upload → appears on `/deals` and `/business`.
-2. Edit the deal, toggle inactive → disappears from public `/deals`, still visible in `/business`.
-3. Click "Open deal" from public `/deals/$id` → `deal_clicks` row inserted, `click_count` bumps.
-4. Delete the deal → confirm dialog → gone everywhere.
+- **Music integration** (Section 8) — library, mood/genre search, beat sync.
+- **Paid / collaborative folders & folder AI summaries** (Section 9).
+- **Creator storefront monetisation** (Section 10) — premium guides, paid itineraries, earnings dashboard.
+- **Creator deal application flow** (Section 11) — apply → business approve → unique code + tracking link + QR.
+- **Stripe Connect payment split** (Section 12) — business / creator / platform split, payouts, refund tracking.
+- **Deal calculator** (Section 13).
+- **AI itinerary builder** (Section 14).
+- **Destination page enrichment** (Section 15) — AI summary, weather, top creators/hotels, suggested itinerary, deals on page.
+- **Map system** (Section 16) — Mapbox/Google Maps view of videos, deals, pins.
+- **External booking/affiliate integrations** (Section 17) — Booking.com, GetYourGuide, Viator, Skyscanner, Airalo.
+- **Admin dashboard** (Section 18) — no admin routes or moderation tools exist yet.
+- **Creator analytics** on `/profile` (views, likes, saves per video).
+- **Realtime notifications badge + mark-all-read**.
 
-### Roadmap after Step 2
+## Suggested next step (smallest valuable slice)
 
-3. Creator analytics on `/profile` (views, likes, saves per video).
-4. Notifications: mark-all-read + realtime badge.
-5. Collections polish (cover image, reorder, share link).
-6. Search: filters (country, activity tag, budget) on `/search`.
-7. AI tagging post-Mux-webhook (auto activity_tags + transcript summary via Lovable AI).
-8. AI itinerary builder on a destination page.
-9. Map view of saved/feed videos.
-10. Creator storefront page.
-11. Stripe Connect deal payouts (last — biggest scope).
+Finish **Business Deals end-to-end** (Section 11 MVP) so businesses can actually run promotions and you have something to demo:
 
-Reply with smoke-test results (or just "go") and I'll start on A.
+1. Image upload in `DealForm` → existing `deal-images` bucket.
+2. Active/inactive toggle + delete confirm on `business.deals.$id`.
+3. Empty/loading/error states on `/business`.
+4. Public `/deals` + `/deals/$id` polish; verify `deal_clicks` + `click_count` tracking end-to-end.
+
+Then either:
+- **B.** Creator deal application flow (Section 11 cont. → 12) — unlocks the monetisation story.
+- **C.** AI video analysis on upload (Section 6) — unlocks search/itinerary/tagging downstream.
+- **D.** Creator analytics + realtime notifications — smaller, high polish wins.
+
+Reply with **B**, **C**, **D**, or your own pick and I'll write the implementation plan.
