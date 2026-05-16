@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { embedDeal } from "@/lib/ai.functions";
 
 // ----------------------------------------------------------------------------
 // Affiliate-friendly suppliers we recognise. URLs from anywhere else are still
@@ -255,7 +256,7 @@ async function ingestCandidates(
       }
       const network = inferNetwork(hit.url);
       const status = extracted.ai_confidence >= threshold ? "approved" : "pending_review";
-      const { error } = await supabaseAdmin.from("deals").insert({
+      const { data: inserted, error } = await supabaseAdmin.from("deals").insert({
         title: extracted.title,
         description: extracted.description,
         url: hit.url,
@@ -275,12 +276,15 @@ async function ingestCandidates(
         discovered_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
         is_active: true,
-      });
+      }).select("id").single();
       if (error) {
         errors.push(error.message);
         continue;
       }
       inserted += 1;
+      if (inserted) {
+        try { await embedDeal((inserted as any).id); } catch (e) { /* non-fatal */ }
+      }
     } catch (e: any) {
       errors.push(String(e?.message ?? e).slice(0, 200));
     }
