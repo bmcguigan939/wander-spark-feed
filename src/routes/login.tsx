@@ -15,18 +15,31 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null); setLoading(true);
-    const fn = mode === "signin"
-      ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
-    const { error } = await fn;
-    setLoading(false);
-    if (error) return setError(error.message);
-    navigate({ to: "/" });
+    setError(null); setInfo(null); setLoading(true);
+    if (mode === "signin") {
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(false);
+      if (err) return setError(err.message);
+      navigate({ to: "/" });
+    } else {
+      const { data, error: err } = await supabase.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      setLoading(false);
+      if (err) return setError(err.message);
+      if (data.session) {
+        navigate({ to: "/" });
+      } else {
+        setInfo("Account created. Check your email to confirm, then sign in.");
+        setMode("signin");
+      }
+    }
   }
 
   async function google() {
@@ -46,6 +59,21 @@ function LoginPage() {
         <p className="mt-1 text-sm text-muted-foreground">Discover travel through video.</p>
       </div>
 
+      <div className="mb-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-card p-1 text-sm font-semibold">
+        {(["signin", "signup"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { setMode(m); setError(null); setInfo(null); }}
+            className={`rounded-full py-2 transition ${
+              mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {m === "signin" ? "Sign in" : "Create account"}
+          </button>
+        ))}
+      </div>
+
       <button onClick={google} className="mb-5 w-full rounded-full border border-border bg-card py-3 text-sm font-semibold">
         Continue with Google
       </button>
@@ -63,20 +91,15 @@ function LoginPage() {
         <input
           type="password" required minLength={6} placeholder="Password" value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
           className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
         />
+        {info && <p className="text-xs text-primary">{info}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
         <button disabled={loading} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
       </form>
-
-      <button
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="mt-5 text-center text-xs text-muted-foreground"
-      >
-        {mode === "signin" ? "New to Travidz? Create an account" : "Already have an account? Sign in"}
-      </button>
     </div>
   );
 }
