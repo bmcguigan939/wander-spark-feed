@@ -162,7 +162,6 @@ function InvitePage() {
         ) : (
           <Link
             to="/login"
-            search={{ redirect: `/business/invite/${token}` } as any}
             className="inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft"
           >
             Sign in to accept
