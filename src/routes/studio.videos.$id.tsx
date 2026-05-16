@@ -334,6 +334,8 @@ function InsightsPage() {
         onSave={(iso) => scheduleM.mutate(iso)}
       />
 
+      <TagBusinessSheet videoId={id} open={tagOpen} onOpenChange={setTagOpen} />
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
