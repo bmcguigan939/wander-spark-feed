@@ -1,36 +1,46 @@
-# Step 1 — Auth polish + role picker
+Now that the project is published and `notify.travidz.com` is verified, here's what's next.
 
-Working through the roadmap in order. This is item 1; we'll smoke-test it, then move to item 2.
+## Smoke test (you do this — Step 1 is live)
 
-## What we're adding
+Run through these on the published URL. Tell me which (if any) fail.
 
-1. **Role picker on first sign-in.** New users land on `/welcome` (instead of `/`) with three big cards: **Traveller** (default), **Creator**, **Business**. Choosing Creator self-assigns the `creator` role (existing RLS policy already allows this). Choosing Business sends them to `/business/apply`. Choosing Traveller proceeds straight to the feed. The picker only appears when the user has exactly the default `traveller` role and no others.
-2. **Forgot/reset password.** Add a "Forgot password?" link on `/login`. Add a `/reset-password` public route that detects the recovery hash, prompts for a new password, and calls `supabase.auth.updateUser({ password })`.
-3. **Branded auth emails (Lovable Emails).** Set up the project's email domain via the email setup dialog (if not already configured), then scaffold the six auth templates (signup confirmation, magic link, recovery, invite, email-change, reauthentication) styled to match Travidz (compass logo, primary color from `src/styles.css`, white body). Auth email hook is queue-based.
-4. **Sign-out polish.** Confirm dialog before sign-out from the profile edit sheet (already implemented per earlier turn — verify it still works and routes to `/login`).
-
-## What we're NOT changing
-
-- No schema changes. `user_roles` and the `users can self-assign creator role` policy already exist; the trigger seeds `traveller`. Business role still goes through the existing `business.apply.tsx` flow.
-- No Google OAuth changes (already wired via the Lovable broker).
-- No transactional/app emails yet — that's a separate roadmap item.
-
-## Technical details
-
-- **`src/routes/welcome.tsx`** — new public route. `beforeLoad` redirects to `/login` if not signed in, and to `/` if the user already has a non-default role (creator/business/admin). Three cards using existing design tokens.
-- **`src/routes/__root.tsx`** — after `onAuthStateChange` fires for a new sign-in, if the user's only role is `traveller` AND they have no profile activity (no videos, no follows — cheap check: just rely on a flag), route them to `/welcome` once. Simpler approach: gate purely on roles — first-time users always have only `traveller` and will see `/welcome`; if they pick Traveller we navigate to `/` and they never see it again because we set a `localStorage` `travidz:welcomed` flag.
-- **`src/lib/roles.functions.ts`** — new server fn `selfAssignCreatorRole` (wraps existing `becomeCreator` logic from `mux.functions.ts` so onboarding doesn't depend on the Mux module). `mux.functions.ts` `becomeCreator` keeps working unchanged.
-- **`src/routes/reset-password.tsx`** — new public route. Reads `type=recovery` from `window.location.hash`, shows a single password input + confirm, calls `supabase.auth.updateUser`, then redirects to `/login` with a success toast.
-- **`src/routes/login.tsx`** — add "Forgot password?" link below the password field; clicking it prompts for email (inline) and calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`.
-- **Auth emails** — call `email_domain--check_email_domain_status`. If no domain, show the email setup dialog and pause. After the user completes setup, scaffold the six templates, apply brand styling (primary color from CSS variables, white body, Compass-inspired header), and let DNS verification finish in the background.
-
-## Smoke test checklist (we'll run after build)
-
-1. Sign out → sign up with a new email → see `/welcome` → pick **Creator** → land on `/create` ready to upload.
-2. Sign out → sign up again → pick **Traveller** → land on `/` → reload → don't see `/welcome` again.
+1. Sign out → sign up new email → see `/welcome` → pick **Creator** → land on `/create`.
+2. Sign out → sign up again → pick **Traveller** → land on `/` → reload → no `/welcome` again.
 3. Sign out → sign up again → pick **Business** → land on `/business/apply`.
-4. Sign out → on `/login` click **Forgot password?** → enter email → see "check your inbox" toast.
-5. Click the recovery link in the email → land on `/reset-password` → set new password → redirected to `/login` → sign in with new password.
-6. Confirm branded auth emails arrive from the configured sender once DNS is green.
+4. On `/login` click **Forgot password?** → toast appears, recovery email arrives.
+5. Open the recovery link → set a new password on `/reset-password` → redirected to `/login` → sign in works.
 
-Once all six pass, I'll move to item 2 (Business onboarding + deals CRUD).
+## What I'll do next (in this order)
+
+### A. Branded auth emails (finishes Step 1)
+Domain is verified, so I'll:
+1. Scaffold the six auth email templates (signup confirm, magic link, recovery, invite, email-change, reauthentication) with Travidz styling — Compass mark, primary color from `src/styles.css`, white body, dark accents.
+2. Re-run the email infra setup so the pg_cron dispatcher is registered against the published `process-email-queue` route (the route is now deployed, so cron can activate).
+3. You verify by triggering a signup or forgot-password and confirming the email arrives from `notify@travidz.com` with Travidz branding (check Cloud → Emails for queue status).
+
+### B. Step 2 — Business onboarding + deals CRUD
+Most of this is already scaffolded (`business.apply.tsx`, `business.index.tsx`, `business.deals.*` routes, `DealForm.tsx`, `deals` table with proper RLS). I'll audit and finish:
+- Image upload to the existing `deal-images` bucket from `DealForm` (currently it's a URL field).
+- Empty/loading/error states on the business dashboard.
+- Active vs inactive toggle + delete confirm on the deal detail page.
+- Public `/deals` index + `/deals/$id` polish, click tracking already wired via `deal_clicks`.
+
+Smoke test for Step 2 (we'll run after I build):
+1. As a Business user, create a deal with image upload → appears on `/deals` and `/business`.
+2. Edit the deal, toggle inactive → disappears from public `/deals`, still visible in `/business`.
+3. Click "Open deal" from public `/deals/$id` → `deal_clicks` row inserted, `click_count` bumps.
+4. Delete the deal → confirm dialog → gone everywhere.
+
+### Roadmap after Step 2
+
+3. Creator analytics on `/profile` (views, likes, saves per video).
+4. Notifications: mark-all-read + realtime badge.
+5. Collections polish (cover image, reorder, share link).
+6. Search: filters (country, activity tag, budget) on `/search`.
+7. AI tagging post-Mux-webhook (auto activity_tags + transcript summary via Lovable AI).
+8. AI itinerary builder on a destination page.
+9. Map view of saved/feed videos.
+10. Creator storefront page.
+11. Stripe Connect deal payouts (last — biggest scope).
+
+Reply with smoke-test results (or just "go") and I'll start on A.
