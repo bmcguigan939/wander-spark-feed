@@ -25,6 +25,7 @@ import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
+import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
@@ -120,6 +121,11 @@ const RCodeRoute = RCodeRouteImport.update({
 const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
   id: '/itineraries/new',
   path: '/itineraries/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItinerariesIdRoute = ItinerariesIdRouteImport.update({
+  id: '/itineraries/$id',
+  path: '/itineraries/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
@@ -426,6 +438,7 @@ export interface RootRouteChildren {
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
+  ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
   RCodeRoute: typeof RCodeRoute
   UUsernameRoute: typeof UUsernameRoute
@@ -555,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/itineraries/new'
       fullPath: '/itineraries/new'
       preLoaderRoute: typeof ItinerariesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/itineraries/$id': {
+      id: '/itineraries/$id'
+      path: '/itineraries/$id'
+      fullPath: '/itineraries/$id'
+      preLoaderRoute: typeof ItinerariesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -713,6 +733,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
+  ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
   RCodeRoute: RCodeRoute,
   UUsernameRoute: UUsernameRoute,
