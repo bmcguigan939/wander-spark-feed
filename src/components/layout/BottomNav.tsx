@@ -1,9 +1,10 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Compass, Search, Plus, Bookmark, User } from "lucide-react";
+import { Compass, Search, MapPin, Plus, Bookmark, User } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Feed", icon: Compass },
   { to: "/search", label: "Search", icon: Search },
+  { to: "/destinations", label: "Places", icon: MapPin },
   { to: "/create", label: "Create", icon: Plus },
   { to: "/collections", label: "Saved", icon: Bookmark },
   { to: "/profile", label: "Profile", icon: User },
