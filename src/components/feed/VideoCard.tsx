@@ -3,27 +3,61 @@ import { Link } from "@tanstack/react-router";
 import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play } from "lucide-react";
 import { useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
+import { useAuth } from "@/lib/auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toggleLike, toggleSave } from "@/lib/interactions.functions";
+import { toast } from "sonner";
+import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
   const [muted, setMuted] = useState(true);
+  const [collectionOpen, setCollectionOpen] = useState(false);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const likeFn = useServerFn(toggleLike);
+  const saveFn = useServerFn(toggleSave);
+
+  const likeM = useMutation({
+    mutationFn: () => likeFn({ data: { videoId: video.id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+  });
+  const saveM = useMutation({
+    mutationFn: () => saveFn({ data: { videoId: video.id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+  });
+
+  function requireAuth(action: () => void) {
+    if (!user) { toast("Sign in to continue", { action: { label: "Sign in", onClick: () => (window.location.href = "/login") } }); return; }
+    action();
+  }
+
+  async function share() {
+    const url = `${window.location.origin}/?v=${video.id}`;
+    if (navigator.share) { try { await navigator.share({ title: video.title, url }); } catch {} }
+    else { await navigator.clipboard.writeText(url); toast("Link copied"); }
+  }
+
+  const styleAny = {
+    width: "100%", height: "100%",
+    "--controls": "none", "--media-object-fit": "cover",
+  } as React.CSSProperties;
+
   return (
     <section className="feed-snap relative h-dvh w-full overflow-hidden bg-black">
       {video.mux_playback_id ? (
-        <MuxPlayer
-          streamType="on-demand"
-          playbackId={video.mux_playback_id}
-          autoPlay={active ? "muted" : false}
-          muted={muted}
-          loop
-          playsInline
-          style={{
-            width: "100%", height: "100%",
-            // @ts-expect-error mux player css vars
-            "--controls": "none", "--media-object-fit": "cover",
-          }}
-          onClick={() => setMuted((m) => !m)}
-          poster={video.thumbnail_url ?? undefined}
-        />
+        <div className="absolute inset-0" onClick={() => setMuted((m) => !m)}>
+          <MuxPlayer
+            streamType="on-demand"
+            playbackId={video.mux_playback_id}
+            autoPlay={active ? "muted" : false}
+            muted={muted}
+            loop
+            playsInline
+            style={styleAny}
+            poster={video.thumbnail_url ?? undefined}
+          />
+        </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-card to-background">
           {video.thumbnail_url ? (
@@ -39,11 +73,13 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
       {/* Right rail */}
       <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
-        <Action icon={Heart} count={video.like_count} />
-        <Action icon={MessageCircle} count={0} />
-        <Action icon={Bookmark} count={video.save_count} />
-        <Action icon={Share2} count={0} />
+        <Action icon={Heart} count={video.like_count} onClick={() => requireAuth(() => likeM.mutate())} />
+        <Action icon={MessageCircle} count={0} onClick={() => toast("Comments coming soon")} />
+        <Action icon={Bookmark} count={video.save_count} onClick={() => requireAuth(() => saveM.mutate())} />
+        <Action icon={Share2} count={0} onClick={share} />
+        <button onClick={() => requireAuth(() => setCollectionOpen(true))} className="text-[10px] font-semibold uppercase tracking-wide text-white/80">+Collection</button>
       </div>
+      <AddToCollectionSheet open={collectionOpen} onOpenChange={setCollectionOpen} videoId={video.id} />
 
       {/* Bottom overlay */}
       <div className="absolute inset-x-0 bottom-4 px-4 text-white">
@@ -84,9 +120,9 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   );
 }
 
-function Action({ icon: Icon, count }: { icon: typeof Heart; count: number }) {
+function Action({ icon: Icon, count, onClick }: { icon: typeof Heart; count: number; onClick?: () => void }) {
   return (
-    <button className="flex flex-col items-center gap-1 text-white drop-shadow-lg">
+    <button onClick={onClick} className="flex flex-col items-center gap-1 text-white drop-shadow-lg">
       <span className="rounded-full bg-black/30 p-2 backdrop-blur-md">
         <Icon className="h-6 w-6" strokeWidth={1.8} />
       </span>
