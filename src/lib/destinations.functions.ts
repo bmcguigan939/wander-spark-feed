@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listDestinations = createServerFn({ method: "GET" }).handler(async () => {
   const { data, error } = await supabaseAdmin
@@ -56,4 +57,158 @@ export const getDestination = createServerFn({ method: "GET" })
       videos: (videos ?? []) as any[],
       cities: Array.from(cities.entries()).map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count),
     };
+  });
+
+const OverviewInput = z.object({
+  country: z.string().min(1).max(100),
+  city: z.string().min(1).max(100),
+});
+
+export const getDestinationOverview = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => OverviewInput.parse(input))
+  .handler(async ({ data }) => {
+    const { country, city } = data;
+
+    const [{ data: videos, error: vErr }, { data: summary }, { data: deals }] = await Promise.all([
+      supabaseAdmin
+        .from("videos")
+        .select(
+          "id,title,thumbnail_url,mux_playback_id,activity_tags,like_count,save_count,view_count,created_at,creator_id,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+        )
+        .eq("status", "ready")
+        .ilike("country", country)
+        .ilike("city", city)
+        .order("like_count", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(24),
+      supabaseAdmin
+        .from("destination_summaries")
+        .select("summary,highlights,best_time,generated_at")
+        .ilike("country", country)
+        .ilike("city", city)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("deals")
+        .select("id,title,image_url,discount_label,price_cents,currency,url,country,city")
+        .eq("is_active", true)
+        .ilike("country", country)
+        .ilike("city", city)
+        .order("created_at", { ascending: false })
+        .limit(6),
+    ]);
+    if (vErr) throw new Error(vErr.message);
+
+    type CreatorAgg = {
+      id: string;
+      username: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+      video_count: number;
+      total_likes: number;
+    };
+    const creators = new Map<string, CreatorAgg>();
+    let totalLikes = 0;
+    for (const v of (videos ?? []) as any[]) {
+      totalLikes += v.like_count ?? 0;
+      const c = v.creator;
+      if (!c) continue;
+      const entry = creators.get(c.id) ?? {
+        id: c.id, username: c.username, display_name: c.display_name, avatar_url: c.avatar_url,
+        video_count: 0, total_likes: 0,
+      };
+      entry.video_count += 1;
+      entry.total_likes += v.like_count ?? 0;
+      creators.set(c.id, entry);
+    }
+    const topCreators = Array.from(creators.values())
+      .sort((a, b) => b.total_likes - a.total_likes || b.video_count - a.video_count)
+      .slice(0, 6);
+
+    return {
+      videos: (videos ?? []) as any[],
+      summary: summary ?? null,
+      deals: (deals ?? []) as any[],
+      topCreators,
+      stats: {
+        videos: (videos ?? []).length,
+        creators: creators.size,
+        likes: totalLikes,
+      },
+    };
+  });
+
+const OverviewSchema = z.object({
+  summary: z.string().min(20).max(600),
+  highlights: z.array(z.string().min(2).max(80)).min(3).max(6),
+  best_time: z.string().min(2).max(120),
+});
+
+export const generateDestinationOverview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => OverviewInput.parse(input))
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("AI is not configured");
+    const { country, city } = data;
+
+    const { data: vids } = await supabaseAdmin
+      .from("videos")
+      .select("title,activity_tags")
+      .eq("status", "ready")
+      .ilike("country", country)
+      .ilike("city", city)
+      .order("like_count", { ascending: false })
+      .limit(12);
+
+    const context = (vids ?? [])
+      .map((v: any) => `- ${v.title}${v.activity_tags?.length ? ` [${v.activity_tags.join(", ")}]` : ""}`)
+      .join("\n");
+
+    const prompt = `Write a concise traveler overview for ${city}, ${country}.
+${context ? `Recent traveler videos there:\n${context}\n` : ""}
+Return JSON: { "summary": string (2-3 sentences, evocative but practical),
+"highlights": string[] (3-6 short tags like "Old Town", "Rice terraces"),
+"best_time": string (e.g. "Apr-Jun & Sep-Oct") }`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "raw-fetch",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: "You are a travel guide editor. Reply ONLY with valid JSON matching the schema." },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (res.status === 429) throw new Error("AI is rate-limited. Try again in a moment.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings.");
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = json.choices?.[0]?.message?.content;
+    if (!raw) throw new Error("AI returned no content");
+    const parsed = OverviewSchema.parse(JSON.parse(raw));
+
+    const { data: row, error: upErr } = await supabaseAdmin
+      .from("destination_summaries")
+      .upsert(
+        {
+          country,
+          city,
+          summary: parsed.summary,
+          highlights: parsed.highlights,
+          best_time: parsed.best_time,
+          generated_at: new Date().toISOString(),
+        },
+        { onConflict: "country,city" }
+      )
+      .select("summary,highlights,best_time,generated_at")
+      .single();
+    if (upErr) throw new Error(upErr.message);
+    return row;
   });
