@@ -16,6 +16,7 @@ export type FeedVideo = {
   like_count: number;
   save_count: number;
   view_count: number;
+  comment_count: number;
   created_at: string;
   creator: {
     id: string;
@@ -35,7 +36,7 @@ async function fetchFeedRows(limit: number, offset: number): Promise<FeedVideo[]
   const { data, error } = await supabaseAdmin
     .from("videos")
     .select(
-      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
     )
     .eq("status", "ready")
     .order("like_count", { ascending: false })

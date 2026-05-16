@@ -1,43 +1,75 @@
-## Status
+## What's already built
 
-The original 5-step roadmap is fully shipped:
+Travel-video app on TanStack Start + Lovable Cloud. Working today:
 
-- Step 1 — Mux upload + creator role ✅
-- Step 2 — Mux Player + caption toggle ✅
-- Step 3 — Feed + interactions (like/save/share/collections) ✅
-- Step 4 — AI auto-tag on upload ✅
-- Step 5 — Transcript-driven re-tagging ✅ (just landed)
+- Auth (email + Google) with `traveller` / `creator` / `business` roles
+- Creator upload → Mux ingest → auto-tag (Lovable AI) → auto-captions → transcript re-tag
+- Vertical feed with Mux Player + CC toggle, likes, saves, collections, share
+- Search (now transcript-aware), Destinations browse, Profiles
+- Business portal: apply, deals CRUD, deal detail with click sparkline
+- Public deal pages with click tracking
 
-Nothing in `.lovable/plan.md` is pending. So "next step" is now a product question, not a checklist question.
+## What's still missing
 
-## Recommended next moves (pick one)
+Five gaps, ordered by user impact:
 
-Three directions worth doing next, in rough priority order:
+### 1. Comments (highest impact — UI button already exists and toasts "coming soon")
+- `comments` table: id, video_id, user_id, body, parent_id (nullable for replies), created_at
+- RLS: public read, auth insert, owner update/delete
+- `comment_count` denormalized on `videos` + trigger (mirrors like/save)
+- Bottom sheet on `VideoCard` listing comments + composer; reuse `AddToCollectionSheet` shape
+- Realtime subscribe on the open video's comments channel
 
-### A. Verify Step 5 end-to-end (1 small task, do this first)
-Before stacking new work, confirm the transcript pipeline actually fires in production:
-- Upload a fresh test video, wait for `video.asset.track.ready`, check `videos.transcript` populates and tags improve.
-- Add a small `console.log` audit in the webhook around the VTT fetch so we can debug from logs if it doesn't.
+### 2. Follows are half-built
+- `follows` table + RLS exist, but no UI
+- Add Follow/Unfollow button to `u.$username.tsx`
+- "Following" tab on the feed (filter by followed creators)
+- Follower counts on profile page
 
-### B. Make the transcript visible & useful (small, high-leverage)
-The data is sitting in the DB unused outside tagging. Two cheap wins:
-1. **Transcript-powered search** — extend `videos_update_search_tsv` trigger to include `transcript` (weight D). Search quality jumps immediately, no UI change needed.
-2. **Manual "Re-run AI tagging" button** on the creator's own video page — calls existing `autoTagVideo` serverFn. Useful when auto-tag misses.
+### 3. Notifications
+- `notifications` table: user_id, type (like/comment/follow/deal_match), actor_id, video_id, deal_id, read_at
+- Triggers on `likes`, `comments`, `follows` insert → write a notification row
+- Bell icon in top nav + `/notifications` route + realtime badge
 
-### C. Comments (medium, user-facing feature)
-The feed UI already has a comment button that toasts "coming soon". Building it is:
-- `comments` table (id, video_id, user_id, body, created_at, parent_id nullable)
-- RLS: public read, auth insert, owner delete
-- `comment_count` on videos + trigger (mirrors like/save pattern)
-- Comments sheet component (reuses `AddToCollectionSheet` shape)
+### 4. Business analytics depth
+- Currently only click sparkline per deal
+- Add: impressions logging in `VideoCard` when a video with a matched deal becomes active
+- Funnel view: impressions → clicks → conversion rate, per deal and per referring video
+- Top-referring creators list per deal
 
-### D. Business analytics depth (medium)
-Business dashboard currently shows sparklines of click volume. Natural next step:
-- Per-deal funnel: impressions (when a video with matched deal is viewed) → clicks → outbound URL hits.
-- Requires logging deal impressions in `VideoCard` when `active` becomes true.
+### 5. Polish & ops
+- Creator's own video page with "Re-run AI tagging" button (calls existing `autoTagVideo`)
+- Empty states across feed/search/collections (some are bare)
+- Email notifications for business deal applications (Resend via Lovable Cloud)
+- Onboarding: first-run role picker for new signups (currently defaults to `traveller`)
+
+## Recommended sequencing
+
+```text
+Phase 1 — Engagement (1 step)
+  └─ Comments
+
+Phase 2 — Social graph (1 step)
+  ├─ Follow button + follower counts
+  └─ "Following" feed tab
+
+Phase 3 — Retention (1 step)
+  └─ Notifications (depends on comments + follows existing)
+
+Phase 4 — Business value (1 step)
+  └─ Impression logging + funnel analytics
+
+Phase 5 — Polish (parallelizable)
+  ├─ Re-run AI tagging button
+  ├─ Empty states
+  ├─ Business email notifications
+  └─ Role onboarding
+```
+
+Each phase is ~1 implementation turn. Phases 1→4 are strictly ordered (each unlocks the next); Phase 5 items are independent and can be picked off anytime.
 
 ## My recommendation
 
-Do **A then B1** in one short turn (verify Step 5, then add transcript to search_tsv — ~15 lines of SQL). Then pick **C (comments)** as the next real feature, since it's the most visible gap in the user-facing app.
+Start with **Phase 1 (Comments)** — it's the most visible gap (the button is already in the UI promising it) and unblocks Phase 3.
 
-Want me to proceed with A + B1, or jump to C?
+Reply with "go" to start Comments, or name a different phase / item to jump to.
