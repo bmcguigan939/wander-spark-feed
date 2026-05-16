@@ -44,6 +44,7 @@ import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
@@ -57,6 +58,8 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
+import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
+import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -233,6 +236,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDiscoveriesRoute = AdminDiscoveriesRouteImport.update({
+  id: '/discoveries',
+  path: '/discoveries',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDealsRoute = AdminDealsRouteImport.update({
   id: '/deals',
   path: '/deals',
@@ -300,6 +308,17 @@ const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
   path: '/api/public/go/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDIdRoute = ApiPublicDIdRouteImport.update({
+  id: '/api/public/d/$id',
+  path: '/api/public/d/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronDiscoverDealsRoute =
+  ApiPublicCronDiscoverDealsRouteImport.update({
+    id: '/api/public/cron/discover-deals',
+    path: '/api/public/cron/discover-deals',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -315,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -344,6 +364,8 @@ export interface FileRoutesByFullPath {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -363,6 +385,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -391,6 +414,8 @@ export interface FileRoutesByTo {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -413,6 +438,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -442,6 +468,8 @@ export interface FileRoutesById {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
+  '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -465,6 +493,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -494,6 +523,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -513,6 +544,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -541,6 +573,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -562,6 +596,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -591,6 +626,8 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/discover-deals'
+    | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -632,6 +669,8 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
+  ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -885,6 +924,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/discoveries': {
+      id: '/admin/discoveries'
+      path: '/discoveries'
+      fullPath: '/admin/discoveries'
+      preLoaderRoute: typeof AdminDiscoveriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/deals': {
       id: '/admin/deals'
       path: '/deals'
@@ -976,11 +1022,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/d/$id': {
+      id: '/api/public/d/$id'
+      path: '/api/public/d/$id'
+      fullPath: '/api/public/d/$id'
+      preLoaderRoute: typeof ApiPublicDIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/discover-deals': {
+      id: '/api/public/cron/discover-deals'
+      path: '/api/public/cron/discover-deals'
+      fullPath: '/api/public/cron/discover-deals'
+      preLoaderRoute: typeof ApiPublicCronDiscoverDealsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminDealsRoute: typeof AdminDealsRoute
+  AdminDiscoveriesRoute: typeof AdminDiscoveriesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVideosRoute: typeof AdminVideosRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -988,6 +1049,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDealsRoute: AdminDealsRoute,
+  AdminDiscoveriesRoute: AdminDiscoveriesRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVideosRoute: AdminVideosRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -1083,6 +1145,8 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
+  ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

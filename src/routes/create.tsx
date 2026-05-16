@@ -11,6 +11,7 @@ import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Glo
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
+import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -94,6 +95,8 @@ function UploadFlowBody() {
   const [scheduleAt, setScheduleAt] = useState("");
   const [track, setTrack] = useState<MusicTrack | null>(null);
   const [musicOpen, setMusicOpen] = useState(false);
+  const [smartDealsOpen, setSmartDealsOpen] = useState(false);
+  const [smartDealsVideoId, setSmartDealsVideoId] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
@@ -140,7 +143,13 @@ function UploadFlowBody() {
         publishMode === "now" ? "Published — processing in the background" :
         publishMode === "draft" ? "Saved as draft" : "Scheduled"
       );
-      navigate({ to: "/studio/videos", search: { filter: "all" } });
+      // Open Smart Deals sheet if we have a destination signal; otherwise jump.
+      if (videoId && (country || city || destination)) {
+        setSmartDealsVideoId(videoId);
+        setSmartDealsOpen(true);
+      } else {
+        navigate({ to: "/studio/videos", search: { filter: "all" } });
+      }
     },
     onError: (e: any) => toast(e.message ?? "Failed to save"),
   });
@@ -271,6 +280,14 @@ function UploadFlowBody() {
           onOpenChange={setMusicOpen}
           selectedId={track?.id ?? null}
           onSelect={(t) => { setTrack(t); setMusicOpen(false); }}
+        />
+        <SmartDealsSheet
+          open={smartDealsOpen}
+          videoId={smartDealsVideoId}
+          onClose={() => {
+            setSmartDealsOpen(false);
+            navigate({ to: "/studio/videos", search: { filter: "all" } });
+          }}
         />
     </div>
   );
