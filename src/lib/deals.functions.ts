@@ -135,6 +135,25 @@ export const logDealClick = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const logDealImpression = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        dealId: z.string().uuid(),
+        referrerVideoId: z.string().uuid().optional(),
+        userId: z.string().uuid().optional(),
+      })
+      .parse(input)
+  )
+  .handler(async ({ data }) => {
+    await supabaseAdmin.from("deal_impressions").insert({
+      deal_id: data.dealId,
+      referrer_video_id: data.referrerVideoId ?? null,
+      user_id: data.userId ?? null,
+    });
+    return { ok: true };
+  });
+
 export const applyForBusiness = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -192,6 +211,16 @@ export const getDealStats = createServerFn({ method: "GET" })
     const inRange = rows.filter((r) => r.clicked_at >= sinceIso);
     const prevRange = rows.filter((r) => r.clicked_at < sinceIso);
 
+    const { data: imps } = await supabase
+      .from("deal_impressions")
+      .select("created_at,user_id,referrer_video_id")
+      .eq("deal_id", data.dealId)
+      .gte("created_at", prevSinceIso)
+      .order("created_at", { ascending: true });
+    const impRows = imps ?? [];
+    const impsInRange = impRows.filter((r) => r.created_at >= sinceIso);
+    const impsPrevRange = impRows.filter((r) => r.created_at < sinceIso);
+
     // zero-filled daily series
     const daily: Array<{ day: string; clicks: number }> = [];
     const dayMap = new Map<string, number>();
@@ -207,11 +236,16 @@ export const getDealStats = createServerFn({ method: "GET" })
 
     const uniqueUsers = new Set(inRange.map((r) => r.user_id).filter(Boolean)).size;
 
-    // top referring videos
+    // top referring videos (clicks + impressions)
     const videoCounts = new Map<string, number>();
     for (const r of inRange) {
       if (!r.referrer_video_id) continue;
       videoCounts.set(r.referrer_video_id, (videoCounts.get(r.referrer_video_id) ?? 0) + 1);
+    }
+    const videoImpCounts = new Map<string, number>();
+    for (const r of impsInRange) {
+      if (!r.referrer_video_id) continue;
+      videoImpCounts.set(r.referrer_video_id, (videoImpCounts.get(r.referrer_video_id) ?? 0) + 1);
     }
     let topVideos: Array<{
       videoId: string;
@@ -219,9 +253,12 @@ export const getDealStats = createServerFn({ method: "GET" })
       thumbnail_url: string | null;
       creator_username: string | null;
       clicks: number;
+      impressions: number;
+      ctr: number;
     }> = [];
-    if (videoCounts.size > 0) {
-      const ids = Array.from(videoCounts.keys());
+    const allVideoIds = new Set<string>([...videoCounts.keys(), ...videoImpCounts.keys()]);
+    if (allVideoIds.size > 0) {
+      const ids = Array.from(allVideoIds);
       const { data: vids } = await supabaseAdmin
         .from("videos")
         .select(
@@ -229,14 +266,20 @@ export const getDealStats = createServerFn({ method: "GET" })
         )
         .in("id", ids);
       topVideos = (vids ?? [])
-        .map((v: any) => ({
-          videoId: v.id,
-          title: v.title,
-          thumbnail_url: v.thumbnail_url,
-          creator_username: v.creator?.username ?? null,
-          clicks: videoCounts.get(v.id) ?? 0,
-        }))
-        .sort((a, b) => b.clicks - a.clicks)
+        .map((v: any) => {
+          const clicks = videoCounts.get(v.id) ?? 0;
+          const impressions = videoImpCounts.get(v.id) ?? 0;
+          return {
+            videoId: v.id,
+            title: v.title,
+            thumbnail_url: v.thumbnail_url,
+            creator_username: v.creator?.username ?? null,
+            clicks,
+            impressions,
+            ctr: impressions > 0 ? clicks / impressions : 0,
+          };
+        })
+        .sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
         .slice(0, 5);
     }
 
@@ -247,6 +290,10 @@ export const getDealStats = createServerFn({ method: "GET" })
         clicks: inRange.length,
         prevClicks: prevRange.length,
         uniqueUsers,
+        impressions: impsInRange.length,
+        prevImpressions: impsPrevRange.length,
+        uniqueImpressionUsers: new Set(impsInRange.map((r) => r.user_id).filter(Boolean)).size,
+        ctr: impsInRange.length > 0 ? inRange.length / impsInRange.length : 0,
       },
       daily,
       topVideos,
