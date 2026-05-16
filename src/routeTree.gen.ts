@@ -16,6 +16,8 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -52,34 +54,50 @@ const UUsernameRoute = UUsernameRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CollectionsIdRoute = CollectionsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CollectionsRoute,
+} as any)
+const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
+  id: '/api/public/mux-webhook',
+  path: '/api/public/mux-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/collections': typeof CollectionsRoute
+  '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/collections/$id': typeof CollectionsIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/collections': typeof CollectionsRoute
+  '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/collections/$id': typeof CollectionsIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/collections': typeof CollectionsRoute
+  '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/collections/$id': typeof CollectionsIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,7 +108,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/collections/$id'
     | '/u/$username'
+    | '/api/public/mux-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -99,7 +119,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/collections/$id'
     | '/u/$username'
+    | '/api/public/mux-webhook'
   id:
     | '__root__'
     | '/'
@@ -108,17 +130,20 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/collections/$id'
     | '/u/$username'
+    | '/api/public/mux-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CollectionsRoute: typeof CollectionsRoute
+  CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
   UUsernameRoute: typeof UUsernameRoute
+  ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,17 +197,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/collections/$id': {
+      id: '/collections/$id'
+      path: '/$id'
+      fullPath: '/collections/$id'
+      preLoaderRoute: typeof CollectionsIdRouteImport
+      parentRoute: typeof CollectionsRoute
+    }
+    '/api/public/mux-webhook': {
+      id: '/api/public/mux-webhook'
+      path: '/api/public/mux-webhook'
+      fullPath: '/api/public/mux-webhook'
+      preLoaderRoute: typeof ApiPublicMuxWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface CollectionsRouteChildren {
+  CollectionsIdRoute: typeof CollectionsIdRoute
+}
+
+const CollectionsRouteChildren: CollectionsRouteChildren = {
+  CollectionsIdRoute: CollectionsIdRoute,
+}
+
+const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
+  CollectionsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CollectionsRoute: CollectionsRoute,
+  CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
   UUsernameRoute: UUsernameRoute,
+  ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
