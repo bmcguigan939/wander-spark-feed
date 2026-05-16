@@ -27,6 +27,7 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
@@ -51,6 +52,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
+import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -141,6 +143,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StudioLinksRoute = StudioLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => StudioRoute,
 } as any)
 const SoundsIdRoute = SoundsIdRouteImport.update({
   id: '/sounds/$id',
@@ -264,6 +271,11 @@ const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => BusinessDealsIdRoute,
 } as any)
+const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
+  id: '/api/public/go/$id',
+  path: '/api/public/go/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -276,7 +288,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -292,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -303,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -319,7 +333,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -335,6 +349,7 @@ export interface FileRoutesByTo {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
@@ -345,6 +360,7 @@ export interface FileRoutesByTo {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -363,7 +379,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -379,6 +395,7 @@ export interface FileRoutesById {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -390,6 +407,7 @@ export interface FileRoutesById {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -425,6 +443,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -436,6 +455,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -468,6 +488,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin'
     | '/business'
@@ -478,6 +499,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -511,6 +533,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -522,6 +545,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
+    | '/api/public/go/$id'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -540,7 +564,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
-  StudioRoute: typeof StudioRoute
+  StudioRoute: typeof StudioRouteWithChildren
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
@@ -562,6 +586,7 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -694,6 +719,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/studio/links': {
+      id: '/studio/links'
+      path: '/links'
+      fullPath: '/studio/links'
+      preLoaderRoute: typeof StudioLinksRouteImport
+      parentRoute: typeof StudioRoute
     }
     '/sounds/$id': {
       id: '/sounds/$id'
@@ -863,6 +895,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessDealsIdEditRouteImport
       parentRoute: typeof BusinessDealsIdRoute
     }
+    '/api/public/go/$id': {
+      id: '/api/public/go/$id'
+      path: '/api/public/go/$id'
+      fullPath: '/api/public/go/$id'
+      preLoaderRoute: typeof ApiPublicGoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -894,6 +933,17 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
 
+interface StudioRouteChildren {
+  StudioLinksRoute: typeof StudioLinksRoute
+}
+
+const StudioRouteChildren: StudioRouteChildren = {
+  StudioLinksRoute: StudioLinksRoute,
+}
+
+const StudioRouteWithChildren =
+  StudioRoute._addFileChildren(StudioRouteChildren)
+
 interface BusinessDealsIdRouteChildren {
   BusinessDealsIdEditRoute: typeof BusinessDealsIdEditRoute
   BusinessDealsIdIndexRoute: typeof BusinessDealsIdIndexRoute
@@ -919,7 +969,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
-  StudioRoute: StudioRoute,
+  StudioRoute: StudioRouteWithChildren,
   WelcomeRoute: WelcomeRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
@@ -941,6 +991,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,

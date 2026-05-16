@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tansta
 import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { Clapperboard, LayoutGrid, CalendarClock, Upload } from "lucide-react";
+import { Clapperboard, LayoutGrid, CalendarClock, Upload, Link2 } from "lucide-react";
 
 export const Route = createFileRoute("/studio")({
   head: () => ({ meta: [{ title: "Creator studio — Travidz" }] }),
@@ -13,6 +13,7 @@ const tabs = [
   { to: "/studio", label: "Overview", icon: Clapperboard, exact: true },
   { to: "/studio/videos", label: "Videos", icon: LayoutGrid },
   { to: "/studio/schedule", label: "Schedule", icon: CalendarClock },
+  { to: "/studio/links", label: "Links", icon: Link2 },
 ];
 
 function StudioLayout() {
