@@ -44,6 +44,7 @@ import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
@@ -235,6 +236,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDiscoveriesRoute = AdminDiscoveriesRouteImport.update({
+  id: '/discoveries',
+  path: '/discoveries',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDealsRoute = AdminDealsRouteImport.update({
   id: '/deals',
   path: '/deals',
@@ -328,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -430,6 +438,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
+  '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
   '/business/applications': typeof BusinessApplicationsRoute
@@ -484,6 +493,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -585,6 +596,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/welcome'
     | '/admin/deals'
+    | '/admin/discoveries'
     | '/admin/users'
     | '/admin/videos'
     | '/business/applications'
@@ -912,6 +924,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/discoveries': {
+      id: '/admin/discoveries'
+      path: '/discoveries'
+      fullPath: '/admin/discoveries'
+      preLoaderRoute: typeof AdminDiscoveriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/deals': {
       id: '/admin/deals'
       path: '/deals'
@@ -1022,6 +1041,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminDealsRoute: typeof AdminDealsRoute
+  AdminDiscoveriesRoute: typeof AdminDiscoveriesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVideosRoute: typeof AdminVideosRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1029,6 +1049,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDealsRoute: AdminDealsRoute,
+  AdminDiscoveriesRoute: AdminDiscoveriesRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVideosRoute: AdminVideosRoute,
   AdminIndexRoute: AdminIndexRoute,
