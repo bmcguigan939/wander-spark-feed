@@ -11,6 +11,8 @@ export type CreatorAnalytics = {
     comments: number;
     followers: number;
     watchMs: number;
+    dealClicks: number;
+    dealClicks30d: number;
   };
   daily: Array<{ date: string; views: number }>;
   topVideos: Array<{
@@ -55,7 +57,8 @@ export const getCreatorAnalytics = createServerFn({ method: "GET" })
     );
 
     const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
-    const [{ count: followerCount }, viewsRes, followersRes] = await Promise.all([
+    const since30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const [{ count: followerCount }, viewsRes, followersRes, dealClicksTotal, dealClicks30] = await Promise.all([
       supabaseAdmin.from("follows").select("follower_id", { count: "exact", head: true }).eq("creator_id", userId),
       videoIds.length
         ? supabaseAdmin.from("video_views").select("created_at,watch_ms").in("video_id", videoIds).gte("created_at", since).limit(5000)
@@ -66,6 +69,8 @@ export const getCreatorAnalytics = createServerFn({ method: "GET" })
         .eq("creator_id", userId)
         .order("created_at", { ascending: false })
         .limit(8),
+      supabaseAdmin.from("deal_clicks").select("id", { count: "exact", head: true }).eq("creator_id", userId),
+      supabaseAdmin.from("deal_clicks").select("id", { count: "exact", head: true }).eq("creator_id", userId).gte("clicked_at", since30),
     ]);
 
     const rawViews = ((viewsRes as { data: Array<{ created_at: string; watch_ms: number }> | null }).data) ?? [];
@@ -104,6 +109,8 @@ export const getCreatorAnalytics = createServerFn({ method: "GET" })
         ...totals,
         followers: followerCount ?? 0,
         watchMs,
+        dealClicks: dealClicksTotal.count ?? 0,
+        dealClicks30d: dealClicks30.count ?? 0,
       },
       daily,
       topVideos,

@@ -189,6 +189,7 @@ export type Database = {
       deal_clicks: {
         Row: {
           clicked_at: string
+          creator_id: string | null
           deal_id: string
           id: string
           referrer_video_id: string | null
@@ -196,6 +197,7 @@ export type Database = {
         }
         Insert: {
           clicked_at?: string
+          creator_id?: string | null
           deal_id: string
           id?: string
           referrer_video_id?: string | null
@@ -203,6 +205,7 @@ export type Database = {
         }
         Update: {
           clicked_at?: string
+          creator_id?: string | null
           deal_id?: string
           id?: string
           referrer_video_id?: string | null
@@ -239,6 +242,27 @@ export type Database = {
           id?: string
           referrer_video_id?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      deal_redirects: {
+        Row: {
+          code: string
+          created_at: string
+          creator_id: string
+          deal_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          creator_id: string
+          deal_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          creator_id?: string
+          deal_id?: string
         }
         Relationships: []
       }
