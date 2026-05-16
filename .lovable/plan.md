@@ -1,136 +1,86 @@
-## K. Admin dashboard (§18)
+## Section P — Creator Studio polish + cinematic UI tidy
 
-Adds an admin-only `/admin` route to moderate the platform. Builds on the existing `admin` role in `app_role` (already used by `has_role` and one RLS policy on `user_roles`). No new secrets.
-
-### 1. Database migration
-
-Add moderation columns + the missing admin RLS policies that let admins act across tables.
-
-```sql
--- Moderation flags on videos
-alter table public.videos
-  add column if not exists is_hidden boolean not null default false,
-  add column if not exists is_featured boolean not null default false,
-  add column if not exists moderated_at timestamptz,
-  add column if not exists moderated_by uuid;
-
--- Hide videos from public when is_hidden = true (creator can still see own)
-drop policy if exists "videos public read ready" on public.videos;
-create policy "videos public read ready"
-  on public.videos for select
-  using (
-    (status = 'ready' and is_hidden = false)
-    or creator_id = auth.uid()
-    or has_role(auth.uid(), 'admin')
-  );
-
--- Admins can update/delete any video, deal, application
-create policy "admins update any video" on public.videos
-  for update using (has_role(auth.uid(), 'admin'));
-create policy "admins delete any video" on public.videos
-  for delete using (has_role(auth.uid(), 'admin'));
-
-create policy "admins read all deals" on public.deals
-  for select using (has_role(auth.uid(), 'admin'));
-create policy "admins update any deal" on public.deals
-  for update using (has_role(auth.uid(), 'admin'));
-create policy "admins delete any deal" on public.deals
-  for delete using (has_role(auth.uid(), 'admin'));
-
-create policy "admins read all applications" on public.deal_applications
-  for select using (has_role(auth.uid(), 'admin'));
-
--- Admin role management
-create policy "admins insert roles" on public.user_roles
-  for insert with check (has_role(auth.uid(), 'admin'));
-create policy "admins delete roles" on public.user_roles
-  for delete using (has_role(auth.uid(), 'admin'));
-
--- Audit log
-create table public.admin_actions (
-  id uuid primary key default gen_random_uuid(),
-  admin_id uuid not null,
-  action text not null,            -- 'hide_video','feature_video','delete_deal','grant_role','revoke_role',...
-  target_type text not null,       -- 'video' | 'deal' | 'user'
-  target_id uuid not null,
-  notes text,
-  created_at timestamptz not null default now()
-);
-alter table public.admin_actions enable row level security;
-create policy "admins read actions" on public.admin_actions
-  for select using (has_role(auth.uid(), 'admin'));
--- inserts only via service role (server functions)
-```
-
-### 2. Server functions — `src/lib/admin.functions.ts`
-
-All `.middleware([requireSupabaseAuth])` + a small `assertAdmin(supabase, userId)` helper that throws if not admin. All writes log to `admin_actions` via `supabaseAdmin`.
-
-- `getAdminStats()` → counts: users, creators, businesses, videos (ready/pending/hidden), deals (active), applications (pending).
-- `listAdminVideos({ filter: 'all'|'pending'|'hidden'|'featured', q?, cursor? })` → 30 rows w/ creator profile.
-- `listAdminDeals({ filter: 'all'|'active'|'inactive', q? })` → 30 rows w/ business profile.
-- `listAdminUsers({ q?, role? })` → profiles + roles[].
-- `setVideoModeration({ videoId, hidden?, featured? })` → updates videos, audit log.
-- `deleteVideo({ videoId })` → admin delete + audit.
-- `setDealActive({ dealId, active })` + `deleteDeal({ dealId })`.
-- `grantRole({ userId, role })` / `revokeRole({ userId, role })` — guards: cannot revoke own admin, cannot leave system with zero admins.
-
-### 3. Routes
-
-```text
-src/routes/admin.tsx                     # layout: guard + tab strip + <Outlet/>
-src/routes/admin.index.tsx               # stats overview
-src/routes/admin.videos.tsx              # moderation queue
-src/routes/admin.deals.tsx               # deal moderation
-src/routes/admin.users.tsx               # users + role management
-```
-
-Layout (`admin.tsx`): reads `useAuth()`, checks `isAdmin` (new flag on the auth hook — see step 4). Non-admins → redirect `/`. Renders top tab bar (Overview / Videos / Deals / Users) and `<Outlet />` inside `MobileShell`.
-
-Each list page:
-- Filter pills + search input.
-- Card rows w/ inline action buttons (Hide/Unhide, Feature/Unfeature, Delete confirm) using `useMutation` + `queryClient.invalidateQueries`.
-- For users: chips for current roles, add/remove role buttons (creator / business / admin).
-
-### 4. Auth hook tweak — `src/lib/auth.ts`
-
-Add `isAdmin` alongside existing `isBusiness`. Single extra `.has_role(uid,'admin')` check (or reuse the existing user_roles fetch).
-
-### 5. Navigation surfacing
-
-- `/profile`: if `isAdmin`, show an "Admin" link to `/admin` (avoid touching the 6-slot bottom nav).
-- Optional: tiny shield icon next to admin badges in their profile header.
-
-### 6. Bootstrap an admin
-
-`user_roles` does not let normal users self-assign admin (RLS only allows creator self-assign). Plan ships a one-off SQL helper in the migration the user can run from the SQL editor:
-
-```sql
--- Grant admin to a user by email (run manually once)
--- insert into public.user_roles (user_id, role)
--- select id, 'admin' from auth.users where email = 'you@example.com';
-```
-
-Leave this commented in the migration so it's documented but doesn't run by accident. The user runs it from the Cloud SQL editor with their own email.
-
-### 7. Test checklist
-
-- Non-admin hits `/admin` → bounced to `/`.
-- Admin sees Overview with non-zero counts.
-- Hide a video → public feed no longer shows it; creator still sees in profile.
-- Feature a video → appears with a featured chip (UI hook only in admin list for v1).
-- Toggle deal active → `/deals/:id` reflects new state.
-- Grant `business` role to a user → that user can access `/business`.
-- Cannot revoke your own admin role.
-- All actions create rows in `admin_actions`.
-
-### Out of scope (follow-ups)
-
-- Featured carousel on the feed (separate UI work).
-- Bulk actions / CSV export.
-- Comment moderation (no public report system yet).
-- Email notification to affected creators when content is hidden.
+Two workstreams in one slice: ship the remaining creator-studio polish (§P), then a focused visual pass so the app feels cinematic and editorial. No business-logic changes outside P.
 
 ---
 
-Reply **approve** to proceed.
+### Part 1 — Creator Studio (§P)
+
+**Goal:** give creators a real "studio" instead of a scattered set of pages — drafts, scheduled posts, deeper per-video analytics — all reachable from one hub at `/studio`.
+
+**Database migration**
+- `videos`: add `is_draft boolean default false`, `scheduled_at timestamptz null`, `published_at timestamptz null`.
+- Update the public-read RLS on `videos` so unpublished/scheduled videos are only visible to their creator + admins (`status='ready' AND is_hidden=false AND is_draft=false AND (scheduled_at IS NULL OR scheduled_at <= now())`).
+- `feed.functions.ts` ranker pool query: add the same publish gate.
+- One-shot backfill: `published_at = created_at` for existing ready videos.
+
+**Server functions (`src/lib/studio.functions.ts`)**
+All `requireSupabaseAuth` + creator-role guard.
+- `listMyVideos({status?: 'all'|'draft'|'scheduled'|'live'|'processing'})` — returns videos with counts + matched-deal hint.
+- `setVideoDraft({videoId, isDraft})`, `scheduleVideo({videoId, scheduledAt|null})`, `publishVideoNow({videoId})`.
+- `getVideoInsights({videoId, days?})` — per-video time series: views, likes, saves, comments, watch_ms, deal clicks (from existing tables `video_views`, `likes`, `saves`, `comments`, `deal_clicks`). Aggregated server-side by day.
+
+**Routes**
+- `/studio` — overview: greeting, "Publish queue" (drafts + scheduled), 4 KPIs (last 7d views/likes/saves/followers gained), links to upload + analytics.
+- `/studio/videos` — list with filter chips (All · Live · Scheduled · Drafts · Processing), search, row actions: Edit, Publish, Save as draft, Schedule, Delete, View insights.
+- `/studio/videos/$id` — per-video insights page (sparkline + 7/30d toggle, top-line counters, deal click breakdown if any, list of recent comments with quick reply link).
+- `/studio/schedule` — small calendar-ish list grouped by day for everything with `scheduled_at` in the future.
+- Existing `/creator/analytics` stays but is linked from `/studio` and gets a back-link.
+
+**Upload flow change (`/create`)**
+- After upload completes, instead of jumping straight to feed, land on a "Ready to post" screen with three buttons: **Publish now**, **Save as draft**, **Schedule…**. Default Publish now (so current behavior is preserved with one extra confirmation step).
+
+**Nav**
+- Replace the bottom-bar "Create" `+` for creators with a "Studio" entry (still opens upload via a primary action button on `/studio`). For non-creators, keep current Create behavior.
+- Profile page: add "Creator studio" link (next to existing Analytics) for creators.
+
+**Out of scope (won't build)**
+- Recurring schedules, bulk publish, A/B thumbnails, post-to-multiple-platforms, email digest of insights.
+
+---
+
+### Part 2 — Cinematic UI tidy
+
+**Scope:** purely visual/typographic. No new features. Touches global tokens + shared shells + the top-traffic routes (feed, profile, search, destinations, studio).
+
+**Design tokens (`src/styles.css`)**
+- Keep dark-first but deepen base: `--background` slightly cooler/darker; introduce `--surface-1`, `--surface-2`, `--surface-3` for layered depth instead of one flat `--card`.
+- Add gradient + shadow tokens: `--gradient-aurora` (sunset → ocean), `--gradient-overlay-bottom` (transparent → near-black 85%), `--shadow-cinematic` (long, soft, primary-tinted).
+- Typography upgrade: swap display font to **Fraunces** (editorial serif w/ optical sizing) for h1/h2 + hero numerals; keep **Inter** for body; add a third utility token `--font-mono` (JetBrains Mono) for stats/timecodes. Load via `<link>` in `__root.tsx`.
+- Tighter heading tracking (`-0.02em`), `font-feature-settings: "ss01","ss02","ss03"` on display.
+
+**Reusable primitives (new in `src/components/ui/`)**
+- `<CinematicHeader title subtitle eyebrow image?>` — full-bleed image w/ bottom gradient overlay, serif H1, small uppercase eyebrow chip. Used on destinations, profile, studio, deals detail.
+- `<StatTile icon label value trend?>` — glass surface, mono numerals, optional sparkline.
+- `<Chip>` and `<Pill>` — consistent radius / hover / active states (replaces the ad-hoc chip styles in feed, search, business pages).
+- `<SectionTitle eyebrow title trailing?>` — editorial section header (eyebrow + serif title + optional CTA).
+- `<EmptyState icon title body action?>` — replaces the per-page `FullEmptyState` clones in feed/collections/profile.
+
+**Global polish**
+- Feed: smaller, more refined right-rail action stack (replace solid bg pills with frosted circles + tactile press state); bottom info panel uses the new bottom gradient + serif title overlay; CC and mute glyphs unified.
+- Bottom nav: thinner top border replaced with frosted backdrop only; active tab gets a 2px primary underline + subtle scale; remove text labels on >sm width, keep on mobile.
+- Profile/destination headers swapped to `<CinematicHeader>` so they read like a magazine cover.
+- All `rounded-2xl` cards → consistent `rounded-[1.25rem]` + `shadow-cinematic` on raised surfaces.
+- Subtle entry animation (`animate-fade-in` from existing utilities) on route mount for major sections; respect `prefers-reduced-motion`.
+- Replace the two custom skeleton blocks with a shared `Skeleton` from `components/ui/skeleton` styled with a slow shimmer.
+
+**SEO/meta touch-up**
+- Each new `/studio*` route gets its own `head()` with title + description, no og:image (private pages).
+
+**Out of scope**
+- Light mode (still dark-first), redesigning the login flow, swapping any third-party widget (Mux player, Mapbox), changing iconography library.
+
+---
+
+### Technical notes
+- `studio.functions.ts` follows the existing `*.functions.ts` pattern (`createServerFn` + `requireSupabaseAuth`); no edge functions.
+- The publish gate is enforced at **both** RLS and the ranker query so a misuse can't leak drafts.
+- Insights aggregation is done in SQL (`date_trunc('day', created_at)`) on `video_views`/`likes`/`saves`/`comments`/`deal_clicks`, no new tables.
+- Type-only edits to `src/integrations/supabase/types.ts` will happen automatically after the migration runs.
+
+### Verification
+1. Run migration → confirm drafts/scheduled videos don't appear in `/` feed for other users.
+2. Upload a video, choose "Save as draft" → appears in `/studio/videos` under Drafts, not on profile public view.
+3. Schedule a video 2 min in the future → appears on `/studio/schedule`, becomes visible after the timestamp on a refresh (no cron needed, RLS gates it).
+4. Per-video insights page renders a sparkline for a video with views.
+5. Visual sweep: home feed, profile, a destination page, `/studio` — all share new header/stat tile/chip styling; nothing overflows on 390px width.

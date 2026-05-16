@@ -776,6 +776,7 @@ export type Database = {
           destination: string | null
           duration_sec: number | null
           id: string
+          is_draft: boolean
           is_featured: boolean
           is_hidden: boolean
           lat: number | null
@@ -786,7 +787,9 @@ export type Database = {
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
+          published_at: string | null
           save_count: number
+          scheduled_at: string | null
           search_tsv: unknown
           status: string
           thumbnail_url: string | null
@@ -809,6 +812,7 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          is_draft?: boolean
           is_featured?: boolean
           is_hidden?: boolean
           lat?: number | null
@@ -819,7 +823,9 @@ export type Database = {
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
+          published_at?: string | null
           save_count?: number
+          scheduled_at?: string | null
           search_tsv?: unknown
           status?: string
           thumbnail_url?: string | null
@@ -842,6 +848,7 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          is_draft?: boolean
           is_featured?: boolean
           is_hidden?: boolean
           lat?: number | null
@@ -852,7 +859,9 @@ export type Database = {
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
+          published_at?: string | null
           save_count?: number
+          scheduled_at?: string | null
           search_tsv?: unknown
           status?: string
           thumbnail_url?: string | null
