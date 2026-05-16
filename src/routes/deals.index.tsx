@@ -30,9 +30,30 @@ function DealsIndex() {
           <Tag className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-semibold">Deals</h1>
         </div>
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {isLoading && (
+          <ul className="space-y-3">
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex gap-3 overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="h-24 w-24 animate-pulse bg-muted" />
+                <div className="flex-1 space-y-2 py-3 pr-3">
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-1/4 animate-pulse rounded bg-muted" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
         {!isLoading && deals.length === 0 && (
-          <p className="text-sm text-muted-foreground">No active deals yet.</p>
+          <div className="mt-10 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center">
+            <div className="rounded-full bg-primary/10 p-3 text-primary">
+              <Tag className="h-6 w-6" />
+            </div>
+            <h2 className="text-sm font-semibold">No active deals right now</h2>
+            <p className="text-xs text-muted-foreground">
+              Check back soon — businesses publish offers daily.
+            </p>
+          </div>
         )}
         <ul className="space-y-3">
           {deals.map((d: any) => (
