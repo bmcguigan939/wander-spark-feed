@@ -18,11 +18,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ItinerariesIndexRouteImport } from './routes/itineraries.index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
+import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
@@ -85,6 +88,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ItinerariesIndexRoute = ItinerariesIndexRouteImport.update({
+  id: '/itineraries/',
+  path: '/itineraries/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DestinationsIndexRoute = DestinationsIndexRouteImport.update({
   id: '/destinations/',
   path: '/destinations/',
@@ -108,6 +116,16 @@ const UUsernameRoute = UUsernameRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
+  id: '/itineraries/new',
+  path: '/itineraries/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItinerariesIdRoute = ItinerariesIdRouteImport.update({
+  id: '/itineraries/$id',
+  path: '/itineraries/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -209,11 +227,14 @@ export interface FileRoutesByFullPath {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
+  '/itineraries/': typeof ItinerariesIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -241,11 +262,14 @@ export interface FileRoutesByTo {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business': typeof BusinessIndexRoute
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
+  '/itineraries': typeof ItinerariesIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
@@ -273,11 +297,14 @@ export interface FileRoutesById {
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/itineraries/$id': typeof ItinerariesIdRoute
+  '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
+  '/itineraries/': typeof ItinerariesIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -307,11 +334,14 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business/'
     | '/deals/'
     | '/destinations/'
+    | '/itineraries/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
     | '/business/deals/new'
@@ -339,11 +369,14 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business'
     | '/deals'
     | '/destinations'
+    | '/itineraries'
     | '/api/public/mux-webhook'
     | '/business/deals/new'
     | '/destinations/$country/$city'
@@ -370,11 +403,14 @@ export interface FileRouteTypes {
     | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
+    | '/itineraries/$id'
+    | '/itineraries/new'
     | '/r/$code'
     | '/u/$username'
     | '/business/'
     | '/deals/'
     | '/destinations/'
+    | '/itineraries/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
     | '/business/deals/new'
@@ -402,11 +438,14 @@ export interface RootRouteChildren {
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
+  ItinerariesIdRoute: typeof ItinerariesIdRoute
+  ItinerariesNewRoute: typeof ItinerariesNewRoute
   RCodeRoute: typeof RCodeRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
   DealsIndexRoute: typeof DealsIndexRoute
   DestinationsIndexRoute: typeof DestinationsIndexRoute
+  ItinerariesIndexRoute: typeof ItinerariesIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
@@ -482,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/itineraries/': {
+      id: '/itineraries/'
+      path: '/itineraries'
+      fullPath: '/itineraries/'
+      preLoaderRoute: typeof ItinerariesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/destinations/': {
       id: '/destinations/'
       path: '/destinations'
@@ -515,6 +561,20 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/itineraries/new': {
+      id: '/itineraries/new'
+      path: '/itineraries/new'
+      fullPath: '/itineraries/new'
+      preLoaderRoute: typeof ItinerariesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/itineraries/$id': {
+      id: '/itineraries/$id'
+      path: '/itineraries/$id'
+      fullPath: '/itineraries/$id'
+      preLoaderRoute: typeof ItinerariesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -673,11 +733,14 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
+  ItinerariesIdRoute: ItinerariesIdRoute,
+  ItinerariesNewRoute: ItinerariesNewRoute,
   RCodeRoute: RCodeRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
   DealsIndexRoute: DealsIndexRoute,
   DestinationsIndexRoute: DestinationsIndexRoute,
+  ItinerariesIndexRoute: ItinerariesIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
   BusinessDealsNewRoute: BusinessDealsNewRoute,

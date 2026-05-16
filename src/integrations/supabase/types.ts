@@ -457,6 +457,54 @@ export type Database = {
           },
         ]
       }
+      itineraries: {
+        Row: {
+          budget_tag: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          days: number
+          destination: string
+          id: string
+          interests: string[]
+          plan: Json
+          summary: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_tag?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          days: number
+          destination: string
+          id?: string
+          interests?: string[]
+          plan?: Json
+          summary?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_tag?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          days?: number
+          destination?: string
+          id?: string
+          interests?: string[]
+          plan?: Json
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
