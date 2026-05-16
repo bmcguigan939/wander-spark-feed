@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listModerationFlags, resolveModerationFlag } from "@/lib/moderation.functions";
-import { Check, X, ShieldAlert, Eye } from "lucide-react";
+import { Check, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/moderation")({
@@ -62,18 +62,8 @@ function AdminModeration() {
                   </span>
                 </div>
                 {f.reason && <p className="mt-1 text-xs text-muted-foreground">{f.reason}</p>}
-                <div className="mt-1.5">
-                  {f.target_type === "video" ? (
-                    <Link
-                      to="/v/$id"
-                      params={{ id: f.target_id }}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
-                    >
-                      <Eye className="h-3 w-3" /> View video
-                    </Link>
-                  ) : (
-                    <span className="text-[11px] text-muted-foreground">Comment {f.target_id.slice(0, 8)}</span>
-                  )}
+                <div className="mt-1.5 text-[11px] text-muted-foreground font-mono">
+                  {f.target_type} {f.target_id.slice(0, 8)}…
                 </div>
               </div>
             </div>
