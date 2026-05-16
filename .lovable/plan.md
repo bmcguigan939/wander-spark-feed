@@ -1,6 +1,6 @@
 ## Remaining AI/LLM improvements — sequenced rollout
 
-**Shipped:** #2 Auto-tag videos · Phase A (#1 quality scoring, #6 moderation) · **Phase B #7 Semantic search (pgvector hybrid)**.
+**Shipped:** #2 Auto-tag videos · Phase A (#1 quality scoring, #6 moderation) · Phase B (#7 semantic search, #3 personalized ranking) · **Phase C (#4 semantic deal↔video matching, #5 destination summary backfill, #8 itinerary semantic enrichment)**.
 
 Phase B notes (just shipped):
 - pgvector enabled; `embedding vector(1536)` on `videos` and `deals` with ivfflat cosine index.

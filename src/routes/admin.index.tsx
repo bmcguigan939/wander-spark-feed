@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getAdminStats } from "@/lib/admin.functions";
 import { backfillEmbeddings } from "@/lib/feed.functions";
+import { backfillDestinationSummaries } from "@/lib/destinations.functions";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminOverview,
@@ -18,6 +19,13 @@ function AdminOverview() {
     mutationFn: (kind: "videos" | "deals") => backfillFn({ data: { kind, limit: 25 } }),
     onSuccess: (r, kind) => setLast(`${kind}: embedded ${r.ok}/${r.attempted}`),
     onError: (e: any) => setLast(`error: ${e?.message ?? e}`),
+  });
+  const summariesFn = useServerFn(backfillDestinationSummaries);
+  const [sumLast, setSumLast] = useState<string | null>(null);
+  const ms = useMutation({
+    mutationFn: () => summariesFn({ data: { limit: 5, minVideos: 3, staleDays: 30 } }),
+    onSuccess: (r) => setSumLast(`generated ${r.ok}/${r.attempted}`),
+    onError: (e: any) => setSumLast(`error: ${e?.message ?? e}`),
   });
 
   return (
@@ -57,6 +65,20 @@ function AdminOverview() {
           </button>
         </div>
         {last && <p className="mt-2 text-xs text-muted-foreground">{last}</p>}
+      </div>
+      <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="text-sm font-semibold">Destination summaries</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Generate AI overviews for popular (city, country) pairs with 3+ videos and no recent summary.
+        </p>
+        <button
+          disabled={ms.isPending}
+          onClick={() => ms.mutate()}
+          className="mt-3 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+        >
+          {ms.isPending ? "Generating…" : "Generate 5 summaries"}
+        </button>
+        {sumLast && <p className="mt-2 text-xs text-muted-foreground">{sumLast}</p>}
       </div>
     </div>
   );
