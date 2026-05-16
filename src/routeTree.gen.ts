@@ -21,6 +21,7 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudioIndexRouteImport } from './routes/studio.index'
 import { Route as ItinerariesIndexRouteImport } from './routes/itineraries.index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
@@ -113,6 +114,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StudioIndexRoute = StudioIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StudioRoute,
 } as any)
 const ItinerariesIndexRoute = ItinerariesIndexRouteImport.update({
   id: '/itineraries/',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/itineraries/': typeof ItinerariesIndexRoute
+  '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -333,7 +340,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -356,6 +362,7 @@ export interface FileRoutesByTo {
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
   '/itineraries': typeof ItinerariesIndexRoute
+  '/studio': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
@@ -402,6 +409,7 @@ export interface FileRoutesById {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/itineraries/': typeof ItinerariesIndexRoute
+  '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -450,6 +458,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/itineraries/'
+    | '/studio/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
     | '/business/deals/new'
@@ -472,7 +481,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/search'
-    | '/studio'
     | '/welcome'
     | '/admin/deals'
     | '/admin/users'
@@ -495,6 +503,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/destinations'
     | '/itineraries'
+    | '/studio'
     | '/api/public/mux-webhook'
     | '/business/deals/new'
     | '/destinations/$country/$city'
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/itineraries/'
+    | '/studio/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
     | '/business/deals/new'
@@ -677,6 +687,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/studio/': {
+      id: '/studio/'
+      path: '/'
+      fullPath: '/studio/'
+      preLoaderRoute: typeof StudioIndexRouteImport
+      parentRoute: typeof StudioRoute
     }
     '/itineraries/': {
       id: '/itineraries/'
@@ -935,10 +952,12 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
 
 interface StudioRouteChildren {
   StudioLinksRoute: typeof StudioLinksRoute
+  StudioIndexRoute: typeof StudioIndexRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioLinksRoute: StudioLinksRoute,
+  StudioIndexRoute: StudioIndexRoute,
 }
 
 const StudioRouteWithChildren =
@@ -999,3 +1018,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
