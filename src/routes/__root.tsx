@@ -80,6 +80,13 @@ function AuthListener() {
         try { welcomed = localStorage.getItem("travidz:welcomed") === "1"; } catch {}
         if (welcomed) return;
         if (typeof window !== "undefined" && window.location.pathname === "/welcome") return;
+        // Only auto-redirect brand-new accounts (created in the last 10 minutes).
+        const createdAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
+        const isNew = createdAt && (Date.now() - createdAt) < 10 * 60 * 1000;
+        if (!isNew) {
+          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
+          return;
+        }
         const { data } = await supabase
           .from("user_roles")
           .select("role")
