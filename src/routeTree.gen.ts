@@ -100,9 +100,9 @@ const DestinationsCountryIndexRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
-  id: '/$city',
-  path: '/$city',
-  getParentRoute: () => DestinationsCountryRoute,
+  id: '/destinations/$country/$city',
+  path: '/destinations/$country/$city',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessDealsNewRoute = BusinessDealsNewRouteImport.update({
   id: '/business/deals/new',
@@ -259,6 +259,7 @@ export interface RootRouteChildren {
   DestinationsIndexRoute: typeof DestinationsIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
+  DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
   BusinessDealsIdEditRoute: typeof BusinessDealsIdEditRoute
 }
@@ -365,10 +366,10 @@ declare module '@tanstack/react-router' {
     }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
-      path: '/$city'
+      path: '/destinations/$country/$city'
       fullPath: '/destinations/$country/$city'
       preLoaderRoute: typeof DestinationsCountryCityRouteImport
-      parentRoute: typeof DestinationsCountryRoute
+      parentRoute: typeof rootRouteImport
     }
     '/business/deals/new': {
       id: '/business/deals/new'
@@ -421,19 +422,10 @@ const rootRouteChildren: RootRouteChildren = {
   DestinationsIndexRoute: DestinationsIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
   BusinessDealsNewRoute: BusinessDealsNewRoute,
+  DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
   BusinessDealsIdEditRoute: BusinessDealsIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
