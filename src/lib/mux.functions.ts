@@ -80,10 +80,25 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
       budget_tag: z.enum(["budget", "mid", "luxury"]).optional(),
       lat: z.number().min(-90).max(90).optional(),
       lng: z.number().min(-180).max(180).optional(),
+      publish_mode: z.enum(["now", "draft", "schedule"]).default("now"),
+      scheduled_at: z.string().datetime().nullable().optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const isDraft = data.publish_mode === "draft";
+    const scheduledAt =
+      data.publish_mode === "schedule" && data.scheduled_at
+        ? data.scheduled_at
+        : null;
+    if (data.publish_mode === "schedule") {
+      if (!scheduledAt) throw new Error("Scheduled time required");
+      if (new Date(scheduledAt).getTime() <= Date.now() + 30_000) {
+        throw new Error("Schedule time must be in the future");
+      }
+    }
+    const publishedAt =
+      data.publish_mode === "now" ? new Date().toISOString() : null;
     const { error } = await supabase
       .from("videos")
       .update({
@@ -96,6 +111,9 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
         budget_tag: data.budget_tag ?? null,
         lat: data.lat ?? null,
         lng: data.lng ?? null,
+        is_draft: isDraft,
+        scheduled_at: scheduledAt,
+        published_at: publishedAt,
       })
       .eq("id", data.videoId)
       .eq("creator_id", userId);

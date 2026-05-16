@@ -43,7 +43,9 @@ async function fetchFeedRows(
     .select(
       "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
     )
-    .eq("status", "ready");
+    .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()");
   if (creatorIds) {
     if (creatorIds.length === 0) return [];
     q = q.in("creator_id", creatorIds);
@@ -203,6 +205,8 @@ export const getForYouFeed = createServerFn({ method: "GET" })
         "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
       )
       .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()")
       .eq("is_hidden", false)
       .order("created_at", { ascending: false })
       .limit(POOL);
@@ -257,6 +261,8 @@ export const searchAll = createServerFn({ method: "GET" })
           "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()")
         .textSearch("search_tsv", tsQuery, { config: "simple" })
         .limit(30),
       supabaseAdmin
@@ -287,6 +293,8 @@ async function loadFacets(): Promise<SearchFacets> {
     .from("videos")
     .select("country,activity_tags")
     .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()")
     .limit(2000);
   const countryMap = new Map<string, number>();
   const tagMap = new Map<string, number>();
@@ -334,7 +342,9 @@ export const searchVideos = createServerFn({ method: "GET" })
       .select(
         "id,title,thumbnail_url,mux_playback_id,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
       )
-      .eq("status", "ready");
+      .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()");
 
     if (data.country) q = q.eq("country", data.country);
     if (data.budget) q = q.eq("budget_tag", data.budget);
@@ -376,6 +386,8 @@ export const getProfileByUsername = createServerFn({ method: "GET" })
         .select("id,title,thumbnail_url,mux_playback_id,like_count,view_count,created_at")
         .eq("creator_id", profile.id)
         .eq("status", "ready")
+    .eq("is_draft", false)
+    .or("scheduled_at.is.null,scheduled_at.lte.now()")
         .order("created_at", { ascending: false })
         .limit(60),
       supabaseAdmin.from("follows").select("follower_id", { count: "exact", head: true }).eq("creator_id", profile.id),

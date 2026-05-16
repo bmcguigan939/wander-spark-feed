@@ -1,7 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Compass, Search, Map as MapIcon, Plus, Bookmark, User } from "lucide-react";
+import { Compass, Search, Map as MapIcon, Plus, Bookmark, User, Clapperboard } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
-const tabs = [
+const baseTabs = [
   { to: "/", label: "Feed", icon: Compass },
   { to: "/search", label: "Search", icon: Search },
   { to: "/map", label: "Map", icon: MapIcon },
@@ -12,12 +13,18 @@ const tabs = [
 
 export function BottomNav() {
   const { pathname } = useLocation();
+  const { isCreator } = useAuth();
+  const tabs = baseTabs.map((t) =>
+    t.to === "/create" && isCreator
+      ? ({ to: "/studio", label: "Studio", icon: Clapperboard } as const)
+      : t,
+  );
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/85 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]">
       <ul className="mx-auto flex max-w-md items-stretch justify-between px-2 py-2">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
-          const isCreate = to === "/create";
+          const isPrimary = to === "/create" || to === "/studio";
           return (
             <li key={to} className="flex-1">
               <Link
@@ -26,10 +33,10 @@ export function BottomNav() {
               >
                 <span
                   className={
-                    isCreate
-                      ? "rounded-xl bg-primary px-3 py-1.5 text-primary-foreground shadow-lg shadow-primary/30"
+                    isPrimary
+                      ? "rounded-xl bg-aurora px-3 py-1.5 text-white shadow-soft"
                       : active
-                        ? "text-foreground"
+                        ? "text-primary"
                         : "text-muted-foreground"
                   }
                 >
