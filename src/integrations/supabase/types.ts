@@ -544,6 +544,8 @@ export type Database = {
           destination: string | null
           discount_label: string | null
           discovered_at: string | null
+          embedded_at: string | null
+          embedding: string | null
           ends_at: string | null
           id: string
           image_url: string | null
@@ -576,6 +578,8 @@ export type Database = {
           destination?: string | null
           discount_label?: string | null
           discovered_at?: string | null
+          embedded_at?: string | null
+          embedding?: string | null
           ends_at?: string | null
           id?: string
           image_url?: string | null
@@ -608,6 +612,8 @@ export type Database = {
           destination?: string | null
           discount_label?: string | null
           discovered_at?: string | null
+          embedded_at?: string | null
+          embedding?: string | null
           ends_at?: string | null
           id?: string
           image_url?: string | null
@@ -1248,6 +1254,8 @@ export type Database = {
           destination: string | null
           duration_sec: number | null
           embed_mode: string
+          embedded_at: string | null
+          embedding: string | null
           id: string
           is_draft: boolean
           is_featured: boolean
@@ -1289,6 +1297,8 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           embed_mode?: string
+          embedded_at?: string | null
+          embedding?: string | null
           id?: string
           is_draft?: boolean
           is_featured?: boolean
@@ -1330,6 +1340,8 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           embed_mode?: string
+          embedded_at?: string | null
+          embedding?: string | null
           id?: string
           is_draft?: boolean
           is_featured?: boolean
@@ -1392,6 +1404,29 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_deals: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          only_active?: boolean
+          query_embedding: string
+        }
+        Returns: {
+          id: string
+          similarity: number
+        }[]
+      }
+      match_videos: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          query_embedding: string
+        }
+        Returns: {
+          id: string
+          similarity: number
+        }[]
       }
       move_to_dlq: {
         Args: {
