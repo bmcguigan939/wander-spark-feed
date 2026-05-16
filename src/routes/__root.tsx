@@ -44,7 +44,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" },
       { name: "theme-color", content: "#1a1530" },
       { title: "Travidz — Discover travel through video" },
-      { name: "description", content: "AI-powered TikTok-style travel video feed. Discover destinations, hotels, excursions and deals from real creators." },
+      { name: "description", content: "AI-powered travel video feed. Discover destinations, hotels, excursions and deals from real content creators." },
+      { property: "og:title", content: "Travidz — Discover travel through video" },
+      { name: "twitter:title", content: "Travidz — Discover travel through video" },
+      { property: "og:description", content: "AI-powered travel video feed. Discover destinations, hotels, excursions and deals from real content creators." },
+      { name: "twitter:description", content: "AI-powered travel video feed. Discover destinations, hotels, excursions and deals from real content creators." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b65804f1-9fdd-4adc-ae31-5eec100ccb93" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b65804f1-9fdd-4adc-ae31-5eec100ccb93" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -72,34 +80,9 @@ function AuthListener() {
   const router = useRouter();
   const qc = useQueryClient();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       router.invalidate();
       qc.invalidateQueries();
-      if (event === "SIGNED_IN" && session?.user) {
-        let welcomed = false;
-        try { welcomed = localStorage.getItem("travidz:welcomed") === "1"; } catch {}
-        if (welcomed) return;
-        if (typeof window !== "undefined" && window.location.pathname === "/welcome") return;
-        // Only auto-redirect brand-new accounts (created in the last 10 minutes).
-        const createdAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
-        const isNew = createdAt && (Date.now() - createdAt) < 10 * 60 * 1000;
-        if (!isNew) {
-          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
-          return;
-        }
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id);
-        const roles = (data ?? []).map((r) => r.role as string);
-        const onlyTraveller = roles.length > 0 && roles.every((r) => r === "traveller");
-        if (onlyTraveller) {
-          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
-          router.navigate({ to: "/welcome" });
-        } else {
-          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
-        }
-      }
     });
     return () => subscription.unsubscribe();
   }, [router, qc]);
