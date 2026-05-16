@@ -27,6 +27,7 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
@@ -142,6 +143,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StudioLinksRoute = StudioLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => StudioRoute,
 } as any)
 const SoundsIdRoute = SoundsIdRouteImport.update({
   id: '/sounds/$id',
@@ -282,7 +288,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -326,7 +333,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
@@ -371,7 +379,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
-  '/studio': typeof StudioRoute
+  '/studio': typeof StudioRouteWithChildren
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
+  '/studio/links': typeof StudioLinksRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -434,6 +443,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin'
     | '/business'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/itineraries/new'
     | '/r/$code'
     | '/sounds/$id'
+    | '/studio/links'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -552,7 +564,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
-  StudioRoute: typeof StudioRoute
+  StudioRoute: typeof StudioRouteWithChildren
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
@@ -707,6 +719,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/studio/links': {
+      id: '/studio/links'
+      path: '/links'
+      fullPath: '/studio/links'
+      preLoaderRoute: typeof StudioLinksRouteImport
+      parentRoute: typeof StudioRoute
     }
     '/sounds/$id': {
       id: '/sounds/$id'
@@ -914,6 +933,17 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
 
+interface StudioRouteChildren {
+  StudioLinksRoute: typeof StudioLinksRoute
+}
+
+const StudioRouteChildren: StudioRouteChildren = {
+  StudioLinksRoute: StudioLinksRoute,
+}
+
+const StudioRouteWithChildren =
+  StudioRoute._addFileChildren(StudioRouteChildren)
+
 interface BusinessDealsIdRouteChildren {
   BusinessDealsIdEditRoute: typeof BusinessDealsIdEditRoute
   BusinessDealsIdIndexRoute: typeof BusinessDealsIdIndexRoute
@@ -939,7 +969,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
-  StudioRoute: StudioRoute,
+  StudioRoute: StudioRouteWithChildren,
   WelcomeRoute: WelcomeRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
@@ -969,3 +999,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
