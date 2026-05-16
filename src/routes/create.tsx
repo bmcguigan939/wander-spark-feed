@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
 import { toast } from "sonner";
 import { Upload, Video, Loader2, Sparkles } from "lucide-react";
+import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -60,6 +61,8 @@ function UploadFlow() {
   const [city, setCity] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
 
   async function startUpload(f: File) {
     setFile(f); setUploading(true); setProgress(0);
@@ -124,8 +127,30 @@ function UploadFlow() {
 
         {file && !uploading && videoId && (
           <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) finalizeM.mutate(); }} className="mt-6 space-y-3">
-            <Field label="Title"><input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} /></Field>
-            <Field label="Description"><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} /></Field>
+            <Field label="Title">
+              <div className="relative">
+                <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={`${inputCls} pr-10`} />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                  <EmojiPicker onPick={(emoji) => {
+                    const { next, caret } = insertAtCursor(titleRef.current, title, emoji);
+                    setTitle(next);
+                    requestAnimationFrame(() => { const el = titleRef.current; if (el) { el.focus(); el.setSelectionRange(caret, caret); } });
+                  }} />
+                </div>
+              </div>
+            </Field>
+            <Field label="Description">
+              <div className="relative">
+                <textarea ref={descRef} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={`${inputCls} pr-10`} />
+                <div className="absolute right-1 top-1">
+                  <EmojiPicker onPick={(emoji) => {
+                    const { next, caret } = insertAtCursor(descRef.current, description, emoji);
+                    setDescription(next);
+                    requestAnimationFrame(() => { const el = descRef.current; if (el) { el.focus(); el.setSelectionRange(caret, caret); } });
+                  }} />
+                </div>
+              </div>
+            </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Country"><input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} /></Field>
               <Field label="City"><input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} /></Field>

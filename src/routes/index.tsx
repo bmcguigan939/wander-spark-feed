@@ -67,6 +67,14 @@ function FeedPage() {
           <FullEmptyState
             title="No videos from people you follow yet"
             body="Follow creators to see their latest travel videos here."
+            action={
+              <button
+                onClick={() => setTab("for-you")}
+                className="mt-5 rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-muted"
+              >
+                ← Back to For you
+              </button>
+            }
           />
         )}
         {videos.map((v, i) => (
@@ -92,7 +100,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-function FullEmptyState({ title, body }: { title: string; body?: string }) {
+function FullEmptyState({ title, body, action }: { title: string; body?: string; action?: React.ReactNode }) {
   return (
     <section className="feed-snap flex h-dvh w-full items-center justify-center bg-gradient-to-br from-card to-background px-8 text-center">
       <div className="max-w-xs">
@@ -101,6 +109,7 @@ function FullEmptyState({ title, body }: { title: string; body?: string }) {
         </div>
         <h2 className="text-xl font-semibold">{title}</h2>
         {body && <p className="mt-2 text-sm text-muted-foreground">{body}</p>}
+        {action}
       </div>
     </section>
   );

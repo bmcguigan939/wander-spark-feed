@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabase as anon } from "@/integrations/supabase/client";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type CommentRow = {
   id: string;
@@ -22,7 +22,7 @@ export const listComments = createServerFn({ method: "GET" })
     z.object({ videoId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { data: rows, error } = await anon
+    const { data: rows, error } = await supabaseAdmin
       .from("comments")
       .select("id, video_id, user_id, parent_id, body, created_at, profiles:user_id (username, display_name, avatar_url)")
       .eq("video_id", data.videoId)
