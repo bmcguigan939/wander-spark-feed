@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
@@ -38,6 +39,11 @@ const SearchRoute = SearchRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/business/apply': typeof BusinessApplyRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/business/apply': typeof BusinessApplyRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/business/apply': typeof BusinessApplyRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/notifications'
     | '/profile'
     | '/search'
     | '/business/apply'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/notifications'
     | '/profile'
     | '/search'
     | '/business/apply'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/create'
     | '/login'
+    | '/notifications'
     | '/profile'
     | '/search'
     | '/business/apply'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -462,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
   BusinessApplyRoute: BusinessApplyRoute,

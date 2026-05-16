@@ -6,6 +6,7 @@ import { VideoCard } from "@/components/feed/VideoCard";
 import { getFeed, getFollowingFeed } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Travidz — Discover travel through video" }] }),
@@ -50,6 +51,9 @@ function FeedPage() {
           }}>Following</TabBtn>
           <TabBtn active={tab === "for-you"} onClick={() => setTab("for-you")}>For you</TabBtn>
         </div>
+      </div>
+      <div className="pointer-events-none absolute right-3 top-3 z-20">
+        <NotificationsBell />
       </div>
       <div ref={containerRef} className="feed-scroll h-dvh overflow-y-scroll">
         {isLoading && <FullEmptyState title="Loading feed…" />}
