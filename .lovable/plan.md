@@ -10,7 +10,7 @@ Phase B notes (just shipped):
 - `searchVideos` is now hybrid: keyword (tsv) + semantic candidates merged with weighted score.
 - Admin overview has a backfill button (25 rows/click) for legacy rows missing embeddings.
 
-**Still open in Phase B:** richer personalized ranking using embeddings (extend `getForYouFeed`'s `scoreVideo` with semantic affinity from liked/saved video embeddings).
+**Phase B complete:** `getForYouFeed` now builds a per-viewer taste vector by averaging embeddings of recently liked/saved videos (L2-normalized), pulls top semantic candidates via `match_videos`, merges them into the chronological pool, and adds a cosine-similarity term to `scoreVideo` so older-but-relevant videos can surface for the right user.
 
 We've shipped **#2 Auto-tag videos**. Here's a proposed order for the remaining 9, grouped so each phase unlocks the next.
 
