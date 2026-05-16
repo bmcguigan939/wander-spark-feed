@@ -31,6 +31,7 @@ import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.ne
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 import { Route as BusinessDealsIdIndexRouteImport } from './routes/business.deals.$id.index'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -144,6 +145,12 @@ const BusinessDealsIdIndexRoute = BusinessDealsIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => BusinessDealsIdRoute,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -173,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id/': typeof BusinessDealsIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -197,6 +205,7 @@ export interface FileRoutesByTo {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id': typeof BusinessDealsIdIndexRoute
 }
 export interface FileRoutesById {
@@ -223,6 +232,7 @@ export interface FileRoutesById {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id/': typeof BusinessDealsIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/destinations/$country/'
     | '/business/deals/$id/edit'
+    | '/lovable/email/queue/process'
     | '/business/deals/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/destinations/$country'
     | '/business/deals/$id/edit'
+    | '/lovable/email/queue/process'
     | '/business/deals/$id'
   id:
     | '__root__'
@@ -299,6 +311,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/destinations/$country/'
     | '/business/deals/$id/edit'
+    | '/lovable/email/queue/process'
     | '/business/deals/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -323,6 +336,7 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -481,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessDealsIdIndexRouteImport
       parentRoute: typeof BusinessDealsIdRoute
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/deals/$id/edit': {
       id: '/business/deals/$id/edit'
       path: '/edit'
@@ -538,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
