@@ -18,6 +18,7 @@ import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ItinerariesIndexRouteImport } from './routes/itineraries.index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
@@ -88,6 +89,11 @@ const CreateRoute = CreateRouteImport.update({
 const CollectionsRoute = CollectionsRouteImport.update({
   id: '/collections',
   path: '/collections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -225,6 +231,7 @@ const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
@@ -299,6 +307,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/collections'
     | '/create'
     | '/login'
@@ -375,6 +385,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/collections'
     | '/create'
     | '/login'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/collections'
     | '/create'
     | '/login'
@@ -449,6 +461,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/collections'
       fullPath: '/collections'
       preLoaderRoute: typeof CollectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -760,6 +780,7 @@ const BusinessDealsIdRouteWithChildren = BusinessDealsIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
@@ -795,3 +816,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
