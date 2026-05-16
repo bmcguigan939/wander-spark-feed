@@ -101,6 +101,135 @@ export async function runAutoTag(videoId: string, opts?: { useTranscript?: boole
 
   const { error: updErr } = await supabaseAdmin.from("videos").update(patch).eq("id", videoId);
   if (updErr) console.error("[ai] update failed", updErr.message);
+
+  // After tagging, also extract businesses mentioned (best-effort).
+  // Skip on the pre-transcript pass — we want richer signal first.
+  if (opts?.useTranscript) {
+    try { await runBusinessExtraction(videoId); }
+    catch (e) { console.error("[ai] business extraction failed", e); }
+  }
+}
+
+// ---------- Business extraction ----------
+
+const BusinessSchema = z.object({
+  businesses: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(160),
+        category: z
+          .enum(["hotel", "restaurant", "tour", "activity", "bar", "other"])
+          .nullable()
+          .optional(),
+        city: z.string().max(120).nullable().optional(),
+        country: z.string().max(120).nullable().optional(),
+        website_guess: z.string().max(500).nullable().optional(),
+        confidence: z.number().min(0).max(1).optional(),
+      }),
+    )
+    .max(8)
+    .default([]),
+});
+
+async function callBusinessGateway(prompt: string): Promise<z.infer<typeof BusinessSchema> | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "raw-fetch",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract REAL named businesses (hotels, restaurants, tour operators, bars, activity providers) that a creator mentions or features in a short travel video. " +
+            "Reject generic nouns like 'the hotel', 'a cafe', 'some restaurant'. Only include businesses with a real proper name. " +
+            "Reply ONLY with JSON shaped as { businesses: [{ name, category, city, country, website_guess, confidence }] }. " +
+            "category must be one of: hotel, restaurant, tour, activity, bar, other. confidence is 0..1. Use null when unknown. Max 8 entries.",
+        },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) {
+    console.error("[ai] business gateway error", res.status);
+    return null;
+  }
+  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = json.choices?.[0]?.message?.content;
+  if (!raw) return null;
+  try {
+    return BusinessSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    console.error("[ai] business parse failed", e);
+    return null;
+  }
+}
+
+export async function runBusinessExtraction(videoId: string): Promise<void> {
+  const { data: video } = await supabaseAdmin
+    .from("videos")
+    .select("id,title,description,transcript,city,country,destination")
+    .eq("id", videoId)
+    .maybeSingle();
+  if (!video) return;
+
+  const transcript = (video as any).transcript as string | null;
+  const titleLen = (video.title ?? "").length;
+  const descLen = (video.description ?? "").length;
+  // Need at least a transcript OR a reasonably descriptive title/description.
+  if (!transcript && titleLen + descLen < 40) return;
+
+  const prompt = [
+    `Title: ${video.title}`,
+    `Description: ${video.description ?? "(none)"}`,
+    `Location hint: ${video.destination ?? ""} ${video.city ?? ""} ${video.country ?? ""}`.trim(),
+    transcript ? `\nTranscript (auto, may have errors, truncated):\n${String(transcript).slice(0, 4000)}` : "",
+    `\nExtract real named businesses mentioned or featured. Use the location hint to guide city/country when missing.`,
+  ].join("\n");
+
+  const result = await callBusinessGateway(prompt);
+  if (!result || result.businesses.length === 0) return;
+
+  // Fetch existing rows so we don't overwrite dismissed/converted ones.
+  const { data: existing } = await supabaseAdmin
+    .from("video_business_suggestions")
+    .select("name,status")
+    .eq("video_id", videoId);
+  const seen = new Map<string, string>(
+    (existing ?? []).map((r: any) => [String(r.name).toLowerCase(), r.status]),
+  );
+
+  const source = transcript ? "transcript" : titleLen >= descLen ? "title" : "description";
+  const rows = result.businesses
+    .filter((b) => {
+      const prev = seen.get(b.name.toLowerCase());
+      // Skip if already dismissed or converted — only insert fresh names.
+      return !prev;
+    })
+    .map((b) => ({
+      video_id: videoId,
+      name: b.name.trim().slice(0, 160),
+      category: b.category ?? null,
+      city: b.city ?? video.city ?? null,
+      country: b.country ?? video.country ?? null,
+      website_guess: b.website_guess ?? null,
+      confidence: b.confidence ?? null,
+      source,
+      status: "pending",
+    }));
+
+  if (rows.length === 0) return;
+  const { error } = await supabaseAdmin
+    .from("video_business_suggestions")
+    .upsert(rows, { onConflict: "video_id,name", ignoreDuplicates: true });
+  if (error) console.error("[ai] insert business suggestions failed", error.message);
 }
 
 export const autoTagVideo = createServerFn({ method: "POST" })

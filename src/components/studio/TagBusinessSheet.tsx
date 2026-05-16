@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -17,9 +17,16 @@ type Props = {
   videoId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initial?: {
+    businessName?: string;
+    websiteUrl?: string;
+    city?: string;
+    suggestionId?: string;
+  } | null;
+  onCreated?: (inviteId: string) => void;
 };
 
-export function TagBusinessSheet({ videoId, open, onOpenChange }: Props) {
+export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreated }: Props) {
   const qc = useQueryClient();
   const createFn = useServerFn(createBusinessInvite);
 
@@ -28,6 +35,14 @@ export function TagBusinessSheet({ videoId, open, onOpenChange }: Props) {
   const [city, setCity] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setBusinessName(initial?.businessName ?? "");
+      setWebsiteUrl(initial?.websiteUrl ?? "");
+      setCity(initial?.city ?? "");
+    }
+  }, [open, initial]);
 
   const m = useMutation({
     mutationFn: () =>
@@ -41,9 +56,11 @@ export function TagBusinessSheet({ videoId, open, onOpenChange }: Props) {
           contactPhone: contactPhone.trim() || null,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["business-invites", videoId] });
+      qc.invalidateQueries({ queryKey: ["business-suggestions", videoId] });
       toast.success("Invite created — share the link with them");
+      if (onCreated && res?.id) onCreated(res.id);
       setBusinessName("");
       setWebsiteUrl("");
       setCity("");
