@@ -38,10 +38,10 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     else { await navigator.clipboard.writeText(url); toast("Link copied"); }
   }
 
-  const styleAny = {
+  const styleAny: any = {
     width: "100%", height: "100%",
     "--controls": "none", "--media-object-fit": "cover",
-  } as React.CSSProperties;
+  };
 
   return (
     <section className="feed-snap relative h-dvh w-full overflow-hidden bg-black">
