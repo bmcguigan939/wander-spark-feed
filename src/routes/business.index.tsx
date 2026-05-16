@@ -58,9 +58,31 @@ function BusinessDashboard() {
             <Plus className="h-3.5 w-3.5" /> New
           </Link>
         </div>
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {isLoading && (
+          <ul className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="h-28 animate-pulse rounded-2xl border border-border bg-card" />
+            ))}
+          </ul>
+        )}
         {!isLoading && deals.length === 0 && (
-          <p className="text-sm text-muted-foreground">No deals yet. Create your first one.</p>
+          <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center">
+            <div className="rounded-full bg-primary/10 p-3 text-primary">
+              <Briefcase className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">No deals yet</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Publish your first offer so creators can promote it and viewers can book.
+              </p>
+            </div>
+            <Link
+              to="/business/deals/new"
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" /> Create a deal
+            </Link>
+          </div>
         )}
         <ul className="space-y-3">
           {deals.map((d: any, i: number) => {
