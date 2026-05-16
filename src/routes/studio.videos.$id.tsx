@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import {
