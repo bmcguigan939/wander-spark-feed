@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -87,6 +88,7 @@ function RootComponent() {
       <AuthProvider>
         <AuthListener />
         <Outlet />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );
