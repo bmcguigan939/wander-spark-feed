@@ -2,6 +2,84 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// ============================================================================
+// Embeddings (Lovable AI Gateway, OpenAI text-embedding-3-small, 1536 dims)
+// ============================================================================
+
+const EMBED_MODEL = "openai/text-embedding-3-small";
+const EMBED_DIMS = 1536;
+
+export async function embedText(text: string): Promise<number[] | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  const clean = text.replace(/\s+/g, " ").trim().slice(0, 8000);
+  if (!clean) return null;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "raw-fetch",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: EMBED_MODEL, input: clean }),
+  });
+  if (!res.ok) {
+    console.error("[ai] embeddings error", res.status, await res.text().catch(() => ""));
+    return null;
+  }
+  const json = (await res.json()) as { data?: Array<{ embedding?: number[] }> };
+  const vec = json.data?.[0]?.embedding;
+  if (!vec || vec.length !== EMBED_DIMS) return null;
+  return vec;
+}
+
+function vecLiteral(v: number[]): string {
+  return `[${v.join(",")}]`;
+}
+
+export async function embedVideo(videoId: string): Promise<void> {
+  const { data: v } = await supabaseAdmin
+    .from("videos")
+    .select("id,title,description,destination,country,city,activity_tags,transcript")
+    .eq("id", videoId)
+    .maybeSingle();
+  if (!v) return;
+  const parts = [
+    v.title,
+    v.description ?? "",
+    [v.destination, v.city, v.country].filter(Boolean).join(", "),
+    (v.activity_tags ?? []).join(" "),
+    (v as any).transcript ? String((v as any).transcript).slice(0, 4000) : "",
+  ].filter(Boolean);
+  const vec = await embedText(parts.join("\n"));
+  if (!vec) return;
+  await supabaseAdmin
+    .from("videos")
+    .update({ embedding: vecLiteral(vec) as any, embedded_at: new Date().toISOString() })
+    .eq("id", videoId);
+}
+
+export async function embedDeal(dealId: string): Promise<void> {
+  const { data: d } = await supabaseAdmin
+    .from("deals")
+    .select("id,title,description,destination,country,city,ai_summary")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (!d) return;
+  const parts = [
+    d.title,
+    d.description ?? "",
+    d.ai_summary ?? "",
+    [d.destination, d.city, d.country].filter(Boolean).join(", "),
+  ].filter(Boolean);
+  const vec = await embedText(parts.join("\n"));
+  if (!vec) return;
+  await supabaseAdmin
+    .from("deals")
+    .update({ embedding: vecLiteral(vec) as any, embedded_at: new Date().toISOString() })
+    .eq("id", dealId);
+}
+
 const TagSchema = z.object({
   country: z.string().nullable(),
   city: z.string().nullable(),
@@ -108,6 +186,10 @@ export async function runAutoTag(videoId: string, opts?: { useTranscript?: boole
     try { await runBusinessExtraction(videoId); }
     catch (e) { console.error("[ai] business extraction failed", e); }
   }
+
+  // Re-embed after metadata update so semantic search reflects latest signal.
+  try { await embedVideo(videoId); }
+  catch (e) { console.error("[ai] embed video failed", e); }
 }
 
 // ---------- Business extraction ----------
