@@ -74,9 +74,9 @@ const DestinationsCountryIndexRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
-  id: '/$city',
-  path: '/$city',
-  getParentRoute: () => DestinationsCountryRoute,
+  id: '/destinations/$country/$city',
+  path: '/destinations/$country/$city',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
   id: '/api/public/mux-webhook',
@@ -182,6 +182,7 @@ export interface RootRouteChildren {
   UUsernameRoute: typeof UUsernameRoute
   DestinationsIndexRoute: typeof DestinationsIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
+  DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
 }
 
@@ -259,10 +260,10 @@ declare module '@tanstack/react-router' {
     }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
-      path: '/$city'
+      path: '/destinations/$country/$city'
       fullPath: '/destinations/$country/$city'
       preLoaderRoute: typeof DestinationsCountryCityRouteImport
-      parentRoute: typeof DestinationsCountryRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/mux-webhook': {
       id: '/api/public/mux-webhook'
@@ -296,18 +297,9 @@ const rootRouteChildren: RootRouteChildren = {
   UUsernameRoute: UUsernameRoute,
   DestinationsIndexRoute: DestinationsIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
+  DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
