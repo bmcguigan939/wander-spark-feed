@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runAutoTag } from "@/lib/ai.functions";
+import { moderateVideo } from "@/lib/moderation.functions";
 
 export const Route = createFileRoute("/api/public/mux-webhook")({
   server: {
