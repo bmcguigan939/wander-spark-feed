@@ -174,13 +174,18 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         </button>
       )}
 
-      {/* Right rail */}
-      <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
-        <Action icon={Heart} count={video.like_count} onClick={() => requireAuth(() => likeM.mutate())} />
-        <Action icon={MessageCircle} count={video.comment_count ?? 0} onClick={() => setCommentsOpen(true)} />
-        <Action icon={Bookmark} count={video.save_count} onClick={() => requireAuth(() => saveM.mutate())} />
-        <Action icon={Share2} count={0} onClick={share} />
-        <button onClick={() => requireAuth(() => setCollectionOpen(true))} className="text-[10px] font-semibold uppercase tracking-wide text-white/80">+Collection</button>
+      {/* Right rail — frosted circles */}
+      <div className="absolute right-3 bottom-32 flex flex-col items-center gap-4 text-white">
+        <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
+        <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
+        <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
+        <Action icon={Share2} label="Share" onClick={share} />
+        <button
+          onClick={() => requireAuth(() => setCollectionOpen(true))}
+          className="mt-1 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 backdrop-blur-md transition hover:bg-white/20"
+        >
+          + Collection
+        </button>
       </div>
       <AddToCollectionSheet open={collectionOpen} onOpenChange={setCollectionOpen} videoId={video.id} />
       <CommentsSheet open={commentsOpen} onOpenChange={setCommentsOpen} videoId={video.id} />
@@ -201,7 +206,9 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           </div>
         </Link>
 
-        <h2 className="mt-3 text-base font-semibold leading-snug">{video.title}</h2>
+        <h2 className="mt-3 font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+          {video.title}
+        </h2>
 
         {video.matchedDeal && (
           <Link
@@ -267,13 +274,29 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   );
 }
 
-function Action({ icon: Icon, count, onClick }: { icon: typeof Heart; count: number; onClick?: () => void }) {
+function Action({
+  icon: Icon,
+  count,
+  onClick,
+  label,
+}: {
+  icon: typeof Heart;
+  count?: number;
+  onClick?: () => void;
+  label: string;
+}) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 text-white drop-shadow-lg">
-      <span className="rounded-full bg-black/30 p-2 backdrop-blur-md">
-        <Icon className="h-6 w-6" strokeWidth={1.8} />
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="group flex flex-col items-center gap-1 text-white"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition group-hover:bg-white/20 group-active:scale-95">
+        <Icon className="h-5 w-5" strokeWidth={1.9} />
       </span>
-      <span className="text-[11px] font-medium tabular-nums">{formatCount(count)}</span>
+      {typeof count === "number" && (
+        <span className="text-[11px] font-semibold tabular-nums text-white/90 drop-shadow">{formatCount(count)}</span>
+      )}
     </button>
   );
 }
