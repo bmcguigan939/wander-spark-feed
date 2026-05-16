@@ -72,9 +72,27 @@ function AuthListener() {
   const router = useRouter();
   const qc = useQueryClient();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       router.invalidate();
       qc.invalidateQueries();
+      if (event === "SIGNED_IN" && session?.user) {
+        let welcomed = false;
+        try { welcomed = localStorage.getItem("travidz:welcomed") === "1"; } catch {}
+        if (welcomed) return;
+        if (typeof window !== "undefined" && window.location.pathname === "/welcome") return;
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id);
+        const roles = (data ?? []).map((r) => r.role as string);
+        const onlyTraveller = roles.length > 0 && roles.every((r) => r === "traveller");
+        if (onlyTraveller) {
+          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
+          router.navigate({ to: "/welcome" });
+        } else {
+          try { localStorage.setItem("travidz:welcomed", "1"); } catch {}
+        }
+      }
     });
     return () => subscription.unsubscribe();
   }, [router, qc]);
