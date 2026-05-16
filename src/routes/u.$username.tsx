@@ -25,8 +25,8 @@ function ProfilePage() {
   const qc = useQueryClient();
   const followFn = useServerFn(toggleFollow);
   const { data, isLoading } = useQuery({
-    queryKey: ["profile", username],
-    queryFn: () => getProfileByUsername({ data: { username } }),
+    queryKey: ["profile", username, user?.id ?? null],
+    queryFn: () => getProfileByUsername({ data: { username, viewerId: user?.id ?? null } }),
   });
   const followM = useMutation({
     mutationFn: () => followFn({ data: { creatorId: data!.profile!.id } }),
@@ -71,9 +71,13 @@ function ProfilePage() {
                   followM.mutate();
                 }}
                 disabled={followM.isPending}
-                className="mt-5 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                className={`mt-5 w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50 ${
+                  data.isFollowing
+                    ? "border border-border bg-card text-foreground"
+                    : "bg-primary text-primary-foreground"
+                }`}
               >
-                Follow
+                {data.isFollowing ? "Following" : "Follow"}
               </button>
             )}
 
