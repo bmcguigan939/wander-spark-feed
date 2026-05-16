@@ -31,6 +31,7 @@ import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
@@ -154,6 +155,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const BusinessCalculatorRoute = BusinessCalculatorRouteImport.update({
+  id: '/business/calculator',
+  path: '/business/calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessApplyRoute = BusinessApplyRouteImport.update({
   id: '/business/apply',
   path: '/business/apply',
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
+  '/business/calculator': typeof BusinessCalculatorRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
+  '/business/calculator': typeof BusinessCalculatorRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
+  '/business/calculator': typeof BusinessCalculatorRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/applications'
     | '/business/apply'
+    | '/business/calculator'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/applications'
     | '/business/apply'
+    | '/business/calculator'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/business/applications'
     | '/business/apply'
+    | '/business/calculator'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -448,6 +460,7 @@ export interface RootRouteChildren {
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
+  BusinessCalculatorRoute: typeof BusinessCalculatorRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
@@ -625,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
     }
+    '/business/calculator': {
+      id: '/business/calculator'
+      path: '/business/calculator'
+      fullPath: '/business/calculator'
+      preLoaderRoute: typeof BusinessCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/apply': {
       id: '/business/apply'
       path: '/business/apply'
@@ -751,6 +771,7 @@ const rootRouteChildren: RootRouteChildren = {
   WelcomeRoute: WelcomeRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
+  BusinessCalculatorRoute: BusinessCalculatorRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
@@ -774,3 +795,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
