@@ -60,6 +60,7 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
             .maybeSingle();
           if (row?.id) {
             try { await runAutoTag(row.id); } catch (e) { console.error("[mux-webhook] auto-tag failed", e); }
+            try { await moderateVideo(row.id); } catch (e) { console.error("[mux-webhook] moderation failed", e); }
           }
         } else if (event.type === "video.asset.errored" || event.type === "video.upload.errored") {
           const uploadId = event.data?.upload_id as string | undefined;
