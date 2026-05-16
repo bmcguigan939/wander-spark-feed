@@ -55,15 +55,20 @@ async function callGateway(prompt: string, thumbnailUrl: string | null): Promise
   }
 }
 
-export async function runAutoTag(videoId: string): Promise<void> {
+export async function runAutoTag(videoId: string, opts?: { useTranscript?: boolean }): Promise<void> {
   const { data: video, error } = await supabaseAdmin
     .from("videos")
-    .select("id,title,description,thumbnail_url,destination,country,city,activity_tags,budget_tag")
+    .select("id,title,description,thumbnail_url,destination,country,city,activity_tags,budget_tag,transcript")
     .eq("id", videoId)
     .maybeSingle();
   if (error || !video) return;
 
-  const prompt = `Title: ${video.title}\nDescription: ${video.description ?? "(none)"}\nExisting destination hint: ${video.destination ?? "(none)"}\n\nFrom the title, description, and thumbnail image, infer the travel location and activities. Return JSON:\n{ "country": string|null, "city": string|null, "destination": string|null (short human label like "Bali" or "Lisbon"), "activity_tags": string[], "budget_tag": "budget"|"mid-range"|"luxury"|null, "suggested_title": string|null (only if current title is generic) }`;
+  const transcript = opts?.useTranscript ? (video as any).transcript ?? null : null;
+  const transcriptBlock = transcript
+    ? `\nTranscript (auto-captioned, may contain errors, truncated to 4000 chars):\n${String(transcript).slice(0, 4000)}\n`
+    : "";
+
+  const prompt = `Title: ${video.title}\nDescription: ${video.description ?? "(none)"}\nExisting destination hint: ${video.destination ?? "(none)"}${transcriptBlock}\n\nFrom the title, description${transcript ? ", spoken transcript," : ""} and thumbnail image, infer the travel location and activities. Return JSON:\n{ "country": string|null, "city": string|null, "destination": string|null (short human label like "Bali" or "Lisbon"), "activity_tags": string[], "budget_tag": "budget"|"mid-range"|"luxury"|null, "suggested_title": string|null (only if current title is generic) }`;
 
   const result = await callGateway(prompt, video.thumbnail_url);
   if (!result) return;
