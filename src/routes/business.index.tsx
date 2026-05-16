@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users } from "lucide-react";
 import { Sparkline } from "@/components/business/Sparkline";
 
 export const Route = createFileRoute("/business/")({
@@ -58,6 +58,15 @@ function BusinessDashboard() {
             <Plus className="h-3.5 w-3.5" /> New
           </Link>
         </div>
+        <Link
+          to="/business/applications"
+          className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card/40 px-3 py-2 text-sm"
+        >
+          <span className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" /> Creator applications
+          </span>
+          <span className="text-xs text-muted-foreground">View</span>
+        </Link>
         {isLoading && (
           <ul className="space-y-3">
             {[0, 1, 2].map((i) => (
