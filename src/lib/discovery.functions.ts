@@ -247,6 +247,12 @@ async function ingestCandidates(
       }
       const extracted = await extractDeal(hit);
       if (!extracted || extracted.ai_confidence < 0.4) continue;
+      // Grade quality. Skip if below reject threshold.
+      const quality = await gradeQuality(hit, extracted);
+      if (quality && quality.quality_score < QUALITY_REJECT_THRESHOLD) {
+        skippedDuplicate += 0; // not a dup; just track silently
+        continue;
+      }
       const network = inferNetwork(hit.url);
       const status = extracted.ai_confidence >= threshold ? "approved" : "pending_review";
       const { error } = await supabaseAdmin.from("deals").insert({
@@ -264,6 +270,8 @@ async function ingestCandidates(
         affiliate_network: network,
         ai_confidence: extracted.ai_confidence,
         ai_summary: extracted.ai_summary,
+        quality_score: quality?.quality_score ?? null,
+        quality_reasons: quality?.reasons ?? [],
         discovered_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
         is_active: true,
@@ -346,10 +354,10 @@ export const listPendingDiscoveries = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data, error } = await supabaseAdmin
       .from("deals")
-      .select("id,title,description,url,original_url,city,country,destination,price_cents,currency,affiliate_network,ai_confidence,ai_summary,discovered_at")
+      .select("id,title,description,url,original_url,city,country,destination,price_cents,currency,affiliate_network,ai_confidence,ai_summary,quality_score,quality_reasons,discovered_at")
       .eq("source", "ai_discovered")
       .eq("status", "pending_review")
-      .order("ai_confidence", { ascending: false })
+      .order("quality_score", { ascending: false, nullsFirst: false })
       .limit(100);
     if (error) throw new Error(error.message);
     return { deals: data ?? [] };
