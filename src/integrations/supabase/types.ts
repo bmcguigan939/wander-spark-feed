@@ -44,6 +44,72 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          link_id: string
+          referrer_video_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          link_id: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          link_id?: string
+          referrer_video_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_links: {
+        Row: {
+          click_count: number
+          commission_pct: number | null
+          created_at: string
+          creator_id: string
+          id: string
+          is_active: boolean
+          label: string
+          provider: string
+          updated_at: string
+          url: string
+          video_id: string | null
+        }
+        Insert: {
+          click_count?: number
+          commission_pct?: number | null
+          created_at?: string
+          creator_id: string
+          id?: string
+          is_active?: boolean
+          label: string
+          provider?: string
+          updated_at?: string
+          url: string
+          video_id?: string | null
+        }
+        Update: {
+          click_count?: number
+          commission_pct?: number | null
+          created_at?: string
+          creator_id?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          provider?: string
+          updated_at?: string
+          url?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
       collection_items: {
         Row: {
           added_at: string
