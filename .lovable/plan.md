@@ -1,79 +1,70 @@
-## Goal
+## Remaining AI/LLM improvements — sequenced rollout
 
-Extend the existing auto-tag pipeline (`runAutoTag` in `src/lib/ai.functions.ts`) so it also extracts **businesses mentioned** in a video (hotels, restaurants, tour operators, etc.) and surfaces them as one-tap suggestions inside the **Businesses featured** panel on `studio.videos.$id`. One tap converts a suggestion into a `business_invites` row using the existing flow — no extra typing.
+We've shipped **#2 Auto-tag videos**. Here's a proposed order for the remaining 9, grouped so each phase unlocks the next.
 
-The location/activity tagging that already runs after `video.asset.ready` and after captions arrive stays unchanged; we just add a businesses pass and a small UI strip.
+### Phase A — Quality & Trust (next up)
 
-## What changes
+**#1 Smarter deal discovery scoring**
+- Extend `discovery.functions.ts`: after crawling, send page text + metadata to Gemini Flash for a `quality_score` (price competitiveness, photo quality, review signals, refundability hints) + `reject_reason`.
+- New columns on `deals`: `quality_score numeric`, `quality_reasons jsonb`.
+- Auto-reject below threshold (e.g. <0.4) before they hit admin queue; admin sees score + reasons on borderline ones.
+- Feedback loop: nightly job compares `quality_score` vs. `click_count` / conversion → log to `deal_discovery_runs` for prompt tuning.
 
-### 1. New table — `video_business_suggestions`
+**#6 Content moderation**
+- On video `status='ready'` and on new `comments` insert, call LLM with a moderation prompt (spam, fake reviews, off-platform links, hate).
+- New table `moderation_flags` (target_type, target_id, label, confidence, reason, status).
+- Auto-hide above threshold via `is_hidden=true` (videos) or soft-delete (comments); admin review page lists flags.
 
-Holds AI-detected businesses per video. One row per detection, kept until the creator dismisses it or converts it into an invite.
+### Phase B — Discovery & Personalization
 
-```
-video_id            uuid    not null
-name                text    not null       (e.g. "Aman Bali")
-category            text                   (hotel | restaurant | tour | activity | bar | other)
-city                text
-country             text
-website_guess       text                   (best-guess URL, may be null)
-confidence          numeric                (0–1)
-source              text                   ('transcript' | 'title' | 'description')
-status              text    default 'pending'   ('pending' | 'converted' | 'dismissed')
-converted_invite_id uuid                   (FK-like ref to business_invites.id)
-detected_at         timestamptz default now()
-primary key (video_id, name)
-```
+**#7 Semantic search (pgvector)**
+- Enable `vector` extension. Add `embedding vector(1536)` to `videos` and `deals`.
+- Generate embeddings from title + description + transcript (videos) / title + description + city (deals) via Lovable AI Gateway embeddings.
+- Hybrid search server fn: combine existing `search_tsv` keyword match with cosine similarity, rerank.
+- Backfill job for existing rows; trigger on insert/update.
 
-RLS:
-- Creator of the video can read / update / delete their own rows.
-- Service role inserts (from the AI pipeline).
-- Admins can read all.
+**#3 Personalized feed ranking** (assumed in original list — confirm)
+- Score feed candidates per user using watch history, likes, saves, follows + semantic similarity from #7.
+- Server fn `getRankedFeed` replaces chronological default on `/index`.
 
-### 2. AI extraction (`src/lib/ai.functions.ts`)
+### Phase C — Creator & Business Tools
 
-Add a sibling helper `runBusinessExtraction(videoId)` that:
-- Loads `title`, `description`, `transcript`, `city`, `country`, `thumbnail_url`.
-- Skips if there is no transcript and the title/description are short (avoids hallucinating from a thumbnail alone).
-- Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with a tight system prompt: *"Extract real-world businesses the creator mentions or visibly features. Reject generic nouns like 'the hotel' or 'a café'. For each, return name, category, best-guess city/country/website, and a confidence 0–1. Reply ONLY as JSON."*
-- Validates with Zod (`z.array(...).max(8)`).
-- Upserts into `video_business_suggestions` (skip if `status='dismissed'` already exists for the same name).
+**#4 Smart deal ↔ video matching**
+- Extend `video_deal_suggestions`: use #7 embeddings + city/country/category match to auto-suggest deals to attach when a creator opens a video in studio.
+- Already has table — just needs population job + UI surface.
 
-Trigger points (wire inside `runAutoTag` so we don't add new webhook plumbing):
-- After the transcript-aware re-tag in `runAutoTag(..., { useTranscript: true })`, also call `runBusinessExtraction(videoId)`.
-- Add `rerunBusinessExtraction` server fn (creator-only) for a manual "Re-scan" button.
+**#5 Auto-generated destination summaries**
+- Already have `destination_summaries` table. Add nightly job: for each (city, country) with ≥N videos, generate summary + highlights + best_time from aggregated transcripts.
+- Surface on destination pages.
 
-### 3. Studio UI (`src/routes/studio.videos.$id.tsx`)
+**#8 AI itinerary improvements**
+- `itineraries` table exists. Add server fn `generateItinerary` (Gemini) given destination + days + interests + budget; pull in real `deals` and `videos` as references.
 
-Above the existing **Businesses featured** list, add a "Suggested from this video" strip showing each pending suggestion as a chip with name + category + confidence dot. Per chip:
-- **Tag** → opens the existing `TagBusinessSheet` pre-filled with `name`, `website_guess`, `city`, leaving contact email for the creator to add.
-- **Dismiss** → marks `status='dismissed'`.
+### Phase D — Ops & Support
 
-When the resulting invite is created, mark the suggestion `status='converted'` and stash `converted_invite_id` so it disappears from the strip. Empty state hidden when no suggestions.
+**#9 Auto-reply / outreach drafts**
+- For new `business_invites`, generate a personalized email draft (creator's video context + business category) the creator can edit before sending.
+- For `deal_applications`, draft business response based on application pitch.
 
-Small server fns added in `src/lib/business-invites.functions.ts` (or a new `business-suggestions.functions.ts`):
-- `listSuggestionsForVideo({ videoId })`
-- `dismissSuggestion({ id })`
-- `convertSuggestion({ id, contactEmail, contactPhone? })` — wraps `createBusinessInvite` and flips status.
+**#10 RAG-powered support chat**
+- Index help docs + recent deals/videos as embeddings.
+- New `/support` route with streaming chat (server fn generator pattern); audience-aware system prompt (traveller vs. business).
 
-### 4. `TagBusinessSheet` tweak
+---
 
-Accept optional `initial` props (`businessName`, `websiteUrl`, `city`) so the chip's **Tag** action can pre-populate the form. No other behavior change.
+### Suggested next step
 
-## Out of scope
+Start **Phase A** in one go (both #1 and #6 share the moderation-style LLM-grader pattern and will reinforce each other in the admin UI). Estimated scope:
 
-- Auto-creating invites without a human tap (we want creator confirmation + contact email).
-- Web-scraping the guessed websites to fetch real contact emails (separate follow-up that also benefits #1 discovery).
-- Image/vision analysis of mid-roll frames — relies on transcript + metadata only for v1.
-- Backfilling suggestions on historic videos (can be a one-off admin button later).
+- 1 migration (new columns + `moderation_flags` table + RLS)
+- Extend `discovery.functions.ts` + `ai.functions.ts` (add `runQualityScore`, `runModeration`)
+- Admin pages: surface scores/flags
+- Wire moderation trigger into mux-webhook (video ready) and comments insert
 
-## Technical notes
+### Open questions before I start Phase A
 
-- All AI calls remain in server functions; `LOVABLE_API_KEY` stays server-side.
-- `runBusinessExtraction` is best-effort: failures are logged and never break the Mux webhook (`await` inside `try/catch`, same pattern as `runAutoTag`).
-- Costs: one extra Gemini Flash call per video after captions land. Skipped when transcript + metadata are both empty/short.
-- Reuses `business_invites` end-to-end — no change to the accept/decline flow or commission constants.
+1. **Auto-reject threshold for deals** — fully drop below 0.4, or always keep in admin queue but pre-sort?
+2. **Comment moderation** — auto-hide on high confidence (>0.85) or always require admin review?
+3. **Do you want me to bundle #3 personalized ranking into Phase B**, or is the chronological feed fine for now and we skip straight to semantic search as a manual search box?
 
-## Open question
-
-For the pre-filled invite, should the suggestion's `website_guess` be treated as authoritative (creator just confirms), or always blank so the creator types/pastes the real URL? Default proposal: pre-fill but show a small "AI guess — verify" hint next to the field.
+Once you answer, I'll implement Phase A end-to-end.
