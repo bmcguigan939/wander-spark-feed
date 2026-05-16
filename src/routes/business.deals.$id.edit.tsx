@@ -8,6 +8,17 @@ import { getDeal, updateDeal, deleteDeal } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/business/deals/$id/edit")({
   head: () => ({ meta: [{ title: "Edit Deal — Travidz" }] }),
@@ -68,21 +79,41 @@ function EditDealPage() {
                 }
               }}
             />
-            <button
-              onClick={async () => {
-                if (!confirm("Delete this deal?")) return;
-                try {
-                  await deleteFn({ data: { id } });
-                  toast.success("Deleted");
-                  navigate({ to: "/business" });
-                } catch (e: any) {
-                  toast.error(e?.message ?? "Failed");
-                }
-              }}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 px-4 py-3 text-sm font-semibold text-destructive"
-            >
-              <Trash2 className="h-4 w-4" /> Delete deal
-            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 px-4 py-3 text-sm font-semibold text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete deal
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete this deal?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes the deal and its public link. Click history stays in analytics but the deal won't show on the public deals page anymore.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async () => {
+                      try {
+                        await deleteFn({ data: { id } });
+                        toast.success("Deleted");
+                        navigate({ to: "/business" });
+                      } catch (e: any) {
+                        toast.error(e?.message ?? "Failed");
+                      }
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </div>
