@@ -23,11 +23,12 @@ async function callGateway(prompt: string, thumbnailUrl: string | null): Promise
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${key}`,
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "raw-fetch",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         {
           role: "system",
@@ -71,7 +72,11 @@ export async function runAutoTag(videoId: string, opts?: { useTranscript?: boole
   const prompt = `Title: ${video.title}\nDescription: ${video.description ?? "(none)"}\nExisting destination hint: ${video.destination ?? "(none)"}${transcriptBlock}\n\nFrom the title, description${transcript ? ", spoken transcript," : ""} and thumbnail image, infer the travel location and activities. Return JSON:\n{ "country": string|null, "city": string|null, "destination": string|null (short human label like "Bali" or "Lisbon"), "activity_tags": string[], "budget_tag": "budget"|"mid-range"|"luxury"|null, "suggested_title": string|null (only if current title is generic) }`;
 
   const result = await callGateway(prompt, video.thumbnail_url);
-  if (!result) return;
+  if (!result) {
+    // Still mark analyzed so the UI doesn't spin forever
+    await supabaseAdmin.from("videos").update({ ai_analyzed_at: new Date().toISOString() }).eq("id", videoId);
+    return;
+  }
 
   const patch: {
     country?: string;
@@ -79,6 +84,8 @@ export async function runAutoTag(videoId: string, opts?: { useTranscript?: boole
     destination?: string;
     activity_tags?: string[];
     budget_tag?: string;
+    ai_suggested_title?: string | null;
+    ai_analyzed_at?: string;
   } = {};
   if (!video.country && result.country) patch.country = result.country;
   if (!video.city && result.city) patch.city = result.city;
@@ -87,8 +94,11 @@ export async function runAutoTag(videoId: string, opts?: { useTranscript?: boole
     patch.activity_tags = result.activity_tags.map((t) => t.toLowerCase().replace(/\s+/g, "-")).slice(0, 6);
   }
   if (!video.budget_tag && result.budget_tag) patch.budget_tag = result.budget_tag;
+  if (result.suggested_title && result.suggested_title.trim() && result.suggested_title.trim() !== video.title) {
+    patch.ai_suggested_title = result.suggested_title.trim().slice(0, 160);
+  }
+  patch.ai_analyzed_at = new Date().toISOString();
 
-  if (Object.keys(patch).length === 0) return;
   const { error: updErr } = await supabaseAdmin.from("videos").update(patch).eq("id", videoId);
   if (updErr) console.error("[ai] update failed", updErr.message);
 }
