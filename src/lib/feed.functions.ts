@@ -156,7 +156,10 @@ export const searchAll = createServerFn({ method: "GET" })
 
 export const getProfileByUsername = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
-    z.object({ username: z.string().min(1).max(64) }).parse(input)
+    z.object({
+      username: z.string().min(1).max(64),
+      viewerId: z.string().uuid().nullable().optional(),
+    }).parse(input)
   )
   .handler(async ({ data }) => {
     const { data: profile } = await supabaseAdmin
@@ -164,7 +167,7 @@ export const getProfileByUsername = createServerFn({ method: "GET" })
       .select("id,username,display_name,bio,avatar_url,created_at")
       .eq("username", data.username)
       .maybeSingle();
-    if (!profile) return { profile: null, videos: [], followerCount: 0, followingCount: 0 };
+    if (!profile) return { profile: null, videos: [], followerCount: 0, followingCount: 0, isFollowing: false };
 
     const [videosRes, followers, following] = await Promise.all([
       supabaseAdmin
@@ -178,10 +181,22 @@ export const getProfileByUsername = createServerFn({ method: "GET" })
       supabaseAdmin.from("follows").select("creator_id", { count: "exact", head: true }).eq("follower_id", profile.id),
     ]);
 
+    let isFollowing = false;
+    if (data.viewerId && data.viewerId !== profile.id) {
+      const { data: rel } = await supabaseAdmin
+        .from("follows")
+        .select("creator_id")
+        .eq("follower_id", data.viewerId)
+        .eq("creator_id", profile.id)
+        .maybeSingle();
+      isFollowing = !!rel;
+    }
+
     return {
       profile,
       videos: videosRes.data ?? [],
       followerCount: followers.count ?? 0,
       followingCount: following.count ?? 0,
+      isFollowing,
     };
   });
