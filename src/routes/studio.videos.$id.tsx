@@ -193,6 +193,96 @@ function InsightsPage() {
         <span className="inline-flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-muted-foreground" /> Saves</span>
       </div>
 
+      <div className="mt-8 flex items-center justify-between">
+        <h3 className="font-display text-base font-semibold">Businesses featured</h3>
+        <button
+          onClick={() => setTagOpen(true)}
+          className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-soft"
+        >
+          <Plus className="h-3.5 w-3.5" /> Tag a business
+        </button>
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Invite businesses you featured. They get a {COMMISSION.totalPct}% offer; you earn on every sale.
+      </p>
+      {!invites?.length ? (
+        <div className="mt-3 rounded-2xl border border-dashed border-border bg-card/40 p-5 text-center text-sm text-muted-foreground">
+          No invites yet. Tag a business to start earning on this video.
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {invites.map((inv) => {
+            const inviteUrl =
+              typeof window !== "undefined"
+                ? `${window.location.origin}/business/invite/${inv.token}`
+                : "";
+            const StatusIcon =
+              inv.status === "accepted"
+                ? CheckCircle2
+                : inv.status === "declined" || inv.status === "expired"
+                ? XCircle
+                : Clock;
+            const statusColor =
+              inv.status === "accepted"
+                ? "text-emerald-600 bg-emerald-500/10"
+                : inv.status === "pending"
+                ? "text-amber-600 bg-amber-500/10"
+                : "text-muted-foreground bg-muted";
+            return (
+              <li key={inv.id} className="rounded-2xl border border-border bg-card p-3 shadow-soft">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Building2 className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">{inv.business_name}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${statusColor}`}
+                      >
+                        <StatusIcon className="h-2.5 w-2.5" />
+                        {inv.status}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {inv.website_url}
+                    </div>
+                  </div>
+                </div>
+                {inv.status === "pending" ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inviteUrl);
+                        toast("Invite link copied");
+                      }}
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border bg-background py-1.5 text-[11px] font-semibold"
+                    >
+                      <Copy className="h-3 w-3" /> Copy invite link
+                    </button>
+                    <a
+                      href={`mailto:${inv.contact_email}?subject=${encodeURIComponent(`Featured you on Travidz`)}&body=${encodeURIComponent(`Hi — I featured ${inv.business_name} in a Travidz video and would love to advertise your direct website on the platform for a ${COMMISSION.totalPct}% commission on any sales directed through us. No setup fee, no monthly cost.\n\nClaim your listing in one click: ${inviteUrl}`)}`}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground"
+                    >
+                      Email
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => revokeM.mutate(inv.id)}
+                      aria-label="Revoke"
+                      className="rounded-full border border-destructive/30 bg-destructive/5 p-1.5 text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       <h3 className="mt-8 mb-3 font-display text-base font-semibold">Recent comments</h3>
       {data.recentComments.length === 0 ? (
         <p className="text-sm text-muted-foreground">No comments yet.</p>
