@@ -24,11 +24,22 @@ export const listComments = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: rows, error } = await supabaseAdmin
       .from("comments")
-      .select("id, video_id, user_id, parent_id, body, created_at, profiles:user_id (username, display_name, avatar_url)")
+      .select("id, video_id, user_id, parent_id, body, created_at")
       .eq("video_id", data.videoId)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
+    const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id)));
+    const profilesById = new Map<string, { username: string; display_name: string | null; avatar_url: string | null }>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", userIds);
+      for (const p of profs ?? []) {
+        profilesById.set(p.id, { username: p.username, display_name: p.display_name, avatar_url: p.avatar_url });
+      }
+    }
     const comments: CommentRow[] = (rows ?? []).map((r: any) => ({
       id: r.id,
       video_id: r.video_id,
@@ -36,13 +47,7 @@ export const listComments = createServerFn({ method: "GET" })
       parent_id: r.parent_id,
       body: r.body,
       created_at: r.created_at,
-      author: r.profiles
-        ? {
-            username: r.profiles.username,
-            display_name: r.profiles.display_name,
-            avatar_url: r.profiles.avatar_url,
-          }
-        : null,
+      author: profilesById.get(r.user_id) ?? null,
     }));
     return { comments };
   });
