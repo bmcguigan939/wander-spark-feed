@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listNotifications, markAllRead, type NotificationRow } from "@/lib/notifications.functions";
 import { useAuth } from "@/lib/auth";
-import { Bell, Heart, MessageCircle, UserPlus, Reply } from "lucide-react";
+import { Bell, Heart, MessageCircle, UserPlus, Reply, Briefcase, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/notifications")({
@@ -82,7 +82,13 @@ function NotificationsPage() {
 function Item({ n }: { n: NotificationRow }) {
   const meta = describe(n);
   const actorName = n.actor?.display_name || (n.actor ? `@${n.actor.username}` : "Someone");
-  const href = n.video_id ? `/?v=${n.video_id}` : n.actor ? `/u/${n.actor.username}` : "/";
+  const href = n.deal_id
+    ? (n.type === "deal_application" ? "/business/applications" : "/creator/applications")
+    : n.video_id
+      ? `/?v=${n.video_id}`
+      : n.actor
+        ? `/u/${n.actor.username}`
+        : "/";
   return (
     <Link to={href} className={`flex items-center gap-3 px-3 py-3 ${n.read_at ? "" : "bg-primary/5"}`}>
       <div className="relative">
@@ -112,6 +118,9 @@ function describe(n: NotificationRow) {
     case "comment": return { text: "commented on your video", Icon: MessageCircle, bg: "bg-sky-500" };
     case "follow": return { text: "started following you", Icon: UserPlus, bg: "bg-emerald-500" };
     case "reply": return { text: "replied to your comment", Icon: Reply, bg: "bg-violet-500" };
+    case "deal_application": return { text: "applied to promote your deal", Icon: Briefcase, bg: "bg-amber-500" };
+    case "deal_application_decided": return { text: "updated your deal application", Icon: CheckCircle2, bg: "bg-primary" };
+    default: return { text: "", Icon: Bell, bg: "bg-muted" };
   }
 }
 

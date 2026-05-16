@@ -24,6 +24,7 @@ import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
+import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
@@ -113,6 +114,11 @@ const CreatorApplicationsRoute = CreatorApplicationsRouteImport.update({
   path: '/creator/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorAnalyticsRoute = CreatorAnalyticsRouteImport.update({
+  id: '/creator/analytics',
+  path: '/creator/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/analytics'
     | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
@@ -375,6 +387,7 @@ export interface RootRouteChildren {
   WelcomeRoute: typeof WelcomeRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
+  CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
@@ -496,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/creator/applications'
       fullPath: '/creator/applications'
       preLoaderRoute: typeof CreatorApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator/analytics': {
+      id: '/creator/analytics'
+      path: '/creator/analytics'
+      fullPath: '/creator/analytics'
+      preLoaderRoute: typeof CreatorAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collections/$id': {
@@ -630,6 +650,7 @@ const rootRouteChildren: RootRouteChildren = {
   WelcomeRoute: WelcomeRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
+  CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,
