@@ -109,6 +109,8 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
             if (row?.id && transcript) {
               try { await runAutoTag(row.id, { useTranscript: true }); }
               catch (e) { console.error("[mux-webhook] transcript re-tag failed", e); }
+              try { await moderateVideo(row.id); }
+              catch (e) { console.error("[mux-webhook] transcript moderation failed", e); }
             }
           }
         }
