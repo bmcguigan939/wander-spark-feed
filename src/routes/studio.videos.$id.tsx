@@ -73,6 +73,21 @@ function InsightsPage() {
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+
+  const invitesFn = useServerFn(listInvitesForVideo);
+  const revokeFn = useServerFn(revokeInvite);
+  const { data: invites } = useQuery({
+    queryKey: ["business-invites", id],
+    queryFn: () => invitesFn({ data: { videoId: id } }),
+  });
+  const revokeM = useMutation({
+    mutationFn: (inviteId: string) => revokeFn({ data: { inviteId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-invites", id] });
+      toast("Invite removed");
+    },
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["studio-insights", id] });
