@@ -672,6 +672,47 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_socials: {
+        Row: {
+          instagram_handle: string | null
+          tiktok_handle: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+          x_handle: string | null
+          youtube_channel_id: string | null
+          youtube_handle: string | null
+        }
+        Insert: {
+          instagram_handle?: string | null
+          tiktok_handle?: string | null
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+          x_handle?: string | null
+          youtube_channel_id?: string | null
+          youtube_handle?: string | null
+        }
+        Update: {
+          instagram_handle?: string | null
+          tiktok_handle?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+          x_handle?: string | null
+          youtube_channel_id?: string | null
+          youtube_handle?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_socials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -814,6 +855,7 @@ export type Database = {
           description: string | null
           destination: string | null
           duration_sec: number | null
+          embed_mode: string
           id: string
           is_draft: boolean
           is_featured: boolean
@@ -831,6 +873,9 @@ export type Database = {
           save_count: number
           scheduled_at: string | null
           search_tsv: unknown
+          source_platform: string
+          source_url: string | null
+          source_video_id: string | null
           status: string
           thumbnail_url: string | null
           title: string
@@ -851,6 +896,7 @@ export type Database = {
           description?: string | null
           destination?: string | null
           duration_sec?: number | null
+          embed_mode?: string
           id?: string
           is_draft?: boolean
           is_featured?: boolean
@@ -868,6 +914,9 @@ export type Database = {
           save_count?: number
           scheduled_at?: string | null
           search_tsv?: unknown
+          source_platform?: string
+          source_url?: string | null
+          source_video_id?: string | null
           status?: string
           thumbnail_url?: string | null
           title: string
@@ -888,6 +937,7 @@ export type Database = {
           description?: string | null
           destination?: string | null
           duration_sec?: number | null
+          embed_mode?: string
           id?: string
           is_draft?: boolean
           is_featured?: boolean
@@ -905,6 +955,9 @@ export type Database = {
           save_count?: number
           scheduled_at?: string | null
           search_tsv?: unknown
+          source_platform?: string
+          source_url?: string | null
+          source_video_id?: string | null
           status?: string
           thumbnail_url?: string | null
           title?: string

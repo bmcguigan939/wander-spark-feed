@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
@@ -152,17 +152,37 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           />
         </div>
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-card to-background">
+        <a
+          href={video.source_url ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-card to-background"
+        >
           {video.thumbnail_url ? (
-            <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover opacity-60" />
+            <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover opacity-80" />
           ) : (
             <Play className="h-16 w-16 text-muted-foreground" />
           )}
-        </div>
+          <span className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30">
+            <Play className="h-9 w-9 fill-white text-white" />
+          </span>
+        </a>
       )}
 
       <div className="scrim-top pointer-events-none absolute inset-x-0 top-0 h-32" />
       <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 h-64" />
+
+      {video.source_platform && video.source_platform !== "travidz" && (
+        <a
+          href={video.source_url ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute left-3 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-xl ring-1 ring-white/20"
+        >
+          {video.source_platform === "youtube" ? <Youtube className="h-3.5 w-3.5" /> : <ExternalLink className="h-3 w-3" />}
+          {video.source_platform}
+        </a>
+      )}
 
       {ccAvailable && (
         <button

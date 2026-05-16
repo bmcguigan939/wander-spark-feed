@@ -1,86 +1,98 @@
-## Section P — Creator Studio polish + cinematic UI tidy
+# Section S — Cross-platform Import & Social Links
 
-Two workstreams in one slice: ship the remaining creator-studio polish (§P), then a focused visual pass so the app feels cinematic and editorial. No business-logic changes outside P.
+Goal: let creators (a) link YouTube / TikTok / Instagram / X handles to their Travidz profile, and (b) pull a specific post/video from those platforms and republish it as a Travidz video in one tap.
+
+## UX strategy — make it irresistible
+
+Three entry points, all funneling into the same flow:
+1. **Onboarding nudge** on the Creator activation screen ("Already a creator? Import your latest 3 videos in 30 sec").
+2. **`+` button → "Import from…"** tab next to "Upload" on `/create`. Big platform tiles (YouTube, TikTok, Instagram Reels, X) with logos.
+3. **Studio empty state** ("No videos yet — import from YouTube") and a persistent **"Import more"** card in `/studio/videos`.
+
+Each import flow is **paste-a-URL** (zero OAuth friction for v1):
+- User pastes link → server fetches oEmbed/metadata + thumbnail → preview card → user edits title/destination/tags → "Publish to Travidz".
+- For YouTube specifically, also support **"Connect channel"** (read-only) which lists their last 20 uploads as checkbox tiles for bulk import.
+
+Profile gets a **"My links"** row of platform chips (icon + handle, tap to open). Shown publicly on `/u/$username`.
+
+## Scope (v1)
+
+In:
+- Profile social links CRUD (YouTube, TikTok, Instagram, X, website) — free text handles, no OAuth.
+- URL-paste import for YouTube + TikTok + Instagram Reels → creates a Travidz `videos` row with `source_platform`, `source_url`, `source_video_id`, fetched thumbnail, title, description.
+- Choice of **Repost mode**:
+  - *Link card* (default, always legal): renders an embed/thumbnail card in the feed that plays the original or deep-links out. No Mux upload.
+  - *Mirror to Travidz* (only if creator confirms ownership): downloads via server-side fetch and pushes to Mux through existing `createDirectUpload` pipeline.
+- YouTube "Connect channel" via Google OAuth (uses Lovable Cloud managed Google sign-in already present) + YouTube Data API key → list recent uploads, multi-select import.
+
+Out (future):
+- TikTok/Instagram OAuth (require business app review — defer).
+- Auto-sync on new uploads (cron) — defer to Section T.
+- Stripe Connect / monetization tie-in.
+
+## Data model
+
+New columns on `videos`:
+- `source_platform text` ('travidz' | 'youtube' | 'tiktok' | 'instagram' | 'x')
+- `source_url text`
+- `source_video_id text`
+- `embed_mode text` default `'mirror'` ('link_card' | 'mirror')
+
+New table `profile_socials`:
+- `user_id uuid PK ref profiles.id`
+- `youtube_handle`, `youtube_channel_id`, `tiktok_handle`, `instagram_handle`, `x_handle`, `website_url` (all nullable text)
+- `updated_at timestamptz`
+- RLS: public read, self update/insert.
+
+Index on `videos(source_platform, source_video_id)` to dedupe.
+
+## Server functions (`src/lib/social.functions.ts`)
+
+- `getMySocials()` / `upsertMySocials(input)` — profile links.
+- `getPublicSocials(userId)` — for `/u/$username`.
+- `previewExternalVideo({ url })` — server-side fetch:
+  - YouTube → oEmbed + Data API (`videos.list` for title/desc/duration/thumb) using `YOUTUBE_API_KEY` secret.
+  - TikTok → oEmbed (`https://www.tiktok.com/oembed`).
+  - Instagram → oEmbed via Meta (requires `INSTAGRAM_OEMBED_TOKEN`) or fallback scrape of `og:` tags.
+  Returns `{ platform, sourceId, title, description, thumbnail, duration, embedHtml }`.
+- `importExternalVideo({ url, mode, destination, country, city, tags, budget_tag })` — inserts a `videos` row. If `mode='link_card'`, marks `status='ready'` immediately. If `mode='mirror'`, kicks off Mux ingest from the source URL (YouTube only, ownership-attested).
+- `listMyYouTubeUploads()` (OAuth path) — calls Data API with user token, returns last 20 videos.
+- `bulkImportYouTube({ videoIds[], mode })`.
+
+## Feed rendering
+
+`VideoCard` gains a `source_platform` badge (tiny logo chip top-left) and, when `embed_mode='link_card'`, swaps `<MuxPlayer>` for a poster + play overlay that opens the original in a sheet (YouTube iframe / TikTok embed / Instagram embed).
+
+## UI
+
+- `src/routes/create.tsx` → tabs `Upload | Import`. Import tab: 4 platform cards, paste field, live preview card, destination/tags form (reuses existing), Publish CTA.
+- `src/routes/profile.tsx` → "My links" editor (sheet with 5 inputs + save). Public chips on `/u/$username`.
+- `src/routes/studio.tsx` → "Import from YouTube" CTA card.
+
+## Secrets to request
+
+- `YOUTUBE_API_KEY` (Google Cloud → YouTube Data API v3, read-only, free quota).
+- Optional later: `INSTAGRAM_OEMBED_TOKEN`.
+
+TikTok oEmbed needs no key. We'll ask for `YOUTUBE_API_KEY` only after you approve the plan.
+
+## Legal / safety
+
+- Default mode is **link card** (embeds = compliant with each platform's TOS).
+- "Mirror to Travidz" shows a mandatory checkbox: *"I own this content or have rights to republish it."* Stored on the video row.
+- DMCA takedown handled via existing admin moderation (`is_hidden`).
+
+## Build order
+
+1. Migration: `videos` columns + `profile_socials` table + RLS.
+2. `social.functions.ts` with `getMySocials`/`upsertMySocials` + `previewExternalVideo` (YouTube + TikTok first).
+3. `/create` Import tab UI.
+4. `VideoCard` link-card variant + platform badge.
+5. Profile social links editor + public chips on `/u/$username`.
+6. YouTube OAuth channel connect + bulk import (last step, after `YOUTUBE_API_KEY` is provided).
 
 ---
 
-### Part 1 — Creator Studio (§P)
-
-**Goal:** give creators a real "studio" instead of a scattered set of pages — drafts, scheduled posts, deeper per-video analytics — all reachable from one hub at `/studio`.
-
-**Database migration**
-- `videos`: add `is_draft boolean default false`, `scheduled_at timestamptz null`, `published_at timestamptz null`.
-- Update the public-read RLS on `videos` so unpublished/scheduled videos are only visible to their creator + admins (`status='ready' AND is_hidden=false AND is_draft=false AND (scheduled_at IS NULL OR scheduled_at <= now())`).
-- `feed.functions.ts` ranker pool query: add the same publish gate.
-- One-shot backfill: `published_at = created_at` for existing ready videos.
-
-**Server functions (`src/lib/studio.functions.ts`)**
-All `requireSupabaseAuth` + creator-role guard.
-- `listMyVideos({status?: 'all'|'draft'|'scheduled'|'live'|'processing'})` — returns videos with counts + matched-deal hint.
-- `setVideoDraft({videoId, isDraft})`, `scheduleVideo({videoId, scheduledAt|null})`, `publishVideoNow({videoId})`.
-- `getVideoInsights({videoId, days?})` — per-video time series: views, likes, saves, comments, watch_ms, deal clicks (from existing tables `video_views`, `likes`, `saves`, `comments`, `deal_clicks`). Aggregated server-side by day.
-
-**Routes**
-- `/studio` — overview: greeting, "Publish queue" (drafts + scheduled), 4 KPIs (last 7d views/likes/saves/followers gained), links to upload + analytics.
-- `/studio/videos` — list with filter chips (All · Live · Scheduled · Drafts · Processing), search, row actions: Edit, Publish, Save as draft, Schedule, Delete, View insights.
-- `/studio/videos/$id` — per-video insights page (sparkline + 7/30d toggle, top-line counters, deal click breakdown if any, list of recent comments with quick reply link).
-- `/studio/schedule` — small calendar-ish list grouped by day for everything with `scheduled_at` in the future.
-- Existing `/creator/analytics` stays but is linked from `/studio` and gets a back-link.
-
-**Upload flow change (`/create`)**
-- After upload completes, instead of jumping straight to feed, land on a "Ready to post" screen with three buttons: **Publish now**, **Save as draft**, **Schedule…**. Default Publish now (so current behavior is preserved with one extra confirmation step).
-
-**Nav**
-- Replace the bottom-bar "Create" `+` for creators with a "Studio" entry (still opens upload via a primary action button on `/studio`). For non-creators, keep current Create behavior.
-- Profile page: add "Creator studio" link (next to existing Analytics) for creators.
-
-**Out of scope (won't build)**
-- Recurring schedules, bulk publish, A/B thumbnails, post-to-multiple-platforms, email digest of insights.
-
----
-
-### Part 2 — Cinematic UI tidy
-
-**Scope:** purely visual/typographic. No new features. Touches global tokens + shared shells + the top-traffic routes (feed, profile, search, destinations, studio).
-
-**Design tokens (`src/styles.css`)**
-- Keep dark-first but deepen base: `--background` slightly cooler/darker; introduce `--surface-1`, `--surface-2`, `--surface-3` for layered depth instead of one flat `--card`.
-- Add gradient + shadow tokens: `--gradient-aurora` (sunset → ocean), `--gradient-overlay-bottom` (transparent → near-black 85%), `--shadow-cinematic` (long, soft, primary-tinted).
-- Typography upgrade: swap display font to **Fraunces** (editorial serif w/ optical sizing) for h1/h2 + hero numerals; keep **Inter** for body; add a third utility token `--font-mono` (JetBrains Mono) for stats/timecodes. Load via `<link>` in `__root.tsx`.
-- Tighter heading tracking (`-0.02em`), `font-feature-settings: "ss01","ss02","ss03"` on display.
-
-**Reusable primitives (new in `src/components/ui/`)**
-- `<CinematicHeader title subtitle eyebrow image?>` — full-bleed image w/ bottom gradient overlay, serif H1, small uppercase eyebrow chip. Used on destinations, profile, studio, deals detail.
-- `<StatTile icon label value trend?>` — glass surface, mono numerals, optional sparkline.
-- `<Chip>` and `<Pill>` — consistent radius / hover / active states (replaces the ad-hoc chip styles in feed, search, business pages).
-- `<SectionTitle eyebrow title trailing?>` — editorial section header (eyebrow + serif title + optional CTA).
-- `<EmptyState icon title body action?>` — replaces the per-page `FullEmptyState` clones in feed/collections/profile.
-
-**Global polish**
-- Feed: smaller, more refined right-rail action stack (replace solid bg pills with frosted circles + tactile press state); bottom info panel uses the new bottom gradient + serif title overlay; CC and mute glyphs unified.
-- Bottom nav: thinner top border replaced with frosted backdrop only; active tab gets a 2px primary underline + subtle scale; remove text labels on >sm width, keep on mobile.
-- Profile/destination headers swapped to `<CinematicHeader>` so they read like a magazine cover.
-- All `rounded-2xl` cards → consistent `rounded-[1.25rem]` + `shadow-cinematic` on raised surfaces.
-- Subtle entry animation (`animate-fade-in` from existing utilities) on route mount for major sections; respect `prefers-reduced-motion`.
-- Replace the two custom skeleton blocks with a shared `Skeleton` from `components/ui/skeleton` styled with a slow shimmer.
-
-**SEO/meta touch-up**
-- Each new `/studio*` route gets its own `head()` with title + description, no og:image (private pages).
-
-**Out of scope**
-- Light mode (still dark-first), redesigning the login flow, swapping any third-party widget (Mux player, Mapbox), changing iconography library.
-
----
-
-### Technical notes
-- `studio.functions.ts` follows the existing `*.functions.ts` pattern (`createServerFn` + `requireSupabaseAuth`); no edge functions.
-- The publish gate is enforced at **both** RLS and the ranker query so a misuse can't leak drafts.
-- Insights aggregation is done in SQL (`date_trunc('day', created_at)`) on `video_views`/`likes`/`saves`/`comments`/`deal_clicks`, no new tables.
-- Type-only edits to `src/integrations/supabase/types.ts` will happen automatically after the migration runs.
-
-### Verification
-1. Run migration → confirm drafts/scheduled videos don't appear in `/` feed for other users.
-2. Upload a video, choose "Save as draft" → appears in `/studio/videos` under Drafts, not on profile public view.
-3. Schedule a video 2 min in the future → appears on `/studio/schedule`, becomes visible after the timestamp on a refresh (no cron needed, RLS gates it).
-4. Per-video insights page renders a sparkline for a video with views.
-5. Visual sweep: home feed, profile, a destination page, `/studio` — all share new header/stat tile/chip styling; nothing overflows on 390px width.
+**Two quick decisions before I build:**
+- OK to default to **link cards** (embed originals) and gate "mirror to Mux" behind an ownership checkbox? This is the safest and fastest path.
+- Start with **YouTube + TikTok + Instagram** in v1, or just YouTube first?
