@@ -24,6 +24,7 @@ import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
+import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 
 const SearchRoute = SearchRouteImport.update({
@@ -98,8 +99,13 @@ const DestinationsCountryIndexRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
-  id: '/destinations/$country/$city',
-  path: '/destinations/$country/$city',
+  id: '/$city',
+  path: '/$city',
+  getParentRoute: () => DestinationsCountryRoute,
+} as any)
+const BusinessDealsNewRoute = BusinessDealsNewRouteImport.update({
+  id: '/business/deals/new',
+  path: '/business/deals/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
 }
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
 }
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
 }
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/api/public/mux-webhook'
+    | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
   fileRoutesByTo: FileRoutesByTo
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/destinations'
     | '/api/public/mux-webhook'
+    | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country'
   id:
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/api/public/mux-webhook'
+    | '/business/deals/new'
     | '/destinations/$country/$city'
     | '/destinations/$country/'
   fileRoutesById: FileRoutesById
@@ -234,7 +246,7 @@ export interface RootRouteChildren {
   DealsIndexRoute: typeof DealsIndexRoute
   DestinationsIndexRoute: typeof DestinationsIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
-  DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
+  BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
 }
 
@@ -340,9 +352,16 @@ declare module '@tanstack/react-router' {
     }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
-      path: '/destinations/$country/$city'
+      path: '/$city'
       fullPath: '/destinations/$country/$city'
       preLoaderRoute: typeof DestinationsCountryCityRouteImport
+      parentRoute: typeof DestinationsCountryRoute
+    }
+    '/business/deals/new': {
+      id: '/business/deals/new'
+      path: '/business/deals/new'
+      fullPath: '/business/deals/new'
+      preLoaderRoute: typeof BusinessDealsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/mux-webhook': {
@@ -381,9 +400,19 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIndexRoute: DealsIndexRoute,
   DestinationsIndexRoute: DestinationsIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
-  DestinationsCountryCityRoute: DestinationsCountryCityRoute,
+  BusinessDealsNewRoute: BusinessDealsNewRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
