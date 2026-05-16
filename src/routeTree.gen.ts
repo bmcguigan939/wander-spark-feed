@@ -21,6 +21,7 @@ import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
@@ -85,6 +86,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const BusinessApplyRoute = BusinessApplyRouteImport.update({
+  id: '/business/apply',
+  path: '/business/apply',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DestinationsCountryIndexRoute =
   DestinationsCountryIndexRouteImport.update({
     id: '/destinations/$country/',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
     | '/u/$username'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
     | '/u/$username'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/search'
+    | '/business/apply'
     | '/collections/$id'
     | '/deals/$id'
     | '/u/$username'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
+  BusinessApplyRoute: typeof BusinessApplyRoute
   DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
     }
+    '/business/apply': {
+      id: '/business/apply'
+      path: '/business/apply'
+      fullPath: '/business/apply'
+      preLoaderRoute: typeof BusinessApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/destinations/$country/': {
       id: '/destinations/$country/'
       path: '/destinations/$country'
@@ -353,6 +373,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
+  BusinessApplyRoute: BusinessApplyRoute,
   DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
