@@ -46,6 +46,7 @@ import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
+import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
@@ -243,6 +244,11 @@ const DestinationsCountryIndexRoute =
     path: '/destinations/$country/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const StudioVideosIdRoute = StudioVideosIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => StudioVideosRoute,
+} as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
   id: '/destinations/$country/$city',
   path: '/destinations/$country/$city',
@@ -324,7 +330,7 @@ export interface FileRoutesByFullPath {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/videos': typeof StudioVideosRoute
+  '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -336,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -371,7 +378,7 @@ export interface FileRoutesByTo {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/videos': typeof StudioVideosRoute
+  '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
@@ -382,6 +389,7 @@ export interface FileRoutesByTo {
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -420,7 +428,7 @@ export interface FileRoutesById {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/videos': typeof StudioVideosRoute
+  '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/destinations/$country/$city'
+    | '/studio/videos/$id'
     | '/destinations/$country/'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -529,6 +539,7 @@ export interface FileRouteTypes {
     | '/api/public/mux-webhook'
     | '/business/deals/new'
     | '/destinations/$country/$city'
+    | '/studio/videos/$id'
     | '/destinations/$country'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -578,6 +589,7 @@ export interface FileRouteTypes {
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/destinations/$country/$city'
+    | '/studio/videos/$id'
     | '/destinations/$country/'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -887,6 +899,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DestinationsCountryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/videos/$id': {
+      id: '/studio/videos/$id'
+      path: '/$id'
+      fullPath: '/studio/videos/$id'
+      preLoaderRoute: typeof StudioVideosIdRouteImport
+      parentRoute: typeof StudioVideosRoute
+    }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
       path: '/destinations/$country/$city'
@@ -988,17 +1007,29 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
 
+interface StudioVideosRouteChildren {
+  StudioVideosIdRoute: typeof StudioVideosIdRoute
+}
+
+const StudioVideosRouteChildren: StudioVideosRouteChildren = {
+  StudioVideosIdRoute: StudioVideosIdRoute,
+}
+
+const StudioVideosRouteWithChildren = StudioVideosRoute._addFileChildren(
+  StudioVideosRouteChildren,
+)
+
 interface StudioRouteChildren {
   StudioLinksRoute: typeof StudioLinksRoute
   StudioScheduleRoute: typeof StudioScheduleRoute
-  StudioVideosRoute: typeof StudioVideosRoute
+  StudioVideosRoute: typeof StudioVideosRouteWithChildren
   StudioIndexRoute: typeof StudioIndexRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioLinksRoute: StudioLinksRoute,
   StudioScheduleRoute: StudioScheduleRoute,
-  StudioVideosRoute: StudioVideosRoute,
+  StudioVideosRoute: StudioVideosRouteWithChildren,
   StudioIndexRoute: StudioIndexRoute,
 }
 
