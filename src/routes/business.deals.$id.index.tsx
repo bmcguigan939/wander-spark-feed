@@ -7,7 +7,7 @@ import { getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Pencil, MapPin, Eye, Users } from "lucide-react";
 
-export const Route = createFileRoute("/business/deals/$id")({
+export const Route = createFileRoute("/business/deals/$id/")({
   head: () => ({ meta: [{ title: "Deal analytics — Travidz" }] }),
   component: DealAnalyticsPage,
 });
