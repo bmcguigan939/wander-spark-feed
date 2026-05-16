@@ -1,47 +1,62 @@
-## Goal
+# Next build phases
 
-Drive one real user through the full pipeline, find what breaks, fix it. No new features.
+Phase 1 (DB/auth/upload/feed/social/search/SEO) and most of Phase 2 (AI auto-tagging, destination browsing) are shipped and smoke-tested. Two tracks remain.
 
-## What I'll exercise (in order)
+## Phase 2 polish — finish the discovery layer
 
-1. **Signup** — create a fresh account on `/login`. Verify `profiles` + `user_roles` rows auto-created by `handle_new_user` trigger.
-2. **Become creator** — call the existing "become a creator" flow from `/profile`. Verify `user_roles` gets a `creator` row.
-3. **Upload** — go to `/create`, pick a short local clip, post it.
-   - Watch the `getMuxUpload` server fn create a direct upload.
-   - Watch the browser `PUT` to Mux's `uploadUrl` succeed (CORS is the usual failure here).
-   - Confirm a `videos` row appears with `status='pending'`.
-4. **Webhook** — wait for Mux to fire `video.upload.asset_created` → `video.asset.ready`.
-   - Confirm `status` flips to `ready`, `mux_playback_id`, `thumbnail_url`, `duration_sec` populate.
-5. **AI auto-tag** — confirm the post-webhook Gemini call writes back `country`, `city`, `destination`, `activity_tags`, `budget_tag`. Inspect server-function logs if it silently no-ops.
-6. **Feed** — `/` should render the new video, autoplay-on-scroll, MapPin chip links to `/destinations/$country[/$city]`.
-7. **Interactions** — like, save, +Collection (create + add), share. Verify counters bump and `likes`/`saves`/`collection_items` rows land.
-8. **Destinations** — `/destinations` lists the country; clicking through shows the video.
-9. **Profile + follow** — `/u/$username` shows the video + working Follow button (sign in as a second test user to verify follower count increments).
-10. **Search** — `/search` returns the video by title and the creator by username.
+1. **Global nav entry for Destinations**
+   - Add a "Destinations" link to the top nav next to Search so the new `/destinations` tree is reachable without typing the URL.
+   - Active state via `activeProps`.
 
-## How I'll run it
+2. **Mux auto-captions + caption toggle**
+   - Enable Mux auto-generated English captions on asset creation (set `generated_subtitles` on the input in `getMuxUpload`).
+   - Store `captions_ready: boolean` on `videos` (migration) and flip it on `video.asset.track.ready` webhook events for `text` tracks.
+   - Add a CC toggle button on `VideoCard` that, when on, renders a `<track kind="subtitles">` pointing at `https://stream.mux.com/{playbackId}/text/{trackId}.vtt` or uses the Mux player's built-in captions if we switch to `@mux/mux-player-react`.
 
-- Use the browser tool against the preview to drive signup, upload, and the UI flows.
-- **The upload step needs a real video file.** I cannot upload from the sandbox into the preview's `<input type="file">`. You'll need to either:
-  - (a) drive the upload yourself in the preview while I watch network + DB, or
-  - (b) let me skip the manual UI upload and instead simulate it by inserting a `videos` row + replaying a sample Mux `video.asset.ready` webhook payload against `/api/public/mux-webhook` with a valid signature. That covers everything past the Mux PUT, but does not validate the browser-to-Mux CORS path.
-- Use `read_query` to inspect DB state after each step.
-- Use `server-function-logs` for the AI tag + webhook handler.
+3. **Transcript-driven tagging upgrade (optional, gated on #2)**
+   - When captions become ready, re-run the AI tag pass with the transcript text appended to title+description for higher accuracy on city/activity tags.
 
-## Likely failure points (so we have a fix list ready)
+## Phase 3 — Deals + Business portal
 
-- Mux direct-upload CORS — likely needs `cors_origin: "*"` or the preview origin set on `getMuxUpload`.
-- Webhook signature parsing if Mux sends extra `,` segments — current parser is strict.
-- AI tag fetch failing silently (gateway 429/402 or schema parse) — already logs, just needs eyes.
-- `handle_new_user` trigger username collision on quick re-signups.
-- TanStack `<Link>` typing on `/destinations/$country/$city` if params arrive lowercase vs DB casing (we `ilike` server-side so lookup works, but URL casing in the chip uses the raw DB value — minor).
+1. **Schema (`supabase--migration`)**
+   - `deals` table: `business_id` (fk profiles), `title`, `description`, `destination`, `country`, `city`, `discount_label`, `price_cents`, `currency`, `url`, `image_url`, `starts_at`, `ends_at`, `is_active`.
+   - `deal_clicks` table: `deal_id`, `user_id` (nullable), `clicked_at`, `referrer_video_id` (nullable) — for attribution from a video CTA.
+   - Add `business` value to `app_role` enum.
+   - RLS: deals are publicly readable when `is_active` and within date window; only the owning business (or admin) can insert/update/delete; clicks are insert-only for anyone, readable only by the deal's business.
 
-## Deliverable
+2. **Server functions (`src/lib/deals.functions.ts`)**
+   - `listDeals({ country?, city?, destination? })` — public.
+   - `getDeal(id)` — public.
+   - `createDeal`, `updateDeal`, `deleteDeal` — `requireSupabaseAuth`, verify caller has `business` role and owns the row.
+   - `logDealClick({ dealId, referrerVideoId? })` — public, rate-limited by IP+dealId per minute.
+   - `listMyDeals` and `getDealStats(dealId)` for the portal.
 
-A pass/fail summary per step, plus any patches applied. After this, Phase 2 polish (captions, nav entry) or Phase 3 (Deals) becomes safe to start.
+3. **Public surfaces**
+   - Surface a "Deals nearby" strip on `/destinations/$country` and `/destinations/$country/$city`.
+   - Optional CTA on `VideoCard`: when the video has a matched `destination`+`city` and there is an active deal, show a "View deal" button that calls `logDealClick` then opens the deal URL.
 
-## What I need from you to start
+4. **Business portal (`/business`)**
+   - Pathless layout `src/routes/_business.tsx` that calls `requireSupabaseAuth` and checks the `business` role; redirects others to `/business/apply`.
+   - `/business` dashboard: list my deals + click counts (last 7/30 days).
+   - `/business/deals/new` and `/business/deals/$id/edit` forms.
+   - `/business/apply` self-serve: writes a `user_roles` row with `business` (or a `business_applications` table if we want admin approval — default: instant grant for now, can add review later).
 
-Pick one:
-- **(a) Manual upload** — you log in to the preview, hit Create, upload a short clip. I'll watch and fix.
-- **(b) Simulated upload** — I seed a video row and replay a Mux webhook to validate everything past the browser→Mux PUT.
+5. **SEO + nav**
+   - Add `/deals` index route listing active deals, plus per-deal pages with proper `head()` meta and JSON-LD `Offer`.
+   - Nav entry for "Deals" (public) and "Business" (only when role present).
+
+## Technical notes
+
+- All new server fns use `requireSupabaseAuth` middleware; admin client only inside the Mux/Stripe-style webhooks if any.
+- No edge functions — stay on `createServerFn` + `src/routes/api/public/*`.
+- Reuse existing destination chip + AI tag normalization so Deals filter cleanly on the same `country`/`city` casing.
+- Keep deal images in the existing Supabase storage bucket pattern; add a `deal-images` bucket with public read.
+
+## Suggested order
+
+A. Phase 2 polish (nav + captions) — ~small, unblocks discovery UX.
+B. Phase 3 schema + public deals surface.
+C. Business portal + apply flow.
+D. Click analytics dashboard.
+
+Tell me to start with A, or skip straight to B if captions can wait.
