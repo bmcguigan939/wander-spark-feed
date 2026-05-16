@@ -68,7 +68,13 @@ export async function runAutoTag(videoId: string): Promise<void> {
   const result = await callGateway(prompt, video.thumbnail_url);
   if (!result) return;
 
-  const patch: Record<string, unknown> = {};
+  const patch: {
+    country?: string;
+    city?: string;
+    destination?: string;
+    activity_tags?: string[];
+    budget_tag?: string;
+  } = {};
   if (!video.country && result.country) patch.country = result.country;
   if (!video.city && result.city) patch.city = result.city;
   if (!video.destination && result.destination) patch.destination = result.destination;
