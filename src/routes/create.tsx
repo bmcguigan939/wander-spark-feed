@@ -6,8 +6,10 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
 import { toast } from "sonner";
-import { Upload, Video, Loader2, Sparkles, MapPin } from "lucide-react";
+import { Upload, Video, Loader2, Sparkles, MapPin, Music, X } from "lucide-react";
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
+import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
+import type { MusicTrack } from "@/lib/music.functions";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -65,6 +67,8 @@ function UploadFlow() {
   const [lng, setLng] = useState<string>("");
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduleAt, setScheduleAt] = useState("");
+  const [track, setTrack] = useState<MusicTrack | null>(null);
+  const [musicOpen, setMusicOpen] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
@@ -100,6 +104,7 @@ function UploadFlow() {
       lng: lng === "" ? undefined : Number(lng),
       publish_mode: publishMode,
       scheduled_at: publishMode === "schedule" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
+      music_track_id: track?.id ?? null,
     } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feed"] });
@@ -192,6 +197,25 @@ function UploadFlow() {
                 ))}
               </div>
             </Field>
+            <Field label="Music">
+              {track ? (
+                <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5">
+                  <Music className="h-4 w-4 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{track.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">{track.artist}</div>
+                  </div>
+                  <button type="button" onClick={() => setMusicOpen(true)} className="text-xs font-semibold text-primary">Change</button>
+                  <button type="button" onClick={() => setTrack(null)} aria-label="Remove" className="rounded-full p-1 text-muted-foreground hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setMusicOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card py-3 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary">
+                  <Music className="h-4 w-4" /> Add music
+                </button>
+              )}
+            </Field>
             <Field label="When to post">
               <div className="grid grid-cols-3 gap-2">
                 {(["now", "draft", "schedule"] as const).map((m) => (
@@ -221,6 +245,12 @@ function UploadFlow() {
             </button>
           </form>
         )}
+        <MusicPickerSheet
+          open={musicOpen}
+          onOpenChange={setMusicOpen}
+          selectedId={track?.id ?? null}
+          onSelect={(t) => { setTrack(t); setMusicOpen(false); }}
+        />
       </div>
     </MobileShell>
   );

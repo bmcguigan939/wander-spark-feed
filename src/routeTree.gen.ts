@@ -27,6 +27,7 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
@@ -139,6 +140,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SoundsIdRoute = SoundsIdRouteImport.update({
+  id: '/sounds/$id',
+  path: '/sounds/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
@@ -285,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
+  '/sounds/$id': typeof SoundsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -327,6 +334,7 @@ export interface FileRoutesByTo {
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
+  '/sounds/$id': typeof SoundsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
   '/business': typeof BusinessIndexRoute
@@ -370,6 +378,7 @@ export interface FileRoutesById {
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/r/$code': typeof RCodeRoute
+  '/sounds/$id': typeof SoundsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
   '/business/': typeof BusinessIndexRoute
@@ -415,6 +424,7 @@ export interface FileRouteTypes {
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
+    | '/sounds/$id'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -457,6 +467,7 @@ export interface FileRouteTypes {
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
+    | '/sounds/$id'
     | '/u/$username'
     | '/admin'
     | '/business'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/r/$code'
+    | '/sounds/$id'
     | '/u/$username'
     | '/admin/'
     | '/business/'
@@ -539,6 +551,7 @@ export interface RootRouteChildren {
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
   RCodeRoute: typeof RCodeRoute
+  SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
   DealsIndexRoute: typeof DealsIndexRoute
@@ -680,6 +693,13 @@ declare module '@tanstack/react-router' {
       path: '/u/$username'
       fullPath: '/u/$username'
       preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sounds/$id': {
+      id: '/sounds/$id'
+      path: '/sounds/$id'
+      fullPath: '/sounds/$id'
+      preLoaderRoute: typeof SoundsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$code': {
@@ -910,6 +930,7 @@ const rootRouteChildren: RootRouteChildren = {
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
   RCodeRoute: RCodeRoute,
+  SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
   DealsIndexRoute: DealsIndexRoute,

@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
@@ -269,6 +269,17 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
             <span key={t} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] backdrop-blur">#{t}</span>
           ))}
         </div>
+
+        {video.music && (
+          <Link
+            to="/sounds/$id"
+            params={{ id: video.music.id }}
+            className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] text-white backdrop-blur hover:bg-black/60"
+          >
+            <Music className="h-3 w-3 flex-shrink-0 animate-pulse" />
+            <span className="truncate">{video.music.title} — {video.music.artist}</span>
+          </Link>
+        )}
       </div>
     </section>
   );

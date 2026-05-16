@@ -597,6 +597,45 @@ export type Database = {
           },
         ]
       }
+      music_tracks: {
+        Row: {
+          artist: string
+          audio_url: string
+          cover_url: string | null
+          created_at: string
+          duration_sec: number | null
+          id: string
+          is_active: boolean
+          license: string | null
+          source: string | null
+          title: string
+        }
+        Insert: {
+          artist: string
+          audio_url: string
+          cover_url?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          is_active?: boolean
+          license?: string | null
+          source?: string | null
+          title: string
+        }
+        Update: {
+          artist?: string
+          audio_url?: string
+          cover_url?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          is_active?: boolean
+          license?: string | null
+          source?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           actor_id: string
@@ -784,6 +823,7 @@ export type Database = {
           lng: number | null
           moderated_at: string | null
           moderated_by: string | null
+          music_track_id: string | null
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
@@ -820,6 +860,7 @@ export type Database = {
           lng?: number | null
           moderated_at?: string | null
           moderated_by?: string | null
+          music_track_id?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
@@ -856,6 +897,7 @@ export type Database = {
           lng?: number | null
           moderated_at?: string | null
           moderated_by?: string | null
+          music_track_id?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
@@ -875,6 +917,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_music_track_id_fkey"
+            columns: ["music_track_id"]
+            isOneToOne: false
+            referencedRelation: "music_tracks"
             referencedColumns: ["id"]
           },
         ]
