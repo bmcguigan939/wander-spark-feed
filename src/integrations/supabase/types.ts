@@ -292,6 +292,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string
+          comment_id: string | null
+          created_at: string
+          deal_id: string | null
+          id: string
+          read_at: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          comment_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          read_at?: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          comment_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          read_at?: string | null
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -496,6 +532,7 @@ export type Database = {
     }
     Enums: {
       app_role: "traveller" | "creator" | "business" | "admin"
+      notification_type: "like" | "comment" | "follow" | "reply"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -624,6 +661,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["traveller", "creator", "business", "admin"],
+      notification_type: ["like", "comment", "follow", "reply"],
     },
   },
 } as const
