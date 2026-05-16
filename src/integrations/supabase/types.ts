@@ -130,6 +130,62 @@ export type Database = {
           },
         ]
       }
+      deal_applications: {
+        Row: {
+          approved_code: string | null
+          business_id: string
+          commission_pct: number | null
+          created_at: string
+          creator_id: string
+          deal_id: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          pitch: string | null
+          requested_code: string | null
+          status: Database["public"]["Enums"]["deal_application_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_code?: string | null
+          business_id: string
+          commission_pct?: number | null
+          created_at?: string
+          creator_id: string
+          deal_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          pitch?: string | null
+          requested_code?: string | null
+          status?: Database["public"]["Enums"]["deal_application_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_code?: string | null
+          business_id?: string
+          commission_pct?: number | null
+          created_at?: string
+          creator_id?: string
+          deal_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          pitch?: string | null
+          requested_code?: string | null
+          status?: Database["public"]["Enums"]["deal_application_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_applications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_clicks: {
         Row: {
           clicked_at: string
@@ -692,7 +748,14 @@ export type Database = {
     }
     Enums: {
       app_role: "traveller" | "creator" | "business" | "admin"
-      notification_type: "like" | "comment" | "follow" | "reply"
+      deal_application_status: "pending" | "approved" | "declined" | "withdrawn"
+      notification_type:
+        | "like"
+        | "comment"
+        | "follow"
+        | "reply"
+        | "deal_application"
+        | "deal_application_decided"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -821,7 +884,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["traveller", "creator", "business", "admin"],
-      notification_type: ["like", "comment", "follow", "reply"],
+      deal_application_status: ["pending", "approved", "declined", "withdrawn"],
+      notification_type: [
+        "like",
+        "comment",
+        "follow",
+        "reply",
+        "deal_application",
+        "deal_application_decided",
+      ],
     },
   },
 } as const

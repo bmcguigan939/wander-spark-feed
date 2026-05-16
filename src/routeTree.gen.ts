@@ -23,8 +23,10 @@ import { Route as DealsIndexRouteImport } from './routes/deals.index'
 import { Route as BusinessIndexRouteImport } from './routes/business.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
+import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
+import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
@@ -106,6 +108,11 @@ const DealsIdRoute = DealsIdRouteImport.update({
   path: '/deals/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorApplicationsRoute = CreatorApplicationsRouteImport.update({
+  id: '/creator/applications',
+  path: '/creator/applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -114,6 +121,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
 const BusinessApplyRoute = BusinessApplyRouteImport.update({
   id: '/business/apply',
   path: '/business/apply',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessApplicationsRoute = BusinessApplicationsRouteImport.update({
+  id: '/business/applications',
+  path: '/business/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DestinationsCountryIndexRoute =
@@ -179,8 +191,10 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -207,8 +221,10 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business': typeof BusinessIndexRoute
@@ -235,8 +251,10 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/welcome': typeof WelcomeRoute
+  '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/creator/applications': typeof CreatorApplicationsRoute
   '/deals/$id': typeof DealsIdRoute
   '/u/$username': typeof UUsernameRoute
   '/business/': typeof BusinessIndexRoute
@@ -265,8 +283,10 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business/'
@@ -293,8 +313,10 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business'
@@ -320,8 +342,10 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/search'
     | '/welcome'
+    | '/business/applications'
     | '/business/apply'
     | '/collections/$id'
+    | '/creator/applications'
     | '/deals/$id'
     | '/u/$username'
     | '/business/'
@@ -349,7 +373,9 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   WelcomeRoute: typeof WelcomeRoute
+  BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
+  CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -465,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DealsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creator/applications': {
+      id: '/creator/applications'
+      path: '/creator/applications'
+      fullPath: '/creator/applications'
+      preLoaderRoute: typeof CreatorApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections/$id': {
       id: '/collections/$id'
       path: '/$id'
@@ -477,6 +510,13 @@ declare module '@tanstack/react-router' {
       path: '/business/apply'
       fullPath: '/business/apply'
       preLoaderRoute: typeof BusinessApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/applications': {
+      id: '/business/applications'
+      path: '/business/applications'
+      fullPath: '/business/applications'
+      preLoaderRoute: typeof BusinessApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/destinations/$country/': {
@@ -588,7 +628,9 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   WelcomeRoute: WelcomeRoute,
+  BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
+  CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
