@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       collection_items: {
         Row: {
           added_at: string
@@ -746,9 +776,13 @@ export type Database = {
           destination: string | null
           duration_sec: number | null
           id: string
+          is_featured: boolean
+          is_hidden: boolean
           lat: number | null
           like_count: number
           lng: number | null
+          moderated_at: string | null
+          moderated_by: string | null
           mux_asset_id: string | null
           mux_playback_id: string | null
           mux_upload_id: string | null
@@ -775,9 +809,13 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           lat?: number | null
           like_count?: number
           lng?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
@@ -804,9 +842,13 @@ export type Database = {
           destination?: string | null
           duration_sec?: number | null
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           lat?: number | null
           like_count?: number
           lng?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
           mux_asset_id?: string | null
           mux_playback_id?: string | null
           mux_upload_id?: string | null
