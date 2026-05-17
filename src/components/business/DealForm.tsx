@@ -17,6 +17,7 @@ export type DealFormValues = {
   lng?: number | null;
   parity_exempt?: boolean;
   parity_exempt_reason?: string | null;
+  category?: "stay" | "eat" | "do" | "tour" | "transport" | "other";
 };
 
 export function DealForm({
@@ -44,6 +45,7 @@ export function DealForm({
     lng: initial?.lng ?? null,
     parity_exempt: initial?.parity_exempt ?? false,
     parity_exempt_reason: initial?.parity_exempt_reason ?? "",
+    category: initial?.category ?? "other",
   });
   const [uploading, setUploading] = useState(false);
 
@@ -116,6 +118,21 @@ export function DealForm({
       className="space-y-3"
     >
       {field("Title", "title", "text", true)}
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted-foreground">Category</span>
+        <select
+          value={v.category ?? "other"}
+          onChange={(e) => setV({ ...v, category: e.target.value as DealFormValues["category"] })}
+          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+        >
+          <option value="stay">Stay (hotel, villa, hostel)</option>
+          <option value="eat">Eat (restaurant, cafe, bar)</option>
+          <option value="do">Do (activity, spa, experience)</option>
+          <option value="tour">Tour (guide, excursion, cruise)</option>
+          <option value="transport">Transport (transfer, rental, flight)</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Description</span>
         <textarea
