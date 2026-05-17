@@ -638,6 +638,89 @@ export type Database = {
           },
         ]
       }
+      deal_redemptions: {
+        Row: {
+          code: string
+          commission_cents: number | null
+          commission_rate: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          creator_id: string | null
+          currency: string
+          deal_id: string
+          id: string
+          notes: string | null
+          order_value_cents: number | null
+          status: Database["public"]["Enums"]["deal_redemption_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          code: string
+          commission_cents?: number | null
+          commission_rate?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          creator_id?: string | null
+          currency?: string
+          deal_id: string
+          id?: string
+          notes?: string | null
+          order_value_cents?: number | null
+          status?: Database["public"]["Enums"]["deal_redemption_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          code?: string
+          commission_cents?: number | null
+          commission_rate?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          creator_id?: string | null
+          currency?: string
+          deal_id?: string
+          id?: string
+          notes?: string | null
+          order_value_cents?: number | null
+          status?: Database["public"]["Enums"]["deal_redemption_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_redemptions_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_redemptions_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_redemptions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_redirects: {
         Row: {
           code: string
@@ -1700,6 +1783,7 @@ export type Database = {
     Enums: {
       app_role: "traveller" | "creator" | "business" | "admin"
       deal_application_status: "pending" | "approved" | "declined" | "withdrawn"
+      deal_redemption_status: "pending" | "confirmed" | "rejected"
       notification_type:
         | "like"
         | "comment"
@@ -1837,6 +1921,7 @@ export const Constants = {
     Enums: {
       app_role: ["traveller", "creator", "business", "admin"],
       deal_application_status: ["pending", "approved", "declined", "withdrawn"],
+      deal_redemption_status: ["pending", "confirmed", "rejected"],
       notification_type: [
         "like",
         "comment",

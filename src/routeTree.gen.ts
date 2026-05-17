@@ -50,6 +50,7 @@ import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
@@ -279,6 +280,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const BusinessRedemptionsRoute = BusinessRedemptionsRouteImport.update({
+  id: '/business/redemptions',
+  path: '/business/redemptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessCalculatorRoute = BusinessCalculatorRouteImport.update({
   id: '/business/calculator',
   path: '/business/calculator',
@@ -423,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -487,6 +494,7 @@ export interface FileRoutesByTo {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -553,6 +561,7 @@ export interface FileRoutesById {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -685,6 +695,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -750,6 +761,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -812,6 +824,7 @@ export interface RootRouteChildren {
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
+  BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   DealsIdRoute: typeof DealsIdRoute
@@ -1134,6 +1147,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
     }
+    '/business/redemptions': {
+      id: '/business/redemptions'
+      path: '/business/redemptions'
+      fullPath: '/business/redemptions'
+      preLoaderRoute: typeof BusinessRedemptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/calculator': {
       id: '/business/calculator'
       path: '/business/calculator'
@@ -1393,6 +1413,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
+  BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   DealsIdRoute: DealsIdRoute,

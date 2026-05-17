@@ -11,7 +11,8 @@ import {
   withdrawApplication,
 } from "@/lib/deal-applications.functions";
 import { useAuth } from "@/lib/auth";
-import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck } from "lucide-react";
+import { claimRedemption } from "@/lib/redemptions.functions";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,7 @@ function DealDetail() {
             >
               <ExternalLink className="h-4 w-4" /> View deal
             </button>
+            {user && <ClaimRedemptionBlock />}
             {user && isCreator && deal.business_id !== user.id && (
               <CreatorApplyBlock dealId={id} />
             )}
@@ -222,6 +224,64 @@ function CreatorApplyBlock({ dealId }: { dealId: string }) {
             disabled={pitch.trim().length < 10 || applyMut.isPending}
           >
             {applyMut.isPending ? "Submitting…" : "Submit application"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ClaimRedemptionBlock() {
+  const claim = useServerFn(claimRedemption);
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const mut = useMutation({
+    mutationFn: () => claim({ data: { code: code.trim().toUpperCase() } }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(res.error ?? "Couldn’t track that booking");
+        return;
+      }
+      toast.success(res.deduped ? "Already tracked — thanks!" : "Booking tracked. The business will confirm soon.");
+      setOpen(false);
+      setCode("");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/40 px-4 py-3 text-sm font-medium text-foreground/80">
+          <BadgeCheck className="h-4 w-4" /> I booked with this deal
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Track your booking</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Enter the promo code you used at checkout. The business will confirm
+            the booking and the referring creator earns commission.
+          </p>
+          <div>
+            <Label htmlFor="redcode">Promo code</Label>
+            <Input
+              id="redcode"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g. SUNSET10"
+              maxLength={40}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => mut.mutate()}
+            disabled={code.trim().length < 2 || mut.isPending}
+          >
+            {mut.isPending ? "Tracking…" : "Track booking"}
           </Button>
         </DialogFooter>
       </DialogContent>

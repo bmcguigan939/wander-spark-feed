@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { getCreatorAnalytics } from "@/lib/analytics.functions";
-import { BarChart3, Eye, Heart, Bookmark, MessageCircle, Users, Clock, Video, MousePointerClick } from "lucide-react";
+import { getCreatorRedemptionStats } from "@/lib/redemptions.functions";
+import { BarChart3, Eye, Heart, Bookmark, MessageCircle, Users, Clock, Video, MousePointerClick, BadgeCheck, Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/creator/analytics")({
   head: () => ({ meta: [{ title: "Creator analytics — Travidz" }] }),
@@ -16,6 +17,7 @@ function AnalyticsPage() {
   const { user, loading, isCreator } = useAuth();
   const navigate = useNavigate();
   const fn = useServerFn(getCreatorAnalytics);
+  const redFn = useServerFn(getCreatorRedemptionStats);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
@@ -27,6 +29,13 @@ function AnalyticsPage() {
     queryFn: () => fn({ data: undefined as any }),
     enabled: !!user && isCreator,
     refetchInterval: 30_000,
+  });
+
+  const { data: red } = useQuery({
+    queryKey: ["creator-redemptions", user?.id ?? null],
+    queryFn: () => redFn({ data: undefined as any }),
+    enabled: !!user && isCreator,
+    refetchInterval: 60_000,
   });
 
   return (
@@ -58,6 +67,33 @@ function AnalyticsPage() {
                 <Stat icon={MousePointerClick} label="Total clicks" value={data.totals.dealClicks} />
                 <Stat icon={MousePointerClick} label="Last 30 days" value={data.totals.dealClicks30d} />
               </div>
+            </Section>
+
+            <Section title="Bookings & commission">
+              <div className="grid grid-cols-2 gap-3">
+                <Stat
+                  icon={BadgeCheck}
+                  label="Pending bookings"
+                  value={red?.pendingCount ?? 0}
+                />
+                <Stat
+                  icon={BadgeCheck}
+                  label="Confirmed bookings"
+                  value={red?.confirmedCount ?? 0}
+                />
+                <Stat
+                  icon={Wallet}
+                  label="Confirmed commission"
+                  value={
+                    red
+                      ? `${(red.confirmedCommissionCents / 100).toFixed(2)} ${red.currency}`
+                      : "—"
+                  }
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Commission is recorded for tracking only — payouts will be enabled once banking is set up.
+              </p>
             </Section>
 
             <Section title="Views — last 14 days">

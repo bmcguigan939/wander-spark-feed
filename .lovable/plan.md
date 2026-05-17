@@ -1,75 +1,119 @@
-# What's left to ship Travidz (excluding banking/payments)
+# Referral redirect + business tracking
 
-Phases 0 and 1 are done: schema FKs, triggers, legal pages, notifications wiring, analytics rate-limiting, account delete + export, sitemap/robots, onboarding/error boundaries, security pass, and the new Golden Hour rebrand (incl. email templates). Below is everything still queued.
+Activate the end-to-end pipe so every deal click and redemption is captured cleanly, ready for analytics and (eventually) payout math — without touching banking or money movement.
 
-## Phase 2 — Feature completeness
+## What already exists
 
-### Scheduled jobs (single migration + `/api/public/cron/*` routes)
-- Publish scheduled videos when `scheduled_at <= now()`.
-- Expire deals: set `is_active = false` when `ends_at < now()`.
-- Refresh destination AI summaries for (city, country) pairs with ≥3 videos and no recent summary.
-- Nightly deal discovery re-scoring (quality / freshness).
-- Recompute creator analytics rollups.
+- `/r/$code` page (client-rendered redirect via `resolveRedirect` serverFn) — works but flashes a loading screen, has no SSR-friendly 302, and doesn't capture `referrer_video_id`.
+- `/api/public/d/$id` and `/api/public/go/$id` — already do proper server 302 redirects for deal-id and affiliate-link routes, including `?v=<videoId>` capture and `wrapWithAffiliate` URL wrapping.
+- `deal_clicks` table — populated, has trigger to bump `deals.click_count`.
+- `deal_redirects` table — auto-populated by `sync_deal_redirect` trigger when a deal application is approved with a code.
+- `deal_redemptions` table — **does not exist yet**.
 
-### Search (`/search`)
-Extend hybrid search beyond videos to deals, destinations, creators, itineraries. Tabbed result UI.
+## What we'll build
 
-### Map (`/map`)
-Render video + deal `lat/lng` markers, cluster above 100, sync with URL bbox.
+### 1. Upgrade `/r/$code` to a true server 302
 
-### Collections
-Public discovery page, "add to collection" button on video cards, shareable links.
+Replace the client-rendered redirect at `src/routes/r.$code.tsx` with a TanStack server route that mirrors the `/api/public/d/$id` pattern:
 
-### Itineraries
-Public visibility flag, share / export to PDF, "remix" another user's public itinerary.
+- Look up code in `deal_redirects` → load `deals` row → validate active/in-window.
+- Capture `?v=<videoId>` query param (referrer video) and pass it into the click insert.
+- Insert into `deal_clicks` with `deal_id`, `creator_id` (from `deal_redirects`), `referrer_video_id`.
+- Wrap final URL with `wrapWithAffiliate` (consistent with `/api/public/d`).
+- Return `302` with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
+- On unknown code → render a small "link not found" HTML page (200) with a link back to `/`.
 
-### Sounds / music
-Wire `music_track_id` end-to-end through `/create`; "use this sound" CTA on `/sounds/$id` deeplinks into the recorder.
+Keep the URL `/r/$code` (already shared externally, must not break). Delete `src/lib/redirects.functions.ts:resolveRedirect` once nothing references it; keep `getCreatorClickStats` (used by creator dashboard).
 
-### Studio
-- `studio.schedule.tsx`: confirm cron flips scheduled videos to `ready`.
-- `studio.links.tsx`: inject `affiliate_partners.tracking_param` into outgoing URLs.
-- Video edit: deal-suggestion accept flow writes to `video_deals`.
+### 2. Create `deal_redemptions` table + RLS
 
-### Business (tracking only — no money handling)
-- `business.calculator.tsx`: real commission math from `commission_pct`.
-- Application lifecycle: approved → unique `approved_code` → `deal_redemptions` table → dashboard reads conversions.
-- Deal performance dashboard: impressions / clicks / CTR / top creators.
+Migration: new table to record confirmed bookings/purchases for commission math.
 
-### Creator
-- `creator.analytics.tsx`: verify charts read `video_views`, `likes`, `saves`, `affiliate_clicks` (likely needs a service-role server fn since `video_views` has no SELECT policy).
-- Followers list + follower-only feed filter.
+Columns (domain only):
+- `deal_id`, `creator_id`, `user_id` (nullable — anonymous redemptions allowed via business confirmation)
+- `code` (the redirect code used, denormalised for audit)
+- `order_value_cents` (int, nullable until business confirms)
+- `currency` (text, default 'GBP')
+- `commission_rate` (numeric, snapshot from deal at time of redemption)
+- `commission_cents` (int, computed on confirm)
+- `status` enum: `pending` | `confirmed` | `rejected` (default `pending`)
+- `confirmed_by` (uuid, business user who confirmed), `confirmed_at`
+- `notes` (text, optional)
+- standard `id`, `created_at`, `updated_at` + `touch_updated_at` trigger
 
-### Admin
-- `admin.users.tsx`: role grant/revoke audited into `admin_actions`.
-- Moderation queue: bulk actions + appeal flow (uses existing `moderation_flags.status`).
-- Feature-flag table + admin toggle UI.
+RLS:
+- Travellers: can view their own redemptions (`user_id = auth.uid()`).
+- Creators: can view redemptions where `creator_id = auth.uid()` (commission visibility).
+- Businesses: can view + update (status, order_value, notes) where `deal.business_id = auth.uid()` via subquery.
+- Admins: full access via `has_role(auth.uid(), 'admin')`.
+- Insert: server-side only (service role); no client insert policy.
 
-### Referral redirect (`/r/$code`)
-Verify it logs to `deal_redirects`, increments `deal_clicks`, then 302s.
+Trigger: on `UPDATE` when `status` transitions to `confirmed`, compute `commission_cents = round(order_value_cents * commission_rate)` if both present.
 
-### Public profile (`/u/$username`)
-Tabs (videos / collections / public itineraries / sounds), follow button, share.
+### 3. Server functions for redemption lifecycle
 
-## Phase 3 — Polish & ops
+New file `src/lib/redemptions.functions.ts`:
 
-- Loading skeletons on feed, search, destination, profile.
-- Empty states on every list (collections, notifications, applications, invites, moderation, itineraries).
-- Mobile sweep at 375px: `/create`, `/studio/*`, `/business/*`, admin.
-- Accessibility: video player keyboard controls, comment dialog focus trap, alt text on every `image_url` / `thumbnail_url`.
-- Realtime: add `comments`, `video_views` (count only) to `supabase_realtime` if useful for live counts.
-- Observability: error boundary → server-fn log surfaced in `/admin`.
-- Performance: image lazy-load, tune `match_videos` / `match_deals` ivfflat indexes if cold queries are slow.
-- Rebrand QA pass: visit `/`, `/login`, `/legal/*`, `/settings`, `/u/$username`, `/business`, `/studio`, `/admin` and fix any contrast/legibility regressions from the dark→light switch.
+- `claimRedemption({ code })` — auth required. Traveller-initiated "I used this code" CTA. Inserts a `pending` redemption row (deal_id resolved from `deal_redirects.code`, creator_id from same row, user_id from auth). Idempotent per (user_id, code) within 24h.
+- `listBusinessRedemptions({ dealId?, status?, limit, offset })` — auth required, business-scoped via RLS.
+- `confirmRedemption({ id, orderValueCents, currency? })` — business sets status `confirmed`, fills order value. Trigger computes commission.
+- `rejectRedemption({ id, reason })` — business sets status `rejected`.
+- `getCreatorRedemptionStats()` — totals + last-30d counts + pending commission for the authed creator.
 
-## Suggested execution order
+All use `requireSupabaseAuth` middleware and `context.supabase` (RLS enforced).
 
-1. Cron jobs (Phase 2) — unlocks scheduled publishing + deal expiry + fresh destination content automatically.
-2. Referral redirect + business tracking lifecycle (`deal_redemptions`) — these monetisation surfaces are dead without it.
-3. Creator analytics + admin moderation — power-user tools.
-4. Search / map / collections / itineraries / sounds / profile — discovery & engagement surfaces.
-5. Phase 3 polish as small follow-up PRs once features land.
+### 4. UI surfaces (small, focused)
 
-## Explicitly excluded (deferred until Ltd + bank + Stripe)
+- **Deal detail page**: add an "I used this deal" button next to the existing redirect CTA. When clicked, calls `claimRedemption`. Shows a confirmation toast.
+- **Business dashboard (`/business`)**: add a "Redemptions" card listing pending rows with inline "Confirm" (prompts for order value) and "Reject" actions. Uses `listBusinessRedemptions`.
+- **Creator dashboard**: extend the existing click-stats card with a new "Pending commission" tile using `getCreatorRedemptionStats`. Read-only.
 
-Stripe Connect onboarding, payouts, ledger, invoicing, tax, subscriptions, boosted-deal monetisation, and creator earnings.
+### 5. Verification
+
+- Manual: open `/r/<known-code>` → confirm 302 to wrapped URL, `deal_clicks` row appears with `creator_id` and `referrer_video_id` (if `?v=` present), `deals.click_count` increments.
+- Manual: click "I used this deal" → row in `deal_redemptions` (status `pending`). Business confirms → status flips, commission populated. Creator dashboard reflects pending commission.
+- Linter: run Supabase linter after migration; resolve any RLS warnings.
+
+## Technical notes
+
+```text
+Flow
+─────
+[user] → /r/CODE?v=<videoId>
+              │
+              ▼
+   server route (302)
+              │  insert deal_clicks
+              ▼
+   wrapWithAffiliate(deal.url) → external supplier
+
+Later
+─────
+[user] → deal page → "I used this" → claimRedemption()
+                                            │
+                                            ▼
+                            deal_redemptions (pending)
+                                            │
+[business] → /business → Confirm + £value   │
+                                            ▼
+                            deal_redemptions (confirmed)
+                                            │ trigger
+                                            ▼
+                            commission_cents computed
+```
+
+Files touched:
+- `supabase/migrations/<ts>_deal_redemptions.sql` — new table, RLS, trigger
+- `src/routes/r.$code.tsx` — **replace** client component with server route (same URL)
+- `src/lib/redirects.functions.ts` — remove `resolveRedirect`, keep `getCreatorClickStats`
+- `src/lib/redemptions.functions.ts` — **new**
+- `src/routes/business.index.tsx` — add redemptions panel
+- `src/routes/creator.applications.tsx` or creator dashboard — add commission tile
+- Deal detail page — add "I used this" CTA
+
+## Explicitly out of scope
+
+- Stripe Connect, payouts, ledger, invoicing, tax — deferred until banking is ready
+- Charts/visualisations — totals only for now
+- Disputes / refund flows — `rejected` status is a hard stop, no negotiation UX
+- Email notifications on confirm/reject — can layer on later via the existing notifications table

@@ -1,0 +1,178 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+// Traveller-initiated "I used this code" claim. Inserts a pending redemption.
+// Idempotent: if the same user has already claimed the same code in the last
+// 24h, returns the existing row rather than creating a duplicate.
+export const claimRedemption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ code: z.string().min(1).max(40) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const code = data.code.trim().toUpperCase();
+
+    // Resolve code → deal + creator
+    const { data: redirect } = await supabaseAdmin
+      .from("deal_redirects")
+      .select("deal_id,creator_id")
+      .eq("code", code)
+      .maybeSingle();
+    if (!redirect) {
+      return { ok: false as const, error: "Unknown code" };
+    }
+
+    // Snapshot commission rate from the approved application (if any)
+    const { data: deal } = await supabaseAdmin
+      .from("deals")
+      .select("id,is_active,status")
+      .eq("id", redirect.deal_id)
+      .maybeSingle();
+    if (!deal || !deal.is_active || deal.status !== "approved") {
+      return { ok: false as const, error: "Deal unavailable" };
+    }
+
+    const { data: app } = await supabaseAdmin
+      .from("deal_applications")
+      .select("commission_pct")
+      .eq("deal_id", redirect.deal_id)
+      .eq("creator_id", redirect.creator_id ?? "")
+      .eq("status", "approved")
+      .maybeSingle();
+
+    // Idempotency: 24h window
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: existing } = await supabaseAdmin
+      .from("deal_redemptions")
+      .select("id,status,created_at")
+      .eq("user_id", userId)
+      .eq("code", code)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing) return { ok: true as const, id: existing.id, deduped: true };
+
+    const { data: inserted, error } = await supabaseAdmin
+      .from("deal_redemptions")
+      .insert({
+        deal_id: redirect.deal_id,
+        creator_id: redirect.creator_id,
+        user_id: userId,
+        code,
+        commission_rate: app?.commission_pct ?? null,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) {
+      return { ok: false as const, error: error?.message ?? "Insert failed" };
+    }
+    return { ok: true as const, id: inserted.id, deduped: false };
+  });
+
+// Business — list redemptions on their own deals.
+export const listBusinessRedemptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        dealId: z.string().uuid().optional(),
+        status: z.enum(["pending", "confirmed", "rejected"]).optional(),
+        limit: z.number().int().min(1).max(100).optional().default(50),
+        offset: z.number().int().min(0).optional().default(0),
+      })
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("deal_redemptions")
+      .select(
+        "id,deal_id,creator_id,user_id,code,order_value_cents,currency,commission_rate,commission_cents,status,confirmed_at,notes,created_at,deals(title,business_id),profile_user:profiles!deal_redemptions_user_id_fkey(username,display_name),profile_creator:profiles!deal_redemptions_creator_id_fkey(username,display_name)",
+      )
+      .order("created_at", { ascending: false })
+      .range(data.offset, data.offset + data.limit - 1);
+    if (data.dealId) q = q.eq("deal_id", data.dealId);
+    if (data.status) q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) return { rows: [], error: error.message };
+    return { rows: rows ?? [], error: null };
+  });
+
+// Business confirms a redemption.
+export const confirmRedemption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        orderValueCents: z.number().int().min(0).max(10_000_000),
+        currency: z.string().length(3).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const update = {
+      status: "confirmed" as const,
+      order_value_cents: data.orderValueCents,
+      confirmed_by: userId,
+      ...(data.currency ? { currency: data.currency.toUpperCase() } : {}),
+    };
+    const { data: row, error } = await supabase
+      .from("deal_redemptions")
+      .update(update)
+      .eq("id", data.id)
+      .select("id,status,commission_cents")
+      .single();
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, row };
+  });
+
+// Business rejects a redemption.
+export const rejectRedemption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ id: z.string().uuid(), reason: z.string().max(500).optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("deal_redemptions")
+      .update({ status: "rejected", confirmed_by: userId, notes: data.reason ?? null })
+      .eq("id", data.id);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
+// Creator — pending vs confirmed commission totals.
+export const getCreatorRedemptionStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: rows } = await supabaseAdmin
+      .from("deal_redemptions")
+      .select("status,commission_cents,currency,created_at")
+      .eq("creator_id", userId);
+    const stats = {
+      pendingCount: 0,
+      confirmedCount: 0,
+      rejectedCount: 0,
+      confirmedCommissionCents: 0,
+      currency: "GBP" as string,
+    };
+    for (const r of rows ?? []) {
+      if (r.status === "pending") stats.pendingCount++;
+      else if (r.status === "rejected") stats.rejectedCount++;
+      else if (r.status === "confirmed") {
+        stats.confirmedCount++;
+        stats.confirmedCommissionCents += r.commission_cents ?? 0;
+        if (r.currency) stats.currency = r.currency;
+      }
+    }
+    return stats;
+  });
