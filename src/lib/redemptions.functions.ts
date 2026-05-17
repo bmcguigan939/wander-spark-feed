@@ -10,6 +10,7 @@ import {
 } from "./email-send.server";
 import { RedemptionConfirmedCreatorEmail } from "./email-templates/redemption-confirmed-creator";
 import { RedemptionConfirmedTravellerEmail } from "./email-templates/redemption-confirmed-traveller";
+import { stampRedemptionSplit } from "@/lib/commission.server";
 
 // Traveller-initiated "I used this code" claim. Inserts a pending redemption.
 // Idempotent: if the same user has already claimed the same code in the last
@@ -172,6 +173,12 @@ export const confirmRedemption = createServerFn({ method: "POST" })
       .select("id,status,commission_cents")
       .single();
     if (error) return { ok: false as const, error: error.message };
+
+    // Stamp the v6 tier-based split (creator vs Travidz share of the 8%).
+    // The DB trigger has already computed commission_cents on the row.
+    await stampRedemptionSplit(data.id).catch((e) =>
+      console.error("stamp split failed", e),
+    );
 
     // Flip the price-match code to 'redeemed' so it cannot be re-used and
     // the audit page can show fair settlement.
