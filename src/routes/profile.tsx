@@ -10,7 +10,6 @@ import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, S
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
-import { CinematicHeader } from "@/components/ui/cinematic";
 import { getMySocials, upsertMySocials } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/profile")({
