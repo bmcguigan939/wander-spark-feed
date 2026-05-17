@@ -123,8 +123,8 @@ export const adminGenerateDraftRuns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { data: rows, error } = await supabaseAdmin.rpc("generate_draft_payout_runs", {
-      _period_start: data.period_start ?? null,
-      _period_end: data.period_end ?? null,
+      _period_start: (data.period_start ?? undefined) as any,
+      _period_end: (data.period_end ?? undefined) as any,
       _min_payout_cents: data.min_payout_cents ?? 2000,
     });
     if (error) return { ok: false as const, error: error.message, created: 0 };
@@ -146,7 +146,7 @@ export const adminUpdatePayoutRunStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const now = new Date().toISOString();
-    let patch: Record<string, unknown> = {};
+    let patch: any = {};
     if (data.action === "approve") {
       patch = { status: "approved", approved_at: now, approved_by: context.userId };
     } else if (data.action === "mark_paid") {
