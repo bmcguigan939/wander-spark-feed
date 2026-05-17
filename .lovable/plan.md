@@ -1,89 +1,85 @@
-## Goal
+# TheFork affiliate integration
 
-Turn `/map` from a static pin layer into a real travel-discovery surface: travellers can type a place ("Lisbon", "Bali"), filter by what they're looking for (stay / eat / do / tour), and tap any pin to see every affiliated business, deal and creator video tied to that location.
+## What TheFork actually pays for
+TheFork (Tripadvisor company) runs its affiliate program through **Awin**, not a direct API. Publishers earn ~€1–2 per seated diner. There is no public booking API — monetisation is done by deep-linking users from our app to `thefork.com` wrapped in an Awin tracking URL.
 
-## What ships
-
-### M1 — Search box with geocoding
-- Add a search input pinned to the top of `/map` (replaces the current title bar).
-- Two modes, switched by what the user types:
-  - **Place search** (default): Mapbox Geocoding API (`mapbox.com/geocoding/v5/mapbox.places`) returns place suggestions; selecting one flies the map to that bbox and triggers a content refetch for the visible area.
-  - **Content search**: when the user prefixes with `#` or hits a Content tab, query our DB (deals + videos + businesses) by text and pin the matches.
-- Recent searches stored in localStorage.
-
-### M2 — Category taxonomy
-- New enum `deal_category`: `stay | eat | do | tour | transport | other`.
-- Add `category deal_category` column to `deals` (default `other`, backfill heuristically from title — "hotel/villa/stay" → stay, "restaurant/cafe/bar" → eat, etc.; admin can refine).
-- Filter chip row under the search box: All / Stay / Eat / Do / Tour. Updates URL `?cat=`.
-- Apply the same filter to videos via existing `videos.tags` (map "stay"→`#hotel,#stay`, "eat"→`#food,#restaurant`, etc.).
-- Add `category` to `DealForm` so businesses pick it on create/edit.
-
-### M3 — Business pins (not just deals)
-- Currently only deals/videos with `lat`/`lng` show. Add a third pin type: **business** (from `profiles` where `role=business` joined with the location they registered).
-- Requires a `businesses_locations` view or two new columns on the business profile: `lat`, `lng`, `address`, `place_name`. Migration adds them to `profiles` (business-only, populated when a business first creates a deal or via a one-time location picker on `/business`).
-- Business pins render only when a business has no current active deal in view (otherwise the deal pin wins to avoid double-pinning the same spot).
-
-### M4 — bbox-aware loading + "Search this area"
-- `getMapPins` already accepts `bbox`; wire the UI to pass it on `onMoveEnd` (debounced 350 ms).
-- Add a small "Search this area" button that appears after the map is panned/zoomed > 1 km away from the last fetch, to make the refetch feel intentional.
-- Raise the per-layer limit when bbox is provided (500 → 1000) and lower it when no bbox (avoid loading the whole planet).
-
-### M5 — Clustered pin sheet (the "everything here" view)
-- When pins are within ~30 m of each other (or all belong to the same `business_id`), render a single cluster pin with a count badge.
-- Tapping a cluster opens the bottom sheet with three tabs: **Deals** · **Videos** · **About**:
-  - Deals tab: list of deal cards (image, title, discount, "View deal →").
-  - Videos tab: thumbnails of all creator videos at this location → deep link to feed.
-  - About tab: business profile card (name, avatar, follow button, "View profile →").
-
-### M6 — Free-text DB search
-- New server fn `searchMapContent({ q, cat, bbox })` in `src/lib/map.functions.ts`:
-  - ILIKE / pg_trgm on `deals.title`, `deals.description`, `profiles.display_name`, `videos.title`, `videos.tags`.
-  - Returns the same `{ videos, deals, businesses }` shape so the map renders matches as pins; map auto-fits to results bbox if user came from a text query.
-
-## Out of scope (parking lot)
-- Google/Mapbox Places POI overlay (generic "things to do nearby" with no Travidz content) — would dilute the affiliate value prop.
-- Saved searches / map alerts.
-- Real-time pin updates (Realtime channel) — current 60 s `staleTime` is fine.
-- Currency-aware price filtering on the map (lives on `/search` and deal pages already).
-
-## Technical details
-
-### Files touched
-| File | Change |
-|------|--------|
-| `supabase/migrations/<ts>_map_categories_business_loc.sql` | New `deal_category` enum; `deals.category`; `profiles.lat/lng/address/place_name`; heuristic backfill of `deals.category`; pg_trgm indexes on `deals.title`, `profiles.display_name`, `videos.title`. |
-| `src/lib/map.functions.ts` | Extend `getMapPins` to return `businesses` and accept `cat`. Add `searchMapContent({ q, cat, bbox })`. Add `geocodePlace({ q })` (server fn, calls Mapbox Geocoding with token from env to avoid CORS preflight noise). |
-| `src/routes/map.tsx` | Replace top bar with search input + suggestion dropdown. Add category chip row. Wire bbox on `onMoveEnd`. Render business pins. Add clustering (simple grid-snap by lat/lng rounded to 4 dp; supercluster only if needed). Add clustered sheet with tabs (reuses `Sheet` + `Tabs` shadcn components). |
-| `src/components/business/DealForm.tsx` | Add Category select. |
-| `src/routes/business.tsx` or new `business.location.tsx` | One-time location picker (Mapbox geocoder → save lat/lng/address/place_name to profile). |
-| `src/components/map/SearchBox.tsx` (new) | Reusable input + suggestions, debounced. |
-| `src/components/map/CategoryChips.tsx` (new) | Stay / Eat / Do / Tour chips. |
-| `src/components/map/ClusteredSheet.tsx` (new) | The 3-tab sheet. |
-
-### Data model
-
-```text
-CREATE TYPE deal_category AS ENUM ('stay','eat','do','tour','transport','other');
-ALTER TABLE deals ADD COLUMN category deal_category NOT NULL DEFAULT 'other';
-ALTER TABLE profiles
-  ADD COLUMN lat double precision,
-  ADD COLUMN lng double precision,
-  ADD COLUMN address text,
-  ADD COLUMN place_name text;
-CREATE INDEX deals_title_trgm ON deals USING gin (title gin_trgm_ops);
-CREATE INDEX profiles_name_trgm ON profiles USING gin (display_name gin_trgm_ops);
+Format (per Awin docs):
 ```
+https://www.awin1.com/awclick.php?mid=15103&id=<AWIN_PUBLISHER_ID>&clickref=<our-click-id>&p=<URL-encoded thefork.com link>
+```
+- `mid=15103` is TheFork's Awin merchant ID (constant).
+- `id` is **your** Awin publisher ID — required before any of this earns money.
+- `clickref` is our own tracking token, surfaced back in Awin reports so we can attribute commissions to a user / deal / city.
+- `p` is the destination on TheFork (a specific restaurant page if we have one, otherwise a city search).
 
-### Mapbox token
-Reuse the existing `pk.*` publishable token for both the map and the Geocoding API; no new secret needed. `geocodePlace` is a thin server fn so we can switch to a paid tier or swap providers later without touching the client.
+## Prerequisites (user action)
+1. Sign up at awin.com as a publisher (free).
+2. Apply to the **TheFork (LaFourchette)** programme inside Awin → wait for approval.
+3. Provide us your numeric **Awin publisher ID** — we'll store it as a runtime secret `AWIN_PUBLISHER_ID`.
 
-### URL contract
-`/map?lng&lat&zoom&layer&cat=stay&q=lisbon` — fully shareable / SEO-friendly.
+I'll request that secret after you approve the plan.
 
-## Execution order
-M2 (schema + category) → M3 (business pins + profile location) → M1 (search box + geocoding) → M4 (bbox + "search this area") → M5 (cluster sheet) → M6 (DB text search).
+## Implementation
 
-## Open questions before I start
-1. **Category list**: OK with `stay / eat / do / tour / transport / other`, or do you want a different cut (e.g. split `do` into `activity` and `attraction`)?
-2. **Business location capture**: prompt businesses on next login with a one-time modal to set their address, or only require it next time they create a deal? (Existing deals will already have lat/lng on the deal row itself.)
-3. **Geocoder provider**: Mapbox (free up to 100k req/mo, same token) — fine, or do you want Google Places (richer POI data, paid)?
+### 1. Schema (migration)
+Add restaurant booking metadata to businesses + a clicks log we can reconcile with Awin reports.
+
+- `profiles.thefork_url text` — optional, the restaurant's own page on thefork.com (e.g. `https://www.thefork.com/restaurant/cervejaria-ramiro-r123456`). Businesses paste this in their profile.
+- `profiles.is_restaurant boolean default false` — flag so the CTA only renders for restaurant pins. (Cheap; later we can derive from a proper `business_category` enum.)
+- New table `partner_clicks`:
+  - `id`, `created_at`, `user_id` (nullable), `partner` text (`'thefork'`), `business_id` (nullable), `deal_id` (nullable), `city` text (nullable), `click_ref` text unique, `destination_url` text.
+  - RLS: insert allowed for anyone (including anon — clicks come from logged-out travellers too); select restricted to admins via `has_role`.
+
+### 2. Affiliate link builder (`src/lib/affiliates/thefork.ts`)
+Pure helper, client-safe:
+```ts
+buildTheForkUrl({
+  destination: string;          // specific restaurant page or city search URL
+  publisherId: string;
+  clickRef: string;
+}): string
+```
+- If destination is a `thefork.com` URL → wrap with awin1.
+- If only city given → build a city search URL like `https://www.thefork.com/search/?cityId=…` (we store a tiny lookup of city → TheFork URL slug for the cities we already seed; fallback to a global search).
+
+### 3. Server function (`src/lib/affiliates.functions.ts`)
+`createTheForkClick({ business_id?, deal_id?, city? })`:
+- Reads `process.env.AWIN_PUBLISHER_ID` inside handler.
+- Picks the destination URL (business `thefork_url` if present, else city-search fallback).
+- Generates a short `click_ref` (nanoid), inserts a `partner_clicks` row (with user_id from `requireSupabaseAuth` middleware if signed in, else anon).
+- Returns the fully-built Awin URL.
+
+Why server-side: keeps the publisher ID out of the bundle and lets us attribute the click to the authenticated user.
+
+### 4. UI — CTA in ClusteredSheet "About" tab
+In `src/components/map/ClusteredSheet.tsx`, for each business with `is_restaurant = true`, render a primary "Book a table on TheFork" button next to the existing profile link. On click:
+- Call `createTheForkClick({ business_id })` → open returned URL in a new tab.
+- Falls back to a disabled state with tooltip "Booking link coming soon" if business has no `thefork_url` AND no city fallback exists.
+
+Also add a generic "Find restaurants on TheFork" footer to the **Eat** category view when no specific business is selected (uses the current map city as the destination).
+
+### 5. Business profile form
+Add a single text input "TheFork restaurant URL" + an "Is restaurant" toggle to the business profile editor (`/business`) so owners can self-serve.
+
+### 6. Seed
+Mark one of our two seeded businesses (Lisbon) as a restaurant with a sample TheFork URL so we can click through end-to-end immediately.
+
+## Out of scope (deliberately)
+- Awin XML feed ingestion (auto-importing 50k+ restaurants). Possible later but adds complexity; better once we know the program converts.
+- Server-to-server commission reconciliation. Awin reports are downloaded weekly; we'll add a CSV importer once revenue starts.
+- OpenTable / Resy. Same pattern, easy to add later — the `partner` column is already generic.
+
+## Files touched
+- new: `supabase/migrations/<ts>_thefork_affiliate.sql`
+- new: `src/lib/affiliates/thefork.ts`
+- new: `src/lib/affiliates.functions.ts`
+- edit: `src/components/map/ClusteredSheet.tsx` (CTA)
+- edit: `src/routes/business.index.tsx` + profile form (new fields)
+- edit: `src/lib/businesses.functions.ts` (persist new fields) — if it exists; otherwise inline
+- runtime secret request: `AWIN_PUBLISHER_ID`
+
+## Test plan
+1. Run migration → confirm `types.ts` shows new columns.
+2. Seed Lisbon business with a sample TheFork URL.
+3. From `/map`, open Lisbon cluster → About tab → click "Book a table" → opens awin1.com → 302s to TheFork. Verify `partner_clicks` row landed with a `click_ref`.
+4. Edit business profile → save TheFork URL → re-test.

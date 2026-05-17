@@ -1489,6 +1489,42 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_clicks: {
+        Row: {
+          business_id: string | null
+          city: string | null
+          click_ref: string
+          created_at: string
+          deal_id: string | null
+          destination_url: string
+          id: string
+          partner: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          city?: string | null
+          click_ref: string
+          created_at?: string
+          deal_id?: string | null
+          destination_url: string
+          id?: string
+          partner: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          city?: string | null
+          click_ref?: string
+          created_at?: string
+          deal_id?: string | null
+          destination_url?: string
+          id?: string
+          partner?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payout_line_items: {
         Row: {
           commission_cents: number
@@ -1752,10 +1788,12 @@ export type Database = {
           creator_agreement_accepted_at: string | null
           display_name: string | null
           id: string
+          is_restaurant: boolean
           is_verified: boolean
           lat: number | null
           lng: number | null
           place_name: string | null
+          thefork_url: string | null
           username: string
           verification_notes: string | null
           verified_at: string | null
@@ -1770,10 +1808,12 @@ export type Database = {
           creator_agreement_accepted_at?: string | null
           display_name?: string | null
           id: string
+          is_restaurant?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
           place_name?: string | null
+          thefork_url?: string | null
           username: string
           verification_notes?: string | null
           verified_at?: string | null
@@ -1788,10 +1828,12 @@ export type Database = {
           creator_agreement_accepted_at?: string | null
           display_name?: string | null
           id?: string
+          is_restaurant?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
           place_name?: string | null
+          thefork_url?: string | null
           username?: string
           verification_notes?: string | null
           verified_at?: string | null
