@@ -47,6 +47,7 @@ import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.busin
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
+import { Route as CreatorEarningsRouteImport } from './routes/creator.earnings'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
@@ -265,6 +266,11 @@ const DealsIdRoute = DealsIdRouteImport.update({
   path: '/deals/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorEarningsRoute = CreatorEarningsRouteImport.update({
+  id: '/creator/earnings',
+  path: '/creator/earnings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CreatorApplicationsRoute = CreatorApplicationsRouteImport.update({
   id: '/creator/applications',
   path: '/creator/applications',
@@ -433,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -498,6 +505,7 @@ export interface FileRoutesByTo {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -565,6 +573,7 @@ export interface FileRoutesById {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -634,6 +643,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -699,6 +709,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -765,6 +776,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -827,6 +839,7 @@ export interface RootRouteChildren {
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
+  CreatorEarningsRoute: typeof CreatorEarningsRoute
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
@@ -1126,6 +1139,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DealsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creator/earnings': {
+      id: '/creator/earnings'
+      path: '/creator/earnings'
+      fullPath: '/creator/earnings'
+      preLoaderRoute: typeof CreatorEarningsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/creator/applications': {
       id: '/creator/applications'
       path: '/creator/applications'
@@ -1416,6 +1436,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
+  CreatorEarningsRoute: CreatorEarningsRoute,
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,

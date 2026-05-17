@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listNotifications, markAllRead, type NotificationRow } from "@/lib/notifications.functions";
 import { useAuth } from "@/lib/auth";
-import { Bell, Heart, MessageCircle, UserPlus, Reply, Briefcase, CheckCircle2 } from "lucide-react";
+import { Bell, Heart, MessageCircle, UserPlus, Reply, Briefcase, CheckCircle2, Wallet, XCircle, Clock4, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/notifications")({
@@ -82,13 +82,7 @@ function NotificationsPage() {
 function Item({ n }: { n: NotificationRow }) {
   const meta = describe(n);
   const actorName = n.actor?.display_name || (n.actor ? `@${n.actor.username}` : "Someone");
-  const href = n.deal_id
-    ? (n.type === "deal_application" ? "/business/applications" : "/creator/applications")
-    : n.video_id
-      ? `/?v=${n.video_id}`
-      : n.actor
-        ? `/u/${n.actor.username}`
-        : "/";
+  const href = hrefFor(n);
   return (
     <Link to={href} className={`flex items-center gap-3 px-3 py-3 ${n.read_at ? "" : "bg-primary/5"}`}>
       <div className="relative">
@@ -112,6 +106,27 @@ function Item({ n }: { n: NotificationRow }) {
   );
 }
 
+function hrefFor(n: NotificationRow): string {
+  switch (n.type) {
+    case "redemption_confirmed":
+      return "/creator/earnings";
+    case "redemption_rejected":
+      return n.deal_id ? `/deals/${n.deal_id}` : "/";
+    case "deal_expiring_soon":
+      return n.deal_id ? `/business/deals/${n.deal_id}` : "/business";
+    case "deal_application":
+      return "/business/applications";
+    case "deal_application_decided":
+      return "/creator/applications";
+    case "business_invite_received":
+      return "/business";
+    default:
+      if (n.video_id) return `/?v=${n.video_id}`;
+      if (n.actor) return `/u/${n.actor.username}`;
+      return "/";
+  }
+}
+
 function describe(n: NotificationRow) {
   switch (n.type) {
     case "like": return { text: "liked your video", Icon: Heart, bg: "bg-rose-500" };
@@ -120,6 +135,10 @@ function describe(n: NotificationRow) {
     case "reply": return { text: "replied to your comment", Icon: Reply, bg: "bg-violet-500" };
     case "deal_application": return { text: "applied to promote your deal", Icon: Briefcase, bg: "bg-amber-500" };
     case "deal_application_decided": return { text: "updated your deal application", Icon: CheckCircle2, bg: "bg-primary" };
+    case "business_invite_received": return { text: "invited you to add a deal", Icon: Building2, bg: "bg-amber-500" };
+    case "redemption_confirmed": return { text: "confirmed a booking — commission added", Icon: Wallet, bg: "bg-emerald-500" };
+    case "redemption_rejected": return { text: "couldn't confirm your booking", Icon: XCircle, bg: "bg-rose-500" };
+    case "deal_expiring_soon": return { text: "your deal expires within 7 days", Icon: Clock4, bg: "bg-amber-500" };
     default: return { text: "", Icon: Bell, bg: "bg-muted" };
   }
 }
