@@ -66,7 +66,7 @@ for l,p,col in alloc:
     sg=bw*p
     c.setFillColor(col); c.rect(cur, by, sg, bh, fill=1, stroke=0)
     c.setFillColor(white); c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(cur+3, by+2, f"{l} {int(p*100)}%")
+    c.drawString(cur+3, by+2, f"{l[:3]} {int(p*100)}")
     cur+=sg
 
 # Central image area
