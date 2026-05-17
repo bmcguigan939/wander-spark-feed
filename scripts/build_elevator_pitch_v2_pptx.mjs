@@ -44,7 +44,7 @@ let cur=bx;
 alloc.forEach(([l,p,col])=>{
   const sg=bw*p;
   s.addShape("rect",{x:cur,y:by,w:sg,h:bh,fill:{color:col},line:{color:col}});
-  s.addText(`${l} ${Math.round(p*100)}`,{x:cur+0.02,y:by+0.01,w:sg-0.02,h:bh-0.02,fontSize:7,bold:true,color:WHITE,fontFace:"Calibri"});
+  if(p>=0.2){ s.addText(`${l} ${Math.round(p*100)}%`,{x:cur+0.02,y:by+0.01,w:sg-0.02,h:bh-0.02,fontSize:7,bold:true,color:WHITE,fontFace:"Calibri"}); }
   cur+=sg;
 });
 
