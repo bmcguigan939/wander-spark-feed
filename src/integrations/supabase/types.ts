@@ -100,6 +100,8 @@ export type Database = {
       }
       affiliate_links: {
         Row: {
+          business_id: string | null
+          canonical_key: string | null
           click_count: number
           commission_pct: number | null
           created_at: string
@@ -107,12 +109,19 @@ export type Database = {
           id: string
           is_active: boolean
           label: string
+          link_kind: Database["public"]["Enums"]["affiliate_link_kind"]
+          parity_exempt: boolean
+          parity_exempt_reason: string | null
           provider: string
+          supplier_ref: string | null
+          supplier_type: Database["public"]["Enums"]["supplier_type"] | null
           updated_at: string
           url: string
           video_id: string | null
         }
         Insert: {
+          business_id?: string | null
+          canonical_key?: string | null
           click_count?: number
           commission_pct?: number | null
           created_at?: string
@@ -120,12 +129,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           label: string
+          link_kind?: Database["public"]["Enums"]["affiliate_link_kind"]
+          parity_exempt?: boolean
+          parity_exempt_reason?: string | null
           provider?: string
+          supplier_ref?: string | null
+          supplier_type?: Database["public"]["Enums"]["supplier_type"] | null
           updated_at?: string
           url: string
           video_id?: string | null
         }
         Update: {
+          business_id?: string | null
+          canonical_key?: string | null
           click_count?: number
           commission_pct?: number | null
           created_at?: string
@@ -133,7 +149,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string
+          link_kind?: Database["public"]["Enums"]["affiliate_link_kind"]
+          parity_exempt?: boolean
+          parity_exempt_reason?: string | null
           provider?: string
+          supplier_ref?: string | null
+          supplier_type?: Database["public"]["Enums"]["supplier_type"] | null
           updated_at?: string
           url?: string
           video_id?: string | null
@@ -737,6 +758,8 @@ export type Database = {
           currency: string
           deal_id: string
           id: string
+          match_code: string | null
+          matched_from_price_cents: number | null
           notes: string | null
           order_value_cents: number | null
           payout_run_id: string | null
@@ -755,6 +778,8 @@ export type Database = {
           currency?: string
           deal_id: string
           id?: string
+          match_code?: string | null
+          matched_from_price_cents?: number | null
           notes?: string | null
           order_value_cents?: number | null
           payout_run_id?: string | null
@@ -773,6 +798,8 @@ export type Database = {
           currency?: string
           deal_id?: string
           id?: string
+          match_code?: string | null
+          matched_from_price_cents?: number | null
           notes?: string | null
           order_value_cents?: number | null
           payout_run_id?: string | null
@@ -1387,6 +1414,39 @@ export type Database = {
           },
         ]
       }
+      parity_checks: {
+        Row: {
+          action: string
+          cheapest_network: string | null
+          cheapest_price_cents: number | null
+          direct_price_cents: number | null
+          id: string
+          link_id: string
+          providers_checked: string[]
+          ran_at: string
+        }
+        Insert: {
+          action: string
+          cheapest_network?: string | null
+          cheapest_price_cents?: number | null
+          direct_price_cents?: number | null
+          id?: string
+          link_id: string
+          providers_checked?: string[]
+          ran_at?: string
+        }
+        Update: {
+          action?: string
+          cheapest_network?: string | null
+          cheapest_price_cents?: number | null
+          direct_price_cents?: number | null
+          id?: string
+          link_id?: string
+          providers_checked?: string[]
+          ran_at?: string
+        }
+        Relationships: []
+      }
       payout_line_items: {
         Row: {
           commission_cents: number
@@ -1479,6 +1539,123 @@ export type Database = {
           status?: string
           total_cents?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      price_match_codes: {
+        Row: {
+          business_id: string | null
+          code: string
+          competitor_network: string
+          competitor_url: string
+          currency: string
+          dispute_evidence_url: string | null
+          dispute_reason: string | null
+          dispute_resolved_at: string | null
+          dispute_resolved_by: string | null
+          evidence_hash: string | null
+          evidence_url: string | null
+          expires_at: string
+          issued_at: string
+          link_id: string
+          matched_price_cents: number
+          original_price_cents: number
+          redeemed_at: string | null
+          status: Database["public"]["Enums"]["price_match_status"]
+          traveller_user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          code: string
+          competitor_network: string
+          competitor_url: string
+          currency?: string
+          dispute_evidence_url?: string | null
+          dispute_reason?: string | null
+          dispute_resolved_at?: string | null
+          dispute_resolved_by?: string | null
+          evidence_hash?: string | null
+          evidence_url?: string | null
+          expires_at: string
+          issued_at?: string
+          link_id: string
+          matched_price_cents: number
+          original_price_cents: number
+          redeemed_at?: string | null
+          status?: Database["public"]["Enums"]["price_match_status"]
+          traveller_user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          code?: string
+          competitor_network?: string
+          competitor_url?: string
+          currency?: string
+          dispute_evidence_url?: string | null
+          dispute_reason?: string | null
+          dispute_resolved_at?: string | null
+          dispute_resolved_by?: string | null
+          evidence_hash?: string | null
+          evidence_url?: string | null
+          expires_at?: string
+          issued_at?: string
+          link_id?: string
+          matched_price_cents?: number
+          original_price_cents?: number
+          redeemed_at?: string | null
+          status?: Database["public"]["Enums"]["price_match_status"]
+          traveller_user_id?: string | null
+        }
+        Relationships: []
+      }
+      price_quotes: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          currency: string
+          evidence_hash: string | null
+          evidence_url: string | null
+          fetched_at: string
+          id: string
+          link_id: string
+          network: string
+          pax: number | null
+          price_cents: number
+          source: string
+          ttl_seconds: number
+          url: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          currency?: string
+          evidence_hash?: string | null
+          evidence_url?: string | null
+          fetched_at?: string
+          id?: string
+          link_id: string
+          network: string
+          pax?: number | null
+          price_cents: number
+          source?: string
+          ttl_seconds?: number
+          url: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          currency?: string
+          evidence_hash?: string | null
+          evidence_url?: string | null
+          fetched_at?: string
+          id?: string
+          link_id?: string
+          network?: string
+          pax?: number | null
+          price_cents?: number
+          source?: string
+          ttl_seconds?: number
+          url?: string
         }
         Relationships: []
       }
@@ -2092,6 +2269,10 @@ export type Database = {
       }
     }
     Enums: {
+      affiliate_link_kind:
+        | "creator_affiliate"
+        | "ota_affiliate"
+        | "direct_business"
       app_role: "traveller" | "creator" | "business" | "admin"
       deal_application_status: "pending" | "approved" | "declined" | "withdrawn"
       deal_redemption_status: "pending" | "confirmed" | "rejected"
@@ -2106,6 +2287,19 @@ export type Database = {
         | "redemption_confirmed"
         | "redemption_rejected"
         | "deal_expiring_soon"
+      price_match_status:
+        | "issued"
+        | "redeemed"
+        | "expired"
+        | "disputed"
+        | "dispute_rejected"
+      supplier_type:
+        | "hotel"
+        | "activity"
+        | "flight"
+        | "transfer"
+        | "esim"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2233,6 +2427,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      affiliate_link_kind: [
+        "creator_affiliate",
+        "ota_affiliate",
+        "direct_business",
+      ],
       app_role: ["traveller", "creator", "business", "admin"],
       deal_application_status: ["pending", "approved", "declined", "withdrawn"],
       deal_redemption_status: ["pending", "confirmed", "rejected"],
@@ -2247,6 +2446,21 @@ export const Constants = {
         "redemption_confirmed",
         "redemption_rejected",
         "deal_expiring_soon",
+      ],
+      price_match_status: [
+        "issued",
+        "redeemed",
+        "expired",
+        "disputed",
+        "dispute_rejected",
+      ],
+      supplier_type: [
+        "hotel",
+        "activity",
+        "flight",
+        "transfer",
+        "esim",
+        "other",
       ],
     },
   },
