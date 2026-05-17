@@ -131,12 +131,13 @@ export const seedDemoContent = createServerFn({ method: "POST" })
         .from("videos")
         .select("id")
         .eq("creator_id", creator)
-        .eq("caption", `Demo: ${DEMO_DEALS[i].title}`)
+        .eq("description", `Demo: ${DEMO_DEALS[i].title}`)
         .maybeSingle();
       if (existingVid) continue;
       await supabaseAdmin.from("videos").insert({
         creator_id: creator,
-        caption: `Demo: ${DEMO_DEALS[i].title}`,
+        title: DEMO_DEALS[i].title,
+        description: `Demo: ${DEMO_DEALS[i].title}`,
         mux_playback_id: muxId,
         thumbnail_url: DEMO_DEALS[i].image,
         destination: DEMO_DEALS[i].city,
