@@ -24,13 +24,13 @@ export const setProfileVerified = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const patch: Record<string, unknown> = {
+    const patch = {
       is_verified: data.verified,
       verified_at: data.verified ? new Date().toISOString() : null,
       verified_by: data.verified ? context.userId : null,
+      ...(data.notes !== undefined ? { verification_notes: data.notes } : {}),
     };
-    if (data.notes !== undefined) patch.verification_notes = data.notes;
-    const { error } = await supabaseAdmin.from("profiles").update(patch).eq("id", data.userId);
+    const { error } = await (supabaseAdmin.from("profiles") as any).update(patch).eq("id", data.userId);
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("admin_actions").insert({
       admin_id: context.userId,
@@ -52,8 +52,7 @@ export const acceptAgreement = createServerFn({ method: "POST" })
       data.kind === "creator"
         ? "creator_agreement_accepted_at"
         : "business_agreement_accepted_at";
-    const { error } = await supabaseAdmin
-      .from("profiles")
+    const { error } = await (supabaseAdmin.from("profiles") as any)
       .update({ [col]: new Date().toISOString() })
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
