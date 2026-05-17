@@ -36,6 +36,8 @@ import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
@@ -199,6 +201,16 @@ const RCodeRoute = RCodeRouteImport.update({
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/legal/terms',
   path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalCookiesRoute = LegalCookiesRouteImport.update({
+  id: '/legal/cookies',
+  path: '/legal/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
@@ -378,6 +390,8 @@ export interface FileRoutesByFullPath {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
@@ -434,6 +448,8 @@ export interface FileRoutesByTo {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
@@ -492,6 +508,8 @@ export interface FileRoutesById {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
@@ -552,6 +570,8 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/cookies'
+    | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
@@ -608,6 +628,8 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/cookies'
+    | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
@@ -665,6 +687,8 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/cookies'
+    | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
@@ -718,6 +742,8 @@ export interface RootRouteChildren {
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
+  LegalCookiesRoute: typeof LegalCookiesRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
   SoundsIdRoute: typeof SoundsIdRoute
@@ -930,6 +956,20 @@ declare module '@tanstack/react-router' {
       path: '/legal/terms'
       fullPath: '/legal/terms'
       preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/cookies': {
+      id: '/legal/cookies'
+      path: '/legal/cookies'
+      fullPath: '/legal/cookies'
+      preLoaderRoute: typeof LegalCookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/itineraries/new': {
@@ -1235,6 +1275,8 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
+  LegalCookiesRoute: LegalCookiesRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
   SoundsIdRoute: SoundsIdRoute,
