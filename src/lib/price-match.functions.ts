@@ -1,3 +1,65 @@
+
+/** Admin lists all disputed price-match codes for resolution. */
+export const listDisputedMatchCodes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context;
+    const { data: isAdminRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!isAdminRows) throw new Error("Forbidden");
+    const { data: codes } = await supabaseAdmin
+      .from("price_match_codes")
+      .select("*")
+      .eq("status", "disputed")
+      .order("issued_at", { ascending: false })
+      .limit(200);
+    return { codes: codes ?? [] };
+  });
+
+/** Admin resolves a dispute: either rejects it (match stands) or upholds it
+ * (status → 'dispute_rejected' for the business, meaning the business's
+ * dispute is upheld and the code is invalidated). */
+export const resolveMatchDispute = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { code: string; decision: "uphold_match" | "uphold_business"; note?: string }) =>
+    z
+      .object({
+        code: z.string().min(8).max(40),
+        decision: z.enum(["uphold_match", "uphold_business"]),
+        note: z.string().max(2000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context;
+    const { data: isAdminRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!isAdminRows) throw new Error("Forbidden");
+    // uphold_match: match stays, code goes back to 'issued' (or 'redeemed' if already used).
+    // uphold_business: business wins, code becomes 'dispute_rejected' and is unusable.
+    const newStatus =
+      data.decision === "uphold_business" ? ("dispute_rejected" as const) : ("issued" as const);
+    const update: Record<string, unknown> = {
+      status: newStatus,
+      dispute_resolved_by: userId,
+      dispute_resolved_at: new Date().toISOString(),
+    };
+    if (data.note) update.dispute_evidence_url = data.note;
+    const { error } = await supabaseAdmin
+      .from("price_match_codes")
+      .update(update)
+      .eq("code", data.code);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
