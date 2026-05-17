@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { listParityChecksForBusiness, disputeMatchCode } from "@/lib/price-match.functions";
+import { listParityChecksForBusiness, disputeMatchCode, setParityExempt } from "@/lib/price-match.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink } from "lucide-react";
+import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff } from "lucide-react";
 
 export const Route = createFileRoute("/business/price-audit")({
   head: () => ({ meta: [{ title: "Price-match audit — Travidz" }] }),
@@ -29,6 +29,7 @@ function PriceAuditPage() {
   const navigate = useNavigate();
   const fetchFn = useServerFn(listParityChecksForBusiness);
   const disputeFn = useServerFn(disputeMatchCode);
+  const exemptFn = useServerFn(setParityExempt);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -43,9 +44,11 @@ function PriceAuditPage() {
     enabled: !!user && isBusiness,
   });
 
-  const [tab, setTab] = useState<"checks" | "codes">("codes");
+  const [tab, setTab] = useState<"checks" | "codes" | "listings">("codes");
   const [disputing, setDisputing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [exemptingId, setExemptingId] = useState<string | null>(null);
+  const [exemptReason, setExemptReason] = useState("");
 
   const dispute = useMutation({
     mutationFn: (code: string) => disputeFn({ data: { code, reason } }),
@@ -56,6 +59,18 @@ function PriceAuditPage() {
       qc.invalidateQueries({ queryKey: ["price-audit"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to file dispute"),
+  });
+
+  const exempt = useMutation({
+    mutationFn: (v: { linkId: string; exempt: boolean; reason?: string }) =>
+      exemptFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Listing updated");
+      setExemptingId(null);
+      setExemptReason("");
+      qc.invalidateQueries({ queryKey: ["price-audit"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
   if (!user || !isBusiness) return null;
@@ -90,6 +105,12 @@ function PriceAuditPage() {
             className={`px-4 py-1.5 rounded-full ${tab === "checks" ? "bg-primary text-primary-foreground" : ""}`}
           >
             All checks ({data?.checks?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setTab("listings")}
+            className={`px-4 py-1.5 rounded-full ${tab === "listings" ? "bg-primary text-primary-foreground" : ""}`}
+          >
+            Listings ({data?.links?.length ?? 0})
           </button>
         </div>
 
