@@ -1,121 +1,81 @@
-# Notifications + payout-ready earnings ledger
+# Travidz — get everything functional pre-Stripe (next week)
 
-## Status: shipped (partial)
+## Status
+- **Phase A: shipped** — daily expiring-deals cron at 09:00 UTC; 3 transactional email templates wired (`redemption_confirmed_creator`, `redemption_confirmed_traveller`, `deal_expiring`) with suppression + per-user category preference checks; notification bell + realtime unread badge already live from prior phase.
+- **Phase B–D: pending** — see below.
 
-**Done:** redemption_confirmed/rejected + deal_expiring_soon notification types; trigger on `deal_redemptions` status changes; `notify_expiring_deals()` SQL fn; `email_preferences` table + RLS + settings UI toggles; `creator_earnings_monthly` view with payable vs pending (14d clearance); `src/lib/earnings.functions.ts`; `src/lib/email-preferences.functions.ts`; `/creator/earnings` page (KPIs, bar chart, per-deal breakdown, payouts-locked banner); notifications page deep-links + icons for new types.
+Stripe lands next week. Goal: ship every non-Stripe piece now so when Stripe goes in, it's a focused 1–2 day swap (onboarding + transfers) on top of a fully working app. Everything below is independent of banking.
 
-**Deferred:** transactional email dispatcher + 3 React Email templates (queue infra exists, toggles ready); pg_cron schedule that calls `notify_expiring_deals()` daily; Stripe Connect / banking.
+## Phase A — Close prior loops (1–2 days)
+
+1. **Daily expiring-deals cron** — schedule `notify_expiring_deals()` via `pg_cron` at 09:00 UTC daily.
+2. **Transactional emails for app events** — 3 React Email templates in `src/lib/email-templates/` using existing `_brand.ts`:
+   - `redemption-confirmed-creator`, `redemption-confirmed-traveller`, `deal-expiring`
+   Wire through the existing `enqueue_email` RPC + `process-email-queue` worker. Respect `email_preferences` and `suppressed_emails`. Ship the `/unsubscribe` page.
+3. **Header notification bell + realtime unread badge** — wire existing `NotificationsBell.tsx` to `notifications` via Supabase Realtime; deep-link per type; mark-all-read.
+
+## Phase B — Earnings ledger functional end-to-end, sans transfers (3–4 days)
+
+Build the full payout shape so Stripe just plugs in. No money moves; admin can mark runs "paid" once you've done the transfer manually next week (and after Stripe, this becomes automated).
+
+4. **Schema**
+   - `payout_runs(id, creator_id, period_start, period_end, total_payable_cents, currency, status: draft|approved|paid|void, paid_at, external_reference, notes)`
+   - `payout_line_items(id, payout_run_id, redemption_id, commission_cents)`
+   - `deal_redemptions.payout_run_id` (nullable FK) — excludes paid redemptions from future runs
+   - `creator_payout_details(creator_id, account_holder, country, iban, sort_code, account_number, vat_number, ...)` with strict creator-only RLS
+5. **Weekly draft-run generator** — Monday cron creates one `draft` run per creator whose unpaid `payable_cents` ≥ £20. Idempotent on `(creator_id, period_start)`.
+6. **Admin payouts console** `/admin/payouts` — list draft/approved/paid runs, per-run drill-down with line items + creator details, "Approve" → "Mark as paid" (captures bank reference + paid_at), CSV export of approved runs for bulk bank upload.
+7. **Creator payout history** on `/creator/earnings` — "Paid out" section with date / amount / reference; banner switches to "Payouts processed weekly".
+8. **`payout-paid` email template** — auto-sent on mark-as-paid with full breakdown.
+9. **Creator payout-details form** — collected from `/creator/earnings`. (Next week's Stripe phase replaces this with hosted onboarding; data captured now is the fallback + KYC trail.)
+
+After Phase B you can run real payouts by hand from the admin console using your personal account in the interim, with a full audit trail. When Stripe lands, the only change is replacing the "Mark as paid" action with `stripe.transfers.create` + webhook reconcile.
+
+## Phase C — Trust, safety, funnel quality (parallel to A/B, ~1 week)
+
+10. **Business verification gate** — domain-email or admin approval before first deal goes live; "Verified" badge on `/deals/$id`.
+11. **Creator-agreement acceptance timestamp** — recorded before first payout-eligible redemption.
+12. **Content moderation** — Lovable AI vision pass on video upload (NSFW/spam); reporter flow on videos/comments; shadow-ban state surfaced in `admin.moderation`.
+13. **Rate limiting** on public POST routes (applications, redemptions, comments, follows) — Postgres token bucket keyed by `user_id` + ip.
+14. **Studio → deal attachment polish** — ≤ 3 taps from `/studio/videos/$id` to attach an approved deal.
+15. **Search/discovery audit** — verify ranking on `/search`, `/destinations`, `/map`; add "more like this" via pgvector (`match_deals` already exists).
+16. **Public creator profile `/u/$username` polish** — og:image from top video, follow CTA, top deals strip. This is the share surface.
+17. **Onboarding checklists on `/welcome`** — creator: profile → first video → attach a deal → add payout details. Business: verify → first deal → invite a creator.
+18. **Admin KPI dashboard** at `/admin/index` — DAU, redemptions/day, GMV, commission accrued, **outstanding payout liability** (sum of unpaid `payable_cents`).
+19. **Error monitoring** (Sentry or equivalent) wired for server functions + browser.
+
+## Phase D — Pre-Stripe-ready housekeeping (1–2 days, can run during week)
+
+20. Custom domain + production email DNS verified
+21. Legal review pass on `/legal/*` (UK jurisdiction assumption) + DPA confirmation
+22. EU cookie/consent banner wired to analytics opt-in
+23. Verify sitemap/robots canonical URLs once domain set; submit to Search Console
+24. Backup verification + restore drill documented
+
+## Out of scope this week (planned for Stripe phase next week)
+
+- Stripe Connect Express onboarding (`/creator/payouts`, `/business/payouts`)
+- `stripe_accounts` table + `account.updated` / `payout.*` / `charge.dispute.*` webhook
+- Replace admin "Mark as paid" with `stripe.transfers.create` + reconcile
+- Dispute/clawback automation
+
+## Also out of scope
+
+- Native apps, push notifications, in-app DMs
+- Multi-currency (GBP only)
+- Affiliate-of-affiliates / referral program
+- Auto e-invoicing / VAT MOSS
 
 ---
 
-Close the redemption loop so users actually hear about what's happening, and shape the data Stripe will read from on day one of banking — without moving any money.
-
-## What already exists
-
-- `notifications` table with `type` enum, RLS scoped to `user_id`, owner read/update/delete.
-- DB triggers already firing for: `like`, `comment`, `reply`, `follow`, `deal_application`, `deal_application_decided`.
-- `/notifications` route exists.
-- Email infra: `pgmq` queues, `email_send_log`, `suppressed_emails`, `email_unsubscribe_tokens`, `enqueue_email()` RPC, scaffolded auth email templates with brand tokens.
-- `deal_redemptions` table with `status` (pending/confirmed/rejected) and `commission_cents` computed by trigger on confirm.
-
-## What's missing
-
-- No notifications when redemptions are confirmed or rejected → creator + traveller never hear back.
-- No notification when a deal is expiring → business has no nudge to renew.
-- `/notifications` has no header bell / unread badge / grouping.
-- No transactional email pipeline wired to events (templates not scaffolded for these).
-- No aggregated earnings view — creator dashboard shows pending/confirmed counts but no monthly breakdown, no "payable" concept, nothing Stripe Connect can read on day one.
-
-## Scope
-
-### 1. New notification types + DB triggers
-
-Migration adds enum values + 3 triggers:
-
-- `redemption_confirmed` → notify creator (`user_id = creator_id`) AND traveller (`user_id = redemption.user_id` when not null). Trigger on `deal_redemptions` AFTER UPDATE when `status` transitions to `confirmed`.
-- `redemption_rejected` → notify traveller only.
-- `deal_expiring_soon` → notify business owner. Driven by a small SQL function called from a daily cron (reuses existing `pg_cron` setup that runs `cron_expire_deals`), scanning `deals` where `ends_at` is between `now()` and `now() + interval '7 days'` and no `deal_expiring_soon` notification exists yet for that deal.
-
-Add `redemption_id` nullable column to `notifications` so the UI can deep-link.
-
-### 2. Notifications UI polish (frontend only)
-
-- Header bell icon with unread count badge (count of `notifications WHERE read_at IS NULL`) — uses Supabase Realtime subscription on `notifications` filtered by `user_id`.
-- `/notifications` route: group by day, show actor avatar + relative time + deep link per type (video → `/sounds/$id` or video detail, deal → `/deals/$id`, redemption → `/business/redemptions` or `/creator/analytics`, follow → `/u/$username`).
-- "Mark all as read" action (UPDATE `read_at = now()` for current user).
-- Empty state.
-
-### 3. Transactional email for the same 3 events
-
-Use the existing `enqueue_email` RPC inside the new triggers to push payloads onto a `transactional_emails` queue. Scaffold three React Email templates under `supabase/functions/_shared/email-templates/`:
-
-- `redemption-confirmed-creator.tsx` — "You earned £X.XX on {deal.title}"
-- `redemption-confirmed-traveller.tsx` — "Your booking with {business} is confirmed"
-- `deal-expiring.tsx` — "Your deal '{title}' expires in N days"
-
-Each user gets a per-type opt-out via a new `email_preferences` table (`user_id`, `notify_redemption`, `notify_expiry`, `notify_social`, defaults true). Settings page gets a "Email preferences" section. Unsubscribe links use the existing `email_unsubscribe_tokens` flow.
-
-Skip if user is in `suppressed_emails`.
-
-### 4. Payout-ready earnings aggregation
-
-Migration creates a SQL view (no money movement):
+## Suggested order
 
 ```text
-creator_earnings_monthly (view)
-  creator_id, month (date_trunc),
-  redemption_count,
-  gross_order_cents,
-  commission_cents_total,
-  payable_cents   -- sum where status='confirmed' AND confirmed_at < now() - interval '14 days'
-  pending_cents   -- sum where status='confirmed' AND confirmed_at >= now() - interval '14 days'
+Day 1–2:  Phase A
+Day 3–6:  Phase B  (ledger + admin payouts console + creator form)
+Day 4–7:  Phase C  (start in parallel; trust + funnel)
+Day 7+:   Phase D  (housekeeping)
+Next wk:  Stripe Connect swap-in (separate plan)
 ```
 
-RLS: creator reads own rows; admin reads all.
-
-Server fns in `src/lib/earnings.functions.ts`:
-- `getCreatorEarningsSummary()` → all-time totals + last 6 months.
-- `getCreatorEarningsByMonth({ from, to })` → table rows.
-- `getCreatorEarningsByDeal({ month? })` → per-deal contribution.
-
-### 5. Creator earnings page
-
-New route `/creator/earnings`:
-- Header KPIs: Lifetime commission, Payable now, Pending clearance, This month.
-- Monthly bar chart (last 6 months) — reuse existing chart components if present, else simple CSS bars.
-- Table: per-deal contribution for the selected month.
-- Banner: "Payouts launch when banking is connected" with a disabled "Connect bank" CTA (placeholder for Stripe Connect phase).
-
-Add a link to it from `/creator/analytics` and from the header user menu.
-
-## Files
-
-- `supabase/migrations/<ts>_notifications_redemptions_and_earnings.sql` — new enum values, triggers, `redemption_id` column, `email_preferences` table + RLS, `creator_earnings_monthly` view + RLS, expiring-deals notification function.
-- `supabase/migrations/<ts>_cron_notify_expiring_deals.sql` — pg_cron schedule (separate migration for clarity).
-- `supabase/functions/_shared/email-templates/redemption-confirmed-creator.tsx`
-- `supabase/functions/_shared/email-templates/redemption-confirmed-traveller.tsx`
-- `supabase/functions/_shared/email-templates/deal-expiring.tsx`
-- `src/lib/earnings.functions.ts` — new
-- `src/lib/notifications.functions.ts` — extend with `markAllRead`, `getUnreadCount`
-- `src/lib/email-preferences.functions.ts` — new
-- `src/routes/creator.earnings.tsx` — new
-- `src/routes/notifications.tsx` — polish
-- `src/routes/settings.tsx` — add email preferences section
-- `src/components/layout/Header.tsx` (or equivalent) — add notification bell with realtime unread badge
-
-## Explicitly out of scope
-
-- Stripe Connect onboarding, payouts, bank account capture — deferred until banking phase.
-- Tax/invoicing/VAT — deferred.
-- Push notifications (web push / mobile) — email + in-app only for now.
-- Notification digest / batching — every event sends one email.
-- Currency conversion — totals shown in GBP only.
-- Dispute / clawback flows for confirmed redemptions.
-
-## Verification
-
-- Confirm a `pending` redemption from `/business/redemptions` → creator + traveller see new in-app notification within seconds (realtime); both receive email (check `email_send_log`).
-- Reject another → traveller-only notification + email.
-- Insert a deal with `ends_at = now() + 3 days`, run the expiry cron manually → business sees notification + email, second run does not duplicate.
-- Open `/creator/earnings` as a creator with confirmed redemptions older than 14 days → `payable_cents` populated; newer ones land in `pending_cents`.
-- Toggle email preferences off → trigger still creates in-app notification but no email enqueued.
+**Recommendation:** start Phase A immediately — small, finishes the prior phase, and the email pipeline is needed for Phase B's payout receipts. Want me to write the Phase A implementation plan next?
