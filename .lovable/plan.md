@@ -1,68 +1,49 @@
-# Investor-ready TAM / SAM / SOM v7
+# Travidz Market Research v8 — full populated workbook (v6-depth, v7 numbers)
 
-Goal: make the market sizing defensible to a seed investor and reconcile it line-for-line with `Travidz_Financial_Model_v1.xlsx` (Y5 GBV £444M, Y5 net £20.7M, blended take-rate 4.65%).
+The current v7 file is sparse — 5 thin sheets with lots of whitespace. v6 was a 12-sheet investor research dossier with sources, scenarios, sensitivity, competitors and trends. v8 will restore that depth while keeping the new UK-first build and locking to `Travidz_Financial_Model_v1.xlsx`.
 
-## Problems with the current v6
+## Output
 
-1. **TAM scope is fuzzy** — "UK + key EU travel" with no source. The financial model and hiring plan are UK-first, so investors will challenge the geography.
-2. **SOM is top-down only** — driven by a "% of SAM" slider with no link to the creator funnel. Investors want bottom-up.
-3. **No sources** — every input is hardcoded with no citation. Fails first DD question.
-4. **Net revenue & take-rate missing from market view** — only GBV is shown; deck needs the £20.7M Y5 net + 4.65% take-rate front-and-centre.
-5. **No reconciliation slide** — nothing shows that £444M Y5 GBV from the cohort model fits inside the SOM ceiling.
+New file: `Travidz_Market_Research_TAM_SOM_v8.xlsx` (+ PDF). Replaces v7 as the canonical market doc.
 
-## What v7 will deliver
+## Workbook structure (13 sheets, ~500+ populated rows)
 
-### 1. New workbook: `Travidz_Market_Research_TAM_SOM_v7.xlsx`
+1. **1. Cover** — Project brief (product, ICP, revenue model, round, use of funds), global inputs (FX rates, founders, runway), colour key, methodology, commission structure summary.
+2. **2. Exec Summary** — Headline TAM/SAM/SOM table, 5-year SOM build (creators, GBV, net rev), raise & runway by scenario, top 5 pitch-ready stats, creator-channel headline.
+3. **3. TAM** — UK-first build (outbound + domestic, source per line), EU-5 expansion layer, bottom-up cross-check (smartphone-enabled travellers × bookable spend), reconciliation %, blended take-rate, commission pool.
+4. **4. SAM** — Creator-influenced filter table per country (UK, FR, DE, ES, IT, NL): travellers × smartphone × creator-discovery share, total serviceable travellers, commissionable spend, SAM GBV + commission pool.
+5. **5. SOM** — Scenario toggles (Bear/Base/Bull) for creator UA, CPI, organic multiplier, MAU activation, booker conversion, bookings/yr, basket, take-rate. 5-year build per scenario: paid installs, organic, MAU, bookers, GBV, commission. Locked to financial model in Base.
+6. **6. Cohort Maturity** — Founding (500) / Power / Maturing / Mature / New tier mix by year 1-5, blended commission share, blended take-rate (4.65% Y5), tier transition logic.
+7. **7. Revenue Engine** — Commission breakdown: gross 8%, tapered creator share (50/50/50/40/30 by tier), Travidz net per tier, blended monthly run-rate by year, ARPU per active creator.
+8. **8. Competitors** — Booking Affiliates, TheFork, Klook, GetYourGuide, Headout, Tripadvisor Experiences, Airbnb Experiences. Columns: take-rate, creator share, model, our edge.
+9. **9. Trends** — Creator-economy travel growth, Gen Z/M booking behaviour, social discovery share, short-break demand, UK staycation trend — each row with stat + source.
+10. **10. Sensitivity** — Y5 net revenue tornado: ±20% on creators, GBV/creator, take-rate, churn, CAC. Two-way table: creators × GBV/creator.
+11. **11. Sources** — Numbered [S1]…[S25] citations: ONS, VisitBritain, Eurostat, GWI, Phocuswright, Skift, UNWTO, WTTC, data.ai, Statista, BoE FX, ABS, Stats NZ, CSO Ireland, etc. Full URL + retrieval date.
+12. **12. Rev-Share Scenarios** — Side-by-side: flat 50/50, tapered 50/40/30 (Travidz), tapered 60/50/40 (stretch). Shows Y5 net revenue under each + creator NPS impact.
+13. **13. Reconciliation** — Workbook vs financial model Y1-Y5 GBV, net rev, take-rate, active creators. Zero-delta proof. Flag cells red if delta > £100k.
 
-Buildstreams-style, 5 sheets, every input cell sourced:
+## Build & QA
 
-- **`tam_sam`** — UK-first build:
-  - TAM = UK outbound + domestic leisure travel spend (ONS Travel Trends + UK Tourism Statistics + VisitBritain)
-  - +EU-5 expansion layer (France, Germany, Spain, Italy, Netherlands) shown separately so investors see the UK-only floor and the EU-5 expansion ceiling
-  - SAM = creator-influenced share of leisure travel (cite GWI / Expedia Path-to-Purchase / Phocuswright social-discovery stats)
-  - All sources in adjacent cells per xlsx skill convention
-- **`som_bottom_up`** — creators × GBV/creator × 5y curve, pulling the **same** 500 → 24,000 anchors and £18,500 GBV/creator from the financial model. Output: Y1–Y5 GBV, net revenue, take-rate matching `combined_pnl_cash` exactly.
-- **`som_top_down`** — % of SAM capture by year, as a sanity check. Flags red if bottom-up SOM > 5% of SAM (unrealistic) or > SAM (broken).
-- **`reconciliation`** — side-by-side Y1–Y5: financial model GBV vs bottom-up SOM vs top-down SOM ceiling, with delta column. Must be zero delta vs financial model.
-- **`summary`** — investor-ready one-pager: TAM £X, SAM £Y, SOM Y5 £444M GBV / £20.7M net, take-rate 4.65%, with charts.
+- Use Buildstreams colour conventions: blue inputs / black formulas / green cross-sheet refs / yellow key assumptions / red flags.
+- All numbers tied via formulas (no orphan hardcodes except sourced inputs).
+- Number formats per xlsx skill (£#,##0;(£#,##0);- and £M / £B compaction).
+- Run `recalculate_formulas.py` → assert total_errors=0.
+- Convert to PDF (landscape A4, fit-to-width per sheet), render every page to JPG, inspect for: overflow, blanks, clipped charts, source legibility, reconciliation = 0.
+- Iterate until clean.
 
-Build with openpyxl, recalc via `recalculate_formulas.py` → assert `total_errors: 0`, render to PDF + JPGs, QA every page.
+## Sync after delivery
 
-### 2. Sync `src/lib/investor-model/`
-
-- Replace `V6_DEFAULTS` with `V7_DEFAULTS` in `assumptions.ts` — same creator anchors (already correct), but:
-  - Split `tamTravellers` into `tamUKTravellers` + `tamEU5Travellers` with separate average booking values
-  - Replace the `somSharePctByYear` slider's role: keep it as a **ceiling check** input, not the SOM driver
-- Update `compute.ts` `computeMarket()` to expose `somBottomUpGBVByYear` (creator-driven, matches financial model) alongside the existing top-down `somGBVByYear`, plus a `reconciliation` field.
-- Update `src/routes/admin.investor.tsx` Market tab:
-  - Show TAM (UK only) and TAM (UK+EU5) as two cards
-  - SOM card switches to bottom-up Y5: £444M GBV / £20.7M net / 4.65% take-rate
-  - Add reconciliation strip: bottom-up vs top-down ceiling, with green tick when within bounds
-
-### 3. Update the investor deck
-
-Rebuild the TAM/SAM/SOM slide in `Travidz_Investor_Deck_Seed_v1.pptx` → `_v2.pptx`:
-- Three-tier funnel visual: TAM → SAM → SOM (Y5)
-- SOM panel shows £444M GBV / £20.7M net / 4.65% take-rate with "bottom-up from 24,000 creators" caption
-- Footnote citations for every TAM/SAM number
-- Re-export PDF, QA each slide
+Once user reviews v8 workbook, sync any tweaked inputs back into `src/lib/investor-model/` defaults so the in-app `/admin/investor` tab stays consistent. No schema changes anticipated (v7 schema already supports UK + EU-5).
 
 ## Out of scope
 
-- No changes to the financial model (it's the source of truth)
-- No changes to commission logic, hiring plan, or burn
-- No new database tables or server functions
-- Slides other than TAM/SAM/SOM stay untouched in this pass
+- Pitch deck regeneration (separate pass once v8 approved).
+- Changes to the financial model itself.
+- Changes to commission logic in code.
 
-## Sequence
+## Sequencing
 
-1. Build v7 workbook + QA
-2. User reviews v7 workbook & sources
-3. On approval: sync `investor-model/` code + admin tab
-4. Rebuild deck slide, re-export PDF
-
-## Technical notes
-
-- Workbook: openpyxl, Buildstreams colour conventions (blue inputs, black formulas, green cross-sheet refs, yellow = source cell). Number formats per xlsx skill (`£#,##0;(£#,##0);-`, `0.00%`, `0.0x`).
-- TS changes are surgical to `assumptions.ts`, `compute.ts`, `admin.investor.tsx` — no breaking changes to consumers of `computeRevenue` (Y5 GBV stays £444M).
-- Deck: edit existing pptx via unpack/repack workflow per pptx skill, not full rebuild.
+1. Build v8 workbook (single openpyxl script, ~500 lines).
+2. QA every sheet visually.
+3. Deliver xlsx + PDF artifacts.
+4. Await sign-off → then regenerate deck slide.
