@@ -28,7 +28,7 @@ function BusinessAgreementPage() {
       <h2>4. Tracking and reporting</h2>
       <p>Travidz logs impressions, clicks and (once available) redemptions to help you measure performance. Tracking is on a best-efforts basis and is not a finance system.</p>
       <h2>5. Commissions and payouts</h2>
-      <p>Travidz charges a flat <strong>{COMMISSION.totalPct}% commission</strong> on bookings we send you, split 50/50 between the creator who promoted you ({COMMISSION.creatorPct}%) and Travidz ({COMMISSION.platformPct}%). Payouts and invoicing are not yet enabled; commissions accrue as tracked attributions until payments infrastructure launches.</p>
+      <p>Travidz charges a flat <strong>{COMMISSION.totalPct}% commission</strong> on bookings we send you. That 8% is shared between the creator who promoted you and Travidz; the creator's share depends on their tier (see <a href="/legal/creator-agreement">Creator Agreement</a>). Your invoice from Travidz is always the same flat 8% — the internal split does not change what you owe. Payouts and invoicing are not yet enabled; commissions accrue as tracked attributions until payments infrastructure launches.</p>
       <h2>6. Best Price Guarantee & price-match authorisation</h2>
       <p>To protect traveller trust and keep direct bookings competitive with third-party platforms, you authorise Travidz to:</p>
       <p><strong>(a) Automatically check</strong> the publicly bookable price for the same room, activity, date and party size on supported third-party platforms (Booking.com, Expedia, GetYourGuide, Viator, Agoda, Skyscanner, Airalo, and others added over time) at the moment a traveller clicks to book through Travidz.</p>
