@@ -52,6 +52,7 @@ import { Route as CreatorApplicationsRouteImport } from './routes/creator.applic
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
+import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
@@ -68,6 +69,7 @@ import { Route as DestinationsCountryCityRouteImport } from './routes/destinatio
 import { Route as BusinessInviteTokenRouteImport } from './routes/business.invite.$token'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
+import { Route as BookMatchCodeRouteImport } from './routes/book.match.$code'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
 import { Route as BusinessDealsIdIndexRouteImport } from './routes/business.deals.$id.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -294,6 +296,11 @@ const BusinessRedemptionsRoute = BusinessRedemptionsRouteImport.update({
   path: '/business/redemptions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BusinessPriceAuditRoute = BusinessPriceAuditRouteImport.update({
+  id: '/business/price-audit',
+  path: '/business/price-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessCalculatorRoute = BusinessCalculatorRouteImport.update({
   id: '/business/calculator',
   path: '/business/calculator',
@@ -373,6 +380,11 @@ const BusinessDealsNewRoute = BusinessDealsNewRouteImport.update({
 const BusinessDealsIdRoute = BusinessDealsIdRouteImport.update({
   id: '/business/deals/$id',
   path: '/business/deals/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookMatchCodeRoute = BookMatchCodeRouteImport.update({
+  id: '/book/match/$code',
+  path: '/book/match/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
@@ -456,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
@@ -484,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
@@ -525,6 +539,7 @@ export interface FileRoutesByTo {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
@@ -553,6 +568,7 @@ export interface FileRoutesByTo {
   '/legal': typeof LegalIndexRoute
   '/studio': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
@@ -596,6 +612,7 @@ export interface FileRoutesById {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
@@ -624,6 +641,7 @@ export interface FileRoutesById {
   '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
+  '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
@@ -669,6 +687,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/price-audit'
     | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
@@ -697,6 +716,7 @@ export interface FileRouteTypes {
     | '/legal/'
     | '/studio/'
     | '/api/public/mux-webhook'
+    | '/book/match/$code'
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/business/invite/$token'
@@ -738,6 +758,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/price-audit'
     | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
@@ -766,6 +787,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/studio'
     | '/api/public/mux-webhook'
+    | '/book/match/$code'
     | '/business/deals/new'
     | '/business/invite/$token'
     | '/destinations/$country/$city'
@@ -808,6 +830,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/price-audit'
     | '/business/redemptions'
     | '/collections/$id'
     | '/creator/analytics'
@@ -836,6 +859,7 @@ export interface FileRouteTypes {
     | '/legal/'
     | '/studio/'
     | '/api/public/mux-webhook'
+    | '/book/match/$code'
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/business/invite/$token'
@@ -873,6 +897,7 @@ export interface RootRouteChildren {
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
+  BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
@@ -895,6 +920,7 @@ export interface RootRouteChildren {
   ItinerariesIndexRoute: typeof ItinerariesIndexRoute
   LegalIndexRoute: typeof LegalIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
+  BookMatchCodeRoute: typeof BookMatchCodeRoute
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
@@ -1212,6 +1238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessRedemptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/business/price-audit': {
+      id: '/business/price-audit'
+      path: '/business/price-audit'
+      fullPath: '/business/price-audit'
+      preLoaderRoute: typeof BusinessPriceAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/calculator': {
       id: '/business/calculator'
       path: '/business/calculator'
@@ -1322,6 +1355,13 @@ declare module '@tanstack/react-router' {
       path: '/business/deals/$id'
       fullPath: '/business/deals/$id'
       preLoaderRoute: typeof BusinessDealsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/match/$code': {
+      id: '/book/match/$code'
+      path: '/book/match/$code'
+      fullPath: '/book/match/$code'
+      preLoaderRoute: typeof BookMatchCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/mux-webhook': {
@@ -1496,6 +1536,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
+  BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
@@ -1518,6 +1559,7 @@ const rootRouteChildren: RootRouteChildren = {
   ItinerariesIndexRoute: ItinerariesIndexRoute,
   LegalIndexRoute: LegalIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
+  BookMatchCodeRoute: BookMatchCodeRoute,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
