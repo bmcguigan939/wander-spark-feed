@@ -60,7 +60,7 @@ const CAT_TAG_KEYWORDS: Record<DealCategory, string[]> = {
 function categoryTagFilter(cat: DealCategory): string | null {
   const kws = CAT_TAG_KEYWORDS[cat];
   if (!kws.length) return null;
-  return kws.map((k) => `tags.cs.{${k}}`).join(",");
+  return kws.map((k) => `activity_tags.cs.{${k}}`).join(",");
 }
 
 export const getMapPins = createServerFn({ method: "GET" })
