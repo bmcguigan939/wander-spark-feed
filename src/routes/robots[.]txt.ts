@@ -17,7 +17,7 @@ export const Route = createFileRoute("/robots.txt")({
           "Disallow: /reset-password",
           "Disallow: /welcome",
           "",
-          "Sitemap: https://wander-spark-feed.lovable.app/sitemap.xml",
+          "Sitemap: https://travidz.com/sitemap.xml",
           "",
         ].join("\n");
         return new Response(body, {
