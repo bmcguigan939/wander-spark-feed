@@ -59,6 +59,7 @@ import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
+import { Route as AdminErrorsRouteImport } from './routes/admin.errors'
 import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
@@ -328,6 +329,11 @@ const AdminModerationRoute = AdminModerationRouteImport.update({
   path: '/moderation',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminErrorsRoute = AdminErrorsRouteImport.update({
+  id: '/errors',
+  path: '/errors',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDiscoveriesRoute = AdminDiscoveriesRouteImport.update({
   id: '/discoveries',
   path: '/discoveries',
@@ -442,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/errors': typeof AdminErrorsRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -510,6 +517,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/errors': typeof AdminErrorsRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -580,6 +588,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
+  '/admin/errors': typeof AdminErrorsRoute
   '/admin/moderation': typeof AdminModerationRoute
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -652,6 +661,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/errors'
     | '/admin/moderation'
     | '/admin/payouts'
     | '/admin/users'
@@ -720,6 +730,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/errors'
     | '/admin/moderation'
     | '/admin/payouts'
     | '/admin/users'
@@ -789,6 +800,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/deals'
     | '/admin/discoveries'
+    | '/admin/errors'
     | '/admin/moderation'
     | '/admin/payouts'
     | '/admin/users'
@@ -1249,6 +1261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminModerationRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/errors': {
+      id: '/admin/errors'
+      path: '/errors'
+      fullPath: '/admin/errors'
+      preLoaderRoute: typeof AdminErrorsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/discoveries': {
       id: '/admin/discoveries'
       path: '/discoveries'
@@ -1381,6 +1400,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminDealsRoute: typeof AdminDealsRoute
   AdminDiscoveriesRoute: typeof AdminDiscoveriesRoute
+  AdminErrorsRoute: typeof AdminErrorsRoute
   AdminModerationRoute: typeof AdminModerationRoute
   AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1391,6 +1411,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDealsRoute: AdminDealsRoute,
   AdminDiscoveriesRoute: AdminDiscoveriesRoute,
+  AdminErrorsRoute: AdminErrorsRoute,
   AdminModerationRoute: AdminModerationRoute,
   AdminPayoutsRoute: AdminPayoutsRoute,
   AdminUsersRoute: AdminUsersRoute,

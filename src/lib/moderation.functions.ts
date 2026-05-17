@@ -61,13 +61,64 @@ async function callModerationGateway(prompt: string): Promise<ModerationResult |
   }
 }
 
+async function callVisionModerationGateway(
+  imageUrl: string,
+): Promise<ModerationResult | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "raw-fetch",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a vision content moderator for a short-form travel video platform. " +
+            "Inspect the thumbnail image. Flag only clear violations using these labels: " +
+            "nsfw (nudity, sexual content), hate (hateful symbols, slurs), spam (overlay text " +
+            "pushing external links/contact info or obvious scam imagery), other (graphic violence, " +
+            "weapons, gore). Return ONLY JSON: { flags: [{ label, confidence, reason }] }. " +
+            "If image is fine, return { flags: [] }. confidence is 0..1. Max 5 flags.",
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Moderate this travel video thumbnail." },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) {
+    console.error("[moderation/vision] gateway error", res.status);
+    return null;
+  }
+  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = json.choices?.[0]?.message?.content;
+  if (!raw) return null;
+  try {
+    return ModerationSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    console.error("[moderation/vision] parse failed", e);
+    return null;
+  }
+}
+
 // Auto-hide threshold. Above this, content is hidden automatically pending admin review.
 const AUTO_HIDE_THRESHOLD = 0.85;
 
 export async function moderateVideo(videoId: string): Promise<void> {
   const { data: video } = await supabaseAdmin
     .from("videos")
-    .select("id,title,description,transcript")
+    .select("id,title,description,transcript,thumbnail_url")
     .eq("id", videoId)
     .maybeSingle();
   if (!video) return;
@@ -78,22 +129,33 @@ export async function moderateVideo(videoId: string): Promise<void> {
     (video as any).transcript ? `Transcript:\n${String((video as any).transcript).slice(0, 3000)}` : "",
   ].join("\n");
 
-  if (text.replace(/\s+/g, "").length < 20) return;
+  // Run text + vision passes in parallel. Combine flags into one decision.
+  const thumb = (video as any).thumbnail_url as string | null | undefined;
+  const [textResult, visionResult] = await Promise.all([
+    text.replace(/\s+/g, "").length >= 20
+      ? callModerationGateway(text)
+      : Promise.resolve(null),
+    thumb ? callVisionModerationGateway(thumb) : Promise.resolve(null),
+  ]);
 
-  const result = await callModerationGateway(text);
-  if (!result || result.flags.length === 0) return;
+  const combined = [
+    ...(textResult?.flags ?? []).map((f) => ({ ...f, source: "text" as const })),
+    ...(visionResult?.flags ?? []).map((f) => ({ ...f, source: "vision" as const })),
+  ];
+  if (combined.length === 0) return;
 
-  const top = result.flags.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+  const top = combined.reduce((a, b) => (a.confidence > b.confidence ? a : b));
   const shouldHide = top.confidence >= AUTO_HIDE_THRESHOLD;
 
-  // Insert flags
   await supabaseAdmin.from("moderation_flags").insert(
-    result.flags.map((f) => ({
+    combined.map((f) => ({
       target_type: "video",
       target_id: videoId,
       label: f.label,
       confidence: f.confidence,
-      reason: f.reason ?? null,
+      reason: f.reason
+        ? `[${f.source}] ${f.reason}`
+        : `[${f.source}] auto-flagged`,
       status: shouldHide ? "auto_hidden" : "pending",
     })),
   );

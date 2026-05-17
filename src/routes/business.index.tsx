@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck } from "lucide-react";
 import { Sparkline } from "@/components/business/Sparkline";
 import { AgreementBanner } from "@/components/AgreementBanner";
+import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -48,6 +49,7 @@ function BusinessDashboard() {
     <MobileShell>
       <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
+        <OnboardingChecklist />
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />

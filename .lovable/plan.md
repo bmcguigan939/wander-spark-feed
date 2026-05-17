@@ -91,5 +91,8 @@ Next wk:  Stripe Connect swap-in (separate plan)
   - ✅ Creator + business agreement acceptance timestamps + dashboard banner
   - ✅ Rate-limit table + `check_rate_limit` SQL fn + applied to `postComment` and `claimRedemption`
   - ✅ Admin KPI dashboard: GMV30d, commission30d, outstanding payout liability, 7d/30d bookings, verified business count, pending moderation flags
-  - ⏳ Still to do: vision-pass moderation on video thumbnails, business onboarding checklist polish, error monitoring hook
+  - ✅ Vision-pass moderation: thumbnail is sent to Gemini 2.5-flash vision in parallel with text moderation; flags merged + auto-hide at >=0.85 confidence
+  - ✅ Business onboarding checklist on `/business` (agreement → verified → first deal → first confirmed booking, with progress bar, dismissable)
+  - ✅ Error monitoring: `client_error_logs` table + `logClientError` server fn + `ErrorReporter` global listener + admin `/admin/errors` console
+- **Phase C ✅ complete**
 - **Phase D / Stripe** — not started.

@@ -2,20 +2,21 @@ import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tansta
 import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { Shield, BarChart3, Film, Tag, Users, Sparkles, ShieldAlert, Banknote } from "lucide-react";
+import { Shield, BarChart3, Film, Tag, Users, Sparkles, ShieldAlert, Banknote, Bug } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Travidz" }] }),
   component: AdminLayout,
 });
 
-const TABS: Array<{ to: "/admin" | "/admin/videos" | "/admin/deals" | "/admin/users" | "/admin/discoveries" | "/admin/moderation" | "/admin/payouts"; label: string; icon: typeof BarChart3; exact?: boolean }> = [
+const TABS: Array<{ to: "/admin" | "/admin/videos" | "/admin/deals" | "/admin/users" | "/admin/discoveries" | "/admin/moderation" | "/admin/payouts" | "/admin/errors"; label: string; icon: typeof BarChart3; exact?: boolean }> = [
   { to: "/admin", label: "Overview", icon: BarChart3, exact: true },
   { to: "/admin/videos", label: "Videos", icon: Film },
   { to: "/admin/deals", label: "Deals", icon: Tag },
   { to: "/admin/payouts", label: "Payouts", icon: Banknote },
   { to: "/admin/discoveries", label: "AI Queue", icon: Sparkles },
   { to: "/admin/moderation", label: "Moderation", icon: ShieldAlert },
+  { to: "/admin/errors", label: "Errors", icon: Bug },
   { to: "/admin/users", label: "Users", icon: Users },
 ];
 
