@@ -1,49 +1,84 @@
-# Travidz Market Research v8 — full populated workbook (v6-depth, v7 numbers)
+## Goal
 
-The current v7 file is sparse — 5 thin sheets with lots of whitespace. v6 was a 12-sheet investor research dossier with sources, scenarios, sensitivity, competitors and trends. v8 will restore that depth while keeping the new UK-first build and locking to `Travidz_Financial_Model_v1.xlsx`.
+Refresh the Travidz investor pitch with the brighter Travidz brand palette, keep the original v1 narrative intact, and weave in a **Prove → Scale → Defend** 3-phase growth plan. Ship as PPTX + PDF + interactive in-app deck.
 
-## Output
+## Palette (all three formats)
 
-New file: `Travidz_Market_Research_TAM_SOM_v8.xlsx` (+ PDF). Replaces v7 as the canonical market doc.
+Aligned with project core memory — bright, Apple-like, electric blue on deep slate.
 
-## Workbook structure (13 sheets, ~500+ populated rows)
+| Token | Hex | Use |
+|---|---|---|
+| `bg-deep` | `#0F172A` | Slide backgrounds (title + closer) |
+| `bg-light` | `#F8FAFC` | Slide backgrounds (content) |
+| `primary` | `#3B82F6` | Headlines, accent bars, phase highlights |
+| `primary-glow` | `#60A5FA` | Gradients, hover/active states |
+| `ink` | `#0F172A` | Body text on light |
+| `paper` | `#F8FAFC` | Body text on dark |
+| `muted` | `#64748B` | Captions, sources |
+| `success` | `#22D3EE` | Positive metrics, gates met |
 
-1. **1. Cover** — Project brief (product, ICP, revenue model, round, use of funds), global inputs (FX rates, founders, runway), colour key, methodology, commission structure summary.
-2. **2. Exec Summary** — Headline TAM/SAM/SOM table, 5-year SOM build (creators, GBV, net rev), raise & runway by scenario, top 5 pitch-ready stats, creator-channel headline.
-3. **3. TAM** — UK-first build (outbound + domestic, source per line), EU-5 expansion layer, bottom-up cross-check (smartphone-enabled travellers × bookable spend), reconciliation %, blended take-rate, commission pool.
-4. **4. SAM** — Creator-influenced filter table per country (UK, FR, DE, ES, IT, NL): travellers × smartphone × creator-discovery share, total serviceable travellers, commissionable spend, SAM GBV + commission pool.
-5. **5. SOM** — Scenario toggles (Bear/Base/Bull) for creator UA, CPI, organic multiplier, MAU activation, booker conversion, bookings/yr, basket, take-rate. 5-year build per scenario: paid installs, organic, MAU, bookers, GBV, commission. Locked to financial model in Base.
-6. **6. Cohort Maturity** — Founding (500) / Power / Maturing / Mature / New tier mix by year 1-5, blended commission share, blended take-rate (4.65% Y5), tier transition logic.
-7. **7. Revenue Engine** — Commission breakdown: gross 8%, tapered creator share (50/50/50/40/30 by tier), Travidz net per tier, blended monthly run-rate by year, ARPU per active creator.
-8. **8. Competitors** — Booking Affiliates, TheFork, Klook, GetYourGuide, Headout, Tripadvisor Experiences, Airbnb Experiences. Columns: take-rate, creator share, model, our edge.
-9. **9. Trends** — Creator-economy travel growth, Gen Z/M booking behaviour, social discovery share, short-break demand, UK staycation trend — each row with stat + source.
-10. **10. Sensitivity** — Y5 net revenue tornado: ±20% on creators, GBV/creator, take-rate, churn, CAC. Two-way table: creators × GBV/creator.
-11. **11. Sources** — Numbered [S1]…[S25] citations: ONS, VisitBritain, Eurostat, GWI, Phocuswright, Skift, UNWTO, WTTC, data.ai, Statista, BoE FX, ABS, Stats NZ, CSO Ireland, etc. Full URL + retrieval date.
-12. **12. Rev-Share Scenarios** — Side-by-side: flat 50/50, tapered 50/40/30 (Travidz), tapered 60/50/40 (stretch). Shows Y5 net revenue under each + creator NPS impact.
-13. **13. Reconciliation** — Workbook vs financial model Y1-Y5 GBV, net rev, take-rate, active creators. Zero-delta proof. Flag cells red if delta > £100k.
+Typography: SF Pro Display (headings) / Inter (body) — matches project core.
 
-## Build & QA
+Replaces v1's flatter Midnight Indigo navy. Brighter, more confident, consistent across PPTX + PDF + app.
 
-- Use Buildstreams colour conventions: blue inputs / black formulas / green cross-sheet refs / yellow key assumptions / red flags.
-- All numbers tied via formulas (no orphan hardcodes except sourced inputs).
-- Number formats per xlsx skill (£#,##0;(£#,##0);- and £M / £B compaction).
-- Run `recalculate_formulas.py` → assert total_errors=0.
-- Convert to PDF (landscape A4, fit-to-width per sheet), render every page to JPG, inspect for: overflow, blanks, clipped charts, source legibility, reconciliation = 0.
-- Iterate until clean.
+## Original v1 narrative — preserved
 
-## Sync after delivery
+All 15 v1 slides keep their headlines, body copy, and visual structure. Only changes:
+- Recolour to Travidz palette above
+- Refresh numbers to v8 / financial model (TAM £87.6B UK / £343B UK+EU-5; SAM £23.2B / £82.9B; Y5 SOM £444M GBV / £20.7M net / 4.65% take; sources → ONS, VisitBritain, Eurostat, Phocuswright, GWI, Skift)
+- Update 18-month milestones on Ask slide to match Phase 1 gates
 
-Once user reviews v8 workbook, sync any tweaked inputs back into `src/lib/investor-model/` defaults so the in-app `/admin/investor` tab stays consistent. No schema changes anticipated (v7 schema already supports UK + EU-5).
+## 3-phase plan — woven in (not bolted on)
 
-## Out of scope
+**New slide (inserted after Slide 11 — Go-to-Market):**
 
-- Pitch deck regeneration (separate pass once v8 approved).
-- Changes to the financial model itself.
-- Changes to commission logic in code.
+**Slide 12 — Growth plan: Prove → Scale → Defend**
+
+Horizontal 3-column timeline. Each column is a phase card on dark gradient with primary-blue accent bar.
+
+| Phase | Window · Raise | Headline | KPI gates (exit criteria) | Use of funds |
+|---|---|---|---|---|
+| **1 · Prove** | M0–18 · Seed £2M | UK-only. Founding-500 lock-in. Prove unit economics. | 2,400 creators · £44M GBV · 4.12% take · 100 power-tier locks · 250 operators | 40% creator GTM · 35% eng · 15% supply · 10% G&A |
+| **2 · Scale** | M18–44 · Series A £8M | EU-5 rollout (FR/DE/ES/IT/NL). Paid-UA flywheel. Double engineering. | 14,000 creators · £259M GBV · 4.72% take · £12M ARR | EU expansion · ranking/personalisation · ops scale |
+| **3 · Defend** | M44–60+ · Series B £20M | Platform moat. Supply-side network effects. US entry options. | 24,000 creators · £444M GBV · 4.65% blended · category default | US entry · partnerships · trust/safety · data moat |
+
+**Cross-references in existing slides (light touch, no rewrites):**
+- Slide 11 (GTM): add phase chip ("Phase 1 · Prove") to the founding-500 column; ("Phase 2 · Scale") to power-tier; ("Phase 3 · Defend") to operator pull
+- Slide 14 (Ask): retitle "18-MONTH MILESTONES" → "PHASE 1 · PROVE — 18-month gates" and align bullets to Phase 1 exit criteria
+
+Final deck length: **16 slides** (was 15).
+
+## Three deliverables
+
+### 1. PPTX — `Travidz_Investor_Deck_Seed_v2.pptx`
+- Rebuild via `pptxgenjs` reusing v1 layout/content
+- Apply Travidz palette globally
+- New Phase slide: 3 cards, primary-blue top borders, phase number large in `primary-glow`, dark gradient bg
+- Save to `/mnt/documents/`
+
+### 2. PDF — `Travidz_Investor_Deck_Seed_v2.pdf`
+- LibreOffice headless conversion from PPTX
+- Visual QA: render each slide → JPG → inspect for overflow/contrast/overlap → fix → re-render until clean
+
+### 3. In-app interactive deck — `/investor/deck`
+- TanStack route `src/routes/investor.deck.tsx`
+- Follow `slides-app` knowledge: fixed 1920×1080 slides + scale transform, scoped font scaling, dark backdrop
+- 16 React slide components in `src/components/investor-deck/slides/`
+- Shell: keyboard nav (← → Space Esc), F for fullscreen, G for thumbnail grid, slide counter
+- Public route, `noindex` meta — founder can share link
+- "Open pitch deck" link added to `/admin/investor` header
+- Reuses palette via CSS variables in `src/styles.css` (extends existing tokens, no breaking changes)
 
 ## Sequencing
+1. Build PPTX (all 16 slides, new palette, phase slide) → render → QA → fix → re-render until clean
+2. Convert clean PPTX → PDF
+3. Build in-app deck (route + 16 slides + shell) — mirrors PPTX
+4. Cross-check numbers across all three formats match v8 + financial model
 
-1. Build v8 workbook (single openpyxl script, ~500 lines).
-2. QA every sheet visually.
-3. Deliver xlsx + PDF artifacts.
-4. Await sign-off → then regenerate deck slide.
+## Out of scope
+- Rewriting v1 headlines or restructuring slide order
+- Editing v8 workbook or financial model
+- Founder placeholders (team names, live traction) — left as `[ ... ]`
+- Changes to `src/lib/investor-model/` assumptions
+
+No new dependencies, migrations, or server functions.
