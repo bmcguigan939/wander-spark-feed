@@ -117,12 +117,12 @@ export const confirmRedemption = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const update: Record<string, unknown> = {
-      status: "confirmed",
+    const update = {
+      status: "confirmed" as const,
       order_value_cents: data.orderValueCents,
       confirmed_by: userId,
+      ...(data.currency ? { currency: data.currency.toUpperCase() } : {}),
     };
-    if (data.currency) update.currency = data.currency.toUpperCase();
     const { data: row, error } = await supabase
       .from("deal_redemptions")
       .update(update)
