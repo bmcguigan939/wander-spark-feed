@@ -35,6 +35,7 @@ import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
@@ -193,6 +194,11 @@ const SoundsIdRoute = SoundsIdRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
@@ -372,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByTo {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -484,6 +492,7 @@ export interface FileRoutesById {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -598,6 +608,7 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -654,6 +665,7 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -706,6 +718,7 @@ export interface RootRouteChildren {
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
+  LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
   SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/itineraries/new': {
@@ -1215,6 +1235,7 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
+  LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
   SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
@@ -1239,3 +1260,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
