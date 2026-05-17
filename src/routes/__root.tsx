@@ -7,6 +7,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorReporter } from "@/components/ErrorReporter";
 
 function NotFoundComponent() {
   return (
@@ -23,6 +24,13 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   console.error(error);
+  // Best-effort: surface route-level errors to client_error_logs via a
+  // synthetic window error event so ErrorReporter throttles + dedupes them.
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new ErrorEvent("error", { error, message: error.message }));
+    } catch {}
+  }
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-sm text-center">
@@ -95,6 +103,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthListener />
+        <ErrorReporter />
         <Outlet />
         <Toaster />
       </AuthProvider>
