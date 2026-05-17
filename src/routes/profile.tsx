@@ -114,27 +114,25 @@ function ProfilePage() {
 
   return (
     <MobileShell>
-      <CinematicHeader
-        height="h-44"
-        image={null}
-        eyebrow={data.roles.join(" · ")}
-        title={<span className="sr-only">@{p.username}</span>}
-        trailing={
+      <header className="relative h-14 w-full overflow-hidden bg-aurora">
+        <div className="absolute inset-0 overlay-top opacity-40" />
+        <div className="relative flex h-full items-center justify-between px-5">
+          <span className="eyebrow text-white/85">{data.roles.join(" · ")}</span>
           <button
             onClick={openEdit}
             aria-label="Edit profile"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20"
           >
             <Settings className="h-4 w-4" />
           </button>
-        }
-      />
-      <div className="px-5 pt-5">
+        </div>
+      </header>
+      <div className="px-5 pt-4">
         <div className="flex items-end gap-4">
           <img
             src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
             alt={p.username}
-            className="-mt-12 h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
+            className="-mt-8 h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
           />
           <div className="min-w-0 flex-1 pb-1">
             <h1 className="truncate font-display text-2xl font-semibold leading-tight">@{p.username}</h1>
