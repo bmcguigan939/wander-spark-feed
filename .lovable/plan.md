@@ -1,119 +1,113 @@
-# Referral redirect + business tracking
+# Notifications + payout-ready earnings ledger
 
-Activate the end-to-end pipe so every deal click and redemption is captured cleanly, ready for analytics and (eventually) payout math — without touching banking or money movement.
+Close the redemption loop so users actually hear about what's happening, and shape the data Stripe will read from on day one of banking — without moving any money.
 
 ## What already exists
 
-- `/r/$code` page (client-rendered redirect via `resolveRedirect` serverFn) — works but flashes a loading screen, has no SSR-friendly 302, and doesn't capture `referrer_video_id`.
-- `/api/public/d/$id` and `/api/public/go/$id` — already do proper server 302 redirects for deal-id and affiliate-link routes, including `?v=<videoId>` capture and `wrapWithAffiliate` URL wrapping.
-- `deal_clicks` table — populated, has trigger to bump `deals.click_count`.
-- `deal_redirects` table — auto-populated by `sync_deal_redirect` trigger when a deal application is approved with a code.
-- `deal_redemptions` table — **does not exist yet**.
+- `notifications` table with `type` enum, RLS scoped to `user_id`, owner read/update/delete.
+- DB triggers already firing for: `like`, `comment`, `reply`, `follow`, `deal_application`, `deal_application_decided`.
+- `/notifications` route exists.
+- Email infra: `pgmq` queues, `email_send_log`, `suppressed_emails`, `email_unsubscribe_tokens`, `enqueue_email()` RPC, scaffolded auth email templates with brand tokens.
+- `deal_redemptions` table with `status` (pending/confirmed/rejected) and `commission_cents` computed by trigger on confirm.
 
-## What we'll build
+## What's missing
 
-### 1. Upgrade `/r/$code` to a true server 302
+- No notifications when redemptions are confirmed or rejected → creator + traveller never hear back.
+- No notification when a deal is expiring → business has no nudge to renew.
+- `/notifications` has no header bell / unread badge / grouping.
+- No transactional email pipeline wired to events (templates not scaffolded for these).
+- No aggregated earnings view — creator dashboard shows pending/confirmed counts but no monthly breakdown, no "payable" concept, nothing Stripe Connect can read on day one.
 
-Replace the client-rendered redirect at `src/routes/r.$code.tsx` with a TanStack server route that mirrors the `/api/public/d/$id` pattern:
+## Scope
 
-- Look up code in `deal_redirects` → load `deals` row → validate active/in-window.
-- Capture `?v=<videoId>` query param (referrer video) and pass it into the click insert.
-- Insert into `deal_clicks` with `deal_id`, `creator_id` (from `deal_redirects`), `referrer_video_id`.
-- Wrap final URL with `wrapWithAffiliate` (consistent with `/api/public/d`).
-- Return `302` with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
-- On unknown code → render a small "link not found" HTML page (200) with a link back to `/`.
+### 1. New notification types + DB triggers
 
-Keep the URL `/r/$code` (already shared externally, must not break). Delete `src/lib/redirects.functions.ts:resolveRedirect` once nothing references it; keep `getCreatorClickStats` (used by creator dashboard).
+Migration adds enum values + 3 triggers:
 
-### 2. Create `deal_redemptions` table + RLS
+- `redemption_confirmed` → notify creator (`user_id = creator_id`) AND traveller (`user_id = redemption.user_id` when not null). Trigger on `deal_redemptions` AFTER UPDATE when `status` transitions to `confirmed`.
+- `redemption_rejected` → notify traveller only.
+- `deal_expiring_soon` → notify business owner. Driven by a small SQL function called from a daily cron (reuses existing `pg_cron` setup that runs `cron_expire_deals`), scanning `deals` where `ends_at` is between `now()` and `now() + interval '7 days'` and no `deal_expiring_soon` notification exists yet for that deal.
 
-Migration: new table to record confirmed bookings/purchases for commission math.
+Add `redemption_id` nullable column to `notifications` so the UI can deep-link.
 
-Columns (domain only):
-- `deal_id`, `creator_id`, `user_id` (nullable — anonymous redemptions allowed via business confirmation)
-- `code` (the redirect code used, denormalised for audit)
-- `order_value_cents` (int, nullable until business confirms)
-- `currency` (text, default 'GBP')
-- `commission_rate` (numeric, snapshot from deal at time of redemption)
-- `commission_cents` (int, computed on confirm)
-- `status` enum: `pending` | `confirmed` | `rejected` (default `pending`)
-- `confirmed_by` (uuid, business user who confirmed), `confirmed_at`
-- `notes` (text, optional)
-- standard `id`, `created_at`, `updated_at` + `touch_updated_at` trigger
+### 2. Notifications UI polish (frontend only)
 
-RLS:
-- Travellers: can view their own redemptions (`user_id = auth.uid()`).
-- Creators: can view redemptions where `creator_id = auth.uid()` (commission visibility).
-- Businesses: can view + update (status, order_value, notes) where `deal.business_id = auth.uid()` via subquery.
-- Admins: full access via `has_role(auth.uid(), 'admin')`.
-- Insert: server-side only (service role); no client insert policy.
+- Header bell icon with unread count badge (count of `notifications WHERE read_at IS NULL`) — uses Supabase Realtime subscription on `notifications` filtered by `user_id`.
+- `/notifications` route: group by day, show actor avatar + relative time + deep link per type (video → `/sounds/$id` or video detail, deal → `/deals/$id`, redemption → `/business/redemptions` or `/creator/analytics`, follow → `/u/$username`).
+- "Mark all as read" action (UPDATE `read_at = now()` for current user).
+- Empty state.
 
-Trigger: on `UPDATE` when `status` transitions to `confirmed`, compute `commission_cents = round(order_value_cents * commission_rate)` if both present.
+### 3. Transactional email for the same 3 events
 
-### 3. Server functions for redemption lifecycle
+Use the existing `enqueue_email` RPC inside the new triggers to push payloads onto a `transactional_emails` queue. Scaffold three React Email templates under `supabase/functions/_shared/email-templates/`:
 
-New file `src/lib/redemptions.functions.ts`:
+- `redemption-confirmed-creator.tsx` — "You earned £X.XX on {deal.title}"
+- `redemption-confirmed-traveller.tsx` — "Your booking with {business} is confirmed"
+- `deal-expiring.tsx` — "Your deal '{title}' expires in N days"
 
-- `claimRedemption({ code })` — auth required. Traveller-initiated "I used this code" CTA. Inserts a `pending` redemption row (deal_id resolved from `deal_redirects.code`, creator_id from same row, user_id from auth). Idempotent per (user_id, code) within 24h.
-- `listBusinessRedemptions({ dealId?, status?, limit, offset })` — auth required, business-scoped via RLS.
-- `confirmRedemption({ id, orderValueCents, currency? })` — business sets status `confirmed`, fills order value. Trigger computes commission.
-- `rejectRedemption({ id, reason })` — business sets status `rejected`.
-- `getCreatorRedemptionStats()` — totals + last-30d counts + pending commission for the authed creator.
+Each user gets a per-type opt-out via a new `email_preferences` table (`user_id`, `notify_redemption`, `notify_expiry`, `notify_social`, defaults true). Settings page gets a "Email preferences" section. Unsubscribe links use the existing `email_unsubscribe_tokens` flow.
 
-All use `requireSupabaseAuth` middleware and `context.supabase` (RLS enforced).
+Skip if user is in `suppressed_emails`.
 
-### 4. UI surfaces (small, focused)
+### 4. Payout-ready earnings aggregation
 
-- **Deal detail page**: add an "I used this deal" button next to the existing redirect CTA. When clicked, calls `claimRedemption`. Shows a confirmation toast.
-- **Business dashboard (`/business`)**: add a "Redemptions" card listing pending rows with inline "Confirm" (prompts for order value) and "Reject" actions. Uses `listBusinessRedemptions`.
-- **Creator dashboard**: extend the existing click-stats card with a new "Pending commission" tile using `getCreatorRedemptionStats`. Read-only.
-
-### 5. Verification
-
-- Manual: open `/r/<known-code>` → confirm 302 to wrapped URL, `deal_clicks` row appears with `creator_id` and `referrer_video_id` (if `?v=` present), `deals.click_count` increments.
-- Manual: click "I used this deal" → row in `deal_redemptions` (status `pending`). Business confirms → status flips, commission populated. Creator dashboard reflects pending commission.
-- Linter: run Supabase linter after migration; resolve any RLS warnings.
-
-## Technical notes
+Migration creates a SQL view (no money movement):
 
 ```text
-Flow
-─────
-[user] → /r/CODE?v=<videoId>
-              │
-              ▼
-   server route (302)
-              │  insert deal_clicks
-              ▼
-   wrapWithAffiliate(deal.url) → external supplier
-
-Later
-─────
-[user] → deal page → "I used this" → claimRedemption()
-                                            │
-                                            ▼
-                            deal_redemptions (pending)
-                                            │
-[business] → /business → Confirm + £value   │
-                                            ▼
-                            deal_redemptions (confirmed)
-                                            │ trigger
-                                            ▼
-                            commission_cents computed
+creator_earnings_monthly (view)
+  creator_id, month (date_trunc),
+  redemption_count,
+  gross_order_cents,
+  commission_cents_total,
+  payable_cents   -- sum where status='confirmed' AND confirmed_at < now() - interval '14 days'
+  pending_cents   -- sum where status='confirmed' AND confirmed_at >= now() - interval '14 days'
 ```
 
-Files touched:
-- `supabase/migrations/<ts>_deal_redemptions.sql` — new table, RLS, trigger
-- `src/routes/r.$code.tsx` — **replace** client component with server route (same URL)
-- `src/lib/redirects.functions.ts` — remove `resolveRedirect`, keep `getCreatorClickStats`
-- `src/lib/redemptions.functions.ts` — **new**
-- `src/routes/business.index.tsx` — add redemptions panel
-- `src/routes/creator.applications.tsx` or creator dashboard — add commission tile
-- Deal detail page — add "I used this" CTA
+RLS: creator reads own rows; admin reads all.
+
+Server fns in `src/lib/earnings.functions.ts`:
+- `getCreatorEarningsSummary()` → all-time totals + last 6 months.
+- `getCreatorEarningsByMonth({ from, to })` → table rows.
+- `getCreatorEarningsByDeal({ month? })` → per-deal contribution.
+
+### 5. Creator earnings page
+
+New route `/creator/earnings`:
+- Header KPIs: Lifetime commission, Payable now, Pending clearance, This month.
+- Monthly bar chart (last 6 months) — reuse existing chart components if present, else simple CSS bars.
+- Table: per-deal contribution for the selected month.
+- Banner: "Payouts launch when banking is connected" with a disabled "Connect bank" CTA (placeholder for Stripe Connect phase).
+
+Add a link to it from `/creator/analytics` and from the header user menu.
+
+## Files
+
+- `supabase/migrations/<ts>_notifications_redemptions_and_earnings.sql` — new enum values, triggers, `redemption_id` column, `email_preferences` table + RLS, `creator_earnings_monthly` view + RLS, expiring-deals notification function.
+- `supabase/migrations/<ts>_cron_notify_expiring_deals.sql` — pg_cron schedule (separate migration for clarity).
+- `supabase/functions/_shared/email-templates/redemption-confirmed-creator.tsx`
+- `supabase/functions/_shared/email-templates/redemption-confirmed-traveller.tsx`
+- `supabase/functions/_shared/email-templates/deal-expiring.tsx`
+- `src/lib/earnings.functions.ts` — new
+- `src/lib/notifications.functions.ts` — extend with `markAllRead`, `getUnreadCount`
+- `src/lib/email-preferences.functions.ts` — new
+- `src/routes/creator.earnings.tsx` — new
+- `src/routes/notifications.tsx` — polish
+- `src/routes/settings.tsx` — add email preferences section
+- `src/components/layout/Header.tsx` (or equivalent) — add notification bell with realtime unread badge
 
 ## Explicitly out of scope
 
-- Stripe Connect, payouts, ledger, invoicing, tax — deferred until banking is ready
-- Charts/visualisations — totals only for now
-- Disputes / refund flows — `rejected` status is a hard stop, no negotiation UX
-- Email notifications on confirm/reject — can layer on later via the existing notifications table
+- Stripe Connect onboarding, payouts, bank account capture — deferred until banking phase.
+- Tax/invoicing/VAT — deferred.
+- Push notifications (web push / mobile) — email + in-app only for now.
+- Notification digest / batching — every event sends one email.
+- Currency conversion — totals shown in GBP only.
+- Dispute / clawback flows for confirmed redemptions.
+
+## Verification
+
+- Confirm a `pending` redemption from `/business/redemptions` → creator + traveller see new in-app notification within seconds (realtime); both receive email (check `email_send_log`).
+- Reject another → traveller-only notification + email.
+- Insert a deal with `ends_at = now() + 3 days`, run the expiry cron manually → business sees notification + email, second run does not duplicate.
+- Open `/creator/earnings` as a creator with confirmed redemptions older than 14 days → `payable_cents` populated; newer ones land in `pending_cents`.
+- Toggle email preferences off → trigger still creates in-app notification but no email enqueued.
