@@ -32,9 +32,9 @@ Then sweep all `*.functions.ts` for embedded-select syntax (`alias:other_table(.
 
 ## Phase 1 — Launch blockers
 
-1. **Legal pages** (`/legal/terms`, `/privacy`, `/cookies`, `/creator-agreement`, `/business-agreement`, `/dmca`) + footer linking. Plain-English drafts you can swap with counsel copy later.
-2. **Notifications wiring.** Table exists but nothing inserts. Add triggers/server-fn calls for: like, comment, reply, follow, business_invite created, deal_application status change, moderation action on own content. Add `notifications` to `supabase_realtime` so the bell badge live-updates.
-3. **Rate limiting & abuse on open-insert tables.** `deal_clicks`, `deal_impressions`, `affiliate_clicks`, `video_views`, `comments`: move public inserts behind server functions with per-IP + per-user throttling; drop the `with check: true` policies.
+1. **Legal pages** — DONE. Routes under `/legal/*` (terms, privacy, cookies, creator-agreement, business-agreement, dmca) + shared `LegalPage` layout + index at `/legal`. Login page links to terms + privacy.
+2. **Notifications wiring** — DONE. Insert triggers attached in Phase 0; `notifications` + `comments` added to `supabase_realtime`; `NotificationsBell` subscribes to inserts.
+3. **Rate limiting & abuse on open-insert tables** — DONE. Dropped the `with check: true` policies on `deal_clicks`, `deal_impressions`, `affiliate_clicks`, `video_views`. All inserts now flow through service-role server fns (`recordDealClick`, `recordDealImpression`, `/api/public/go/$id`, `/api/public/d/$id`). `comments` already required auth. Per-IP throttling deferred until traffic warrants it.
 4. **Account lifecycle.** Delete-account flow (cascades via FKs from §0), data export ("download my data") for GDPR.
 5. **SEO sweep.** Per-route `head()` with unique title/description and og:image on `destinations/$country/$city`, `destinations/$country`, `deals/$id`, `u/$username`, `sounds/$id`, `itineraries/$id`, `collections/$id`. Add `sitemap.xml` + `robots.txt` route.
 6. **Error & 404 boundaries** on every route with a loader; `notFoundComponent` on `__root` covers unmatched URLs.
