@@ -31,7 +31,7 @@ export const exportMyData = createServerFn({ method: "POST" })
       "business_invites",
     ] as const;
 
-    const result: Record<string, unknown> = { exported_at: new Date().toISOString(), user_id: userId };
+    const result: Record<string, any> = { exported_at: new Date().toISOString(), user_id: userId };
 
     for (const t of tables) {
       // pick the right ownership column per table
@@ -57,7 +57,7 @@ export const exportMyData = createServerFn({ method: "POST" })
       }
     }
 
-    return { data: result };
+    return { json: JSON.stringify(result, null, 2) };
   });
 
 /**
