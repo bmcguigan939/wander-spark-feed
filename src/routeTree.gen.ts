@@ -72,6 +72,7 @@ import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.ne
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
 import { Route as BookMatchCodeRouteImport } from './routes/book.match.$code'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
+import { Route as ApiPublicAttributeRouteImport } from './routes/api/public/attribute'
 import { Route as BusinessDealsIdIndexRouteImport } from './routes/business.deals.$id.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -400,6 +401,11 @@ const ApiPublicMuxWebhookRoute = ApiPublicMuxWebhookRouteImport.update({
   path: '/api/public/mux-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAttributeRoute = ApiPublicAttributeRouteImport.update({
+  id: '/api/public/attribute',
+  path: '/api/public/attribute',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessDealsIdIndexRoute = BusinessDealsIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -517,6 +523,7 @@ export interface FileRoutesByFullPath {
   '/itineraries/': typeof ItinerariesIndexRoute
   '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
+  '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
@@ -591,6 +598,7 @@ export interface FileRoutesByTo {
   '/itineraries': typeof ItinerariesIndexRoute
   '/legal': typeof LegalIndexRoute
   '/studio': typeof StudioIndexRoute
+  '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -667,6 +675,7 @@ export interface FileRoutesById {
   '/itineraries/': typeof ItinerariesIndexRoute
   '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
+  '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
@@ -745,6 +754,7 @@ export interface FileRouteTypes {
     | '/itineraries/'
     | '/legal/'
     | '/studio/'
+    | '/api/public/attribute'
     | '/api/public/mux-webhook'
     | '/book/match/$code'
     | '/business/deals/$id'
@@ -819,6 +829,7 @@ export interface FileRouteTypes {
     | '/itineraries'
     | '/legal'
     | '/studio'
+    | '/api/public/attribute'
     | '/api/public/mux-webhook'
     | '/book/match/$code'
     | '/business/deals/new'
@@ -894,6 +905,7 @@ export interface FileRouteTypes {
     | '/itineraries/'
     | '/legal/'
     | '/studio/'
+    | '/api/public/attribute'
     | '/api/public/mux-webhook'
     | '/book/match/$code'
     | '/business/deals/$id'
@@ -957,6 +969,7 @@ export interface RootRouteChildren {
   DestinationsIndexRoute: typeof DestinationsIndexRoute
   ItinerariesIndexRoute: typeof ItinerariesIndexRoute
   LegalIndexRoute: typeof LegalIndexRoute
+  ApiPublicAttributeRoute: typeof ApiPublicAttributeRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
   BookMatchCodeRoute: typeof BookMatchCodeRoute
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
@@ -1418,6 +1431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMuxWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/attribute': {
+      id: '/api/public/attribute'
+      path: '/api/public/attribute'
+      fullPath: '/api/public/attribute'
+      preLoaderRoute: typeof ApiPublicAttributeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/deals/$id/': {
       id: '/business/deals/$id/'
       path: '/'
@@ -1621,6 +1641,7 @@ const rootRouteChildren: RootRouteChildren = {
   DestinationsIndexRoute: DestinationsIndexRoute,
   ItinerariesIndexRoute: ItinerariesIndexRoute,
   LegalIndexRoute: LegalIndexRoute,
+  ApiPublicAttributeRoute: ApiPublicAttributeRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
   BookMatchCodeRoute: BookMatchCodeRoute,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
