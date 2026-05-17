@@ -47,15 +47,14 @@ export const resolveMatchDispute = createServerFn({ method: "POST" })
     // uphold_business: business wins, code becomes 'dispute_rejected' and is unusable.
     const newStatus =
       data.decision === "uphold_business" ? ("dispute_rejected" as const) : ("issued" as const);
-    const update: Record<string, unknown> = {
-      status: newStatus,
-      dispute_resolved_by: userId,
-      dispute_resolved_at: new Date().toISOString(),
-    };
-    if (data.note) update.dispute_evidence_url = data.note;
     const { error } = await supabaseAdmin
       .from("price_match_codes")
-      .update(update)
+      .update({
+        status: newStatus,
+        dispute_resolved_by: userId,
+        dispute_resolved_at: new Date().toISOString(),
+        ...(data.note ? { dispute_evidence_url: data.note } : {}),
+      })
       .eq("code", data.code);
     if (error) throw new Error(error.message);
     return { ok: true };
