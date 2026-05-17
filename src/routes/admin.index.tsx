@@ -52,6 +52,10 @@ function AdminOverview() {
             <Money label="Commission 30d" cents={(data as any).commission30dCents ?? 0} />
             <Money label="Outstanding payouts" cents={(data as any).outstandingLiabilityCents ?? 0} accent />
             <Stat label="Bookings 7d / 30d" value={(data as any).redemptions7d ?? 0} suffix={` / ${(data as any).redemptions30d ?? 0}`} />
+            <Money label="Travidz share 30d" cents={(data as any).platformShare30dCents ?? 0} accent />
+            <Pct label="Blended take-rate" value={(data as any).blendedTakeRate30d ?? 0} accent />
+            <Stat label="Founding creators" value={(data as any).foundingCreators ?? 0} />
+            <Stat label="Power creators" value={(data as any).powerCreators ?? 0} />
           </div>
         </div>
         </>
@@ -108,6 +112,16 @@ function Stat({ label, value, accent, suffix }: { label: string; value: number; 
 
 function Money({ label, cents, accent }: { label: string; cents: number; accent?: boolean }) {
   const fmt = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(cents / 100);
+  return (
+    <div className={`rounded-2xl border p-4 ${accent ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`mt-1 text-2xl font-bold tabular-nums ${accent ? "text-primary" : ""}`}>{fmt}</div>
+    </div>
+  );
+}
+
+function Pct({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  const fmt = `${(value * 100).toFixed(2)}%`;
   return (
     <div className={`rounded-2xl border p-4 ${accent ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}>
       <div className="text-xs text-muted-foreground">{label}</div>
