@@ -11,7 +11,7 @@ interface Props {
 export const FoundingCreatorWelcomeEmail = ({ creatorName, foundingNumber, studioUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>You're Founding Creator #{foundingNumber} — locked at 50% for life</Preview>
+    <Preview>{`You're Founding Creator #${foundingNumber} — locked at 50% for life`}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Text style={brandMark}>Travidz</Text>
