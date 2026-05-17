@@ -1,80 +1,140 @@
-## Goal
+# Travidz Financial Model v1 — UK build, 60 months, Buildstreams-style
 
-Ship a Travidz **Seed-stage investor pitch deck**, positioning Travidz as "the next TikTok/Instagram, but the booking layer wins the holiday." Anchored on the v6 Base-case SOM/TAM. Delivered in two forms:
+Produce a full **60-month (5-year)** Excel model in the same shape as the attached Buildstreams v4 reference: Summary Dashboard, Assumptions (only blue-input sheet), Channel CAC, UK headcount, monthly creator-cohort + operator tabs, and a consolidated P&L + Cash sheet — all formula-driven.
 
-1. **Downloadable artifact** — `Travidz_Investor_Deck_Seed_v1.pptx` + auto-converted `.pdf` saved to `/mnt/documents/`.
-2. **In-app slide route** — `/admin/investor/deck` (admin-gated, fixed 1920×1080 scaled canvas, keyboard nav, fullscreen present mode).
+**Deliverable:** `/mnt/documents/Travidz_Financial_Model_v1.xlsx` + a PDF preview. Built with the xlsx skill: blue = inputs, black = formulas, green = cross-sheet refs, currency `£#,##0;(£#,##0);-`, percentages 0.0%, years as text. LibreOffice recalc + zero-error audit before delivery.
 
-Both pull numbers from the existing `src/lib/investor-model/` (V6_DEFAULTS base case) so the deck and the live model never drift.
+## Workbook structure (7 sheets, all 60-month horizon M1–M60)
 
-## Narrative arc (15 slides)
+### 1. `summary_dashboard`
+Top-of-file KPI page.
+- **Scenario selector:** Base / Bear / Bull (drives a `Lookup` block; everything else uses `INDEX/MATCH` against it)
+- **KPIs at M12 / M24 / M36 / M48 / M60:** Active creators, Active operators, Annual GBV, Gross commission, Creator payouts, Travidz net revenue, Blended take-rate, Gross margin, EBITDA, Peak cash requirement, Month of peak burn, Months to EBITDA breakeven, Runway months at first raise, Required seed (computed as `−min(net cash)` + 6mo buffer), Year-5 ARR-equivalent (Travidz net × 12 at M60)
+- **Scenario comparison table:** Base / Bear / Bull side-by-side at Y1/Y3/Y5
+- **Charts:** GBV by month (line), Net cash balance (line with seed + Series A injection steps), Headcount ramp (stacked area by team), EBITDA bridge Y1→Y5
 
-Tuned for FOMO without crossing into hype — every claim either ties to a cited external stat or to the v6 model output.
+### 2. `assumptions` (only blue-input sheet)
+Three scenario columns: Base / Bear / Bull. Notes column.
 
-1. **Title** — "Travidz. The feed that books the holiday." Founder, raise size, contact.
-2. **The boat is leaving** — Social commerce hit $1.2T global GMV in 2025; travel is the last vertical without a native social-commerce winner. (Citations baked in.)
-3. **Problem** — Travel discovery happens on TikTok/Instagram; booking happens 3 clicks and 3 tabs later on Booking.com. The handoff leaks 80%+ of intent.
-4. **Solution** — Short-form video feed → tap → book the exact deal in-app. One surface for inspiration *and* transaction.
-5. **Why now** — Gen Z + Millennials = 60% of travel spend by 2030; 70% already start travel research on social; creator-led commerce growing 35% YoY.
-6. **Product** — 3 screenshots/mocks: feed, deal card, in-app checkout. "TikTok UX, Booking.com economics."
-7. **Market — TAM/SAM/SOM** — pulled from v6: TAM ~£65B GBV (85M travellers × 1.6 bookings × £480), SAM 28%, Y5 SOM share.
-8. **Business model** — Flat 8% commission to businesses. Creators earn tapered 50→40→30 share; Travidz net glides 4% → 6.2% as cohort matures.
-9. **Traction** — placeholder block for current creators, GBV, partner businesses, geos — clearly marked "[update before send]" so founder fills the live numbers.
-10. **Unit economics** — Year 5 base case: ~24k active creators, £X GBV, £Y Travidz net, blended take-rate 6.2%. Power-creator tier locks the supply side.
-11. **Go-to-market** — Founding-Creator programme (first 500 locked at 50%/life) → viral creator referral → demand-side flywheel. CAC payback < 6 months at base.
-12. **Competition** — 2×2 matrix: x = social-native, y = bookable inventory. Booking.com / Expedia / TikTok / Instagram / Airbnb plotted; Travidz alone in top-right.
-13. **Team** — founder + key hires + advisors (placeholder rows).
-14. **The ask** — Seed £[X]M for 18-month runway → hit Y2 milestones (creators, GBV, blended take-rate). Use of funds pie.
-15. **Closing** — "Every category had its TikTok moment. Travel's is now." + contact.
+**Market & commission** (mirrors `src/lib/investor-model/assumptions.ts` v6 Base)
+- TAM travellers 85M, ABV £480, bookings/traveller 1.6, SAM% 28%, SOM share Y1–Y5 (extrapolated flat at Y5 level for Y6–Y5 isn't needed; horizon ends at Y5 = M60)
+- Gross commission 8%, creator tapered share 50/50/50/40/30, founding cap 500, power threshold £25k rolling-12mo
 
-## Artifact build (.pptx)
+**Creator funnel** (drives monthly cohort, 60 months)
+- Starting active creators, month paid acquisition starts, monthly paid intake by tier, organic %, monthly creator churn %, GBV per active creator (ramped at M1 / M12 / M24 / M36 / M48 / M60 with linear interp)
 
-- `scripts/build-pitch-deck.mjs` — Node script using `pptxgenjs` (per skill/pptx). Reads V6_DEFAULTS + computeRevenue/computeMarket from the existing model (via a small TS-to-JS shim or by mirroring the numbers — easiest: have the script import the model and call the same pure functions; use `tsx` for execution).
-- Palette: Travidz dark theme — `#0F172A` background, `#3B82F6` primary, `#22D3EE` accent, off-white text. Header font: a confident sans (Calibri/Arial Black fallback for PPTX portability). Body: Calibri.
-- Every numeric slide pulls live from `computeMarket(V6_DEFAULTS)` / `computeRevenue(V6_DEFAULTS)` so re-running the script reflects any model update.
-- Citations rendered as small footer text on each "claim" slide.
-- After build: convert to PDF via LibreOffice, render JPGs, **mandatory visual QA pass** (no overflow, contrast, alignment, no leftover placeholders).
-- Outputs: `/mnt/documents/Travidz_Investor_Deck_Seed_v1.pptx` + `.pdf`, surfaced via `<presentation-artifact>` tags.
+**Operator funnel**
+- Starting partners, monthly new partners, churn, attribution % of GBV touching a verified partner
 
-## In-app slide route
+**Unit costs**
+- Payment processing % of GBV (Stripe 1.5% + £0.20 per booking)
+- Cloud infra £/active creator/mo, video CDN £/1k plays, AI/Lovable Cloud £/mo (ramped across 5 bands)
+- Creator support £/active creator/mo
 
-Per the `slides-app` skill:
+**UK payroll on-costs (global)**
+- Employer NIC 13.8%, Pension 3%, Apprenticeship Levy 0.5% (auto-on once paybill > £3M, modelled as toggle from M24), Benefits £3,600/FTE/yr, Recruitment 15% of base (one-off in hire month), Annual salary inflation 4%
 
-- New route `src/routes/admin.investor.deck.tsx` (nested under existing admin-gated `/admin/investor` layout work already in plan; reuses `AdminLayout`'s admin guard so no new auth).
-- `src/components/deck/` — `ScaledSlide.tsx` (1920×1080 fixed canvas, `transform: scale(...)` to fit container), `DeckShell.tsx` (toolbar + arrow/space/Esc keys, fullscreen API), `slides/` one .tsx per slide (15 files, ~30 lines each).
-- Each numeric slide imports from `@/lib/investor-model` so it stays in lock-step with the model tab.
-- Scoped `.slide-content` font scaling block added to `src/styles.css`.
-- "Download .pptx" button at top of `/admin/investor/deck` links to the artifact in `/mnt/documents/`.
+**Non-payroll opex** (monthly £, ramped across **5 bands**: M1–6, M7–12, M13–24, M25–36, M37–60)
+- Co-working/office (M37+ assumes small London HQ), Legal, Accounting/R&D tax, Insurance, SaaS tooling, Performance marketing, Travel/events, Contingency %
 
-## Citations (researched up-front, hardcoded into slides)
+**Funding** (multi-tranche over 60 months)
+- Starting cash, Seed £2.0M at M0, Series A (default £8.0M at M22), Series B placeholder (default £20.0M at M44, toggleable)
 
-Will run 3–4 `websearch--web_search` calls before slide content lands, to verify:
-- Social commerce 2025 GMV figure
-- Gen Z/Millennial travel spend share by 2030
-- % of travellers using social for trip research
-- Creator economy / creator commerce YoY growth
+### 3. `channel_cac`
+Creator acquisition CAC (replaces Buildstreams' customer CAC). Two blocks: **Creator CAC** + **Operator CAC**. Channels: Paid Social (TikTok/IG), Creator Referral, Founding-500 Programme, SEO/Content, Events, Direct outreach. Columns: Spend £/mo, Conv %, CAC, New/mo, Totals.
 
-Each citation displayed as inline footer source attribution on the slide it backs.
+### 4. `headcount_uk`
+UK hiring roster — one row per planned hire, columns M0…M60. Inputs: Role, Team, Base salary £, Start month, End month (optional). Computed per month: gross, NIC, pension, benefits, recruitment (one-off in start month), loaded cost. Salary inflation applied annually. Totals by team and month feed `combined_pnl_cash`.
 
-## Out of scope (flag for later)
+Default Base-case roster (~18 FTE by M18, ~30 by M36, ~42 by M60):
 
-- Scenario toggle (Bear/Bull) inside the in-app deck — Base only for v1
-- Live "current traction" auto-pulled from Supabase — placeholder slide instead
-- Custom-domain hosting of the deck for share links
-- Animated transitions beyond a simple fade
+| Start | Role | Team | Base £ |
+|---|---|---|---|
+| M0 | CEO / Founder | exec | 85,000 |
+| M0 | CTO / Co-founder | exec | 85,000 |
+| M0 | Founding engineer | eng | 80,000 |
+| M0 | Head of Creator Growth | growth | 75,000 |
+| M2 | Senior full-stack eng | eng | 90,000 |
+| M2 | Product designer | design | 75,000 |
+| M4 | Senior mobile eng (RN) | eng | 95,000 |
+| M4 | Creator partnerships mgr | growth | 55,000 |
+| M6 | Head of Operator Supply | supply | 80,000 |
+| M6 | Data/ML engineer | eng | 90,000 |
+| M9 | Backend engineer | eng | 80,000 |
+| M9 | Growth marketer | growth | 60,000 |
+| M9 | Ops/finance lead | ga | 65,000 |
+| M12 | Senior engineer #2 | eng | 90,000 |
+| M12 | Creator partnerships #2 | growth | 55,000 |
+| M12 | Customer support lead | ops | 40,000 |
+| M15 | Senior product manager | product | 85,000 |
+| M15 | Compliance/legal ops | ga | 60,000 |
+| M20 | Senior eng #3 | eng | 95,000 |
+| M22 | Designer #2 | design | 75,000 |
+| M24 | Head of Marketing | growth | 95,000 |
+| M26 | Engineering manager | eng | 110,000 |
+| M28 | Data analyst | eng | 65,000 |
+| M30 | Operator partnerships mgr | supply | 65,000 |
+| M32 | Finance manager | ga | 70,000 |
+| M34 | Senior backend eng #4 | eng | 90,000 |
+| M36 | International expansion lead | growth | 90,000 |
+| M38 | Senior designer #3 | design | 85,000 |
+| M40 | ML/recommendations eng | eng | 105,000 |
+| M42 | VP Engineering | exec | 140,000 |
+| M44 | Head of Finance | exec | 120,000 |
+| M46 | Senior PM #2 | product | 90,000 |
+| M48 | Creator success #3 | growth | 55,000 |
+| M50 | Senior eng #5 | eng | 95,000 |
+| M52 | People & Talent lead | ga | 75,000 |
+| M54 | Senior eng #6 | eng | 95,000 |
+| M56 | Trust & Safety lead | ops | 70,000 |
+| M58 | Senior PM #3 | product | 90,000 |
+| M60 | Head of International | exec | 110,000 |
+
+### 5. `creator_cohorts` (monthly, 60 columns)
+Per month: New paid creators, New organic, Churned, Active creators EOM, Active-by-tier (Founding / Power / New / Maturing / Mature with tier transitions via tenure month + £25k power threshold), GBV/active creator (ramped), Monthly GBV, Gross commission (8%), Blended creator payout (tier mix × creator share table), Travidz net revenue, Take-rate %.
+
+### 6. `operator_supply` (monthly, 60 columns)
+New partners, churn, total active, attribution-weighted GBV share, partner-success cost per active partner.
+
+### 7. `combined_pnl_cash` (monthly, 60 columns)
+- Revenue = `creator_cohorts!Travidz net`
+- COGS = payment processing + hosting + video CDN + AI usage + creator support
+- Gross profit / Gross margin %
+- OpEx = payroll loaded (`headcount_uk`) + non-payroll lines (`assumptions`) + channel spend (`channel_cac`)
+- EBITDA, Cumulative EBITDA, EBITDA margin
+- **Cash:** Opening cash + revenue − total cash costs + raise tranches = Closing cash
+- Peak cash deficit (running min)
+- Runway (months until closing cash ≤ 0 absent next raise)
+
+## Build & QA process
+
+1. Copy `recalculate_formulas.py` and `run_libreoffice.py` from the xlsx/pdf skills
+2. Generate workbook with openpyxl — **all** formulas, no hardcoded computed values; assumption cells in blue, formulas in black, cross-sheet refs in green
+3. Run `recalculate_formulas.py` → assert `total_errors: 0`
+4. Convert to PDF, then `pdftoppm` to JPGs, **inspect every page** for layout breakage, column widths, number formats, chart legibility, no `#REF!`/`#DIV/0!`
+5. Iterate until clean
+6. Drop into `/mnt/documents/Travidz_Financial_Model_v1.xlsx` (+ `.pdf`)
+7. Summarise the QA pass (issues found + fixed)
+
+## Cross-checks against existing v6 model
+
+Excel `assumptions` hardcodes the same v6 Base values used by `src/lib/investor-model/assumptions.ts`, so Y5 (M60) outputs must reconcile:
+- Active creators ≈ 24,000
+- Annual GBV ≈ £444M
+- Travidz net revenue ≈ £20.7M
+- Blended take-rate ≈ 4.65%
+
+Drift between Excel output and the TS model = bug, fix before delivery.
+
+## Out of scope (deferred)
+
+- Wiring opex back into the in-app `/admin/investor` tab (next step after Excel is locked)
+- Rebuilding the pitch deck (next step after opex + cash plan are locked)
+- Working capital / VAT / EMI option valuations
+- Multi-currency (model is GBP only)
 
 ## Sequencing
 
-1. Run citation web searches; lock the 4–5 external stats.
-2. Build `scripts/build-pitch-deck.mjs`, run it, QA the PDF visually slide-by-slide, fix, re-render until clean.
-3. Drop the .pptx + .pdf into `/mnt/documents/` and emit `<presentation-artifact>` tags.
-4. Build `src/components/deck/` primitives + 15 slide components.
-5. Add `/admin/investor/deck` route + Present-mode + download button.
-6. Add nav entry under the Investor model tab strip.
-
-## Technical notes
-
-- Numbers single-source-of-truth = `src/lib/investor-model/`. Both the .pptx script and the React slides import from there.
-- No new npm deps for the in-app deck (Tailwind + existing primitives).
-- `pptxgenjs` and `tsx` installed in the sandbox just for the build script — not added to the app's runtime deps.
-- Admin-only: the in-app deck inherits `AdminLayout`'s `isAdmin` guard. No new RLS / migrations.
+1. Build the 60-month workbook (this step)
+2. You review in Excel — adjust hires, salaries, channel spend, raise sizing/timing to taste
+3. I sync the locked numbers back into `src/lib/investor-model/` and rebuild the pitch deck against the defensible burn/runway/Series A story
