@@ -1705,6 +1705,7 @@ export type Database = {
         | "reply"
         | "deal_application"
         | "deal_application_decided"
+        | "business_invite_received"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1841,6 +1842,7 @@ export const Constants = {
         "reply",
         "deal_application",
         "deal_application_decided",
+        "business_invite_received",
       ],
     },
   },
