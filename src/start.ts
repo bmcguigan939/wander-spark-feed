@@ -5,6 +5,8 @@ import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
+    // Bypass error rendering for /lovable/* internal routes (webhooks, cron)
+    // — they return their own JSON responses and must not be wrapped in HTML.
     return await next();
   } catch (error) {
     if (error != null && typeof error === "object" && "statusCode" in error) {
