@@ -25,7 +25,6 @@ export type MapVideoPin = {
   lng: number;
   creator_username: string | null;
   tags: string[] | null;
-  business_id: string | null;
 };
 
 export type MapDealPin = {
@@ -76,7 +75,7 @@ export const getMapPins = createServerFn({ method: "GET" })
       let q = supabaseAdmin
         .from("videos")
         .select(
-          "id,title,thumbnail_url,lat,lng,tags,business_id,creator:profiles!videos_creator_id_fkey(username)",
+          "id,title,thumbnail_url,lat,lng,activity_tags,creator:profiles!videos_creator_id_fkey(username)",
         )
         .eq("status", "ready")
         .not("lat", "is", null)
@@ -151,8 +150,7 @@ export const getMapPins = createServerFn({ method: "GET" })
       thumbnail_url: v.thumbnail_url,
       lat: v.lat,
       lng: v.lng,
-      tags: v.tags ?? null,
-      business_id: v.business_id ?? null,
+      tags: v.activity_tags ?? null,
       creator_username: v.creator?.username ?? null,
     }));
 
