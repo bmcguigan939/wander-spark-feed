@@ -102,6 +102,7 @@ function DealDetail() {
 }
 
 function CreatorApplyBlock({ dealId }: { dealId: string }) {
+  // unchanged
   const qc = useQueryClient();
   const fetchApp = useServerFn(getMyApplicationForDeal);
   const apply = useServerFn(applyForDeal);
