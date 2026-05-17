@@ -5,7 +5,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { getCreatorEarningsSummary, getCreatorEarningsByDeal } from "@/lib/earnings.functions";
-import { Wallet, ArrowLeft, Lock, TrendingUp } from "lucide-react";
+import { listCreatorPayouts } from "@/lib/payouts.functions";
+import { PayoutDetailsForm } from "@/components/creator/PayoutDetailsForm";
+import { Wallet, ArrowLeft, TrendingUp, Banknote } from "lucide-react";
 
 export const Route = createFileRoute("/creator/earnings")({
   head: () => ({ meta: [{ title: "Earnings — Travidz" }, { name: "robots", content: "noindex" }] }),
@@ -40,6 +42,13 @@ function EarningsPage() {
     enabled: !!user && isCreator,
   });
 
+  const payoutsFn = useServerFn(listCreatorPayouts);
+  const { data: payouts } = useQuery({
+    queryKey: ["creator-payouts", user?.id ?? null],
+    queryFn: () => payoutsFn(),
+    enabled: !!user && isCreator,
+  });
+
   const months = summary?.months ?? [];
   const last6 = months.slice(0, 6).slice().reverse();
   const maxCommission = Math.max(1, ...last6.map((m) => Number(m.commission_cents_total ?? 0)));
@@ -63,26 +72,48 @@ function EarningsPage() {
           <Kpi label="This month" value={isLoading ? "—" : money(summary?.totals.this_month_commission_cents ?? 0)} />
         </div>
 
-        {/* Payout banner */}
-        <div className="rounded-2xl border border-border bg-card/40 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <Lock className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Payouts launch when banking is connected</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                We're tracking every confirmed booking and computing your share. Once banking is enabled, your payable balance will move into your account on a regular schedule.
-              </p>
-            </div>
+        {/* Payout history */}
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Banknote className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Payouts</h2>
           </div>
-          <button
-            disabled
-            className="mt-3 inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground opacity-60"
-          >
-            Connect bank (coming soon)
-          </button>
-        </div>
+          {(payouts?.runs?.length ?? 0) === 0 ? (
+            <div className="rounded-2xl border border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
+              No payouts yet. We bundle confirmed bookings into weekly runs once you cross the £20 minimum.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {(payouts!.runs as any[]).map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {r.period_start} → {r.period_end}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.redemption_count} booking{r.redemption_count === 1 ? "" : "s"} ·{" "}
+                      <span className={
+                        r.status === "paid" ? "text-emerald-600"
+                        : r.status === "void" ? "line-through"
+                        : "text-amber-600"
+                      }>
+                        {r.status}
+                      </span>
+                      {r.paid_at && <> · paid {new Date(r.paid_at).toLocaleDateString()}</>}
+                      {r.external_reference && <> · ref {r.external_reference}</>}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-primary">{money(r.total_cents, r.currency)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Bank details */}
+        <section>
+          <PayoutDetailsForm />
+        </section>
 
         {/* Monthly chart */}
         <section>
