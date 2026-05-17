@@ -426,6 +426,54 @@ export type Database = {
           },
         ]
       }
+      creator_payout_details: {
+        Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          bank_name: string | null
+          country: string | null
+          created_at: string
+          iban: string | null
+          notes: string | null
+          payout_email: string | null
+          sort_code: string | null
+          swift_bic: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          country?: string | null
+          created_at?: string
+          iban?: string | null
+          notes?: string | null
+          payout_email?: string | null
+          sort_code?: string | null
+          swift_bic?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          country?: string | null
+          created_at?: string
+          iban?: string | null
+          notes?: string | null
+          payout_email?: string | null
+          sort_code?: string | null
+          swift_bic?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deal_applications: {
         Row: {
           approved_code: string | null
@@ -652,6 +700,7 @@ export type Database = {
           id: string
           notes: string | null
           order_value_cents: number | null
+          payout_run_id: string | null
           status: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at: string
           user_id: string | null
@@ -669,6 +718,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_value_cents?: number | null
+          payout_run_id?: string | null
           status?: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at?: string
           user_id?: string | null
@@ -686,6 +736,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_value_cents?: number | null
+          payout_run_id?: string | null
           status?: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at?: string
           user_id?: string | null
@@ -710,6 +761,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_redemptions_payout_run_id_fkey"
+            columns: ["payout_run_id"]
+            isOneToOne: false
+            referencedRelation: "payout_runs"
             referencedColumns: ["id"]
           },
           {
@@ -1290,6 +1348,101 @@ export type Database = {
           },
         ]
       }
+      payout_line_items: {
+        Row: {
+          commission_cents: number
+          created_at: string
+          creator_id: string
+          currency: string
+          id: string
+          payout_run_id: string
+          redemption_id: string
+        }
+        Insert: {
+          commission_cents: number
+          created_at?: string
+          creator_id: string
+          currency?: string
+          id?: string
+          payout_run_id: string
+          redemption_id: string
+        }
+        Update: {
+          commission_cents?: number
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          id?: string
+          payout_run_id?: string
+          redemption_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_line_items_payout_run_id_fkey"
+            columns: ["payout_run_id"]
+            isOneToOne: false
+            referencedRelation: "payout_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          creator_id: string
+          currency: string
+          external_reference: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          period_end: string
+          period_start: string
+          redemption_count: number
+          status: string
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          creator_id: string
+          currency?: string
+          external_reference?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          period_end: string
+          period_start: string
+          redemption_count?: number
+          status?: string
+          total_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          external_reference?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          period_end?: string
+          period_start?: string
+          redemption_count?: number
+          status?: string
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profile_socials: {
         Row: {
           instagram_handle: string | null
@@ -1780,6 +1933,19 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      generate_draft_payout_runs: {
+        Args: {
+          _min_payout_cents?: number
+          _period_end?: string
+          _period_start?: string
+        }
+        Returns: {
+          creator_id: string
+          redemption_count: number
+          run_id: string
+          total_cents: number
+        }[]
       }
       has_role: {
         Args: {
