@@ -34,7 +34,7 @@ export const listParityChecksForBusiness = createServerFn({ method: "GET" })
     const { userId } = context;
     const { data: links } = await supabaseAdmin
       .from("affiliate_links")
-      .select("id,label")
+      .select("id,label,parity_exempt,parity_exempt_reason,is_active")
       .eq("business_id", userId);
     const linkIds = (links ?? []).map((l) => l.id);
     if (linkIds.length === 0) return { checks: [], codes: [], links: [] };
@@ -70,6 +70,37 @@ export const disputeMatchCode = createServerFn({ method: "POST" })
         dispute_reason: data.reason,
       })
       .eq("code", data.code)
+      .eq("business_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Business toggles parity-exempt on one of their listings. Use sparingly —
+ * agreement requires a written reason for exempt listings (e.g. members-only
+ * rate, package excluded by contract). */
+export const setParityExempt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { linkId: string; exempt: boolean; reason?: string }) =>
+    z
+      .object({
+        linkId: z.string().uuid(),
+        exempt: z.boolean(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    if (data.exempt && (!data.reason || data.reason.trim().length < 5)) {
+      throw new Error("A reason is required to mark a listing parity-exempt");
+    }
+    const { error } = await supabaseAdmin
+      .from("affiliate_links")
+      .update({
+        parity_exempt: data.exempt,
+        parity_exempt_reason: data.exempt ? data.reason!.trim() : null,
+      })
+      .eq("id", data.linkId)
       .eq("business_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
