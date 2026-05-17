@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { getCreatorEarningsSummary, getCreatorEarningsByDeal } from "@/lib/earnings.functions";
 import { listCreatorPayouts } from "@/lib/payouts.functions";
 import { PayoutDetailsForm } from "@/components/creator/PayoutDetailsForm";
-import { Wallet, ArrowLeft, TrendingUp, Banknote } from "lucide-react";
+import { Wallet, ArrowLeft, TrendingUp, Banknote, Crown, Sparkles, Lock } from "lucide-react";
+import { getMyCreatorTier } from "@/lib/creator-tier.functions";
 
 export const Route = createFileRoute("/creator/earnings")({
   head: () => ({ meta: [{ title: "Earnings — Travidz" }, { name: "robots", content: "noindex" }] }),
@@ -49,6 +50,13 @@ function EarningsPage() {
     enabled: !!user && isCreator,
   });
 
+  const tierFn = useServerFn(getMyCreatorTier);
+  const { data: tier } = useQuery({
+    queryKey: ["creator-tier", user?.id ?? null],
+    queryFn: () => tierFn(),
+    enabled: !!user && isCreator,
+  });
+
   const months = summary?.months ?? [];
   const last6 = months.slice(0, 6).slice().reverse();
   const maxCommission = Math.max(1, ...last6.map((m) => Number(m.commission_cents_total ?? 0)));
@@ -64,6 +72,9 @@ function EarningsPage() {
       </header>
 
       <div className="space-y-6 px-5 pb-10 pt-5">
+        {/* Tier card */}
+        {tier && <TierCard tier={tier} />}
+
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3">
           <Kpi label="Lifetime commission" value={isLoading ? "—" : money(summary?.totals.lifetime_commission_cents ?? 0)} accent />
@@ -195,6 +206,51 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
     <div className={`rounded-2xl border ${accent ? "border-primary/40 bg-primary/5" : "border-border bg-card/40"} p-4`}>
       <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`mt-1 text-xl font-bold ${accent ? "text-primary" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>> }) {
+  const Icon = tier.tier === "founding" ? Crown : tier.tier === "power" ? Lock : Sparkles;
+  const showProgress = tier.tier !== "founding" && tier.tier !== "power";
+  const pct = Math.min(100, Math.round((tier.rolling12moGbvCents / tier.powerThresholdCents) * 100));
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-primary">
+            <Icon className="h-3.5 w-3.5" /> Your tier
+          </p>
+          <p className="mt-1 text-lg font-bold">
+            {tier.tierLabel}
+            {tier.isFounding && tier.foundingNumber ? ` #${tier.foundingNumber}` : ""}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            You keep <span className="font-semibold text-foreground">{tier.creatorPct}%</span> of the 8% commission on every booking.
+            {tier.tier === "founding" || tier.tier === "power" ? " Locked for life." : ""}
+          </p>
+        </div>
+        <div className="rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-bold text-primary">
+          {tier.creatorPct}/{tier.platformPct}
+        </div>
+      </div>
+
+      {showProgress && (
+        <div className="mt-3">
+          <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
+            <span>Rolling 12-mo GBV: {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.rolling12moGbvCents / 100)}</span>
+            <span>£{Math.round(tier.powerThresholdCents / 100).toLocaleString()} to lock 50% forever</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          {tier.centsToPowerTier > 0 && tier.centsToPowerTier < 500000 && (
+            <p className="mt-2 text-xs font-semibold text-primary">
+              Only {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.centsToPowerTier / 100)} more in bookings to lock 50% forever.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

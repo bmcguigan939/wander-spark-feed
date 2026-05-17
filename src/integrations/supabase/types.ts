@@ -757,7 +757,10 @@ export type Database = {
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
+          creator_commission_cents: number | null
           creator_id: string | null
+          creator_share_pct: number | null
+          creator_tier: string | null
           currency: string
           deal_id: string
           id: string
@@ -766,6 +769,8 @@ export type Database = {
           notes: string | null
           order_value_cents: number | null
           payout_run_id: string | null
+          platform_commission_cents: number | null
+          platform_share_pct: number | null
           status: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at: string
           user_id: string | null
@@ -777,7 +782,10 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
+          creator_commission_cents?: number | null
           creator_id?: string | null
+          creator_share_pct?: number | null
+          creator_tier?: string | null
           currency?: string
           deal_id: string
           id?: string
@@ -786,6 +794,8 @@ export type Database = {
           notes?: string | null
           order_value_cents?: number | null
           payout_run_id?: string | null
+          platform_commission_cents?: number | null
+          platform_share_pct?: number | null
           status?: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at?: string
           user_id?: string | null
@@ -797,7 +807,10 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
+          creator_commission_cents?: number | null
           creator_id?: string | null
+          creator_share_pct?: number | null
+          creator_tier?: string | null
           currency?: string
           deal_id?: string
           id?: string
@@ -806,6 +819,8 @@ export type Database = {
           notes?: string | null
           order_value_cents?: number | null
           payout_run_id?: string | null
+          platform_commission_cents?: number | null
+          platform_share_pct?: number | null
           status?: Database["public"]["Enums"]["deal_redemption_status"]
           updated_at?: string
           user_id?: string | null
@@ -1786,13 +1801,19 @@ export type Database = {
           business_agreement_accepted_at: string | null
           created_at: string
           creator_agreement_accepted_at: string | null
+          creator_joined_at: string | null
           display_name: string | null
+          founding_creator_number: number | null
           id: string
+          is_founding_creator: boolean
           is_restaurant: boolean
           is_verified: boolean
           lat: number | null
           lng: number | null
           place_name: string | null
+          power_tier_locked_at: string | null
+          rolling_12mo_gbv_cents: number
+          rolling_12mo_gbv_refreshed_at: string | null
           thefork_url: string | null
           username: string
           verification_notes: string | null
@@ -1806,13 +1827,19 @@ export type Database = {
           business_agreement_accepted_at?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
+          creator_joined_at?: string | null
           display_name?: string | null
+          founding_creator_number?: number | null
           id: string
+          is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
           place_name?: string | null
+          power_tier_locked_at?: string | null
+          rolling_12mo_gbv_cents?: number
+          rolling_12mo_gbv_refreshed_at?: string | null
           thefork_url?: string | null
           username: string
           verification_notes?: string | null
@@ -1826,13 +1853,19 @@ export type Database = {
           business_agreement_accepted_at?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
+          creator_joined_at?: string | null
           display_name?: string | null
+          founding_creator_number?: number | null
           id?: string
+          is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
           place_name?: string | null
+          power_tier_locked_at?: string | null
+          rolling_12mo_gbv_cents?: number
+          rolling_12mo_gbv_refreshed_at?: string | null
           thefork_url?: string | null
           username?: string
           verification_notes?: string | null
@@ -2366,6 +2399,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_creator_tiers: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

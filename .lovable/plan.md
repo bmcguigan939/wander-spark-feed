@@ -1,52 +1,75 @@
-## Build `Travidz_Market_Research_TAM_SOM_v6.xlsx`
+## Goal
 
-Headline rev-share for v6: **Tapered 50 → 40 → 30 with a Power-Creator Tier.** Every creator starts at 50%, tapers down with tenure, but climbs back to 50% the moment they cross **£25k GBV in a rolling 12-month window.** Keeps cold-start velocity, rewards the power-law top 5%, expands platform margin as the long tail matures.
+Bring the live Travidz product in line with the v6 TAM/SOM model:
+**Tapered 50 → 40 → 30 by tenure**, with a **Power-Creator Tier** (rolling 12-month GBV ≥ £25k locks you at 50% forever), plus a **Founding Creator** flag (first 500 creators locked at 50% for life). The shopper-facing **8% gross commission stays the same** — only the *split* between creator and Travidz changes per booking.
 
-### 1. Cover sheet — new global inputs
-- `New creator share (months 1–6)` = 50%
-- `Maturing creator share (months 7–18)` = 40%
-- `Mature creator share (months 19+)` = 30%
-- `Power-creator threshold (rolling 12mo GBV, £)` = 25,000 (blue input — VC will test this)
-- `Power-creator share` = 50%
-- `Founding Creator cap (first N creators, 50% for life)` = 500
+Today the codebase hard-codes a flat 50/50 split via `src/lib/commission.ts` (`creatorPct: 4, platformPct: 4`). Every redemption, payout, agreement page, calculator and email reads from that constant. We need to replace that single constant with a per-creator, per-booking lookup.
 
-### 2. NEW — `Cohort Maturity` sheet
-Models the blended creator share Y1–Y5 from three inputs:
-- Monthly new-creator intake (from SOM Scenarios)
-- Tenure mix per year (% of active creators in each band)
-- Power-creator penetration (% of active creators above £25k threshold, ramping 2% Y1 → 12% Y5 based on LTK/Stay22 power-law benchmarks)
+---
 
-Output: **blended creator share** Y1 ~48%, Y2 ~44%, Y3 ~40%, Y4 ~36%, Y5 ~33%. Travidz net take-rate climbs **4.0% → 4.5% → 5.0% → 5.7% → 6.2%** of GBV.
+## 1. Database (migration)
 
-### 3. SOM Scenarios — rewire
-- Creator block: net commission = `GBV × 8% × (1 − Cohort Maturity!blended_creator_share)`
-- Paid-UA block: unchanged at 50/50 (no tenure concept for paid bookings)
-- Y3 / Y5 combined net commission recompute against the new blended share
+Add the tenure + power-tier state to creators and stamp the resolved split onto every redemption so historical earnings stay correct even when rates change later.
 
-### 4. `Scenarios — Rev-Share Tiers` — reshuffle
-| Scenario | Structure | Y3 net | Y5 net | Raise |
-|---|---|---|---|---|
-| **A — Recommended** | Tapered + £25k power tier | ~£340k | ~£2.8M | ~£1.70M |
-| B — Flat 50/50 | 50% forever | ~£280k | ~£2.0M | ~£1.90M |
-| C — Pure tapered | 50→40→30 no power tier | ~£360k | ~£3.0M | ~£1.65M |
+- `profiles`: add `is_founding_creator boolean default false`, `founding_creator_number int null` (rank 1–500), `creator_joined_at timestamptz` (backfill from existing signup), `power_tier_locked_at timestamptz null` (set the first time they cross £25k rolling-12mo GBV — once set, never cleared).
+- `deal_redemptions`: add `creator_share_pct numeric(5,2) null`, `platform_share_pct numeric(5,2) null`, `creator_commission_cents int null`, `platform_commission_cents int null`, `creator_tier text null` (`'founding' | 'power' | 'new' | 'maturing' | 'mature'`). Backfill existing rows at 50/50, tier `'new'`.
+- `creator_gbv_rolling_12mo` materialised view (creator_id, gbv_cents, refreshed nightly via existing cron) — used to flip `power_tier_locked_at`.
+- Trigger `enforce_founding_cap()` that assigns `founding_creator_number` on insert into `profiles` while count < 500.
+- Nightly cron (`/api/public/cron/refresh-creator-tiers`) refreshes the view and sets `power_tier_locked_at = now()` for any creator newly above £25k.
 
-Scenario A becomes the default; B and C exist for VC Q&A.
+## 2. Commission engine
 
-### 5. Sensitivity sheet — one new lever
-Add **Power-creator penetration %** as a third sensitivity axis alongside CPI and Conversion. Heat-map Y5 combined net commission across 5% / 10% / 15% / 20% penetration.
+Replace the flat constant with a resolver.
 
-### 6. Revenue Engine + Exec Summary
-- Update flywheel labels: *"50% on every booking from day one. Stay above £25k GBV/year and it's 50% forever."*
-- New headline tile: *"Take-rate: 4% → 6.2% of GBV by Y5 as cohorts mature."*
-- Callout: *"Top 10% of creators carry ~60% of GBV (LTK benchmark). The power tier ensures they never see a pay cut — alignment is permanent."*
+- `src/lib/commission.ts` keeps `totalPct = 8` but exports a new pure function:
+  ```ts
+  resolveSplit({ joinedAt, isFounding, powerTierLockedAt, bookingAt })
+    → { creatorPct, platformPct, tier }
+  ```
+  Rules: founding or power-tier-locked → 50/50. Otherwise by tenure at `bookingAt`: months 0–6 → 50/50, 7–18 → 40/60 (creator/platform of the 8%), 19+ → 30/70.
+- `src/lib/match-codes.server.ts` and `src/routes/api/public/attribute.ts`: when writing a `deal_redemption`, call the resolver with the creator's profile and stamp `creator_share_pct`, `platform_share_pct`, `creator_commission_cents`, `platform_commission_cents`, `creator_tier`.
+- All downstream reads (`earnings.functions.ts`, `payouts.functions.ts`, statement CSV, admin payouts page) switch from the hard-coded constant to the per-row `creator_commission_cents`.
 
-### 7. Sources to add
-- S32: LTK creator GBV distribution (power law, top-decile share)
-- S33: Stay22 / Travelpayouts cohort retention curves
+## 3. Creator-facing UI
 
-### Deliverable
-`/mnt/documents/Travidz_Market_Research_TAM_SOM_v6.xlsx`, QA'd page-by-page, v5 retained for comparison. I'll flag headline numbers in the reply so you can sanity-check before we move to the pitch deck.
+- **`/creator/earnings`** — add a "Your tier" card: shows current tier (Founding / Power / New / Maturing / Mature), current creator share %, rolling-12mo GBV with a progress bar to £25k. If within 6 months of dropping a tier, a banner: *"You're £X away from locking 50% forever."*
+- **`/studio` dashboard** — small badge next to the earnings tile mirroring the same tier.
+- **`/u/$username`** (own profile only) — Founding Creator badge if applicable.
+- **`/creator/analytics`** — annotate the earnings chart with tier transitions.
 
-**Why this works for both sides:**
-- **Creators:** Everyone starts at 50%. Anyone who's actually good (£25k GBV = ~£2k/mo income at 50% = a real side-income) stays at 50% forever. No one ever gets a pay cut while they're winning.
-- **VCs:** Margin expands automatically as the platform matures (4% → 6.2%). The taper isn't a creator-hostile lever — it's a long-tail efficiency story. Power-law math means top creators (the 10% you actually care about retaining) are economically locked in.
+## 4. Legal & marketing copy
+
+- `src/routes/legal.creator-agreement.tsx` — rewrite the commission section to describe the tapered ladder + power-creator unlock + founding-creator lifetime lock. Include the worked example table from the workbook.
+- `src/routes/legal.business-agreement.tsx` — the business-facing copy stays at "flat 8% commission" (businesses don't see the split), but update the 50/50 sentence to *"split between the creator and Travidz; the creator share depends on the creator's tier."*
+- `src/routes/business.calculator.tsx` — leave business calc alone (it already shows business-side maths). Add a parallel `/creator/calculator` route that shows creator take-home across the three tenure tiers + power tier.
+- Welcome / onboarding (`src/routes/welcome.tsx`, creator agreement screen) — add a "Founding Creator — 50% for life" callout while signups < 500, with a live counter (`500 − founding_creator_number_max`).
+
+## 5. Email templates
+
+- `src/lib/email-templates/redemption-confirmed-creator.tsx` — show the actual creator share % from the redemption row, not the constant.
+- New template `creator-tier-unlocked.tsx` — fires when `power_tier_locked_at` is first set ("You're locked at 50% forever — congrats").
+- New template `founding-creator-welcome.tsx` — fires on signup if `is_founding_creator = true`.
+
+## 6. Admin tooling
+
+- `src/routes/admin.users.tsx` — show tier + founding number + rolling-12mo GBV per creator; allow manual override of `power_tier_locked_at` (rare-case promotions).
+- `src/routes/admin.payouts.tsx` — surface split breakdown per redemption (creator vs platform cents).
+- `src/routes/admin.index.tsx` — KPI tile: blended Travidz take-rate this month (should track the workbook's 4.0% → 6.2% glide path).
+
+## 7. Sequencing
+
+1. Migration (tables, view, trigger, cron route).
+2. `commission.ts` resolver + attribution rewrite + redemption stamping.
+3. Backfill script for existing redemptions (50/50, tier `'new'`).
+4. Creator UI (earnings tier card, tier badges).
+5. Legal pages + welcome + emails.
+6. Admin views.
+7. Manual QA: simulate a creator at months 3 / 12 / 24, with and without the power lock, verify the resolver picks the right split and the earnings page reconciles.
+
+## Out of scope (flagged for later)
+
+- Real payouts infrastructure (still "accrual only" per current creator agreement).
+- Quarterly leaderboard / featured placement bonus for power creators — workbook keeps this as a Scenario B alternative, not in the v6 default.
+- Multi-currency tier thresholds — v6 assumes GBP only.
+
+After approval I'll work through the sequence top-to-bottom in a single build pass and surface the migration first for your sign-off before any code changes ship.

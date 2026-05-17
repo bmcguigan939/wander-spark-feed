@@ -82,6 +82,7 @@ import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals
 import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$code.thanks'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
+import { Route as ApiPublicCronRefreshCreatorTiersRouteImport } from './routes/api/public/cron/refresh-creator-tiers'
 import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
 import { Route as ApiPublicCronFxRefreshRouteImport } from './routes/api/public/cron/fx-refresh'
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
@@ -455,6 +456,12 @@ const ApiPublicDIdRoute = ApiPublicDIdRouteImport.update({
   path: '/api/public/d/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronRefreshCreatorTiersRoute =
+  ApiPublicCronRefreshCreatorTiersRouteImport.update({
+    id: '/api/public/cron/refresh-creator-tiers',
+    path: '/api/public/cron/refresh-creator-tiers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronParitySweepRoute =
   ApiPublicCronParitySweepRouteImport.update({
     id: '/api/public/cron/parity-sweep',
@@ -556,6 +563,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
+  '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
@@ -633,6 +641,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
+  '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
@@ -714,6 +723,7 @@ export interface FileRoutesById {
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
+  '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
@@ -796,6 +806,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
+    | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/book/match/$code/thanks'
@@ -873,6 +884,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
+    | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/book/match/$code/thanks'
@@ -953,6 +965,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
+    | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/book/match/$code/thanks'
@@ -1018,6 +1031,7 @@ export interface RootRouteChildren {
   ApiPublicCronExpiringDealsRoute: typeof ApiPublicCronExpiringDealsRoute
   ApiPublicCronFxRefreshRoute: typeof ApiPublicCronFxRefreshRoute
   ApiPublicCronParitySweepRoute: typeof ApiPublicCronParitySweepRoute
+  ApiPublicCronRefreshCreatorTiersRoute: typeof ApiPublicCronRefreshCreatorTiersRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1538,6 +1552,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/refresh-creator-tiers': {
+      id: '/api/public/cron/refresh-creator-tiers'
+      path: '/api/public/cron/refresh-creator-tiers'
+      fullPath: '/api/public/cron/refresh-creator-tiers'
+      preLoaderRoute: typeof ApiPublicCronRefreshCreatorTiersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/parity-sweep': {
       id: '/api/public/cron/parity-sweep'
       path: '/api/public/cron/parity-sweep'
@@ -1726,6 +1747,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronExpiringDealsRoute: ApiPublicCronExpiringDealsRoute,
   ApiPublicCronFxRefreshRoute: ApiPublicCronFxRefreshRoute,
   ApiPublicCronParitySweepRoute: ApiPublicCronParitySweepRoute,
+  ApiPublicCronRefreshCreatorTiersRoute: ApiPublicCronRefreshCreatorTiersRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -1735,13 +1757,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -26,8 +26,17 @@ function CreatorAgreementPage() {
       <p>Applying for a deal does not guarantee approval. If approved, a Business may issue you a unique code; you must use it only in your own promotional content and never sell or transfer it.</p>
       <h2>4. Affiliate links</h2>
       <p>When you wrap an affiliate link via Travidz, the redirect, tracking parameter, and click logging are part of the service. Don't strip or modify them.</p>
-      <h2>5. Earnings (when enabled)</h2>
-      <p>Travidz tracks attributed clicks, conversions and commissions. Payouts are not currently available; earnings are accrued as statements only and will be paid out once payments infrastructure is launched.</p>
+      <h2>5. Earnings and commission split</h2>
+      <p>Travidz charges a flat <strong>8% commission</strong> on every booking attributed to your content. Your share of that 8% is set by your tier at the moment the booking is confirmed:</p>
+      <ul>
+        <li><strong>Founding Creator</strong> (first 500 creators): <strong>50%</strong> of the 8% — locked for life.</li>
+        <li><strong>Power Creator</strong> (rolling 12-month gross booking value ≥ £25,000): <strong>50%</strong> of the 8% — locked for life once you cross the threshold.</li>
+        <li><strong>New Creator</strong> (months 1–6 after joining): 50% of the 8%.</li>
+        <li><strong>Maturing Creator</strong> (months 7–18): 40% of the 8%.</li>
+        <li><strong>Mature Creator</strong> (month 19+): 30% of the 8%, unless your rolling 12-month volume keeps you in the Power tier.</li>
+      </ul>
+      <p>The split applied to each booking is permanently stamped on that booking. Future rule changes do not retroactively reduce earnings already recorded. Travidz tracks attributed clicks, conversions and commissions; payouts will be issued once payments infrastructure is launched.</p>
+      <p><em>Worked example:</em> a £500 booking generates £40 in commission (8%). A Power Creator receives £20; a Mature Creator receives £12.</p>
       <h2>6. Removal and demotion</h2>
       <p>We may demote or remove videos that breach the <a href="/legal/terms">Terms</a>, harm the platform's trust signals, or include misleading travel claims (e.g. unsafe activities marketed as safe).</p>
       <h2>7. Termination</h2>

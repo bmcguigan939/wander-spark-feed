@@ -10,6 +10,7 @@ import {
 } from "./email-send.server";
 import { RedemptionConfirmedCreatorEmail } from "./email-templates/redemption-confirmed-creator";
 import { RedemptionConfirmedTravellerEmail } from "./email-templates/redemption-confirmed-traveller";
+import { stampRedemptionSplit } from "@/lib/commission.server";
 
 // Traveller-initiated "I used this code" claim. Inserts a pending redemption.
 // Idempotent: if the same user has already claimed the same code in the last
@@ -173,6 +174,12 @@ export const confirmRedemption = createServerFn({ method: "POST" })
       .single();
     if (error) return { ok: false as const, error: error.message };
 
+    // Stamp the v6 tier-based split (creator vs Travidz share of the 8%).
+    // The DB trigger has already computed commission_cents on the row.
+    await stampRedemptionSplit(data.id).catch((e) =>
+      console.error("stamp split failed", e),
+    );
+
     // Flip the price-match code to 'redeemed' so it cannot be re-used and
     // the audit page can show fair settlement.
     if (matchCode) {
@@ -238,7 +245,7 @@ async function sendRedemptionConfirmedEmails(redemptionId: string) {
   const { data: r } = await supabaseAdmin
     .from("deal_redemptions")
     .select(
-      "id,deal_id,creator_id,user_id,commission_cents,order_value_cents,deals(title,business_id),creator:profiles!deal_redemptions_creator_id_fkey(display_name,username),traveller:profiles!deal_redemptions_user_id_fkey(display_name,username)",
+      "id,deal_id,creator_id,user_id,commission_cents,creator_commission_cents,order_value_cents,deals(title,business_id),creator:profiles!deal_redemptions_creator_id_fkey(display_name,username),traveller:profiles!deal_redemptions_user_id_fkey(display_name,username)",
     )
     .eq("id", redemptionId)
     .maybeSingle();
@@ -263,7 +270,10 @@ async function sendRedemptionConfirmedEmails(redemptionId: string) {
     const email = await getUserEmail(r.creator_id);
     if (email) {
       const creator = (r as any).creator as { display_name: string | null; username: string } | null;
-      const commission = formatMoneyGBP(r.commission_cents ?? 0);
+      // Send the creator's share (post-split), not the gross commission.
+      const commission = formatMoneyGBP(
+        r.creator_commission_cents ?? Math.round((r.commission_cents ?? 0) / 2),
+      );
       const order = formatMoneyGBP(r.order_value_cents ?? 0);
       await enqueueTransactionalEmail({
         to: email,
