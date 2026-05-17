@@ -37,7 +37,10 @@ import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as LegalDmcaRouteImport } from './routes/legal.dmca'
+import { Route as LegalCreatorAgreementRouteImport } from './routes/legal.creator-agreement'
 import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
+import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.business-agreement'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
@@ -208,9 +211,24 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalDmcaRoute = LegalDmcaRouteImport.update({
+  id: '/legal/dmca',
+  path: '/legal/dmca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalCreatorAgreementRoute = LegalCreatorAgreementRouteImport.update({
+  id: '/legal/creator-agreement',
+  path: '/legal/creator-agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalCookiesRoute = LegalCookiesRouteImport.update({
   id: '/legal/cookies',
   path: '/legal/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalBusinessAgreementRoute = LegalBusinessAgreementRouteImport.update({
+  id: '/legal/business-agreement',
+  path: '/legal/business-agreement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
@@ -390,7 +408,10 @@ export interface FileRoutesByFullPath {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
   '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
@@ -448,7 +469,10 @@ export interface FileRoutesByTo {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
   '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
@@ -508,7 +532,10 @@ export interface FileRoutesById {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
   '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
@@ -570,7 +597,10 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
     | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
@@ -628,7 +658,10 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
     | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
@@ -687,7 +720,10 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
     | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
@@ -742,7 +778,10 @@ export interface RootRouteChildren {
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
+  LegalBusinessAgreementRoute: typeof LegalBusinessAgreementRoute
   LegalCookiesRoute: typeof LegalCookiesRoute
+  LegalCreatorAgreementRoute: typeof LegalCreatorAgreementRoute
+  LegalDmcaRoute: typeof LegalDmcaRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
@@ -965,11 +1004,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/dmca': {
+      id: '/legal/dmca'
+      path: '/legal/dmca'
+      fullPath: '/legal/dmca'
+      preLoaderRoute: typeof LegalDmcaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/creator-agreement': {
+      id: '/legal/creator-agreement'
+      path: '/legal/creator-agreement'
+      fullPath: '/legal/creator-agreement'
+      preLoaderRoute: typeof LegalCreatorAgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/cookies': {
       id: '/legal/cookies'
       path: '/legal/cookies'
       fullPath: '/legal/cookies'
       preLoaderRoute: typeof LegalCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/business-agreement': {
+      id: '/legal/business-agreement'
+      path: '/legal/business-agreement'
+      fullPath: '/legal/business-agreement'
+      preLoaderRoute: typeof LegalBusinessAgreementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/itineraries/new': {
@@ -1275,7 +1335,10 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
+  LegalBusinessAgreementRoute: LegalBusinessAgreementRoute,
   LegalCookiesRoute: LegalCookiesRoute,
+  LegalCreatorAgreementRoute: LegalCreatorAgreementRoute,
+  LegalDmcaRoute: LegalDmcaRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
