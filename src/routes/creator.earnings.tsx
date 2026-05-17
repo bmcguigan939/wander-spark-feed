@@ -209,3 +209,48 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
     </div>
   );
 }
+
+function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>> }) {
+  const Icon = tier.tier === "founding" ? Crown : tier.tier === "power" ? Lock : Sparkles;
+  const showProgress = tier.tier !== "founding" && tier.tier !== "power";
+  const pct = Math.min(100, Math.round((tier.rolling12moGbvCents / tier.powerThresholdCents) * 100));
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-primary">
+            <Icon className="h-3.5 w-3.5" /> Your tier
+          </p>
+          <p className="mt-1 text-lg font-bold">
+            {tier.tierLabel}
+            {tier.isFounding && tier.foundingNumber ? ` #${tier.foundingNumber}` : ""}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            You keep <span className="font-semibold text-foreground">{tier.creatorPct}%</span> of the 8% commission on every booking.
+            {tier.tier === "founding" || tier.tier === "power" ? " Locked for life." : ""}
+          </p>
+        </div>
+        <div className="rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-bold text-primary">
+          {tier.creatorPct}/{tier.platformPct}
+        </div>
+      </div>
+
+      {showProgress && (
+        <div className="mt-3">
+          <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
+            <span>Rolling 12-mo GBV: {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.rolling12moGbvCents / 100)}</span>
+            <span>£{Math.round(tier.powerThresholdCents / 100).toLocaleString()} to lock 50% forever</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          {tier.centsToPowerTier > 0 && tier.centsToPowerTier < 500000 && (
+            <p className="mt-2 text-xs font-semibold text-primary">
+              Only {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.centsToPowerTier / 100)} more in bookings to lock 50% forever.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
