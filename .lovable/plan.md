@@ -1,56 +1,57 @@
-## Update creator-led commission economics in v3 workbook
+## Build `Travidz_Market_Research_TAM_SOM_v5.xlsx`
 
-Currently the creator-led block in `Travidz_Market_Research_TAM_SOM_v3.xlsx` uses the same affiliate take-rate as the paid-UA channel (≈10–12%) and gives creators a 20% rev-share of Travidz's net commission. That does not match how these deals are actually structured.
+Two linked changes plus one defensive addition for investor conversations.
 
-### New commission rule (creator-onboarded businesses only)
-- **Total commission charged to the business: 8% of GBV**
-- **Travidz net take: 4% of GBV**
-- **Creator share: 4% of GBV** (paid directly out of the 8%, not a rev-share of Travidz's cut)
+### 1. Flat 50/50 commission across ALL channels (your ask)
 
-Paid-UA / affiliate-sourced bookings are unchanged — they keep the existing TheFork-style per-cover / affiliate take-rate.
+**Cover sheet — replace creator-only inputs with global splits:**
+- `Creator-onboarded gross commission %` = 8.0%  → Travidz 4.0% / Creator 4.0%
+- `Paid-UA / organic gross commission %` = 10.0% → Travidz 5.0% / Creator 5.0%
+- `Travidz share of all commission` = **50%** (single global driver — change once, model recalculates)
 
-### Changes to the workbook (produces `Travidz_Market_Research_TAM_SOM_v4.xlsx`)
+**SOM Scenarios sheet:**
+- Paid-UA block (rows ~30–60): net commission line now = `GBV × gross% × 50%` instead of `GBV × gross%`
+- Creator block (rows ~61–122): already at 4% net, no change
+- Roll-up: combined Y3 / Y5 net commission both drop ~40–45%
 
-1. **Cover / FX & Assumptions sheet**
-   - Add two new global inputs (blue, yellow highlight):
-     - `Creator deal — Total commission %` = 8.0%
-     - `Creator deal — Travidz share %` = 4.0%
-   - Derived (black): `Creator share %` = Total − Travidz = 4.0%.
+**Revenue Engine sheet:** update flywheel labels to "50/50 on every booking" and recompute blended take-rate (now flat 4–5% net regardless of channel mix).
 
-2. **SOM Scenarios sheet — Creator-Led block (rows ~61–122)**
-   - Replace the current "creator commission = GBV × affiliate_take_rate" and "creator rev-share = 20% × commission" lines with:
-     - `Creator GBV` (unchanged formula)
-     - `Gross commission (8%)` = Creator GBV × Cover!`Creator total %`
-     - `Travidz net commission (4%)` = Creator GBV × Cover!`Travidz share %`
-     - `Creator payout (4%)` = Gross − Travidz net
-   - Update the Conservative / Base / Stretch columns so all three scenarios reference the same 8% / 4% / 4% inputs (scenarios still vary on volume drivers, not on take-rate).
-   - Update the "Total commission" roll-up at the bottom of SOM to sum: `Paid-UA net commission + Creator Travidz net commission (4%)`. Remove the old 20% rev-share opex line — it's no longer needed because the creator payout is already netted out at the take-rate level.
+### 2. Sensitivity sheet → combined commission (your ask)
 
-3. **Revenue Engine sheet**
-   - Update the two-sided flywheel table: creator-onboarded supply now carries an explicit `8% gross / 4% Travidz / 4% creator` label and the blended take-rate row recalculates from the new mix.
+- Break-even tiles switch from paid-UA-only to **combined (paid + creator) net commission**
+- Add explicit **"Annual"** label on Y3 / Y5 tiles so it's unambiguous for investors
+- Heat-map (CPI × Conversion) now outputs combined Y5 net commission
+- Add a second mini heat-map: **Creators/month × Businesses/creator** → combined Y5 net commission (the creator-channel sensitivity that matters under 50/50)
 
-4. **Raise & Runway sheet**
-   - Recalculate required raise using the new (lower) Travidz net commission from the creator channel.
-   - Keep Creator Partnerships Lead (£5k/mo) and outreach tooling lines.
-   - Remove the variable "Creator rev-share" opex line (now embedded in take-rate).
-   - Recompute Y3 break-even coverage and recommended raise.
+### 3. NEW — Tiered scenario tab (defensive, for VC Q&A)
 
-5. **Exec Summary**
-   - Update headline tiles for Y3 / Y5 total net commission and recommended raise with the new numbers.
-   - Add a one-line note: *"Creator-led deals: 8% commission to business, split 4% Travidz / 4% creator."*
+Add a `Scenarios — Rev-Share Tiers` sheet with three side-by-side cases:
 
-6. **Sensitivity sheet**
-   - The creator heat-map (creators/mo × businesses/creator) now outputs **Travidz net commission at 4%**, not gross. Re-label axis and title.
+| Scenario | Creator share | Y3 net | Y5 net | Raise |
+|---|---|---|---|---|
+| A — Flat 50/50 (your pitch) | 50% forever | ~£280k | ~£2.0M | ~£1.9M |
+| B — Tapered | 50% Y1, 40% Y2, 30% Y3+ | ~£340k | ~£2.7M | ~£1.7M |
+| C — First-£10k bonus | 50% on first £10k GBV/creator, then 30% | ~£380k | ~£3.0M | ~£1.6M |
 
-7. **Sources sheet**
-   - Add a short note (S28) documenting the 8% / 4% / 4% structure as a Travidz commercial decision (internal, not a market benchmark).
+This lets you lead the pitch with "50/50, creator-first" but answer the inevitable VC question "how does this look at scale?" without flinching.
 
-### Expected directional impact (to be confirmed on rebuild)
-- Y5 creator-channel net commission drops from £4.26M to roughly £1.7–£1.9M (≈4% of GBV vs. the previous blended ~10% gross × 80% retained).
-- Total Y5 net commission drops from £4.65M to roughly £2.1–£2.3M.
-- Recommended raise increases modestly from £1.41M (likely back into the £1.55–£1.75M range) because Travidz now retains less per creator-driven booking, partially offset by removing the explicit 20% rev-share opex line.
+### 4. Raise & Runway recalc
+- Lower Travidz net → higher raise needed (likely £1.8–2.0M vs. current £1.57M)
+- Founders' £15k/mo salaries from month 1 retained
+- Y3 break-even coverage will drop to ~25–30% under flat 50/50 (vs. 48% in v4)
+
+### 5. Exec Summary update
+- Headline tiles refresh with new numbers
+- Add a callout box: *"Creator-first economics: 50% of every commission goes to the creator who drove the booking. Best-in-class vs. Booking Affiliates (~30%), LTK (~70% but on lower take-rate), Stay22 (~50%)."*
+- Add a one-line note explaining the tiered alternative is modelled on the Scenarios tab
+
+### 6. Sources
+- S29: Booking.com Affiliate Partner Programme commission share (public)
+- S30: Stay22 / Travelpayouts creator payout benchmarks
+- S31: LTK / ShopMy creator economics (for cross-vertical comparison)
 
 ### Deliverable
-A new file at `/mnt/documents/Travidz_Market_Research_TAM_SOM_v4.xlsx`, QA'd page-by-page (no #REF!/#DIV/0!, print layout intact), with the v3 file kept for comparison.
+`/mnt/documents/Travidz_Market_Research_TAM_SOM_v5.xlsx`, QA'd page-by-page, with v4 kept for comparison. I'll flag the projected headline numbers (Y3/Y5 combined, recommended raise, coverage) in the reply when it's built so you can sanity-check before we move on to the pitch deck.
 
-Approve and I'll build v4.
+**One thing I'd like you to confirm before I build:**
+Do you want me to model **flat 50/50 only** (your literal ask), or **flat 50/50 as the headline + the tiered scenarios alongside it** as decision support? I'd strongly recommend the latter — it costs nothing to model and gives you a real answer when a VC pushes on long-term margin.
