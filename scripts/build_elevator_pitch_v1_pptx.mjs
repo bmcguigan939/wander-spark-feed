@@ -159,12 +159,12 @@ alloc.forEach(([l,p,col])=>{
   s.addShape("rect",{x:lx,y:barY+0.3,w:0.14,h:0.14,fill:{color:col},line:{color:col}});
   const t=`${l} ${Math.round(p*100)}%`;
   s.addText(t,{x:lx+0.18,y:barY+0.27,w:1.0,h:0.22,fontSize:9,bold:true,color:INK,fontFace:"Calibri"});
-  lx+=0.85;
+  lx+=0.95;
 });
 
 // Gates & contact
 s.addText("Phase 1 gates: 2.4k cr · £44M GBV · 4.12% take · UK live",{x:ax+0.2,y:y+0.95,w:askW-0.4,h:0.22,fontSize:8.5,bold:true,color:CYAN,fontFace:"Calibri"});
-s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+1.85,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
+s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+1.78,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
 
 await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v1.pptx"});
 console.log("OK");
