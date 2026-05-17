@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { getCreatorEarningsSummary, getCreatorEarningsByDeal } from "@/lib/earnings.functions";
 import { listCreatorPayouts } from "@/lib/payouts.functions";
 import { PayoutDetailsForm } from "@/components/creator/PayoutDetailsForm";
-import { Wallet, ArrowLeft, TrendingUp, Banknote } from "lucide-react";
+import { Wallet, ArrowLeft, TrendingUp, Banknote, Crown, Sparkles, Lock } from "lucide-react";
+import { getMyCreatorTier } from "@/lib/creator-tier.functions";
 
 export const Route = createFileRoute("/creator/earnings")({
   head: () => ({ meta: [{ title: "Earnings — Travidz" }, { name: "robots", content: "noindex" }] }),
@@ -49,6 +50,13 @@ function EarningsPage() {
     enabled: !!user && isCreator,
   });
 
+  const tierFn = useServerFn(getMyCreatorTier);
+  const { data: tier } = useQuery({
+    queryKey: ["creator-tier", user?.id ?? null],
+    queryFn: () => tierFn(),
+    enabled: !!user && isCreator,
+  });
+
   const months = summary?.months ?? [];
   const last6 = months.slice(0, 6).slice().reverse();
   const maxCommission = Math.max(1, ...last6.map((m) => Number(m.commission_cents_total ?? 0)));
@@ -64,6 +72,9 @@ function EarningsPage() {
       </header>
 
       <div className="space-y-6 px-5 pb-10 pt-5">
+        {/* Tier card */}
+        {tier && <TierCard tier={tier} />}
+
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3">
           <Kpi label="Lifetime commission" value={isLoading ? "—" : money(summary?.totals.lifetime_commission_cents ?? 0)} accent />
