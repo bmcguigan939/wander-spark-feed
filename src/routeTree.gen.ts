@@ -78,6 +78,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
+import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$code.thanks'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
 import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
@@ -432,6 +433,11 @@ const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => BusinessDealsIdRoute,
 } as any)
+const BookMatchCodeThanksRoute = BookMatchCodeThanksRouteImport.update({
+  id: '/thanks',
+  path: '/thanks',
+  getParentRoute: () => BookMatchCodeRoute,
+} as any)
 const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
   id: '/api/public/go/$id',
   path: '/api/public/go/$id',
@@ -525,7 +531,7 @@ export interface FileRoutesByFullPath {
   '/studio/': typeof StudioIndexRoute
   '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/book/match/$code': typeof BookMatchCodeRoute
+  '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
@@ -538,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -600,7 +607,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioIndexRoute
   '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/book/match/$code': typeof BookMatchCodeRoute
+  '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
@@ -612,6 +619,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -677,7 +685,7 @@ export interface FileRoutesById {
   '/studio/': typeof StudioIndexRoute
   '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
-  '/book/match/$code': typeof BookMatchCodeRoute
+  '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
@@ -690,6 +698,7 @@ export interface FileRoutesById {
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -769,6 +778,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -920,6 +931,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -971,7 +983,7 @@ export interface RootRouteChildren {
   LegalIndexRoute: typeof LegalIndexRoute
   ApiPublicAttributeRoute: typeof ApiPublicAttributeRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
-  BookMatchCodeRoute: typeof BookMatchCodeRoute
+  BookMatchCodeRoute: typeof BookMatchCodeRouteWithChildren
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
@@ -1473,6 +1485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessDealsIdEditRouteImport
       parentRoute: typeof BusinessDealsIdRoute
     }
+    '/book/match/$code/thanks': {
+      id: '/book/match/$code/thanks'
+      path: '/thanks'
+      fullPath: '/book/match/$code/thanks'
+      preLoaderRoute: typeof BookMatchCodeThanksRouteImport
+      parentRoute: typeof BookMatchCodeRoute
+    }
     '/api/public/go/$id': {
       id: '/api/public/go/$id'
       path: '/api/public/go/$id'
@@ -1585,6 +1604,18 @@ const StudioRouteChildren: StudioRouteChildren = {
 const StudioRouteWithChildren =
   StudioRoute._addFileChildren(StudioRouteChildren)
 
+interface BookMatchCodeRouteChildren {
+  BookMatchCodeThanksRoute: typeof BookMatchCodeThanksRoute
+}
+
+const BookMatchCodeRouteChildren: BookMatchCodeRouteChildren = {
+  BookMatchCodeThanksRoute: BookMatchCodeThanksRoute,
+}
+
+const BookMatchCodeRouteWithChildren = BookMatchCodeRoute._addFileChildren(
+  BookMatchCodeRouteChildren,
+)
+
 interface BusinessDealsIdRouteChildren {
   BusinessDealsIdEditRoute: typeof BusinessDealsIdEditRoute
   BusinessDealsIdIndexRoute: typeof BusinessDealsIdIndexRoute
@@ -1643,7 +1674,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalIndexRoute: LegalIndexRoute,
   ApiPublicAttributeRoute: ApiPublicAttributeRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
-  BookMatchCodeRoute: BookMatchCodeRoute,
+  BookMatchCodeRoute: BookMatchCodeRouteWithChildren,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
