@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { listParityChecksForBusiness, disputeMatchCode, setParityExempt } from "@/lib/price-match.functions";
+import { listParityChecksForBusiness, disputeMatchCode, setParityExempt, exportPriceAuditCsv } from "@/lib/price-match.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff } from "lucide-react";
+import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff, Download } from "lucide-react";
 
 export const Route = createFileRoute("/business/price-audit")({
   head: () => ({ meta: [{ title: "Price-match audit — Travidz" }] }),
@@ -30,6 +30,7 @@ function PriceAuditPage() {
   const fetchFn = useServerFn(listParityChecksForBusiness);
   const disputeFn = useServerFn(disputeMatchCode);
   const exemptFn = useServerFn(setParityExempt);
+  const exportFn = useServerFn(exportPriceAuditCsv);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -86,6 +87,27 @@ function PriceAuditPage() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">Price-match audit</h1>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={async () => {
+              try {
+                const { csv, filename } = await exportFn();
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+                const u = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = u;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(u);
+              } catch (e: any) {
+                toast.error(e?.message ?? "Export failed");
+              }
+            }}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           Every time a traveller clicks through to one of your listings, Travidz checks

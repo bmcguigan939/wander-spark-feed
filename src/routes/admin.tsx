@@ -2,14 +2,14 @@ import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tansta
 import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { Shield, BarChart3, Film, Tag, Users, Sparkles, ShieldAlert, Banknote, Bug, Gavel } from "lucide-react";
+import { Shield, BarChart3, Film, Tag, Users, Sparkles, ShieldAlert, Banknote, Bug, Gavel, Wand2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Travidz" }] }),
   component: AdminLayout,
 });
 
-const TABS: Array<{ to: "/admin" | "/admin/videos" | "/admin/deals" | "/admin/users" | "/admin/discoveries" | "/admin/moderation" | "/admin/payouts" | "/admin/errors" | "/admin/disputes"; label: string; icon: typeof BarChart3; exact?: boolean }> = [
+const TABS: Array<{ to: "/admin" | "/admin/videos" | "/admin/deals" | "/admin/users" | "/admin/discoveries" | "/admin/moderation" | "/admin/payouts" | "/admin/errors" | "/admin/disputes" | "/admin/seed"; label: string; icon: typeof BarChart3; exact?: boolean }> = [
   { to: "/admin", label: "Overview", icon: BarChart3, exact: true },
   { to: "/admin/videos", label: "Videos", icon: Film },
   { to: "/admin/deals", label: "Deals", icon: Tag },
@@ -19,6 +19,7 @@ const TABS: Array<{ to: "/admin" | "/admin/videos" | "/admin/deals" | "/admin/us
   { to: "/admin/moderation", label: "Moderation", icon: ShieldAlert },
   { to: "/admin/errors", label: "Errors", icon: Bug },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/seed", label: "Seed", icon: Wand2 },
 ];
 
 function AdminLayout() {

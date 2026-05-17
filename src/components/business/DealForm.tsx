@@ -15,6 +15,8 @@ export type DealFormValues = {
   is_active: boolean;
   lat?: number | null;
   lng?: number | null;
+  parity_exempt?: boolean;
+  parity_exempt_reason?: string | null;
 };
 
 export function DealForm({
@@ -40,6 +42,8 @@ export function DealForm({
     is_active: initial?.is_active ?? true,
     lat: initial?.lat ?? null,
     lng: initial?.lng ?? null,
+    parity_exempt: initial?.parity_exempt ?? false,
+    parity_exempt_reason: initial?.parity_exempt_reason ?? "",
   });
   const [uploading, setUploading] = useState(false);
 
@@ -212,6 +216,41 @@ export function DealForm({
         />
         <span>Active</span>
       </label>
+      <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={!!v.parity_exempt}
+            onChange={(e) =>
+              setV({
+                ...v,
+                parity_exempt: e.target.checked,
+                parity_exempt_reason: e.target.checked ? v.parity_exempt_reason : "",
+              })
+            }
+          />
+          <span>
+            <span className="font-medium">Parity-exempt listing</span>
+            <span className="block text-xs text-muted-foreground">
+              Skip best-price checks for this listing. Use only when contractually justified
+              (members-only rate, packaged inclusion, non-comparable OTA price). A written
+              reason is required.
+            </span>
+          </span>
+        </label>
+        {v.parity_exempt && (
+          <textarea
+            value={v.parity_exempt_reason ?? ""}
+            onChange={(e) => setV({ ...v, parity_exempt_reason: e.target.value })}
+            rows={2}
+            required
+            minLength={5}
+            placeholder="Reason (min 5 chars, visible to Travidz support)"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        )}
+      </div>
       <button
         type="submit"
         disabled={busy || uploading}

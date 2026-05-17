@@ -166,3 +166,81 @@ export const setParityExempt = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** B11: CSV export of price-audit history for the signed-in business. */
+function csvEscape(v: unknown): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+export const exportPriceAuditCsv = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: links } = await supabaseAdmin
+      .from("affiliate_links")
+      .select("id,label")
+      .eq("business_id", userId);
+    const labelById = new Map((links ?? []).map((l) => [l.id, l.label]));
+    const linkIds = (links ?? []).map((l) => l.id);
+
+    const { data: checks } = linkIds.length
+      ? await supabaseAdmin
+          .from("parity_checks")
+          .select("*")
+          .in("link_id", linkIds)
+          .order("ran_at", { ascending: false })
+          .limit(2000)
+      : { data: [] as any[] };
+
+    const { data: codes } = await supabaseAdmin
+      .from("price_match_codes")
+      .select("*")
+      .eq("business_id", userId)
+      .order("issued_at", { ascending: false })
+      .limit(2000);
+
+    const codeByLink = new Map<string, any>();
+    for (const c of codes ?? []) codeByLink.set(`${c.link_id}|${c.issued_at}`, c);
+
+    const headers = [
+      "date",
+      "link_label",
+      "providers_checked",
+      "direct_price_cents",
+      "competitor_network",
+      "competitor_price_cents",
+      "action",
+      "match_code",
+      "match_status",
+      "evidence_url",
+    ];
+    const rows = [headers.join(",")];
+    for (const r of checks ?? []) {
+      // Best-effort: find a code issued near this check's timestamp
+      const matchedCode = (codes ?? []).find(
+        (c) =>
+          c.link_id === r.link_id &&
+          Math.abs(new Date(c.issued_at).getTime() - new Date(r.ran_at).getTime()) < 5000,
+      );
+      rows.push(
+        [
+          new Date(r.ran_at).toISOString(),
+          labelById.get(r.link_id) ?? "",
+          (r.providers_checked ?? []).join("|"),
+          r.direct_price_cents ?? "",
+          r.cheapest_network ?? "",
+          r.cheapest_price_cents ?? "",
+          r.action ?? "",
+          matchedCode?.code ?? "",
+          matchedCode?.status ?? "",
+          matchedCode?.evidence_url ?? "",
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    }
+    return { csv: rows.join("\n"), filename: `travidz-price-audit-${new Date().toISOString().slice(0, 10)}.csv` };
+  });
