@@ -79,6 +79,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
+import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
 import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 
@@ -434,6 +435,12 @@ const ApiPublicDIdRoute = ApiPublicDIdRouteImport.update({
   path: '/api/public/d/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronParitySweepRoute =
+  ApiPublicCronParitySweepRouteImport.update({
+    id: '/api/public/cron/parity-sweep',
+    path: '/api/public/cron/parity-sweep',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronExpiringDealsRoute =
   ApiPublicCronExpiringDealsRouteImport.update({
     id: '/api/public/cron/expiring-deals',
@@ -513,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -584,6 +592,7 @@ export interface FileRoutesByTo {
   '/destinations/$country': typeof DestinationsCountryIndexRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -659,6 +668,7 @@ export interface FileRoutesById {
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -735,6 +745,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -806,6 +817,7 @@ export interface FileRouteTypes {
     | '/destinations/$country'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -880,6 +892,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/business/deals/$id/edit'
@@ -940,6 +953,7 @@ export interface RootRouteChildren {
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
   ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
   ApiPublicCronExpiringDealsRoute: typeof ApiPublicCronExpiringDealsRoute
+  ApiPublicCronParitySweepRoute: typeof ApiPublicCronParitySweepRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1439,6 +1453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/parity-sweep': {
+      id: '/api/public/cron/parity-sweep'
+      path: '/api/public/cron/parity-sweep'
+      fullPath: '/api/public/cron/parity-sweep'
+      preLoaderRoute: typeof ApiPublicCronParitySweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/expiring-deals': {
       id: '/api/public/cron/expiring-deals'
       path: '/api/public/cron/expiring-deals'
@@ -1588,6 +1609,7 @@ const rootRouteChildren: RootRouteChildren = {
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
   ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
   ApiPublicCronExpiringDealsRoute: ApiPublicCronExpiringDealsRoute,
+  ApiPublicCronParitySweepRoute: ApiPublicCronParitySweepRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -1597,3 +1619,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
