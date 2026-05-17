@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { moderateComment } from "@/lib/moderation.functions";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 export type CommentRow = {
   id: string;
@@ -66,6 +67,8 @@ export const postComment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const allowed = await checkRateLimit("post_comment", userId, 20, 60);
+    if (!allowed) throw new Error("Too many comments — slow down for a minute.");
     const { data: row, error } = await supabase
       .from("comments")
       .insert({

@@ -1488,26 +1488,73 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          business_agreement_accepted_at: string | null
           created_at: string
+          creator_agreement_accepted_at: string | null
           display_name: string | null
           id: string
+          is_verified: boolean
           username: string
+          verification_notes: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          business_agreement_accepted_at?: string | null
           created_at?: string
+          creator_agreement_accepted_at?: string | null
           display_name?: string | null
           id: string
+          is_verified?: boolean
           username: string
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          business_agreement_accepted_at?: string | null
           created_at?: string
+          creator_agreement_accepted_at?: string | null
           display_name?: string | null
           id?: string
+          is_verified?: boolean
           username?: string
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rate_limit_hits: {
+        Row: {
+          action: string
+          actor_key: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_key: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_key?: string
+          created_at?: string
+          id?: string
         }
         Relationships: []
       }
@@ -1924,6 +1971,15 @@ export type Database = {
       }
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          _action: string
+          _actor_key: string
+          _max_per_window: number
+          _window_seconds: number
+        }
+        Returns: boolean
+      }
       cron_expire_deals: { Args: never; Returns: number }
       cron_publish_scheduled_videos: { Args: never; Returns: number }
       delete_email: {

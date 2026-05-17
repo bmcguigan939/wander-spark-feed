@@ -79,3 +79,17 @@ Next wk:  Stripe Connect swap-in (separate plan)
 ```
 
 **Recommendation:** start Phase A immediately — small, finishes the prior phase, and the email pipeline is needed for Phase B's payout receipts. Want me to write the Phase A implementation plan next?
+
+---
+
+## Progress log
+
+- **Phase A ✅ shipped** — transactional email pipeline (3 templates), expiring-deals cron + notifications.
+- **Phase B ✅ shipped** — payout ledger (`payout_runs` / `payout_line_items` / `creator_payout_details`), admin payouts console, creator banking form, weekly draft cron.
+- **Phase C (in progress)**
+  - ✅ Profile verification fields + admin "Verify" toggle + public `VerifiedBadge` on profiles
+  - ✅ Creator + business agreement acceptance timestamps + dashboard banner
+  - ✅ Rate-limit table + `check_rate_limit` SQL fn + applied to `postComment` and `claimRedemption`
+  - ✅ Admin KPI dashboard: GMV30d, commission30d, outstanding payout liability, 7d/30d bookings, verified business count, pending moderation flags
+  - ⏳ Still to do: vision-pass moderation on video thumbnails, business onboarding checklist polish, error monitoring hook
+- **Phase D / Stripe** — not started.

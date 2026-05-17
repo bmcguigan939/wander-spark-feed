@@ -6,6 +6,7 @@ import { getProfileByUsername } from "@/lib/feed.functions";
 import { toggleFollow } from "@/lib/interactions.functions";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 export const Route = createFileRoute("/u/$username")({
   head: ({ params }) => ({
@@ -54,7 +55,10 @@ function ProfilePage() {
                 className="h-20 w-20 rounded-full border border-border object-cover"
               />
               <div>
-                <h1 className="text-xl font-bold">@{data.profile.username}</h1>
+                <h1 className="text-xl font-bold flex items-center gap-1.5">
+                  @{data.profile.username}
+                  {(data.profile as any).is_verified && <VerifiedBadge />}
+                </h1>
                 {data.profile.display_name && <p className="text-sm text-muted-foreground">{data.profile.display_name}</p>}
               </div>
             </div>

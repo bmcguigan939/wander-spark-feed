@@ -21,6 +21,9 @@ export const claimRedemption = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    const { checkRateLimit } = await import("@/lib/rate-limit.server");
+    const allowed = await checkRateLimit("claim_redemption", userId, 10, 60);
+    if (!allowed) return { ok: false as const, error: "Too many attempts — wait a moment." };
     const code = data.code.trim().toUpperCase();
 
     // Resolve code → deal + creator

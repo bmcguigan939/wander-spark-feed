@@ -7,6 +7,7 @@ import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
 import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck } from "lucide-react";
 import { Sparkline } from "@/components/business/Sparkline";
+import { AgreementBanner } from "@/components/AgreementBanner";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -45,6 +46,7 @@ function BusinessDashboard() {
 
   return (
     <MobileShell>
+      <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
