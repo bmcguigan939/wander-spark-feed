@@ -4,11 +4,14 @@ export type TierMix = Record<CreatorTier, number>; // shares summing to ~1
 
 export type Assumptions = {
   // Market sizing (annual, GBP)
-  tamTravellers: number; // total addressable travellers/yr (UK + key EU)
-  avgBookingValue: number; // £ per booking
+  // TAM is built UK-first; EU-5 (FR/DE/ES/IT/NL) is layered as an expansion multiplier.
+  // Sources: ONS Travel Trends 2023, VisitBritain GB Tourist 2023, Eurostat 2023.
+  tamTravellers: number; // UK leisure travellers/yr (outbound + domestic, blended)
+  avgBookingValue: number; // £ per booking (blended UK leisure trip spend)
   bookingsPerTraveller: number; // attach rate (avg bookings/yr/traveller)
-  samPct: number; // % of TAM that is reachable via creator-led discovery
-  somSharePctByYear: number[]; // Travidz share of SAM, year 1..5
+  eu5ExpansionMultiplier: number; // EU-5 TAM as a multiple of UK TAM (expansion layer)
+  samPct: number; // creator-influenced share × bookable component
+  somSharePctByYear: number[]; // ceiling-check: Travidz share of SAM, year 1..5
 
   // Creator funnel
   creatorsActiveByYear: number[]; // active creators year 1..5
@@ -25,13 +28,16 @@ export type Assumptions = {
   creatorSharePctByTier: Record<CreatorTier, number>; // 0.5, 0.5, 0.5, 0.4, 0.3
 };
 
-// v6 defaults — derived from the SOM/TAM workbook (base case)
+// v7 defaults — UK-first, derived from Travidz_Market_Research_TAM_SOM_v7.xlsx
+// UK TAM: 60.7M outbound × £870 + 118M domestic × £295 = £87.6B
+// SAM = 36% creator-influenced × 80% bookable = 28.8% of TAM
 export const V6_DEFAULTS: Assumptions = {
-  tamTravellers: 85_000_000,
-  avgBookingValue: 480,
-  bookingsPerTraveller: 1.6,
-  samPct: 0.28,
-  somSharePctByYear: [0.0008, 0.0035, 0.0095, 0.018, 0.028],
+  tamTravellers: 178_700_000, // 60.7M outbound + 118M domestic UK leisure trips
+  avgBookingValue: 490, // blended £/trip → ≈ £87.6B UK TAM
+  bookingsPerTraveller: 1.0,
+  eu5ExpansionMultiplier: 2.91, // EU-5 adds ~£255B on top of UK £87.6B
+  samPct: 0.288, // 36% creator-influenced × 80% bookable
+  somSharePctByYear: [0.0004, 0.0018, 0.005, 0.0103, 0.0176], // implied % of UK SAM (sanity check)
 
   creatorsActiveByYear: [500, 2_400, 6_800, 14_000, 24_000],
   gbvPerActiveCreator: 18_500,
