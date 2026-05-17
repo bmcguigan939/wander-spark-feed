@@ -35,10 +35,10 @@ Then sweep all `*.functions.ts` for embedded-select syntax (`alias:other_table(.
 1. **Legal pages** — DONE. Routes under `/legal/*` (terms, privacy, cookies, creator-agreement, business-agreement, dmca) + shared `LegalPage` layout + index at `/legal`. Login page links to terms + privacy.
 2. **Notifications wiring** — DONE. Insert triggers attached in Phase 0; `notifications` + `comments` added to `supabase_realtime`; `NotificationsBell` subscribes to inserts.
 3. **Rate limiting & abuse on open-insert tables** — DONE. Dropped the `with check: true` policies on `deal_clicks`, `deal_impressions`, `affiliate_clicks`, `video_views`. All inserts now flow through service-role server fns (`recordDealClick`, `recordDealImpression`, `/api/public/go/$id`, `/api/public/d/$id`). `comments` already required auth. Per-IP throttling deferred until traffic warrants it.
-4. **Account lifecycle.** Delete-account flow (cascades via FKs from §0), data export ("download my data") for GDPR.
-5. **SEO sweep.** Per-route `head()` with unique title/description and og:image on `destinations/$country/$city`, `destinations/$country`, `deals/$id`, `u/$username`, `sounds/$id`, `itineraries/$id`, `collections/$id`. Add `sitemap.xml` + `robots.txt` route.
-6. **Error & 404 boundaries** on every route with a loader; `notFoundComponent` on `__root` covers unmatched URLs.
-7. **Onboarding.** First-run picker (traveller / creator / business) on `/welcome`; auto-assign role; route to relevant home.
+4. **Account lifecycle** — DONE. `/settings` route with "Download my data" (server fn `exportMyData` returning a JSON blob) and "Delete my account" (server fn `deleteMyAccount` — wipes owned rows then calls `auth.admin.deleteUser`). Linked from the profile sheet.
+5. **SEO sweep** — partial. `sitemap.xml` and `robots.txt` server routes added (dynamic entries for deals, destinations, creators, itineraries, public collections, sounds). Per-route `head()` already exists on most public leaf routes; remaining polish (og:url + canonical on every leaf, og:image on dynamic routes) deferred.
+6. **Error & 404 boundaries** — no per-route loaders in use; `__root` already supplies `notFoundComponent` + `errorComponent`. Considered done until loaders are introduced.
+7. **Onboarding** — already in place: `/welcome` exists with role picker and is guarded by `beforeLoad` session check.
 8. **Email**: verify auth templates render with brand, transactional templates exist for invite/application/moderation, unsubscribe page works.
 9. **Security pass.** Run `supabase--linter` + `security--run_security_scan`, triage findings, update security memory.
 
