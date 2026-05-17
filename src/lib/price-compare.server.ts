@@ -183,6 +183,7 @@ export async function runParityCheck(args: {
 
   let action: "no_breach" | "match_issued" | "no_data" = "no_data";
   if (!cheapest) action = "no_data";
+  else if (args.direct_price_cents == null) action = "no_data";
   else if (args.direct_price_cents != null && args.direct_price_cents <= cheapest.price_cents)
     action = "no_breach";
   else action = "match_issued";
