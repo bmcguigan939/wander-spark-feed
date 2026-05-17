@@ -94,6 +94,12 @@ function AnalyticsPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 Commission is recorded for tracking only — payouts will be enabled once banking is set up.
               </p>
+              <Link
+                to="/creator/earnings"
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Wallet className="h-4 w-4" /> View earnings breakdown
+              </Link>
             </Section>
 
             <Section title="Views — last 14 days">
