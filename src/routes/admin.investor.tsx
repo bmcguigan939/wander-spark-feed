@@ -296,18 +296,25 @@ function MarketPane({
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card className="space-y-4 p-4">
-        <h3 className="text-sm font-semibold">TAM / SAM / SOM assumptions</h3>
+        <h3 className="text-sm font-semibold">TAM / SAM / SOM assumptions (v7 — UK-first)</h3>
+        <p className="text-xs text-muted-foreground">
+          UK TAM is built from ONS Travel Trends + VisitBritain. SAM = creator-influenced × bookable.
+          SOM is bottom-up from the creator funnel — top-down % below is a sanity check only.
+          Reconciles to Travidz_Market_Research_TAM_SOM_v7.xlsx.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <NumberField label="TAM travellers / year" value={assumptions.tamTravellers} step={1_000_000}
+          <NumberField label="UK leisure travellers / year" value={assumptions.tamTravellers} step={1_000_000}
             onChange={(v) => update({ tamTravellers: v })} />
-          <NumberField label="Avg booking value (£)" value={assumptions.avgBookingValue} step={10}
+          <NumberField label="Avg trip spend (£)" value={assumptions.avgBookingValue} step={10}
             onChange={(v) => update({ avgBookingValue: v })} />
-          <NumberField label="Bookings per traveller / year" value={assumptions.bookingsPerTraveller} step={0.1}
+          <NumberField label="Trips per traveller / year" value={assumptions.bookingsPerTraveller} step={0.1}
             onChange={(v) => update({ bookingsPerTraveller: v })} />
-          <PctSlider label="SAM as % of TAM" value={assumptions.samPct} onChange={(v) => update({ samPct: v })} />
+          <NumberField label="EU-5 expansion ×UK TAM" value={assumptions.eu5ExpansionMultiplier} step={0.1}
+            onChange={(v) => update({ eu5ExpansionMultiplier: v })} />
+          <PctSlider label="SAM as % of TAM (creator-influenced × bookable)" value={assumptions.samPct} onChange={(v) => update({ samPct: v })} />
         </div>
         <div className="space-y-3 pt-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Travidz share of SAM by year</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Top-down sanity check — implied % of UK SAM by year</div>
           {assumptions.somSharePctByYear.map((v, i) => (
             <PctSlider
               key={i}
@@ -327,9 +334,13 @@ function MarketPane({
       </Card>
       <Card className="space-y-3 p-4 lg:sticky lg:top-4 lg:self-start">
         <h3 className="text-sm font-semibold">Live output</h3>
-        <KV k="TAM (GBV)" v={fmtGBP(market.tamGBV, { compact: true })} />
-        <KV k="SAM (GBV)" v={fmtGBP(market.samGBV, { compact: true })} />
-        <div className="border-t border-border pt-2 text-xs font-semibold uppercase text-muted-foreground">SOM (GBV) by year</div>
+        <KV k="TAM (UK only)" v={fmtGBP(market.tamGBV, { compact: true })} />
+        <KV k="TAM (UK + EU-5)" v={fmtGBP(market.tamGBVAll, { compact: true })} />
+        <KV k="SAM (UK only)" v={fmtGBP(market.samGBV, { compact: true })} />
+        <KV k="SAM (UK + EU-5)" v={fmtGBP(market.samGBVAll, { compact: true })} />
+        <div className="border-t border-border pt-2 text-xs font-semibold uppercase text-muted-foreground">SOM bottom-up (creators × GBV)</div>
+        {market.somBottomUpGBVByYear.map((v, i) => <KV key={i} k={`Year ${i + 1}`} v={fmtGBP(v, { compact: true })} />)}
+        <div className="border-t border-border pt-2 text-xs font-semibold uppercase text-muted-foreground">Top-down ceiling (% of UK SAM)</div>
         {market.somGBVByYear.map((v, i) => <KV key={i} k={`Year ${i + 1}`} v={fmtGBP(v, { compact: true })} />)}
       </Card>
     </div>
