@@ -31,7 +31,10 @@ export function OnboardingChecklist() {
   });
   const { data: redemptionsRes } = useQuery({
     queryKey: ["business-redemptions"],
-    queryFn: () => redemptionsFn({ data: {} } as any).catch(() => ({ redemptions: [] })),
+    queryFn: () =>
+      redemptionsFn({ data: { limit: 50, offset: 0 } as any }).catch(
+        () => ({ redemptions: [] as any[] }) as any,
+      ),
   });
 
   const deals = (dealsRes?.deals ?? []) as any[];
