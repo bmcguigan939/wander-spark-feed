@@ -12,7 +12,7 @@ interface Props {
 export const DealExpiringEmail = ({ businessName, dealTitle, daysLeft, editUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your deal "{dealTitle}" expires in {daysLeft} day{daysLeft === 1 ? '' : 's'}</Preview>
+    <Preview>{`Your deal "${dealTitle}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Text style={brandMark}>Travidz</Text>
