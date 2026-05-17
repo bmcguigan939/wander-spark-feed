@@ -5,6 +5,13 @@ import {
   splitCommissionCents,
   type CreatorSplit,
 } from "./commission";
+import {
+  enqueueTransactionalEmail,
+  formatMoneyGBP,
+  getUserEmail,
+  SITE_URL,
+} from "./email-send.server";
+import { CreatorTierUnlockedEmail } from "./email-templates/creator-tier-unlocked";
 
 type CreatorTierRow = {
   id: string;
@@ -74,4 +81,67 @@ export async function stampRedemptionSplit(redemptionId: string): Promise<void> 
       platform_commission_cents: platformCents,
     })
     .eq("id", redemptionId);
+
+  // Opportunistic power-tier check: if this creator just crossed £25k
+  // rolling-12mo GBV, lock them at 50% forever and notify.
+  if (r.creator_id) {
+    await maybeLockPowerTier(r.creator_id).catch((e) =>
+      console.error("power-tier check failed", e),
+    );
+  }
+}
+
+async function maybeLockPowerTier(creatorId: string): Promise<void> {
+  const { data: p } = await supabaseAdmin
+    .from("profiles")
+    .select("id,display_name,username,power_tier_locked_at")
+    .eq("id", creatorId)
+    .maybeSingle();
+  if (!p || p.power_tier_locked_at) return;
+
+  const since = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString();
+  const { data: rows } = await supabaseAdmin
+    .from("deal_redemptions")
+    .select("order_value_cents")
+    .eq("creator_id", creatorId)
+    .eq("status", "confirmed")
+    .gte("confirmed_at", since);
+  const gbv = (rows ?? []).reduce(
+    (acc, r: any) => acc + (r.order_value_cents ?? 0),
+    0,
+  );
+  await supabaseAdmin
+    .from("profiles")
+    .update({
+      rolling_12mo_gbv_cents: gbv,
+      rolling_12mo_gbv_refreshed_at: new Date().toISOString(),
+    })
+    .eq("id", creatorId);
+  if (gbv < COMMISSION.powerTierGbvThresholdCents) return;
+
+  const { data: locked } = await supabaseAdmin
+    .from("profiles")
+    .update({ power_tier_locked_at: new Date().toISOString() })
+    .eq("id", creatorId)
+    .is("power_tier_locked_at", null)
+    .select("id")
+    .maybeSingle();
+  if (!locked) return;
+
+  const email = await getUserEmail(creatorId);
+  if (!email) return;
+  await enqueueTransactionalEmail({
+    to: email,
+    subject: "You unlocked Power Creator — 50% for life",
+    label: "creator_tier_unlocked",
+    userId: creatorId,
+    category: "redemption",
+    idempotencyKey: `creator-tier-unlocked-${creatorId}`,
+    react: CreatorTierUnlockedEmail({
+      creatorName:
+        (p as any).display_name || `@${(p as any).username ?? "there"}`,
+      rolling12moFormatted: formatMoneyGBP(gbv),
+      earningsUrl: `${SITE_URL}/creator/earnings`,
+    }),
+  });
 }

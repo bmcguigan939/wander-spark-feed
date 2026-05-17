@@ -5,7 +5,7 @@ import { useState } from "react";
 import { listAdminUsers, grantRole, revokeRole } from "@/lib/admin.functions";
 import { setProfileVerified } from "@/lib/verification.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, X, BadgeCheck } from "lucide-react";
+import { Plus, X, BadgeCheck, Crown, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/users")({
@@ -60,8 +60,23 @@ function AdminUsers() {
                 <div className="text-sm font-semibold flex items-center gap-1">
                   {u.display_name ?? u.username}
                   {u.is_verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                  {u.is_founding_creator && (
+                    <span title={`Founding #${u.founding_creator_number ?? ""}`} className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+                      <Crown className="h-3 w-3" />#{u.founding_creator_number ?? "—"}
+                    </span>
+                  )}
+                  {u.power_tier_locked_at && !u.is_founding_creator && (
+                    <span title="Power Creator — 50% locked" className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                      <Lock className="h-3 w-3" />Power
+                    </span>
+                  )}
                 </div>
-                <div className="text-[11px] text-muted-foreground">@{u.username}{u.id === me?.id ? " · you" : ""}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  @{u.username}{u.id === me?.id ? " · you" : ""}
+                  {u.roles?.includes("creator") && (
+                    <> · 12mo GBV {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(((u.rolling_12mo_gbv_cents ?? 0) as number) / 100)}</>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => verify.mutate({ userId: u.id, verified: !u.is_verified })}

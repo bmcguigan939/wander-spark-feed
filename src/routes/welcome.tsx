@@ -2,8 +2,14 @@ import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Compass, Camera, Briefcase, Plane } from "lucide-react";
+import { Compass, Camera, Briefcase, Plane, Crown } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getFoundingSpotsRemaining,
+  sendFoundingWelcomeIfEligible,
+} from "@/lib/creator-tier.functions";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({ meta: [{ title: "Welcome — Travidz" }] }),
@@ -18,6 +24,12 @@ function WelcomePage() {
   const navigate = useNavigate();
   const { user, roles, refreshRoles } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
+  const spotsFn = useServerFn(getFoundingSpotsRemaining);
+  const { data: spots } = useQuery({
+    queryKey: ["founding-spots-remaining"],
+    queryFn: () => spotsFn(),
+  });
+  const sendFoundingFn = useServerFn(sendFoundingWelcomeIfEligible);
 
   // If user already has a non-default role, skip.
   if (roles.some((r) => r === "creator" || r === "business" || r === "admin")) {
@@ -48,7 +60,11 @@ function WelcomePage() {
     }
     await refreshRoles();
     markDone();
-    toast.success("You're a creator now");
+    // Trigger founding-creator welcome email if eligible (first 500).
+    sendFoundingFn().then((r) => {
+      if (r?.sent) toast.success(`Founding Creator #${r.foundingNumber} — 50% for life`);
+      else toast.success("You're a creator now");
+    }).catch(() => toast.success("You're a creator now"));
     navigate({ to: "/create" });
   }
 
@@ -67,6 +83,16 @@ function WelcomePage() {
         <h1 className="text-3xl font-bold tracking-tight">Welcome to Travidz</h1>
         <p className="mt-2 text-sm text-muted-foreground">How will you use Travidz? You can change this later.</p>
       </div>
+
+      {spots && spots.remaining > 0 && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
+          <Crown className="h-4 w-4 text-primary" />
+          <span>
+            <span className="font-bold text-primary">{spots.remaining}</span> Founding Creator
+            spots left — join now and keep <span className="font-semibold">50% commission for life</span>.
+          </span>
+        </div>
+      )}
 
       <div className="space-y-3">
         <RoleCard

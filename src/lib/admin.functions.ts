@@ -78,6 +78,31 @@ export const getAdminStats = createServerFn({ method: "GET" })
     const commission30dCents = sum(r30.data as any, "commission_cents");
     const outstandingLiabilityCents = sum(outstanding.data as any, "commission_cents");
 
+    // Blended Travidz take-rate (30d): platform_commission_cents / order_value_cents.
+    // Pulls from the v6 per-row split snapshot. Falls back to 50% of commission
+    // when older rows have no split stamped.
+    const { data: splitRows } = await supabaseAdmin
+      .from("deal_redemptions")
+      .select("order_value_cents,commission_cents,platform_commission_cents")
+      .eq("status", "confirmed")
+      .gte("confirmed_at", since30);
+    const platformShare30dCents = (splitRows ?? []).reduce(
+      (acc, r: any) =>
+        acc +
+        (r.platform_commission_cents ?? Math.round((r.commission_cents ?? 0) / 2)),
+      0,
+    );
+    const blendedTakeRate30d =
+      gmv30dCents > 0 ? platformShare30dCents / gmv30dCents : 0;
+    const { count: powerCreators } = await supabaseAdmin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .not("power_tier_locked_at", "is", null);
+    const { count: foundingCreators } = await supabaseAdmin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_founding_creator", true);
+
     return {
       users, creators, businesses, videosReady, videosPending, videosHidden, dealsActive, appsPending,
       gmv30dCents,
@@ -87,6 +112,10 @@ export const getAdminStats = createServerFn({ method: "GET" })
       redemptions7d: r7.count ?? 0,
       verifiedBusinesses: verifiedBiz.count ?? 0,
       pendingModerationFlags: pendingFlags.count ?? 0,
+      blendedTakeRate30d,
+      platformShare30dCents,
+      powerCreators: powerCreators ?? 0,
+      foundingCreators: foundingCreators ?? 0,
     };
   });
 
@@ -157,7 +186,7 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("profiles")
-      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at")
+      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at,is_founding_creator,founding_creator_number,power_tier_locked_at,rolling_12mo_gbv_cents,creator_joined_at")
       .order("created_at", { ascending: false })
       .limit(50);
     if (data.q) q = q.or(`username.ilike.%${data.q}%,display_name.ilike.%${data.q}%`);

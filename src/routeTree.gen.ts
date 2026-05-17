@@ -48,6 +48,7 @@ import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorEarningsRouteImport } from './routes/creator.earnings'
+import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculator'
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
@@ -282,6 +283,11 @@ const DealsIdRoute = DealsIdRouteImport.update({
 const CreatorEarningsRoute = CreatorEarningsRouteImport.update({
   id: '/creator/earnings',
   path: '/creator/earnings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorCalculatorRoute = CreatorCalculatorRouteImport.update({
+  id: '/creator/calculator',
+  path: '/creator/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreatorApplicationsRoute = CreatorApplicationsRouteImport.update({
@@ -526,6 +532,7 @@ export interface FileRoutesByFullPath {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
@@ -605,6 +612,7 @@ export interface FileRoutesByTo {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
@@ -686,6 +694,7 @@ export interface FileRoutesById {
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
+  '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
@@ -769,6 +778,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
@@ -848,6 +858,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
@@ -928,6 +939,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
+    | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
     | '/itineraries/$id'
@@ -1000,6 +1012,7 @@ export interface RootRouteChildren {
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
+  CreatorCalculatorRoute: typeof CreatorCalculatorRoute
   CreatorEarningsRoute: typeof CreatorEarningsRoute
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
@@ -1312,6 +1325,13 @@ declare module '@tanstack/react-router' {
       path: '/creator/earnings'
       fullPath: '/creator/earnings'
       preLoaderRoute: typeof CreatorEarningsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator/calculator': {
+      id: '/creator/calculator'
+      path: '/creator/calculator'
+      fullPath: '/creator/calculator'
+      preLoaderRoute: typeof CreatorCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/creator/applications': {
@@ -1716,6 +1736,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
+  CreatorCalculatorRoute: CreatorCalculatorRoute,
   CreatorEarningsRoute: CreatorEarningsRoute,
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
