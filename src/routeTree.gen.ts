@@ -82,6 +82,7 @@ import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
 import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
 import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
+import { Route as ApiPublicCronBusinessDigestRouteImport } from './routes/api/public/cron/business-digest'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -453,6 +454,12 @@ const ApiPublicCronDiscoverDealsRoute =
     path: '/api/public/cron/discover-deals',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronBusinessDigestRoute =
+  ApiPublicCronBusinessDigestRouteImport.update({
+    id: '/api/public/cron/business-digest',
+    path: '/api/public/cron/business-digest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -518,6 +525,7 @@ export interface FileRoutesByFullPath {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
@@ -590,6 +598,7 @@ export interface FileRoutesByTo {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
@@ -666,6 +675,7 @@ export interface FileRoutesById {
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
@@ -743,6 +753,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/parity-sweep'
@@ -815,6 +826,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country'
+    | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/parity-sweep'
@@ -890,6 +902,7 @@ export interface FileRouteTypes {
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
     | '/api/public/cron/parity-sweep'
@@ -951,6 +964,7 @@ export interface RootRouteChildren {
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicCronBusinessDigestRoute: typeof ApiPublicCronBusinessDigestRoute
   ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
   ApiPublicCronExpiringDealsRoute: typeof ApiPublicCronExpiringDealsRoute
   ApiPublicCronParitySweepRoute: typeof ApiPublicCronParitySweepRoute
@@ -1474,6 +1488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDiscoverDealsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/business-digest': {
+      id: '/api/public/cron/business-digest'
+      path: '/api/public/cron/business-digest'
+      fullPath: '/api/public/cron/business-digest'
+      preLoaderRoute: typeof ApiPublicCronBusinessDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1607,6 +1628,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicCronBusinessDigestRoute: ApiPublicCronBusinessDigestRoute,
   ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
   ApiPublicCronExpiringDealsRoute: ApiPublicCronExpiringDealsRoute,
   ApiPublicCronParitySweepRoute: ApiPublicCronParitySweepRoute,
@@ -1619,3 +1641,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
