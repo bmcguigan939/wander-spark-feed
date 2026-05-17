@@ -117,7 +117,6 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       data: {
         dealId: video.matchedDeal.id,
         referrerVideoId: video.id,
-        userId: user?.id,
       },
     }).catch(() => {});
   }
@@ -134,7 +133,6 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       data: {
         dealId: video.matchedDeal.id,
         referrerVideoId: video.id,
-        userId: user?.id,
       },
     }).catch(() => {});
   }, [active, video.id, video.matchedDeal?.id, user?.id, logDealImpressionFn]);

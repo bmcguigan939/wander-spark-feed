@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { optionalSupabaseAuth } from "@/lib/optional-auth";
 import { embedText, embedVideo, embedDeal } from "@/lib/ai.functions";
 
 export type FeedVideo = {
@@ -219,14 +220,14 @@ async function buildAffinity(userId: string) {
 }
 
 export const getForYouFeed = createServerFn({ method: "GET" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({
       limit: z.number().min(1).max(50).default(20),
-      viewerId: z.string().uuid().nullable().optional(),
     }).parse(input)
   )
-  .handler(async ({ data }) => {
-    const userId = data.viewerId ?? null;
+  .handler(async ({ data, context }) => {
+    const userId = context.userId ?? null;
 
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { optionalSupabaseAuth } from "@/lib/optional-auth";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const listMyCollections = createServerFn({ method: "GET" })
@@ -96,13 +97,18 @@ export const removeFromCollection = createServerFn({ method: "POST" })
   });
 
 export const getCollection = createServerFn({ method: "GET" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { data: collection } = await supabaseAdmin
       .from("collections")
       .select("id,owner_id,title,description,visibility,created_at")
       .eq("id", data.id).maybeSingle();
     if (!collection) return { collection: null, owner: null, videos: [] };
+    // Private collections are visible only to the owner.
+    if (collection.visibility !== "public" && context.userId !== collection.owner_id) {
+      return { collection: null, owner: null, videos: [] };
+    }
     const [{ data: owner }, { data: items }] = await Promise.all([
       supabaseAdmin.from("profiles").select("username,display_name,avatar_url").eq("id", collection.owner_id).maybeSingle(),
       supabaseAdmin.from("collection_items").select("video_id,added_at").eq("collection_id", data.id).order("added_at", { ascending: false }),

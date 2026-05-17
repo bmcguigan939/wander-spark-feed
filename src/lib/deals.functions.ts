@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { optionalSupabaseAuth } from "@/lib/optional-auth";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const dealSelect =
@@ -119,39 +120,39 @@ export const listMyDeals = createServerFn({ method: "GET" })
   });
 
 export const logDealClick = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
         dealId: z.string().uuid(),
         referrerVideoId: z.string().uuid().optional(),
-        userId: z.string().uuid().optional(),
       })
       .parse(input)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await supabaseAdmin.from("deal_clicks").insert({
       deal_id: data.dealId,
       referrer_video_id: data.referrerVideoId ?? null,
-      user_id: data.userId ?? null,
+      user_id: context.userId ?? null,
     });
     return { ok: true };
   });
 
 export const logDealImpression = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
         dealId: z.string().uuid(),
         referrerVideoId: z.string().uuid().optional(),
-        userId: z.string().uuid().optional(),
       })
       .parse(input)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await supabaseAdmin.from("deal_impressions").insert({
       deal_id: data.dealId,
       referrer_video_id: data.referrerVideoId ?? null,
-      user_id: data.userId ?? null,
+      user_id: context.userId ?? null,
     });
     return { ok: true };
   });

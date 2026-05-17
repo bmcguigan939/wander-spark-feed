@@ -314,13 +314,6 @@ export async function runBusinessExtraction(videoId: string): Promise<void> {
   if (error) console.error("[ai] insert business suggestions failed", error.message);
 }
 
-export const autoTagVideo = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ videoId: z.string().uuid() }).parse(input))
-  .handler(async ({ data }) => {
-    await runAutoTag(data.videoId);
-    return { ok: true };
-  });
-
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const rerunAutoTag = createServerFn({ method: "POST" })
