@@ -43,10 +43,11 @@ export const Route = createFileRoute("/api/public/go/$id")({
             // the cheapest active approved deal owned by this business.
             let directPriceCents: number | null = null;
             let directCurrency: string | null = null;
+            let dealLevelExempt = false;
             if (link.business_id) {
               const { data: directDeals } = await supabaseAdmin
                 .from("deals")
-                .select("price_cents,currency")
+                .select("price_cents,currency,parity_exempt")
                 .eq("business_id", link.business_id)
                 .eq("is_active", true)
                 .eq("status", "approved")
@@ -57,7 +58,19 @@ export const Route = createFileRoute("/api/public/go/$id")({
               if (top?.price_cents != null) {
                 directPriceCents = top.price_cents;
                 directCurrency = top.currency ?? null;
+                dealLevelExempt = !!top.parity_exempt;
               }
+            }
+            if (dealLevelExempt) {
+              // Honour deal-level exemption: skip parity check entirely.
+              return new Response(null, {
+                status: 302,
+                headers: {
+                  Location: link.url,
+                  "Cache-Control": "no-store",
+                  "Referrer-Policy": "no-referrer",
+                },
+              });
             }
 
             const { cheapest } = await runParityCheck({
