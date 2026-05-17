@@ -346,6 +346,7 @@ function InsightsPage() {
                     >
                       Email
                     </a>
+                    <DraftEmailButton inviteId={inv.id} email={inv.contact_email} />
                     <button
                       type="button"
                       onClick={() => revokeM.mutate(inv.id)}
