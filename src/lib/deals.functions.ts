@@ -5,7 +5,7 @@ import { optionalSupabaseAuth } from "@/lib/optional-auth";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const dealSelect =
- "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
+  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
 
 const filterSchema = z
   .object({
