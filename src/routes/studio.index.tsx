@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, Heart, Bookmark, UserPlus, CalendarClock, FileText, Upload, ChevronRight } from "lucide-react";
 import { getStudioOverview } from "@/lib/studio.functions";
+import { AgreementBanner } from "@/components/AgreementBanner";
 
 export const Route = createFileRoute("/studio/")({
   head: () => ({ meta: [{ title: "Overview — Travidz Studio" }] }),
@@ -36,7 +37,9 @@ function OverviewPage() {
   const totalContent = Object.values(data.counts).reduce((s, n) => s + (n as number), 0);
 
   return (
-    <div className="px-5 pb-24 pt-6">
+    <div className="pb-24 pt-2">
+      <AgreementBanner kind="creator" />
+      <div className="px-5 pt-4">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold">Last 7 days</h2>
       </div>
