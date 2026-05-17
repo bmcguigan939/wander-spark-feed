@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Travidz design system — dark-first, cinematic, travel-led.
+ * Travidz design system — light, sunny, golden-hour sunset.
  * All colors are oklch. Tokens drive Tailwind utilities via @theme inline.
  */
 
@@ -36,8 +36,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sunset: var(--sunset);
-  --color-ocean: var(--ocean);
+  --color-twilight: var(--twilight);
   --color-coral: var(--coral);
+  --color-video-shell: var(--video-shell);
   --font-display: var(--font-display);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -49,55 +50,58 @@
 :root {
   --radius: 1rem;
 
-  /* Dark-first travel palette, deeper for cinematic surfaces */
-  --background: oklch(0.115 0.018 255);
-  --foreground: oklch(0.98 0.005 250);
+  /* Light, sunny golden-hour travel palette */
+  --background: oklch(0.985 0.018 75);       /* warm cream #fff8f0 */
+  --foreground: oklch(0.245 0.06 315);       /* twilight ink #2a1b3d */
 
-  --card: oklch(0.165 0.022 255);
-  --card-foreground: oklch(0.98 0.005 250);
-  --popover: oklch(0.18 0.024 255);
-  --popover-foreground: oklch(0.98 0.005 250);
+  --card: oklch(1 0 0);                       /* pure white card */
+  --card-foreground: oklch(0.245 0.06 315);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.245 0.06 315);
 
-  /* Layered surfaces */
-  --surface-1: oklch(0.155 0.02 255);
-  --surface-2: oklch(0.19 0.024 255);
-  --surface-3: oklch(0.235 0.028 255);
+  /* Layered warm surfaces */
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.965 0.035 65);         /* soft peach */
+  --surface-3: oklch(0.93 0.06 55);           /* apricot raise */
 
-  /* Primary: sunset coral */
-  --primary: oklch(0.72 0.18 35);
-  --primary-foreground: oklch(0.14 0.02 250);
+  /* Primary: sunset pink */
+  --primary: oklch(0.7 0.22 5);               /* #ff5a8a */
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.23 0.028 255);
-  --secondary-foreground: oklch(0.98 0.005 250);
+  --secondary: oklch(0.965 0.03 15);          /* quiet pink chip */
+  --secondary-foreground: oklch(0.245 0.06 315);
 
-  --muted: oklch(0.21 0.02 255);
-  --muted-foreground: oklch(0.7 0.018 255);
+  --muted: oklch(0.955 0.022 55);
+  --muted-foreground: oklch(0.5 0.04 320);    /* #7a6480 */
 
-  --accent: oklch(0.7 0.16 200);
-  --accent-foreground: oklch(0.14 0.02 250);
+  --accent: oklch(0.74 0.16 35);              /* coral #ff8e72 */
+  --accent-foreground: oklch(0.245 0.06 315);
 
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0.005 250);
+  --destructive: oklch(0.62 0.22 22);         /* warm red */
+  --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.72 0.18 35);
+  --border: oklch(0.245 0.06 315 / 8%);
+  --input: oklch(0.245 0.06 315 / 10%);
+  --ring: oklch(0.7 0.22 5);
 
-  /* Brand accents */
-  --sunset: oklch(0.72 0.18 35);
-  --ocean: oklch(0.6 0.15 220);
-  --coral: oklch(0.7 0.2 15);
+  /* Brand accents — full sunset spectrum */
+  --sunset: oklch(0.88 0.13 80);              /* golden #ffd29a */
+  --coral: oklch(0.74 0.16 35);               /* coral #ff8e72 */
+  --twilight: oklch(0.5 0.17 330);            /* dusk violet #a14b9c */
+
+  /* Dark shell reserved for video playback surfaces */
+  --video-shell: oklch(0.16 0.04 315);
 
   --font-display: "Fraunces", "Space Grotesk", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Cinematic gradients & shadow */
-  --gradient-aurora: linear-gradient(135deg, var(--sunset) 0%, var(--coral) 45%, var(--ocean) 100%);
+  /* Sunset gradients & warm shadow */
+  --gradient-aurora: linear-gradient(135deg, oklch(0.97 0.04 75) 0%, var(--sunset) 25%, var(--coral) 55%, var(--primary) 80%, var(--twilight) 100%);
   --gradient-overlay-bottom: linear-gradient(to top, color-mix(in oklab, black 88%, transparent) 0%, color-mix(in oklab, black 55%, transparent) 35%, transparent 90%);
   --gradient-overlay-top: linear-gradient(to bottom, color-mix(in oklab, black 70%, transparent) 0%, transparent 70%);
-  --shadow-cinematic: 0 30px 60px -25px color-mix(in oklab, var(--primary) 40%, transparent), 0 12px 24px -12px oklch(0 0 0 / 50%);
-  --shadow-soft: 0 12px 30px -18px oklch(0 0 0 / 60%);
+  --shadow-cinematic: 0 30px 60px -25px color-mix(in oklab, var(--primary) 35%, transparent), 0 12px 24px -12px color-mix(in oklab, var(--twilight) 25%, transparent);
+  --shadow-soft: 0 12px 30px -18px color-mix(in oklab, var(--twilight) 20%, transparent);
 }
 
 @layer base {
@@ -137,12 +141,11 @@
 .feed-scroll::-webkit-scrollbar { display: none; }
 .feed-snap { scroll-snap-align: start; scroll-snap-stop: always; }
 
-/* Glass card */
 .glass {
-  background-color: color-mix(in oklch, var(--card) 50%, transparent);
+  background-color: color-mix(in oklch, white 70%, transparent);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid color-mix(in oklch, white 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
 }
 
 /* Scrim gradient overlays for video legibility */
