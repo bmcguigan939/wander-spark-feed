@@ -56,7 +56,8 @@ export async function enqueueTransactionalEmail(args: EnqueueArgs) {
         .eq('user_id', args.userId)
         .maybeSingle()
       // Default is opt-in; only skip when explicitly false
-      if (prefs && (prefs as Record<string, unknown>)[col] === false) {
+      const value = prefs ? (prefs as unknown as Record<string, unknown>)[col] : undefined
+      if (value === false) {
         return { ok: true as const, skipped: 'opted-out' as const }
       }
     }
