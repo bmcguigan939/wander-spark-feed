@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorReporter } from "@/components/ErrorReporter";
 import { CookieConsent } from "@/components/CookieConsent";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 function NotFoundComponent() {
   return (
@@ -65,6 +66,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" },
@@ -108,6 +111,7 @@ function RootComponent() {
         <Outlet />
         <Toaster />
         <CookieConsent />
+        <PWAInstallPrompt />
       </AuthProvider>
     </QueryClientProvider>
   );
