@@ -890,6 +890,7 @@ export type Database = {
           ai_confidence: number | null
           ai_summary: string | null
           business_id: string | null
+          category: Database["public"]["Enums"]["deal_category"]
           city: string | null
           click_count: number
           country: string | null
@@ -926,6 +927,7 @@ export type Database = {
           ai_confidence?: number | null
           ai_summary?: string | null
           business_id?: string | null
+          category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
           country?: string | null
@@ -962,6 +964,7 @@ export type Database = {
           ai_confidence?: number | null
           ai_summary?: string | null
           business_id?: string | null
+          category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
           country?: string | null
@@ -1741,6 +1744,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
           bio: string | null
           business_agreement_accepted_at: string | null
@@ -1749,12 +1753,16 @@ export type Database = {
           display_name: string | null
           id: string
           is_verified: boolean
+          lat: number | null
+          lng: number | null
+          place_name: string | null
           username: string
           verification_notes: string | null
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
           bio?: string | null
           business_agreement_accepted_at?: string | null
@@ -1763,12 +1771,16 @@ export type Database = {
           display_name?: string | null
           id: string
           is_verified?: boolean
+          lat?: number | null
+          lng?: number | null
+          place_name?: string | null
           username: string
           verification_notes?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
           bio?: string | null
           business_agreement_accepted_at?: string | null
@@ -1777,6 +1789,9 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_verified?: boolean
+          lat?: number | null
+          lng?: number | null
+          place_name?: string | null
           username?: string
           verification_notes?: string | null
           verified_at?: string | null
@@ -2309,6 +2324,8 @@ export type Database = {
           read_ct: number
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       affiliate_link_kind:
@@ -2317,6 +2334,7 @@ export type Database = {
         | "direct_business"
       app_role: "traveller" | "creator" | "business" | "admin"
       deal_application_status: "pending" | "approved" | "declined" | "withdrawn"
+      deal_category: "stay" | "eat" | "do" | "tour" | "transport" | "other"
       deal_redemption_status: "pending" | "confirmed" | "rejected"
       notification_type:
         | "like"
@@ -2476,6 +2494,7 @@ export const Constants = {
       ],
       app_role: ["traveller", "creator", "business", "admin"],
       deal_application_status: ["pending", "approved", "declined", "withdrawn"],
+      deal_category: ["stay", "eat", "do", "tour", "transport", "other"],
       deal_redemption_status: ["pending", "confirmed", "rejected"],
       notification_type: [
         "like",
