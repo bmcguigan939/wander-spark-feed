@@ -142,6 +142,7 @@ function InvitePage() {
           <li>✓ No setup fee, no monthly cost</li>
           <li>✓ You only pay when we send you a paying customer</li>
           <li>✓ Your direct website stays the destination — no rebranding</li>
+          <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
         </ul>
         <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <ExternalLink className="h-3 w-3" />
