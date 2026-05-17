@@ -8,8 +8,9 @@ import {
   listApplicationsForBusiness,
   decideApplication,
 } from "@/lib/deal-applications.functions";
+import { draftApplicationReply } from "@/lib/outreach.functions";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle, Sparkles, Copy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -81,9 +82,26 @@ function BusinessApplications() {
 function ApplicationCard({ app }: { app: any }) {
   const qc = useQueryClient();
   const decide = useServerFn(decideApplication);
+  const draftFn = useServerFn(draftApplicationReply);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(app.requested_code ?? "");
   const [commission, setCommission] = useState("");
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyDecision, setReplyDecision] = useState<"approved" | "declined">("approved");
+  const [draftSubject, setDraftSubject] = useState("");
+  const [draftBody, setDraftBody] = useState("");
+
+  const draftMut = useMutation({
+    mutationFn: (decision: "approved" | "declined") =>
+      draftFn({ data: { applicationId: app.id, decision } }),
+    onSuccess: (d, decision) => {
+      setReplyDecision(decision);
+      setDraftSubject(d.subject);
+      setDraftBody(d.body);
+      setReplyOpen(true);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Couldn't draft reply"),
+  });
 
   const decideMut = useMutation({
     mutationFn: (decision: "approved" | "declined") =>
@@ -157,6 +175,29 @@ function ApplicationCard({ app }: { app: any }) {
           >
             <X className="mr-1 h-3.5 w-3.5" /> Decline
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => draftMut.mutate("approved")}
+            disabled={draftMut.isPending}
+            className="ml-auto"
+          >
+            <Sparkles className="mr-1 h-3.5 w-3.5" />
+            {draftMut.isPending ? "Drafting…" : "Draft reply"}
+          </Button>
+        </div>
+      )}
+      {app.status !== "pending" && app.creator?.username && (
+        <div className="mt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => draftMut.mutate(app.status === "approved" ? "approved" : "declined")}
+            disabled={draftMut.isPending}
+          >
+            <Sparkles className="mr-1 h-3.5 w-3.5" />
+            {draftMut.isPending ? "Drafting…" : "Draft message"}
+          </Button>
         </div>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -193,6 +234,55 @@ function ApplicationCard({ app }: { app: any }) {
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={() => decideMut.mutate("approved")} disabled={decideMut.isPending}>
               {decideMut.isPending ? "Saving…" : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              AI {replyDecision === "approved" ? "approval" : "decline"} draft
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="d-subject">Subject</Label>
+              <Input
+                id="d-subject"
+                value={draftSubject}
+                onChange={(e) => setDraftSubject(e.target.value)}
+                maxLength={160}
+              />
+            </div>
+            <div>
+              <Label htmlFor="d-body">Message</Label>
+              <textarea
+                id="d-body"
+                value={draftBody}
+                onChange={(e) => setDraftBody(e.target.value)}
+                rows={10}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                navigator.clipboard.writeText(`${draftSubject}\n\n${draftBody}`);
+                toast.success("Copied to clipboard");
+              }}
+            >
+              <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+            </Button>
+            <Button
+              onClick={() => {
+                const href = `mailto:?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
+                window.location.href = href;
+              }}
+            >
+              Open in email
             </Button>
           </DialogFooter>
         </DialogContent>

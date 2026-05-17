@@ -1,6 +1,12 @@
 ## Remaining AI/LLM improvements — sequenced rollout
 
-**Shipped:** #2 Auto-tag videos · Phase A (#1 quality scoring, #6 moderation) · Phase B (#7 semantic search, #3 personalized ranking) · **Phase C (#4 semantic deal↔video matching, #5 destination summary backfill, #8 itinerary semantic enrichment)**.
+**Shipped:** #2 Auto-tag · Phase A (#1, #6) · Phase B (#7, #3) · Phase C (#4, #5, #8) · **Phase D (#9 outreach drafts, #10 RAG support chat)**. All 10 items complete.
+
+Phase D notes:
+- `src/lib/outreach.functions.ts` — `draftInviteEmail` and `draftApplicationReply` call Gemini Flash via Lovable AI Gateway, return `{subject, body}`; fall back to a deterministic template if the gateway fails. Both ownership-checked.
+- Studio invite list: "AI draft" button per invite opens the user's mail client with the generated subject/body. Business applications: "Draft reply" generates an approval/decline message editable in a dialog (copy or open in email).
+- `src/lib/support.functions.ts` — streaming `askSupport` server fn. Embeds the question, retrieves top videos/deals via `match_videos`/`match_deals`, plus an audience-scoped help-doc corpus, then streams a Gemini answer (SSE → async generator). Returns cited sources on the final chunk.
+- `src/routes/support.tsx` — chat UI with audience tabs (traveller/creator/business), suggested prompts, markdown rendering, streamed assistant messages, and clickable source chips.
 
 Phase B notes (just shipped):
 - pgvector enabled; `embedding vector(1536)` on `videos` and `deals` with ivfflat cosine index.

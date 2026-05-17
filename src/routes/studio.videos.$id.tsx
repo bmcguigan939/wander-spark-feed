@@ -43,6 +43,7 @@ import {
   setVideoDraft,
 } from "@/lib/studio.functions";
 import { listInvitesForVideo, revokeInvite } from "@/lib/business-invites.functions";
+import { draftInviteEmail } from "@/lib/outreach.functions";
 import {
   listSuggestionsForVideo,
   dismissSuggestion,
@@ -345,6 +346,7 @@ function InsightsPage() {
                     >
                       Email
                     </a>
+                    <DraftEmailButton inviteId={inv.id} email={inv.contact_email} />
                     <button
                       type="button"
                       onClick={() => revokeM.mutate(inv.id)}
@@ -441,5 +443,27 @@ function InsightsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function DraftEmailButton({ inviteId, email }: { inviteId: string; email: string }) {
+  const draftFn = useServerFn(draftInviteEmail);
+  const m = useMutation({
+    mutationFn: () => draftFn({ data: { inviteId } }),
+    onSuccess: (d) => {
+      const href = `mailto:${email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`;
+      window.location.href = href;
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't draft email"),
+  });
+  return (
+    <button
+      type="button"
+      onClick={() => m.mutate()}
+      disabled={m.isPending}
+      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary disabled:opacity-50"
+    >
+      <Sparkles className="h-3 w-3" /> {m.isPending ? "Drafting…" : "AI draft"}
+    </button>
   );
 }
