@@ -17,6 +17,7 @@ import { Video, Tag, Store, RefreshCcw } from "lucide-react";
 import { SearchBox } from "@/components/map/SearchBox";
 import { CategoryChips } from "@/components/map/CategoryChips";
 import { ClusteredSheet, type ClusterIds } from "@/components/map/ClusteredSheet";
+import { MapLayerSwitcher, LAYER_STYLES, type MapLayer } from "@/components/map/MapLayerSwitcher";
 
 const MAPBOX_TOKEN =
   "pk.eyJ1IjoiYm1jZ3VpZ2FuOTM5IiwiYSI6ImNtcDhhZGswdDBhNWYyc3NjdngycDAxZ28ifQ.X9A6bOGFB5bz6xljmJBwQg";
@@ -92,6 +93,15 @@ function MapPage() {
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   const [pendingBbox, setPendingBbox] = useState<[number, number, number, number] | null>(null);
   const [selected, setSelected] = useState<{ ids: ClusterIds; title: string } | null>(null);
+  const [layer, setLayer] = useState<MapLayer>(() => {
+    if (typeof window === "undefined") return "default";
+    const v = window.localStorage.getItem("map.layer") as MapLayer | null;
+    return v && v in LAYER_STYLES ? v : "default";
+  });
+  const setLayerPersist = (v: MapLayer) => {
+    setLayer(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("map.layer", v);
+  };
 
   const fn = useServerFn(getMapPins);
   const cat = search.cat === "all" ? undefined : (search.cat as DealCategory);
@@ -199,7 +209,7 @@ function MapPage() {
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}
           initialViewState={{ longitude: search.lng, latitude: search.lat, zoom: search.zoom }}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle={LAYER_STYLES[layer]}
           onLoad={onLoad}
           onMoveEnd={onMoveEnd}
           style={{ width: "100%", height: "100%" }}
@@ -244,6 +254,8 @@ function MapPage() {
             );
           })}
         </MapboxMap>
+
+        <MapLayerSwitcher value={layer} onChange={setLayerPersist} />
 
         {/* Top: search + filters */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3">
