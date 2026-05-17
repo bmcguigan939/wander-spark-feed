@@ -1,75 +1,66 @@
 ## Goal
 
-Bring the live Travidz product in line with the v6 TAM/SOM model:
-**Tapered 50 → 40 → 30 by tenure**, with a **Power-Creator Tier** (rolling 12-month GBV ≥ £25k locks you at 50% forever), plus a **Founding Creator** flag (first 500 creators locked at 50% for life). The shopper-facing **8% gross commission stays the same** — only the *split* between creator and Travidz changes per booking.
+Add an internal, admin-only **financial model & investment** workspace inside Travidz that turns the v6 TAM/SAM/SOM and tapered commission model into an interactive 5-year forecast. Standalone — pure assumptions, no live DB reads. Lives at `/admin/investor` (admin-gated).
 
-Today the codebase hard-codes a flat 50/50 split via `src/lib/commission.ts` (`creatorPct: 4, platformPct: 4`). Every redemption, payout, agreement page, calculator and email reads from that constant. We need to replace that single constant with a per-creator, per-booking lookup.
+## Scope
 
----
+Market sizing + revenue model only (per chosen scope). No P&L/cash, no cohort churn engine, no exports — those are explicitly out of scope for v1 and can be layered on later.
 
-## 1. Database (migration)
+## 1. Route structure
 
-Add the tenure + power-tier state to creators and stamp the resolved split onto every redemption so historical earnings stay correct even when rates change later.
+New nested admin layout `src/routes/admin.investor.tsx` (sidebar + Outlet), with children:
 
-- `profiles`: add `is_founding_creator boolean default false`, `founding_creator_number int null` (rank 1–500), `creator_joined_at timestamptz` (backfill from existing signup), `power_tier_locked_at timestamptz null` (set the first time they cross £25k rolling-12mo GBV — once set, never cleared).
-- `deal_redemptions`: add `creator_share_pct numeric(5,2) null`, `platform_share_pct numeric(5,2) null`, `creator_commission_cents int null`, `platform_commission_cents int null`, `creator_tier text null` (`'founding' | 'power' | 'new' | 'maturing' | 'mature'`). Backfill existing rows at 50/50, tier `'new'`.
-- `creator_gbv_rolling_12mo` materialised view (creator_id, gbv_cents, refreshed nightly via existing cron) — used to flip `power_tier_locked_at`.
-- Trigger `enforce_founding_cap()` that assigns `founding_creator_number` on insert into `profiles` while count < 500.
-- Nightly cron (`/api/public/cron/refresh-creator-tiers`) refreshes the view and sets `power_tier_locked_at = now()` for any creator newly above £25k.
+- `admin.investor.index.tsx` — Overview: TAM → SAM → SOM funnel + headline 5-year GBV & net revenue chart
+- `admin.investor.market.tsx` — Editable TAM/SAM/SOM assumptions (travellers, ABV, attach rate, market share %)
+- `admin.investor.creators.tsx` — Creator funnel assumptions (signups/mo, GBV per active creator, % founding, % reaching power tier, tenure mix)
+- `admin.investor.revenue.tsx` — Revenue & take-rate: per-year breakdown of GBV by tier (founding / power / new / maturing / mature), 8% gross, blended creator vs Travidz split, Travidz net revenue
+- `admin.investor.scenarios.tsx` — Bear / Base / Bull preset toggles that swap the assumption set
 
-## 2. Commission engine
+All routes wrapped by an admin role guard (reuse the existing `requireAdmin` pattern already used by `admin.*` routes).
 
-Replace the flat constant with a resolver.
+## 2. Model layer (pure, no DB)
 
-- `src/lib/commission.ts` keeps `totalPct = 8` but exports a new pure function:
-  ```ts
-  resolveSplit({ joinedAt, isFounding, powerTierLockedAt, bookingAt })
-    → { creatorPct, platformPct, tier }
-  ```
-  Rules: founding or power-tier-locked → 50/50. Otherwise by tenure at `bookingAt`: months 0–6 → 50/50, 7–18 → 40/60 (creator/platform of the 8%), 19+ → 30/70.
-- `src/lib/match-codes.server.ts` and `src/routes/api/public/attribute.ts`: when writing a `deal_redemption`, call the resolver with the creator's profile and stamp `creator_share_pct`, `platform_share_pct`, `creator_commission_cents`, `platform_commission_cents`, `creator_tier`.
-- All downstream reads (`earnings.functions.ts`, `payouts.functions.ts`, statement CSV, admin payouts page) switch from the hard-coded constant to the per-row `creator_commission_cents`.
+`src/lib/investor-model/` — pure TypeScript, fully unit-testable, no Supabase:
 
-## 3. Creator-facing UI
+- `assumptions.ts` — typed `Assumptions` object with v6 defaults seeded from the workbook (TAM travellers, SAM %, SOM %, ABV £, attach %, signups/mo curve, founding cap = 500, power threshold = £25k rolling-12mo GBV, tenure-tier mix by year, tapered split 50/40/30, gross commission 8%).
+- `scenarios.ts` — three presets (`bear`, `base`, `bull`) that override a subset of `Assumptions`.
+- `compute.ts` — pure functions:
+  - `computeMarket(a)` → `{ tam, sam, som }` in £ GBV
+  - `computeCreatorCohorts(a)` → for years 1–5: active creators, % founding / power / mature / maturing / new
+  - `computeRevenue(a)` → for years 1–5: `{ gbv, grossCommission, creatorPayout, travidzNet, blendedTakeRate }`
+- `format.ts` — money/percent formatters (reuse existing `src/lib/format.ts` if present).
 
-- **`/creator/earnings`** — add a "Your tier" card: shows current tier (Founding / Power / New / Maturing / Mature), current creator share %, rolling-12mo GBV with a progress bar to £25k. If within 6 months of dropping a tier, a banner: *"You're £X away from locking 50% forever."*
-- **`/studio` dashboard** — small badge next to the earnings tile mirroring the same tier.
-- **`/u/$username`** (own profile only) — Founding Creator badge if applicable.
-- **`/creator/analytics`** — annotate the earnings chart with tier transitions.
+State management: a single `useInvestorAssumptions` hook backed by `localStorage` (key `travidz.investor.assumptions.v1`) + a "Reset to v6 defaults" button. No DB persistence in v1 — fits the "standalone, internal only" choice.
 
-## 4. Legal & marketing copy
+## 3. UI
 
-- `src/routes/legal.creator-agreement.tsx` — rewrite the commission section to describe the tapered ladder + power-creator unlock + founding-creator lifetime lock. Include the worked example table from the workbook.
-- `src/routes/legal.business-agreement.tsx` — the business-facing copy stays at "flat 8% commission" (businesses don't see the split), but update the 50/50 sentence to *"split between the creator and Travidz; the creator share depends on the creator's tier."*
-- `src/routes/business.calculator.tsx` — leave business calc alone (it already shows business-side maths). Add a parallel `/creator/calculator` route that shows creator take-home across the three tenure tiers + power tier.
-- Welcome / onboarding (`src/routes/welcome.tsx`, creator agreement screen) — add a "Founding Creator — 50% for life" callout while signups < 500, with a live counter (`500 − founding_creator_number_max`).
+- Reuse existing dark-theme tokens (`bg-background`, `text-foreground`, primary `#3B82F6`) — no new design tokens.
+- Charts: reuse `recharts` (already in deps) — stacked area for GBV-by-tier, line for blended take-rate glide path (4.0% → 6.2%), funnel/bar for TAM→SAM→SOM.
+- Assumption inputs: shadcn `Input` + `Slider` for percentages, with live recompute (no save button needed since it's localStorage).
+- Each page shows the resulting headline numbers in a sticky right-rail card so editing assumptions gives instant feedback.
 
-## 5. Email templates
+## 4. Admin nav
 
-- `src/lib/email-templates/redemption-confirmed-creator.tsx` — show the actual creator share % from the redemption row, not the constant.
-- New template `creator-tier-unlocked.tsx` — fires when `power_tier_locked_at` is first set ("You're locked at 50% forever — congrats").
-- New template `founding-creator-welcome.tsx` — fires on signup if `is_founding_creator = true`.
+Add an "Investor model" link to the admin sidebar in `src/routes/admin.tsx` (next to existing admin sections).
 
-## 6. Admin tooling
+## 5. Out of scope (flag for later)
 
-- `src/routes/admin.users.tsx` — show tier + founding number + rolling-12mo GBV per creator; allow manual override of `power_tier_locked_at` (rare-case promotions).
-- `src/routes/admin.payouts.tsx` — surface split breakdown per redemption (creator vs platform cents).
-- `src/routes/admin.index.tsx` — KPI tile: blended Travidz take-rate this month (should track the workbook's 4.0% → 6.2% glide path).
+- P&L, costs, burn, runway
+- Creator cohort churn / signup decay curves
+- PDF / XLSX investor export
+- Shareable read-only investor links
+- Pulling live GBV from `deal_redemptions` (the existing v6 commission work already stamps the data — easy to wire later)
 
-## 7. Sequencing
+## 6. Sequencing
 
-1. Migration (tables, view, trigger, cron route).
-2. `commission.ts` resolver + attribution rewrite + redemption stamping.
-3. Backfill script for existing redemptions (50/50, tier `'new'`).
-4. Creator UI (earnings tier card, tier badges).
-5. Legal pages + welcome + emails.
-6. Admin views.
-7. Manual QA: simulate a creator at months 3 / 12 / 24, with and without the power lock, verify the resolver picks the right split and the earnings page reconciles.
+1. Create `src/lib/investor-model/` (assumptions, scenarios, compute, types) with v6 defaults.
+2. Create `admin.investor.tsx` layout + admin guard + sidebar entry.
+3. Build the four child routes (overview, market, creators, revenue) wired to the model.
+4. Add scenarios route with bear/base/bull preset switcher.
+5. Manual QA: defaults should reproduce the v6 workbook's headline year-5 GBV, Travidz net revenue, and blended take-rate.
 
-## Out of scope (flagged for later)
+## Technical notes
 
-- Real payouts infrastructure (still "accrual only" per current creator agreement).
-- Quarterly leaderboard / featured placement bonus for power creators — workbook keeps this as a Scenario B alternative, not in the v6 default.
-- Multi-currency tier thresholds — v6 assumes GBP only.
-
-After approval I'll work through the sequence top-to-bottom in a single build pass and surface the migration first for your sign-off before any code changes ship.
+- All math lives in `src/lib/investor-model/` — zero React, zero Supabase — so we can later add a vitest spec without refactoring.
+- No new dependencies; recharts and shadcn primitives already cover the UI needs.
+- No migration, no server functions, no env vars.
