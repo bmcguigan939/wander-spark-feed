@@ -2,6 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { COMMISSION, resolveSplit, TIER_LABEL, type CreatorTier } from "@/lib/commission";
+import {
+  enqueueTransactionalEmail,
+  getUserEmail,
+  SITE_URL,
+} from "@/lib/email-send.server";
+import { FoundingCreatorWelcomeEmail } from "@/lib/email-templates/founding-creator-welcome";
 
 export type CreatorTierInfo = {
   tier: CreatorTier;
@@ -73,4 +79,37 @@ export const getFoundingSpotsRemaining = createServerFn({ method: "GET" })
       remaining: Math.max(0, COMMISSION.foundingCap - (count ?? 0)),
       cap: COMMISSION.foundingCap,
     };
+  });
+
+/** Called by the welcome flow right after a user picks the "creator" role.
+ *  Sends the Founding Creator welcome email if the trigger assigned them a
+ *  founding number. Idempotent via Resend idempotency key. */
+export const sendFoundingWelcomeIfEligible = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ sent: boolean; foundingNumber: number | null }> => {
+    const { userId } = context;
+    const { data: p } = await supabaseAdmin
+      .from("profiles")
+      .select("display_name,username,is_founding_creator,founding_creator_number")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!p?.is_founding_creator || !p.founding_creator_number) {
+      return { sent: false, foundingNumber: null };
+    }
+    const email = await getUserEmail(userId);
+    if (!email) return { sent: false, foundingNumber: p.founding_creator_number };
+    await enqueueTransactionalEmail({
+      to: email,
+      subject: `You're Founding Creator #${p.founding_creator_number} — 50% for life`,
+      label: "founding_creator_welcome",
+      userId,
+      category: "redemption",
+      idempotencyKey: `founding-creator-welcome-${userId}`,
+      react: FoundingCreatorWelcomeEmail({
+        creatorName: p.display_name || `@${p.username ?? "there"}`,
+        foundingNumber: p.founding_creator_number,
+        studioUrl: `${SITE_URL}/studio`,
+      }),
+    });
+    return { sent: true, foundingNumber: p.founding_creator_number };
   });
