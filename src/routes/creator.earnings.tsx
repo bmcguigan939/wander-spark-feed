@@ -251,6 +251,9 @@ function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>>
           )}
         </div>
       )}
+      <Link to="/creator/calculator" className="mt-3 inline-block text-xs font-semibold text-primary underline-offset-2 hover:underline">
+        Open earnings calculator →
+      </Link>
     </div>
   );
 }
