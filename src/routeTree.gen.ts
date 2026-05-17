@@ -23,6 +23,7 @@ import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudioIndexRouteImport } from './routes/studio.index'
+import { Route as LegalIndexRouteImport } from './routes/legal.index'
 import { Route as ItinerariesIndexRouteImport } from './routes/itineraries.index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations.index'
 import { Route as DealsIndexRouteImport } from './routes/deals.index'
@@ -34,6 +35,12 @@ import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as LegalDmcaRouteImport } from './routes/legal.dmca'
+import { Route as LegalCreatorAgreementRouteImport } from './routes/legal.creator-agreement'
+import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
+import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.business-agreement'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
@@ -134,6 +141,11 @@ const StudioIndexRoute = StudioIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StudioRoute,
 } as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: '/legal/',
+  path: '/legal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ItinerariesIndexRoute = ItinerariesIndexRouteImport.update({
   id: '/itineraries/',
   path: '/itineraries/',
@@ -187,6 +199,36 @@ const SoundsIdRoute = SoundsIdRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalDmcaRoute = LegalDmcaRouteImport.update({
+  id: '/legal/dmca',
+  path: '/legal/dmca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalCreatorAgreementRoute = LegalCreatorAgreementRouteImport.update({
+  id: '/legal/creator-agreement',
+  path: '/legal/creator-agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalCookiesRoute = LegalCookiesRouteImport.update({
+  id: '/legal/cookies',
+  path: '/legal/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalBusinessAgreementRoute = LegalBusinessAgreementRouteImport.update({
+  id: '/legal/business-agreement',
+  path: '/legal/business-agreement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
@@ -366,6 +408,12 @@ export interface FileRoutesByFullPath {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -377,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/itineraries/': typeof ItinerariesIndexRoute
+  '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
@@ -420,6 +469,12 @@ export interface FileRoutesByTo {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -431,6 +486,7 @@ export interface FileRoutesByTo {
   '/deals': typeof DealsIndexRoute
   '/destinations': typeof DestinationsIndexRoute
   '/itineraries': typeof ItinerariesIndexRoute
+  '/legal': typeof LegalIndexRoute
   '/studio': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/new': typeof BusinessDealsNewRoute
@@ -476,6 +532,12 @@ export interface FileRoutesById {
   '/deals/$id': typeof DealsIdRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
+  '/legal/business-agreement': typeof LegalBusinessAgreementRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/creator-agreement': typeof LegalCreatorAgreementRoute
+  '/legal/dmca': typeof LegalDmcaRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
@@ -487,6 +549,7 @@ export interface FileRoutesById {
   '/deals/': typeof DealsIndexRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/itineraries/': typeof ItinerariesIndexRoute
+  '/legal/': typeof LegalIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
@@ -534,6 +597,12 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
+    | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -545,6 +614,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/itineraries/'
+    | '/legal/'
     | '/studio/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
@@ -588,6 +658,12 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
+    | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -599,6 +675,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/destinations'
     | '/itineraries'
+    | '/legal'
     | '/studio'
     | '/api/public/mux-webhook'
     | '/business/deals/new'
@@ -643,6 +720,12 @@ export interface FileRouteTypes {
     | '/deals/$id'
     | '/itineraries/$id'
     | '/itineraries/new'
+    | '/legal/business-agreement'
+    | '/legal/cookies'
+    | '/legal/creator-agreement'
+    | '/legal/dmca'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
@@ -654,6 +737,7 @@ export interface FileRouteTypes {
     | '/deals/'
     | '/destinations/'
     | '/itineraries/'
+    | '/legal/'
     | '/studio/'
     | '/api/public/mux-webhook'
     | '/business/deals/$id'
@@ -694,6 +778,12 @@ export interface RootRouteChildren {
   DealsIdRoute: typeof DealsIdRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
+  LegalBusinessAgreementRoute: typeof LegalBusinessAgreementRoute
+  LegalCookiesRoute: typeof LegalCookiesRoute
+  LegalCreatorAgreementRoute: typeof LegalCreatorAgreementRoute
+  LegalDmcaRoute: typeof LegalDmcaRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
   SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
@@ -701,6 +791,7 @@ export interface RootRouteChildren {
   DealsIndexRoute: typeof DealsIndexRoute
   DestinationsIndexRoute: typeof DestinationsIndexRoute
   ItinerariesIndexRoute: typeof ItinerariesIndexRoute
+  LegalIndexRoute: typeof LegalIndexRoute
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
@@ -815,6 +906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioIndexRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/legal/': {
+      id: '/legal/'
+      path: '/legal'
+      fullPath: '/legal/'
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/itineraries/': {
       id: '/itineraries/'
       path: '/itineraries'
@@ -890,6 +988,48 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/dmca': {
+      id: '/legal/dmca'
+      path: '/legal/dmca'
+      fullPath: '/legal/dmca'
+      preLoaderRoute: typeof LegalDmcaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/creator-agreement': {
+      id: '/legal/creator-agreement'
+      path: '/legal/creator-agreement'
+      fullPath: '/legal/creator-agreement'
+      preLoaderRoute: typeof LegalCreatorAgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/cookies': {
+      id: '/legal/cookies'
+      path: '/legal/cookies'
+      fullPath: '/legal/cookies'
+      preLoaderRoute: typeof LegalCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/business-agreement': {
+      id: '/legal/business-agreement'
+      path: '/legal/business-agreement'
+      fullPath: '/legal/business-agreement'
+      preLoaderRoute: typeof LegalBusinessAgreementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/itineraries/new': {
@@ -1195,6 +1335,12 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIdRoute: DealsIdRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
+  LegalBusinessAgreementRoute: LegalBusinessAgreementRoute,
+  LegalCookiesRoute: LegalCookiesRoute,
+  LegalCreatorAgreementRoute: LegalCreatorAgreementRoute,
+  LegalDmcaRoute: LegalDmcaRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
   SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
@@ -1202,6 +1348,7 @@ const rootRouteChildren: RootRouteChildren = {
   DealsIndexRoute: DealsIndexRoute,
   DestinationsIndexRoute: DestinationsIndexRoute,
   ItinerariesIndexRoute: ItinerariesIndexRoute,
+  LegalIndexRoute: LegalIndexRoute,
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
   BusinessDealsNewRoute: BusinessDealsNewRoute,
