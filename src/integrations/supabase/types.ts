@@ -184,6 +184,7 @@ export type Database = {
           enabled: boolean
           id: string
           network: string
+          partner_url_template: string | null
           tracking_param: string | null
           tracking_value: string | null
           updated_at: string
@@ -195,6 +196,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           network: string
+          partner_url_template?: string | null
           tracking_param?: string | null
           tracking_value?: string | null
           updated_at?: string
@@ -206,6 +208,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           network?: string
+          partner_url_template?: string | null
           tracking_param?: string | null
           tracking_value?: string | null
           updated_at?: string
@@ -906,6 +909,8 @@ export type Database = {
           lat: number | null
           lng: number | null
           original_url: string | null
+          parity_exempt: boolean
+          parity_exempt_reason: string | null
           price_cents: number | null
           quality_reasons: Json | null
           quality_score: number | null
@@ -940,6 +945,8 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           original_url?: string | null
+          parity_exempt?: boolean
+          parity_exempt_reason?: string | null
           price_cents?: number | null
           quality_reasons?: Json | null
           quality_score?: number | null
@@ -974,6 +981,8 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           original_url?: string | null
+          parity_exempt?: boolean
+          parity_exempt_reason?: string | null
           price_cents?: number | null
           quality_reasons?: Json | null
           quality_score?: number | null
@@ -1170,6 +1179,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fx_rates: {
+        Row: {
+          base: string
+          fetched_at: string
+          quote: string
+          rate: number
+        }
+        Insert: {
+          base: string
+          fetched_at?: string
+          quote: string
+          rate: number
+        }
+        Update: {
+          base?: string
+          fetched_at?: string
+          quote?: string
+          rate?: number
+        }
+        Relationships: []
       }
       itineraries: {
         Row: {
@@ -1420,8 +1450,11 @@ export type Database = {
           cheapest_network: string | null
           cheapest_price_cents: number | null
           direct_price_cents: number | null
+          fx_quote_currency: string | null
+          fx_rate_used: number | null
           id: string
           link_id: string
+          normalised_competitor_price_cents: number | null
           providers_checked: string[]
           ran_at: string
         }
@@ -1430,8 +1463,11 @@ export type Database = {
           cheapest_network?: string | null
           cheapest_price_cents?: number | null
           direct_price_cents?: number | null
+          fx_quote_currency?: string | null
+          fx_rate_used?: number | null
           id?: string
           link_id: string
+          normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
         }
@@ -1440,8 +1476,11 @@ export type Database = {
           cheapest_network?: string | null
           cheapest_price_cents?: number | null
           direct_price_cents?: number | null
+          fx_quote_currency?: string | null
+          fx_rate_used?: number | null
           id?: string
           link_id?: string
+          normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
         }
@@ -2035,6 +2074,7 @@ export type Database = {
           embedded_at: string | null
           embedding: string | null
           id: string
+          is_demo: boolean
           is_draft: boolean
           is_featured: boolean
           is_hidden: boolean
@@ -2078,6 +2118,7 @@ export type Database = {
           embedded_at?: string | null
           embedding?: string | null
           id?: string
+          is_demo?: boolean
           is_draft?: boolean
           is_featured?: boolean
           is_hidden?: boolean
@@ -2121,6 +2162,7 @@ export type Database = {
           embedded_at?: string | null
           embedding?: string | null
           id?: string
+          is_demo?: boolean
           is_draft?: boolean
           is_featured?: boolean
           is_hidden?: boolean
