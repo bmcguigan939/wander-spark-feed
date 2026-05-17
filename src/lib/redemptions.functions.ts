@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  enqueueTransactionalEmail,
+  formatMoneyGBP,
+  getUserEmail,
+  SITE_URL,
+} from "./email-send.server";
+import { RedemptionConfirmedCreatorEmail } from "./email-templates/redemption-confirmed-creator";
+import { RedemptionConfirmedTravellerEmail } from "./email-templates/redemption-confirmed-traveller";
 
 // Traveller-initiated "I used this code" claim. Inserts a pending redemption.
 // Idempotent: if the same user has already claimed the same code in the last
@@ -130,6 +138,10 @@ export const confirmRedemption = createServerFn({ method: "POST" })
       .select("id,status,commission_cents")
       .single();
     if (error) return { ok: false as const, error: error.message };
+    // Fire-and-forget email notifications (DB triggers already create in-app notifications).
+    void sendRedemptionConfirmedEmails(data.id).catch((e) =>
+      console.error("redemption emails failed", e),
+    );
     return { ok: true as const, row };
   });
 
@@ -176,3 +188,75 @@ export const getCreatorRedemptionStats = createServerFn({ method: "GET" })
     }
     return stats;
   });
+
+async function sendRedemptionConfirmedEmails(redemptionId: string) {
+  const { data: r } = await supabaseAdmin
+    .from("deal_redemptions")
+    .select(
+      "id,deal_id,creator_id,user_id,commission_cents,order_value_cents,deals(title,business_id),creator:profiles!deal_redemptions_creator_id_fkey(display_name,username),traveller:profiles!deal_redemptions_user_id_fkey(display_name,username)",
+    )
+    .eq("id", redemptionId)
+    .maybeSingle();
+  if (!r) return;
+
+  const deal = (r as any).deals as { title: string; business_id: string } | null;
+  const businessName = deal?.business_id
+    ? (
+        await supabaseAdmin
+          .from("profiles")
+          .select("display_name,username")
+          .eq("id", deal.business_id)
+          .maybeSingle()
+      ).data
+    : null;
+  const businessLabel = businessName?.display_name || businessName?.username || "the business";
+  const dealTitle = deal?.title ?? "your booking";
+  const dealUrl = `${SITE_URL}/deals/${r.deal_id}`;
+
+  // Creator
+  if (r.creator_id) {
+    const email = await getUserEmail(r.creator_id);
+    if (email) {
+      const creator = (r as any).creator as { display_name: string | null; username: string } | null;
+      const commission = formatMoneyGBP(r.commission_cents ?? 0);
+      const order = formatMoneyGBP(r.order_value_cents ?? 0);
+      await enqueueTransactionalEmail({
+        to: email,
+        subject: `You earned ${commission} on ${dealTitle}`,
+        label: "redemption_confirmed_creator",
+        userId: r.creator_id,
+        category: "redemption",
+        idempotencyKey: `redemption-confirmed-creator-${redemptionId}`,
+        react: RedemptionConfirmedCreatorEmail({
+          creatorName: creator?.display_name || `@${creator?.username ?? "there"}`,
+          dealTitle,
+          commissionFormatted: commission,
+          orderValueFormatted: order,
+          earningsUrl: `${SITE_URL}/creator/earnings`,
+        }),
+      });
+    }
+  }
+
+  // Traveller (only if a known user, not anonymous)
+  if (r.user_id && r.user_id !== r.creator_id) {
+    const email = await getUserEmail(r.user_id);
+    if (email) {
+      const traveller = (r as any).traveller as { display_name: string | null; username: string } | null;
+      await enqueueTransactionalEmail({
+        to: email,
+        subject: `Your booking with ${businessLabel} is confirmed`,
+        label: "redemption_confirmed_traveller",
+        userId: r.user_id,
+        category: "redemption",
+        idempotencyKey: `redemption-confirmed-traveller-${redemptionId}`,
+        react: RedemptionConfirmedTravellerEmail({
+          travellerName: traveller?.display_name || `@${traveller?.username ?? "there"}`,
+          businessName: businessLabel,
+          dealTitle,
+          dealUrl,
+        }),
+      });
+    }
+  }
+}
