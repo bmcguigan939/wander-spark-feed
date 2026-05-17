@@ -1,48 +1,40 @@
+## Update Travidz TAM/SAM/SOM workbook (v2)
 
-# Travidz — Market Research & TAM/SAM/SOM Plan
+**Scope:** Revise uploaded `Travidz_Market_Research_TAM_SOM.xlsx` → deliver `Travidz_Market_Research_TAM_SOM_v2.xlsx`.
 
-## Objective
-Deliver an investor-grade Excel workbook (`/mnt/documents/Travidz_Market_Research_TAM_SOM.xlsx`) that doubles as the data backbone for the pitch deck and SaaS financial model.
+### Changes
 
-## Positioning baked into the model
-- **Product:** mobile-first creator-led travel discovery app (map + video) monetised via affiliate commission (TheFork, Booking.com, Viator).
-- **ICP:** global English-speaking leisure travellers (UK, US, CA, AU, NZ, IE + English-speaking outbound from EU/Asia).
-- **Round:** pre-seed, raising £500k–£750k for 3-year runway. SOM must show credible path to break-even traction inside 3 years.
+1. **Currency → GBP only**
+   - All monetary values in £ GBP. Strip $/€ from headers, formats, labels.
+   - Single FX input block on Cover (USD→GBP, EUR→GBP) cited on Sources sheet; all conversions formula-driven.
+   - Number formats: `£#,##0;(£#,##0);-` (with `"bn"` / `"m"` scalers where used).
+   - TheFork €2/cover converted via FX cell, not hardcoded.
 
-## Research scope (desk research, cited sources only)
-Pulled from UNWTO, Statista, Phocuswright, Skift Research, Booking.com investor reports, Tripadvisor 10-K, TheFork/Tripadvisor disclosures, Awin network reports, GWI travel reports, App Annie/data.ai, EU Tourism stats, and Companies House filings of comparators.
+2. **Horizon → 5 years, with 3-year funded runway**
+   - Extend SOM Scenarios (Conservative / Base / Stretch) from Y1–Y3 to **Y1–Y5**.
+   - Extend Exec Summary dashboard, chart data, Revenue Engine repeat curve, and Sensitivity terminal-year to Y5.
 
-Comparators benchmarked: **Polarsteps, Wanderlog, Atlas Obscura, Beli, Rezdy, TheFork, Tripadvisor, Hopper, Culture Trip, Sidekick**.
+3. **Founders' salary built into raise calculation**
+   - New **"Raise & Runway"** block (on SOM Scenarios sheet, also surfaced on Exec Summary):
+     - Input: **2 founders × £7,500/mo = £15,000/mo** from Month 1 (£180k/yr, £540k over 3-yr runway). Input cells in blue so investors can flex.
+     - Add operating-cost stack alongside: founders salary (hardcoded above), UA spend (already modelled), tooling/infra placeholder, contingency %.
+     - Compute **cumulative Y1–Y3 cash burn = salaries + UA + opex − commission revenue**.
+     - Output: **Required Raise = cash burn over 3-yr runway + buffer**, shown for all three scenarios. This becomes the recommended pre-seed ask (validates/replaces the £500–750k placeholder).
+     - Break-even check: month/quarter where monthly commission ≥ monthly burn.
+   - Y4–Y5 modelled post-runway with toggle: revenue-funded vs. Seed top-up.
 
-## Excel workbook structure (10 sheets)
+4. **Sheets touched:** Cover/Methodology (currency + horizon + salary assumption notes), Exec Summary (new Raise headline tile), TAM, SAM, SOM Scenarios (5-yr columns + Raise & Runway block), Revenue Engine, Sensitivity, Sources (FX citation). Competitors / Trends: currency labels only.
 
-1. **Cover & Methodology** — scope, assumptions, colour key (blue=input, black=formula, green=cross-sheet, yellow=key assumption), data-source legend.
-2. **Executive Summary** — TAM / SAM / SOM headline table + 3-yr SOM chart data + key takeaways for the deck.
-3. **TAM — Global** — top-down: 1.4bn intl arrivals × English-speaking share × smartphone penetration × avg annual bookable spend × blended affiliate take-rate. Bottom-up cross-check via global online travel GBV.
-4. **SAM — Serviceable** — English-speaking outbound travellers actively using discovery apps, filtered to restaurants + tours + hotels in cities where TheFork/Booking/Viator have inventory. Country-by-country breakdown (UK, US, CA, AU, NZ, IE + key EU outbound).
-5. **SOM — 3-Year** — bottom-up funnel: marketing spend → installs → MAU → bookers → bookings/yr → GBV → commission. Three scenarios (Conservative / Base / Stretch). Yearly P&L-ready outputs feed the financial model.
-6. **Revenue Engine** — per-partner take rates (TheFork 2€/cover, Booking 25–40% of hotel commission via affiliate, Viator 8%), avg basket sizes, attach rates, repeat-booking curve.
-7. **Competitor Benchmark** — funding raised, users, revenue, monetisation, geo, gaps Travidz exploits. Sourced from Crunchbase, PitchBook public data, press.
-8. **Market Trends & Tailwinds** — creator-economy travel ($250bn influence on bookings), Gen Z/Millennial share, short-form video → booking conversion stats, post-COVID experiential travel rebound.
-9. **Sensitivity & Assumptions** — toggleable drivers (CAC, install→MAU, MAU→booker, avg commission) so investors can stress-test live.
-10. **Sources & Evidence Log** — every figure tied to a numbered citation (publication, year, page/URL). This is the "back-up evidence" layer.
+### Build steps
 
-## Headline numbers I will derive (for sanity)
-- **TAM** ≈ $1.1–1.4 trillion global online travel GBV → ~$60–80bn affiliate-commission opportunity.
-- **SAM** ≈ $4–7bn — English-speaking discovery-driven bookings across restaurants, tours, hotels in covered cities.
-- **SOM Yr 3 (Base)** ≈ £600k–£1.2M ARR from ~80–150k MAU, ~4–7% booker conversion, ~£90 avg commissionable basket.
+1. Copy uploaded `.xlsx` to `/tmp/`, load with `openpyxl`.
+2. Add FX + founders-salary input cells on Cover; wire monetary formulas to them.
+3. Extend Y3 column blocks to Y5; insert Raise & Runway block.
+4. Apply GBP number formats across all sheets.
+5. Save to `/mnt/documents/Travidz_Market_Research_TAM_SOM_v2.xlsx`.
+6. Run `recalculate_formulas.py`; fix any #REF / #DIV.
+7. Render each sheet to PNG for QA; fix overflow/clipping; iterate until clean.
+8. Deliver via `<presentation-artifact>` with summary of: 5-yr GBP TAM/SAM/SOM headlines, **recommended raise size** (Base case), and break-even month.
 
-Final numbers will be whatever the cited inputs produce — no fabrication.
-
-## Build steps
-1. Python script with `openpyxl` builds the 10 sheets, applies the colour conventions from the XLSX skill, embeds formulas (no hardcoded calcs), and writes the sources log.
-2. Run `recalculate_formulas.py` to populate cached values and catch any #REF/#DIV errors.
-3. QA: render each sheet to image, inspect every page for layout/overflow/typos. Fix and re-run until clean.
-4. Deliver via `<presentation-artifact>` plus a short summary of headline TAM/SAM/SOM and the 5 most pitch-ready stats.
-
-## Out of scope (call out for follow-up)
-- Pitch deck slides themselves — produced next, fed by this workbook.
-- SaaS financial model (`.xlsx`) — produced next, pulls SOM Yr1–3 GBV and commission lines directly.
-- Primary research / customer interviews — desk research only in this pass.
-
-Approve and I'll build the workbook in one go.
+### Out of scope
+Pitch deck and SaaS financial model — built next, consuming this workbook.
