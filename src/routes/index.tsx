@@ -21,7 +21,7 @@ function FeedPage() {
     queryFn: () =>
       tab === "following" && user
         ? getFollowingFeed({ data: { limit: 20, offset: 0 } })
-        : getForYouFeed({ data: { limit: 20, viewerId: user?.id ?? null } }),
+        : getForYouFeed({ data: { limit: 20 } }),
   });
   const videos = data?.videos ?? [];
   const containerRef = useRef<HTMLDivElement>(null);

@@ -212,7 +212,12 @@ Return JSON: { "summary": string (2-3 sentences, evocative but practical),
 export const generateDestinationOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => OverviewInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await (supabaseAdmin as any).rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
     return buildAndStoreOverview(data.country, data.city);
   });
 

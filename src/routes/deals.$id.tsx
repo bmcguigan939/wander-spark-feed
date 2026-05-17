@@ -44,7 +44,7 @@ function DealDetail() {
 
   const onView = async () => {
     try {
-      await logClick({ data: { dealId: id, userId: user?.id } });
+      await logClick({ data: { dealId: id } });
     } catch {}
     if (deal?.url) window.open(deal.url, "_blank", "noopener,noreferrer");
   };

@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "accepted business reads own invite" ON public.business_invites;
