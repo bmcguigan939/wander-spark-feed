@@ -1,0 +1,13 @@
+{
+  "name": "Travidz",
+  "short_name": "Travidz",
+  "description": "Discover travel through video.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0a1a",
+  "theme_color": "#1a1530",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
