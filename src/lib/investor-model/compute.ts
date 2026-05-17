@@ -3,16 +3,22 @@ import type { Assumptions, TierMix } from "./assumptions";
 import { TIER_ORDER } from "./assumptions";
 
 export type MarketSizing = {
-  tamGBV: number;
-  samGBV: number;
-  somGBVByYear: number[]; // year 1..5
+  tamGBV: number; // UK-only TAM
+  tamGBVAll: number; // UK + EU-5
+  samGBV: number; // UK-only SAM
+  samGBVAll: number; // UK + EU-5 SAM
+  somGBVByYear: number[]; // top-down ceiling check: % of UK SAM
+  somBottomUpGBVByYear: number[]; // bottom-up SOM from creator funnel (matches financial model)
 };
 
 export function computeMarket(a: Assumptions): MarketSizing {
   const tamGBV = a.tamTravellers * a.bookingsPerTraveller * a.avgBookingValue;
+  const tamGBVAll = tamGBV * (1 + a.eu5ExpansionMultiplier);
   const samGBV = tamGBV * a.samPct;
+  const samGBVAll = tamGBVAll * a.samPct;
   const somGBVByYear = a.somSharePctByYear.map((p) => samGBV * p);
-  return { tamGBV, samGBV, somGBVByYear };
+  const somBottomUpGBVByYear = a.creatorsActiveByYear.map((c) => c * a.gbvPerActiveCreator);
+  return { tamGBV, tamGBVAll, samGBV, samGBVAll, somGBVByYear, somBottomUpGBVByYear };
 }
 
 export type CreatorYear = {
@@ -47,9 +53,10 @@ export function computeRevenue(a: Assumptions): RevenueYear[] {
   const market = computeMarket(a);
   return a.creatorsActiveByYear.map((creators, i) => {
     const year = i + 1;
-    // GBV = lesser of (creator-driven capacity, SOM) — keep both visible by using min
-    const creatorDrivenGBV = creators * a.gbvPerActiveCreator;
-    const gbv = Math.min(creatorDrivenGBV, market.somGBVByYear[i]);
+    // GBV is bottom-up from creator funnel (matches financial model).
+    // SAM ceiling is shown separately in MarketPane as a sanity check.
+    void market;
+    const gbv = creators * a.gbvPerActiveCreator;
     const mix = a.tierMixByYear[i];
     const gbvByTier = Object.fromEntries(
       TIER_ORDER.map((t) => [t, gbv * (mix[t] ?? 0)]),
