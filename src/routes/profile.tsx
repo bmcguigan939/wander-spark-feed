@@ -246,6 +246,12 @@ function ProfilePage() {
           >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
+          <Link
+            to="/settings"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted"
+          >
+            Account & data
+          </Link>
         </SheetContent>
       </Sheet>
       <Sheet open={socialsOpen} onOpenChange={setSocialsOpen}>
