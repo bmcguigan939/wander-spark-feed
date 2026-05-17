@@ -56,6 +56,7 @@ async function scrapeOne(
       firecrawl.scrape(url, {
         formats: [
           { type: "json", schema: PRICE_SCHEMA, prompt: "Extract the lowest total bookable price visible on this page for the default dates/party size." } as any,
+          "screenshot",
         ],
         onlyMainContent: true,
       }),
@@ -65,14 +66,18 @@ async function scrapeOne(
     if (!json || typeof json.price !== "number") return null;
     const currency = (json.currency || "GBP").toString().toUpperCase();
     const price_cents = toCents(json.price, currency);
+    const screenshot: string | null =
+      result?.screenshot ?? result?.data?.screenshot ?? null;
     const fetched_at = new Date().toISOString();
     return {
       network,
       url,
       price_cents,
       currency,
-      evidence_url: null,
-      evidence_hash: hash(JSON.stringify({ url, network, price_cents, currency, fetched_at })),
+      evidence_url: typeof screenshot === "string" ? screenshot : null,
+      evidence_hash: hash(
+        JSON.stringify({ url, network, price_cents, currency, fetched_at, screenshot: screenshot ?? null }),
+      ),
       fetched_at,
     };
   } catch {
@@ -183,6 +188,7 @@ export async function runParityCheck(args: {
 
   let action: "no_breach" | "match_issued" | "no_data" = "no_data";
   if (!cheapest) action = "no_data";
+  else if (args.direct_price_cents == null) action = "no_data";
   else if (args.direct_price_cents != null && args.direct_price_cents <= cheapest.price_cents)
     action = "no_breach";
   else action = "match_issued";

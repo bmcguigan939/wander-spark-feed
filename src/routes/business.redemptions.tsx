@@ -123,6 +123,7 @@ function RedemptionRow({ row, onChange }: { row: Row; onChange: () => void }) {
   const reject = useServerFn(rejectRedemption);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [matchCode, setMatchCode] = useState("");
 
   const confirmMut = useMutation({
     mutationFn: () =>
@@ -131,6 +132,7 @@ function RedemptionRow({ row, onChange }: { row: Row; onChange: () => void }) {
           id: row.id,
           orderValueCents: Math.round(parseFloat(value || "0") * 100),
           currency: row.currency,
+          ...(matchCode.trim() ? { matchCode: matchCode.trim().toUpperCase() } : {}),
         },
       }),
     onSuccess: (res) => {
@@ -138,6 +140,7 @@ function RedemptionRow({ row, onChange }: { row: Row; onChange: () => void }) {
       toast.success("Confirmed");
       setOpen(false);
       setValue("");
+      setMatchCode("");
       qc.invalidateQueries({ queryKey: ["business-redemptions"] });
       onChange();
     },
@@ -229,6 +232,19 @@ function RedemptionRow({ row, onChange }: { row: Row; onChange: () => void }) {
                       Commission rate: {row.commission_rate}% (auto-calculated on confirm)
                     </p>
                   )}
+                </div>
+                <div>
+                  <Label htmlFor="mc">Price-match code (optional)</Label>
+                  <Input
+                    id="mc"
+                    value={matchCode}
+                    onChange={(e) => setMatchCode(e.target.value)}
+                    placeholder="TRAVIDZ-MATCH-XXXXXXXX"
+                    autoCapitalize="characters"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    If the traveller booked with a Travidz price-match code, paste it here. The booking will settle from the matched price and the code will be marked redeemed in your audit log.
+                  </p>
                 </div>
               </div>
               <DialogFooter>

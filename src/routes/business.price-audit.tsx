@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
-import { listParityChecksForBusiness, disputeMatchCode } from "@/lib/price-match.functions";
+import { listParityChecksForBusiness, disputeMatchCode, setParityExempt } from "@/lib/price-match.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink } from "lucide-react";
+import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff } from "lucide-react";
 
 export const Route = createFileRoute("/business/price-audit")({
   head: () => ({ meta: [{ title: "Price-match audit — Travidz" }] }),
@@ -29,6 +29,7 @@ function PriceAuditPage() {
   const navigate = useNavigate();
   const fetchFn = useServerFn(listParityChecksForBusiness);
   const disputeFn = useServerFn(disputeMatchCode);
+  const exemptFn = useServerFn(setParityExempt);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -43,9 +44,11 @@ function PriceAuditPage() {
     enabled: !!user && isBusiness,
   });
 
-  const [tab, setTab] = useState<"checks" | "codes">("codes");
+  const [tab, setTab] = useState<"checks" | "codes" | "listings">("codes");
   const [disputing, setDisputing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [exemptingId, setExemptingId] = useState<string | null>(null);
+  const [exemptReason, setExemptReason] = useState("");
 
   const dispute = useMutation({
     mutationFn: (code: string) => disputeFn({ data: { code, reason } }),
@@ -56,6 +59,18 @@ function PriceAuditPage() {
       qc.invalidateQueries({ queryKey: ["price-audit"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to file dispute"),
+  });
+
+  const exempt = useMutation({
+    mutationFn: (v: { linkId: string; exempt: boolean; reason?: string }) =>
+      exemptFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Listing updated");
+      setExemptingId(null);
+      setExemptReason("");
+      qc.invalidateQueries({ queryKey: ["price-audit"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
   if (!user || !isBusiness) return null;
@@ -90,6 +105,12 @@ function PriceAuditPage() {
             className={`px-4 py-1.5 rounded-full ${tab === "checks" ? "bg-primary text-primary-foreground" : ""}`}
           >
             All checks ({data?.checks?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setTab("listings")}
+            className={`px-4 py-1.5 rounded-full ${tab === "listings" ? "bg-primary text-primary-foreground" : ""}`}
+          >
+            Listings ({data?.links?.length ?? 0})
           </button>
         </div>
 
@@ -147,6 +168,19 @@ function PriceAuditPage() {
                     <div className="col-span-2">
                       <div className="text-muted-foreground">Evidence hash (SHA-256)</div>
                       <div className="font-mono text-[10px] break-all">{c.evidence_hash}</div>
+                    </div>
+                  )}
+                  {c.evidence_url && (
+                    <div className="col-span-2">
+                      <div className="text-muted-foreground mb-1">Screenshot evidence</div>
+                      <a href={c.evidence_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border">
+                        <img
+                          src={c.evidence_url}
+                          alt={`${c.competitor_network} price screenshot`}
+                          loading="lazy"
+                          className="w-full h-32 object-cover object-top"
+                        />
+                      </a>
                     </div>
                   )}
                 </div>
@@ -222,6 +256,83 @@ function PriceAuditPage() {
                 {c.cheapest_network && (
                   <div className="text-muted-foreground">
                     Cheapest: {c.cheapest_network} @ {fmt(c.cheapest_price_cents)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "listings" && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Mark a listing parity-exempt only when you have a contractual reason — e.g. a
+              members-only rate, a packaged inclusion, or a third-party OTA price that
+              isn't comparable. A written reason is required and will be visible to Travidz
+              support during disputes.
+            </p>
+            {(data?.links ?? []).length === 0 && !isLoading && (
+              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground text-center">
+                No tracked listings yet.
+              </div>
+            )}
+            {(data?.links ?? []).map((l: any) => (
+              <div key={l.id} className="rounded-xl border bg-card p-3 text-sm space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <div className="font-semibold">{l.label}</div>
+                    {l.parity_exempt ? (
+                      <div className="mt-1 text-xs text-amber-600">
+                        Parity-exempt · {l.parity_exempt_reason || "no reason"}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-muted-foreground">Active — price-match checks run on every click</div>
+                    )}
+                  </div>
+                  {l.parity_exempt ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => exempt.mutate({ linkId: l.id, exempt: false })}
+                      disabled={exempt.isPending}
+                    >
+                      Re-enable
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setExemptingId(l.id);
+                        setExemptReason("");
+                      }}
+                    >
+                      <ShieldOff className="h-3.5 w-3.5 mr-1" /> Mark exempt
+                    </Button>
+                  )}
+                </div>
+                {exemptingId === l.id && !l.parity_exempt && (
+                  <div className="space-y-2 pt-1">
+                    <Textarea
+                      rows={2}
+                      placeholder="Reason this listing should be exempt (required, min 5 chars)"
+                      value={exemptReason}
+                      onChange={(e) => setExemptReason(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          exempt.mutate({ linkId: l.id, exempt: true, reason: exemptReason })
+                        }
+                        disabled={exempt.isPending || exemptReason.trim().length < 5}
+                      >
+                        Confirm exempt
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setExemptingId(null)}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
