@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { z } from "zod";
-import Map, { Marker, NavigationControl, type MapRef } from "react-map-gl/mapbox";
+import MapboxMap, { Marker, NavigationControl, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MobileShell } from "@/components/layout/BottomNav";
 import {
@@ -195,7 +195,7 @@ function MapPage() {
   return (
     <MobileShell>
       <div className="relative h-[calc(100dvh-80px)] w-full">
-        <Map
+        <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}
           initialViewState={{ longitude: search.lng, latitude: search.lat, zoom: search.zoom }}
@@ -243,7 +243,7 @@ function MapPage() {
               </Marker>
             );
           })}
-        </Map>
+        </MapboxMap>
 
         {/* Top: search + filters */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3">
