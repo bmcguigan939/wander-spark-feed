@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { COMMISSION } from "@/lib/commission";
+import { stampRedemptionSplit } from "@/lib/commission.server";
 
 /**
  * B10: Booking attribution beacon.
@@ -80,7 +81,7 @@ export const Route = createFileRoute("/api/public/attribute")({
           .maybeSingle();
 
         if (!existing) {
-          await supabaseAdmin.from("deal_redemptions").insert({
+          const { data: inserted } = await supabaseAdmin.from("deal_redemptions").insert({
             deal_id: dealId,
             creator_id: link?.creator_id ?? null,
             user_id: null,
@@ -95,7 +96,8 @@ export const Route = createFileRoute("/api/public/attribute")({
             notes: externalRef
               ? `auto-attributed; partner_ref=${externalRef}`
               : "auto-attributed",
-          });
+          }).select("id").single();
+          if (inserted?.id) await stampRedemptionSplit(inserted.id);
         }
 
         return Response.redirect(`${origin}/book/match/${code}/thanks`, 302);
