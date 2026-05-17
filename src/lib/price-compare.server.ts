@@ -1,6 +1,7 @@
 import Firecrawl from "@mendable/firecrawl-js";
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getFxRate } from "@/lib/fx.server";
 
 export type CompetitorQuote = {
   network: string;
@@ -112,8 +113,11 @@ export async function runParityCheck(args: {
   link_id: string;
   direct_price_cents: number | null;
   query: string; // e.g. "Hotel Foo London"
+  direct_currency?: string | null;
 }): Promise<{
   cheapest: CompetitorQuote | null;
+  cheapest_normalised_cents: number | null;
+  fx_rate_used: number | null;
   quotes: CompetitorQuote[];
 }> {
   const firecrawl = getFirecrawl();
@@ -124,7 +128,7 @@ export async function runParityCheck(args: {
       direct_price_cents: args.direct_price_cents,
       action: "no_data",
     });
-    return { cheapest: null, quotes: [] };
+    return { cheapest: null, cheapest_normalised_cents: null, fx_rate_used: null, quotes: [] };
   }
 
   // 1. Read fresh cache
@@ -181,16 +185,36 @@ export async function runParityCheck(args: {
     });
   }
 
-  const cheapest =
-    allQuotes.length === 0
+  // Normalise each quote into the direct listing currency (if known) so
+  // we compare like-for-like. Fall back to raw price when no FX rate is
+  // available so a missing rate doesn't silently drop a quote.
+  const directCurrency = (args.direct_currency || "").toUpperCase() || null;
+  const normalised: Array<{ q: CompetitorQuote; cents: number; rate: number | null }> = [];
+  for (const q of allQuotes) {
+    if (!directCurrency || q.currency.toUpperCase() === directCurrency) {
+      normalised.push({ q, cents: q.price_cents, rate: 1 });
+      continue;
+    }
+    const rate = await getFxRate(q.currency, directCurrency);
+    normalised.push({
+      q,
+      cents: rate != null ? Math.round(q.price_cents * rate) : q.price_cents,
+      rate,
+    });
+  }
+
+  const cheapestEntry =
+    normalised.length === 0
       ? null
-      : allQuotes.reduce((a, b) => (a.price_cents <= b.price_cents ? a : b));
+      : normalised.reduce((a, b) => (a.cents <= b.cents ? a : b));
+  const cheapest = cheapestEntry?.q ?? null;
+  const cheapestNormalisedCents = cheapestEntry?.cents ?? null;
+  const fxRateUsed = cheapestEntry?.rate ?? null;
 
   let action: "no_breach" | "match_issued" | "no_data" = "no_data";
-  if (!cheapest) action = "no_data";
+  if (!cheapestEntry) action = "no_data";
   else if (args.direct_price_cents == null) action = "no_data";
-  else if (args.direct_price_cents != null && args.direct_price_cents <= cheapest.price_cents)
-    action = "no_breach";
+  else if (args.direct_price_cents <= cheapestEntry.cents) action = "no_breach";
   else action = "match_issued";
 
   await supabaseAdmin.from("parity_checks").insert({
@@ -199,8 +223,16 @@ export async function runParityCheck(args: {
     cheapest_network: cheapest?.network ?? null,
     cheapest_price_cents: cheapest?.price_cents ?? null,
     direct_price_cents: args.direct_price_cents,
+    normalised_competitor_price_cents: cheapestNormalisedCents,
+    fx_rate_used: fxRateUsed,
+    fx_quote_currency: directCurrency,
     action,
   });
 
-  return { cheapest, quotes: allQuotes };
+  return {
+    cheapest,
+    cheapest_normalised_cents: cheapestNormalisedCents,
+    fx_rate_used: fxRateUsed,
+    quotes: allQuotes,
+  };
 }
