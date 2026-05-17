@@ -123,16 +123,47 @@ export const confirmRedemption = createServerFn({ method: "POST" })
         id: z.string().uuid(),
         orderValueCents: z.number().int().min(0).max(10_000_000),
         currency: z.string().length(3).optional(),
+        matchCode: z
+          .string()
+          .trim()
+          .max(40)
+          .regex(/^TRAVIDZ-MATCH-[A-Z0-9]+$/i)
+          .optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    // If a price-match code was supplied, validate it (must exist, not be
+    // expired, not already redeemed). Capture matched_price_cents for audit
+    // and settlement.
+    let matchCode: string | null = null;
+    let matchedFromPriceCents: number | null = null;
+    if (data.matchCode) {
+      const code = data.matchCode.toUpperCase();
+      const { data: mc } = await supabaseAdmin
+        .from("price_match_codes")
+        .select("code,status,expires_at,matched_price_cents,business_id")
+        .eq("code", code)
+        .maybeSingle();
+      if (!mc) return { ok: false as const, error: "Match code not found" };
+      if (mc.status === "redeemed")
+        return { ok: false as const, error: "Match code already redeemed" };
+      if (mc.status === "expired" || new Date(mc.expires_at) < new Date())
+        return { ok: false as const, error: "Match code expired" };
+      matchCode = mc.code;
+      matchedFromPriceCents = mc.matched_price_cents;
+    }
+
     const update = {
       status: "confirmed" as const,
       order_value_cents: data.orderValueCents,
       confirmed_by: userId,
       ...(data.currency ? { currency: data.currency.toUpperCase() } : {}),
+      ...(matchCode ? { match_code: matchCode } : {}),
+      ...(matchedFromPriceCents != null
+        ? { matched_from_price_cents: matchedFromPriceCents }
+        : {}),
     };
     const { data: row, error } = await supabase
       .from("deal_redemptions")
@@ -141,6 +172,17 @@ export const confirmRedemption = createServerFn({ method: "POST" })
       .select("id,status,commission_cents")
       .single();
     if (error) return { ok: false as const, error: error.message };
+
+    // Flip the price-match code to 'redeemed' so it cannot be re-used and
+    // the audit page can show fair settlement.
+    if (matchCode) {
+      await supabaseAdmin
+        .from("price_match_codes")
+        .update({ status: "redeemed", redeemed_at: new Date().toISOString() })
+        .eq("code", matchCode)
+        .eq("status", "issued");
+    }
+
     // Fire-and-forget email notifications (DB triggers already create in-app notifications).
     void sendRedemptionConfirmedEmails(data.id).catch((e) =>
       console.error("redemption emails failed", e),
