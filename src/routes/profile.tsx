@@ -115,11 +115,10 @@ function ProfilePage() {
   return (
     <MobileShell>
       <CinematicHeader
-        height="h-56"
-        image={p.avatar_url ?? null}
+        height="h-44"
+        image={null}
         eyebrow={data.roles.join(" · ")}
-        title={<span>@{p.username}</span>}
-        subtitle={p.display_name}
+        title={<span className="sr-only">@{p.username}</span>}
         trailing={
           <button
             onClick={openEdit}
@@ -131,15 +130,21 @@ function ProfilePage() {
         }
       />
       <div className="px-5 pt-5">
-        <div className="flex items-center gap-4">
+        <div className="flex items-end gap-4">
           <img
             src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
             alt={p.username}
-            className="-mt-16 h-24 w-24 rounded-full border-4 border-background object-cover shadow-cinematic"
+            className="-mt-12 h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
           />
+          <div className="min-w-0 flex-1 pb-1">
+            <h1 className="truncate font-display text-2xl font-semibold leading-tight">@{p.username}</h1>
+            {p.display_name && (
+              <p className="truncate text-sm text-muted-foreground">{p.display_name}</p>
+            )}
+          </div>
         </div>
-        {p.bio && <p className="mt-4 text-sm text-foreground/90">{p.bio}</p>}
-        <div className="mt-5 flex gap-6 text-sm">
+        {p.bio && <p className="mt-3 text-sm text-foreground/90">{p.bio}</p>}
+        <div className="mt-4 flex gap-6 text-sm">
           <span><b>{data.followerCount}</b> <span className="text-muted-foreground">followers</span></span>
           <span><b>{data.followingCount}</b> <span className="text-muted-foreground">following</span></span>
           <span><b>{data.videos.length}</b> <span className="text-muted-foreground">videos</span></span>
