@@ -149,6 +149,19 @@ function PriceAuditPage() {
                       <div className="font-mono text-[10px] break-all">{c.evidence_hash}</div>
                     </div>
                   )}
+                  {c.evidence_url && (
+                    <div className="col-span-2">
+                      <div className="text-muted-foreground mb-1">Screenshot evidence</div>
+                      <a href={c.evidence_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border">
+                        <img
+                          src={c.evidence_url}
+                          alt={`${c.competitor_network} price screenshot`}
+                          loading="lazy"
+                          className="w-full h-32 object-cover object-top"
+                        />
+                      </a>
+                    </div>
+                  )}
                 </div>
                 {c.status !== "disputed" && (
                   <div className="pt-2">
