@@ -9,6 +9,7 @@ import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculat
 import { Sparkline } from "@/components/business/Sparkline";
 import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
+import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -49,6 +50,7 @@ function BusinessDashboard() {
     <MobileShell>
       <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
+        {user && <BusinessLocationPrompt userId={user.id} />}
         <OnboardingChecklist />
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
