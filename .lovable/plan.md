@@ -1,5 +1,13 @@
 # Notifications + payout-ready earnings ledger
 
+## Status: shipped (partial)
+
+**Done:** redemption_confirmed/rejected + deal_expiring_soon notification types; trigger on `deal_redemptions` status changes; `notify_expiring_deals()` SQL fn; `email_preferences` table + RLS + settings UI toggles; `creator_earnings_monthly` view with payable vs pending (14d clearance); `src/lib/earnings.functions.ts`; `src/lib/email-preferences.functions.ts`; `/creator/earnings` page (KPIs, bar chart, per-deal breakdown, payouts-locked banner); notifications page deep-links + icons for new types.
+
+**Deferred:** transactional email dispatcher + 3 React Email templates (queue infra exists, toggles ready); pg_cron schedule that calls `notify_expiring_deals()` daily; Stripe Connect / banking.
+
+---
+
 Close the redemption loop so users actually hear about what's happening, and shape the data Stripe will read from on day one of banking — without moving any money.
 
 ## What already exists
