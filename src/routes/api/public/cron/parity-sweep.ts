@@ -57,24 +57,26 @@ export const Route = createFileRoute("/api/public/cron/parity-sweep")({
               }
             }
 
-            const { cheapest } = await runParityCheck({
+            const { cheapest, cheapest_normalised_cents } = await runParityCheck({
               link_id: link.id,
               direct_price_cents: directPriceCents,
               query: link.label || "",
+              direct_currency: directCurrency,
             });
             checked++;
 
             if (
               cheapest &&
               directPriceCents != null &&
-              cheapest.price_cents < directPriceCents
+              cheapest_normalised_cents != null &&
+              cheapest_normalised_cents < directPriceCents
             ) {
               const issued = await issueMatchCode({
                 link_id: link.id,
                 business_id: link.business_id ?? null,
                 traveller_user_id: null,
                 original_price_cents: directPriceCents,
-                matched_price_cents: cheapest.price_cents,
+                matched_price_cents: cheapest_normalised_cents,
                 currency: directCurrency || cheapest.currency,
                 competitor_network: cheapest.network,
                 competitor_url: cheapest.url,

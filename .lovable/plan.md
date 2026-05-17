@@ -94,3 +94,15 @@ Replaces Firecrawl scraping for the three big networks. Adapter pattern:
 4. **Push notifications scope**: travellers only, or also business/creator notifications (new match code, new redemption)?
 
 I'll wait on answers to 1–4 before implementing, then go straight through B11 → NTH-2.
+
+## Update — NTH-3 (FX normalisation) + NTH-2 (PWA install) shipped
+- `src/lib/fx.server.ts`: getFxRate / convertCents helpers reading from `fx_rates`.
+- `runParityCheck` now accepts `direct_currency` and writes `normalised_competitor_price_cents`, `fx_rate_used`, `fx_quote_currency` to `parity_checks`. Cheapest selection + match-code issuance use normalised cents.
+- Both callers (`go.$id.ts`, cron `parity-sweep.ts`) updated.
+- New cron `/api/public/cron/fx-refresh` pulls GBP/USD/EUR rates from frankfurter.dev → upserts fx_rates. Scheduled `travidz-fx-refresh-daily` 03:00 UTC.
+- Seeded GBP/USD/EUR/JPY cross-rates so normalisation works before first cron run.
+- PWA: `public/manifest.webmanifest` + `public/icon.svg`, `<link rel="manifest">` + `<link rel="icon">` in __root, `PWAInstallPrompt` component (captures `beforeinstallprompt`, shows after 3 visits, 30-day dismissal).
+
+## Still pending (need user input)
+- NTH-1 OTA adapters — waiting on Booking/Skyscanner/Expedia API keys.
+- Push notifications — waiting on `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`.

@@ -83,6 +83,7 @@ import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$co
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
 import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
+import { Route as ApiPublicCronFxRefreshRouteImport } from './routes/api/public/cron/fx-refresh'
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
 import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 import { Route as ApiPublicCronBusinessDigestRouteImport } from './routes/api/public/cron/business-digest'
@@ -460,6 +461,11 @@ const ApiPublicCronParitySweepRoute =
     path: '/api/public/cron/parity-sweep',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronFxRefreshRoute = ApiPublicCronFxRefreshRouteImport.update({
+  id: '/api/public/cron/fx-refresh',
+  path: '/api/public/cron/fx-refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronExpiringDealsRoute =
   ApiPublicCronExpiringDealsRouteImport.update({
     id: '/api/public/cron/expiring-deals',
@@ -548,6 +554,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
@@ -624,6 +631,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
@@ -704,6 +712,7 @@ export interface FileRoutesById {
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
+  '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
@@ -785,6 +794,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
@@ -861,6 +871,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
@@ -940,6 +951,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
+    | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
@@ -1004,6 +1016,7 @@ export interface RootRouteChildren {
   ApiPublicCronBusinessDigestRoute: typeof ApiPublicCronBusinessDigestRoute
   ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
   ApiPublicCronExpiringDealsRoute: typeof ApiPublicCronExpiringDealsRoute
+  ApiPublicCronFxRefreshRoute: typeof ApiPublicCronFxRefreshRoute
   ApiPublicCronParitySweepRoute: typeof ApiPublicCronParitySweepRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
@@ -1532,6 +1545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronParitySweepRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/fx-refresh': {
+      id: '/api/public/cron/fx-refresh'
+      path: '/api/public/cron/fx-refresh'
+      fullPath: '/api/public/cron/fx-refresh'
+      preLoaderRoute: typeof ApiPublicCronFxRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/expiring-deals': {
       id: '/api/public/cron/expiring-deals'
       path: '/api/public/cron/expiring-deals'
@@ -1704,6 +1724,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronBusinessDigestRoute: ApiPublicCronBusinessDigestRoute,
   ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
   ApiPublicCronExpiringDealsRoute: ApiPublicCronExpiringDealsRoute,
+  ApiPublicCronFxRefreshRoute: ApiPublicCronFxRefreshRoute,
   ApiPublicCronParitySweepRoute: ApiPublicCronParitySweepRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
