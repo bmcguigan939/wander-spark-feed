@@ -24,7 +24,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
         <Text style={brandMark}>Travidz</Text>
         <Heading style={h1}>Confirm reauthentication</Heading>
         <Text style={text}>Use the code below to confirm your identity:</Text>
-        <Text style={codeStyle}>{token}</Text>
+        <Text style={code}>{token}</Text>
         <Text style={footer}>
           This code will expire shortly. If you didn't request this, you can
           safely ignore this email.
