@@ -1,108 +1,89 @@
-# Travidz: B9–B12 + Nice-to-haves
+## Goal
 
-## Scope
-Finish the pre-launch must-haves (B9–B12) and add the three nice-to-have items (OTA adapters, PWA, currency normalisation). Banking/payouts remain out of scope (next week).
+Turn `/map` from a static pin layer into a real travel-discovery surface: travellers can type a place ("Lisbon", "Bali"), filter by what they're looking for (stay / eat / do / tour), and tap any pin to see every affiliated business, deal and creator video tied to that location.
 
----
+## What ships
 
-## B9 — Seed demo content
-Real `auth.users` rows are needed, so seeding is two-stage:
+### M1 — Search box with geocoding
+- Add a search input pinned to the top of `/map` (replaces the current title bar).
+- Two modes, switched by what the user types:
+  - **Place search** (default): Mapbox Geocoding API (`mapbox.com/geocoding/v5/mapbox.places`) returns place suggestions; selecting one flies the map to that bbox and triggers a content refetch for the visible area.
+  - **Content search**: when the user prefixes with `#` or hits a Content tab, query our DB (deals + videos + businesses) by text and pin the matches.
+- Recent searches stored in localStorage.
 
-1. Add an **admin seeding panel** at `/admin/seed` (admin-only) with a "Seed demo content" button. Pure server-fn that uses `supabaseAdmin`:
-   - Calls `supabase.auth.admin.createUser()` for 3 creators + 3 businesses (fixed emails like `demo.creator1@travidz.test`, auto-confirmed, random passwords surfaced once in the UI).
-   - Grants matching `app_role` rows (`creator` / `business`).
-   - Inserts ~8 deals (Lisbon, Bali, Tokyo, Marrakech, NYC, Reykjavik, Cape Town, Mexico City) with images, prices, lat/lng, `parity_exempt=false`.
-   - Inserts 12 videos (Mux playback IDs from a small fixture list of public test streams) linked to creators, each with an `affiliate_link` pointing at one of the seeded deals.
-   - Idempotent: skips if `demo.creator1@travidz.test` already exists; "Reset demo" button wipes only rows tagged `source='demo_seed'`.
-2. Tag every seeded row with `source='demo_seed'` (deals already has a `source` column; add the same convention to videos via a `metadata` JSON or a new `is_demo` boolean — prefer reusing `deals.source` pattern).
+### M2 — Category taxonomy
+- New enum `deal_category`: `stay | eat | do | tour | transport | other`.
+- Add `category deal_category` column to `deals` (default `other`, backfill heuristically from title — "hotel/villa/stay" → stay, "restaurant/cafe/bar" → eat, etc.; admin can refine).
+- Filter chip row under the search box: All / Stay / Eat / Do / Tour. Updates URL `?cat=`.
+- Apply the same filter to videos via existing `videos.tags` (map "stay"→`#hotel,#stay`, "eat"→`#food,#restaurant`, etc.).
+- Add `category` to `DealForm` so businesses pick it on create/edit.
 
-**Why a panel, not SQL:** `auth.users` cannot be created from a migration; needs the admin API. Keeps it repeatable across environments.
+### M3 — Business pins (not just deals)
+- Currently only deals/videos with `lat`/`lng` show. Add a third pin type: **business** (from `profiles` where `role=business` joined with the location they registered).
+- Requires a `businesses_locations` view or two new columns on the business profile: `lat`, `lng`, `address`, `place_name`. Migration adds them to `profiles` (business-only, populated when a business first creates a deal or via a one-time location picker on `/business`).
+- Business pins render only when a business has no current active deal in view (otherwise the deal pin wins to avoid double-pinning the same spot).
 
----
+### M4 — bbox-aware loading + "Search this area"
+- `getMapPins` already accepts `bbox`; wire the UI to pass it on `onMoveEnd` (debounced 350 ms).
+- Add a small "Search this area" button that appears after the map is panned/zoomed > 1 km away from the last fetch, to make the refetch feel intentional.
+- Raise the per-layer limit when bbox is provided (500 → 1000) and lower it when no bbox (avoid loading the whole planet).
 
-## B10 — Booking attribution beacon
-Goal: when a traveller returns to Travidz after booking on the partner site, auto-create a `pending` `deal_redemptions` row pre-filled with the match code.
+### M5 — Clustered pin sheet (the "everything here" view)
+- When pins are within ~30 m of each other (or all belong to the same `business_id`), render a single cluster pin with a count badge.
+- Tapping a cluster opens the bottom sheet with three tabs: **Deals** · **Videos** · **About**:
+  - Deals tab: list of deal cards (image, title, discount, "View deal →").
+  - Videos tab: thumbnails of all creator videos at this location → deep link to feed.
+  - About tab: business profile card (name, avatar, follow button, "View profile →").
 
-1. Add a new public route `src/routes/api/public/attribute.ts` (GET) that accepts `?match=<code>&order_value=<cents>&currency=<iso>&external_ref=<partner_booking_id>`.
-2. Handler (uses `supabaseAdmin`):
-   - Looks up `price_match_codes` by `code`, verifies status `issued` and not expired.
-   - Resolves `deal_id` + `creator_id` via the `affiliate_link` → `deals` join.
-   - Inserts `deal_redemptions` row: `status='pending'`, `match_code`, `matched_from_price_cents`, `order_value_cents`, `currency`, `notes='auto-attributed'`.
-   - Flips match code to `pending_redemption` (new enum value — or reuse `issued` and rely on redemption row).
-   - 302-redirects to `/book/match/{code}/thanks` (a new thin "we're tracking your booking" page).
-3. **Outbound URL augmentation**: in `src/routes/api/public/go.$id.ts`, when a match code is issued, append `&travidz_match={code}&travidz_return=https://travidz.app/api/public/attribute?match={code}` to the partner URL where the partner supports return-URL params (Booking.com `aid`, Expedia `camref`). For partners that don't, the traveller still uses the existing manual flow.
-4. Add a `partner_url_template` column on `affiliate_partners` so admins can configure the return-param shape per network. Default null = no auto-append.
+### M6 — Free-text DB search
+- New server fn `searchMapContent({ q, cat, bbox })` in `src/lib/map.functions.ts`:
+  - ILIKE / pg_trgm on `deals.title`, `deals.description`, `profiles.display_name`, `videos.title`, `videos.tags`.
+  - Returns the same `{ videos, deals, businesses }` shape so the map renders matches as pins; map auto-fits to results bbox if user came from a text query.
 
----
+## Out of scope (parking lot)
+- Google/Mapbox Places POI overlay (generic "things to do nearby" with no Travidz content) — would dilute the affiliate value prop.
+- Saved searches / map alerts.
+- Real-time pin updates (Realtime channel) — current 60 s `staleTime` is fine.
+- Currency-aware price filtering on the map (lives on `/search` and deal pages already).
 
-## B11 — CSV export on /business/price-audit
-1. New server fn `exportPriceAuditCsv` in `src/lib/price-match.functions.ts` (`requireSupabaseAuth`, business-scoped). Returns a CSV string with columns: `date, link_label, competitor_network, direct_price, competitor_price, action, match_code, status, evidence_url`.
-2. Wire the existing "Export CSV" button on `src/routes/business.price-audit.tsx` to call it and trigger a browser download via `Blob` + `URL.createObjectURL`.
-3. Respect current filter state (date range, link filter).
+## Technical details
 
----
+### Files touched
+| File | Change |
+|------|--------|
+| `supabase/migrations/<ts>_map_categories_business_loc.sql` | New `deal_category` enum; `deals.category`; `profiles.lat/lng/address/place_name`; heuristic backfill of `deals.category`; pg_trgm indexes on `deals.title`, `profiles.display_name`, `videos.title`. |
+| `src/lib/map.functions.ts` | Extend `getMapPins` to return `businesses` and accept `cat`. Add `searchMapContent({ q, cat, bbox })`. Add `geocodePlace({ q })` (server fn, calls Mapbox Geocoding with token from env to avoid CORS preflight noise). |
+| `src/routes/map.tsx` | Replace top bar with search input + suggestion dropdown. Add category chip row. Wire bbox on `onMoveEnd`. Render business pins. Add clustering (simple grid-snap by lat/lng rounded to 4 dp; supercluster only if needed). Add clustered sheet with tabs (reuses `Sheet` + `Tabs` shadcn components). |
+| `src/components/business/DealForm.tsx` | Add Category select. |
+| `src/routes/business.tsx` or new `business.location.tsx` | One-time location picker (Mapbox geocoder → save lat/lng/address/place_name to profile). |
+| `src/components/map/SearchBox.tsx` (new) | Reusable input + suggestions, debounced. |
+| `src/components/map/CategoryChips.tsx` (new) | Stay / Eat / Do / Tour chips. |
+| `src/components/map/ClusteredSheet.tsx` (new) | The 3-tab sheet. |
 
-## B12 — Per-listing parity-exempt in deal/link editor
-1. Locate the existing deal/link editor (likely `src/routes/business.deals.$id.tsx` and/or the affiliate-link create dialog). Read those files first.
-2. Add the same `parity_exempt` toggle + mandatory `parity_exempt_reason` textarea that already exists in `business.price-audit.tsx` Listings tab.
-3. Extract the toggle into a shared component `src/components/business/ParityExemptToggle.tsx` so both surfaces share the same logic and validation.
+### Data model
 
----
+```text
+CREATE TYPE deal_category AS ENUM ('stay','eat','do','tour','transport','other');
+ALTER TABLE deals ADD COLUMN category deal_category NOT NULL DEFAULT 'other';
+ALTER TABLE profiles
+  ADD COLUMN lat double precision,
+  ADD COLUMN lng double precision,
+  ADD COLUMN address text,
+  ADD COLUMN place_name text;
+CREATE INDEX deals_title_trgm ON deals USING gin (title gin_trgm_ops);
+CREATE INDEX profiles_name_trgm ON profiles USING gin (display_name gin_trgm_ops);
+```
 
-## NTH-1 — Native OTA adapters
-Replaces Firecrawl scraping for the three big networks. Adapter pattern:
+### Mapbox token
+Reuse the existing `pk.*` publishable token for both the map and the Geocoding API; no new secret needed. `geocodePlace` is a thin server fn so we can switch to a paid tier or swap providers later without touching the client.
 
-1. New folder `src/lib/ota-adapters/` with one file per network:
-   - `booking-com.server.ts` — Booking.com Affiliate API (Demand API). Requires `BOOKING_AFFILIATE_ID` + `BOOKING_API_KEY`.
-   - `skyscanner.server.ts` — Skyscanner Partners "Flights Live Prices". Requires `SKYSCANNER_API_KEY`.
-   - `expedia-ean.server.ts` — Expedia EAN Rapid API. Requires `EAN_API_KEY` + `EAN_SHARED_SECRET`.
-2. Each exports `fetchPrice(canonicalKey, { checkIn, checkOut, pax }): Promise<{ priceCents, currency, url, evidenceUrl }>`.
-3. Refactor `src/lib/price-compare.server.ts` to dispatch by `affiliate_links.supplier_type`: native adapter when available, fall back to Firecrawl otherwise.
-4. **Secrets to request from user** (do not add until they confirm): the 5 keys above. Will skip adapters whose key is absent and just keep using Firecrawl for that network.
-
----
-
-## NTH-2 — PWA install + push notifications
-1. Add `vite-plugin-pwa` to `vite.config.ts` with `registerType: 'autoUpdate'`, manifest (name, short_name "Travidz", theme `#000`, icons from `src/assets/`).
-2. Create `src/components/PWAInstallPrompt.tsx` — listens for `beforeinstallprompt`, shows a dismissible bottom-sheet on the traveller feed after the 3rd visit (tracked in `localStorage`).
-3. **Push notifications**: register a service-worker push listener that subscribes via the Push API. Store subscription endpoints in a new `push_subscriptions` table (`user_id`, `endpoint`, `p256dh`, `auth`, RLS owner-only). Send pushes from the existing weekly digest cron + on new match-code issuance using `web-push` library with VAPID keys.
-4. **Secrets to request**: `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (I'll explain how to generate via `npx web-push generate-vapid-keys`).
-
----
-
-## NTH-3 — Per-business currency normalisation
-1. Add `default_currency` (text, 3-letter ISO) to a new `business_settings` table (or `profiles` if simpler — prefer new table for clean separation), defaulting to `'GBP'`.
-2. Add an exchange-rate cache table `fx_rates` (`base`, `quote`, `rate`, `fetched_at`). Refresh daily via a new cron hitting `/api/public/cron/fx-refresh` which calls a free FX API (frankfurter.app — no key needed).
-3. In `price-compare.server.ts` parity logic: if competitor `currency` ≠ direct `currency`, convert competitor → direct using latest `fx_rates` row before declaring a breach. Store both raw and normalised prices on `parity_checks` (add `normalised_competitor_price_cents`, `fx_rate_used` columns).
-4. Display "≈ £X (converted from $Y at 0.79)" in the audit UI and on the match interstitial.
-
----
+### URL contract
+`/map?lng&lat&zoom&layer&cat=stay&q=lisbon` — fully shareable / SEO-friendly.
 
 ## Execution order
-1. **B11** (smallest, pure frontend wiring) — warm up
-2. **B12** (extract shared component, drop into editor)
-3. **B10** (attribution beacon — needs partner_url_template migration)
-4. **B9** (admin seed panel — touches auth admin API)
-5. **NTH-3** (currency — migration + cron + compare-logic refactor)
-6. **NTH-1** (OTA adapters — pause here to request API keys before coding adapters)
-7. **NTH-2** (PWA + push — last; needs VAPID keys + service worker)
+M2 (schema + category) → M3 (business pins + profile location) → M1 (search box + geocoding) → M4 (bbox + "search this area") → M5 (cluster sheet) → M6 (DB text search).
 
 ## Open questions before I start
-1. **Demo seed reset behaviour**: do you want a "Reset demo content" button that wipes seeded rows, or one-shot only?
-2. **Attribution beacon trust model**: should I require an HMAC signature on `?match=` returns to prevent fake commission claims, or trust that the match code itself is the secret? (Codes are short — HMAC is safer.)
-3. **OTA API keys**: do you already have Booking.com Affiliate / Skyscanner Partners / Expedia EAN accounts, or should I pause NTH-1 entirely until you do?
-4. **Push notifications scope**: travellers only, or also business/creator notifications (new match code, new redemption)?
-
-I'll wait on answers to 1–4 before implementing, then go straight through B11 → NTH-2.
-
-## Update — NTH-3 (FX normalisation) + NTH-2 (PWA install) shipped
-- `src/lib/fx.server.ts`: getFxRate / convertCents helpers reading from `fx_rates`.
-- `runParityCheck` now accepts `direct_currency` and writes `normalised_competitor_price_cents`, `fx_rate_used`, `fx_quote_currency` to `parity_checks`. Cheapest selection + match-code issuance use normalised cents.
-- Both callers (`go.$id.ts`, cron `parity-sweep.ts`) updated.
-- New cron `/api/public/cron/fx-refresh` pulls GBP/USD/EUR rates from frankfurter.dev → upserts fx_rates. Scheduled `travidz-fx-refresh-daily` 03:00 UTC.
-- Seeded GBP/USD/EUR/JPY cross-rates so normalisation works before first cron run.
-- PWA: `public/manifest.webmanifest` + `public/icon.svg`, `<link rel="manifest">` + `<link rel="icon">` in __root, `PWAInstallPrompt` component (captures `beforeinstallprompt`, shows after 3 visits, 30-day dismissal).
-
-## Still pending (need user input)
-- NTH-1 OTA adapters — waiting on Booking/Skyscanner/Expedia API keys.
-- Push notifications — waiting on `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`.
+1. **Category list**: OK with `stay / eat / do / tour / transport / other`, or do you want a different cut (e.g. split `do` into `activity` and `attraction`)?
+2. **Business location capture**: prompt businesses on next login with a one-time modal to set their address, or only require it next time they create a deal? (Existing deals will already have lat/lng on the deal row itself.)
+3. **Geocoder provider**: Mapbox (free up to 100k req/mo, same token) — fine, or do you want Google Places (richer POI data, paid)?
