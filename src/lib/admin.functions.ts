@@ -43,7 +43,51 @@ export const getAdminStats = createServerFn({ method: "GET" })
       c(supabaseAdmin.from("deals").select("id", { count: "exact", head: true }).eq("is_active", true)),
       c(supabaseAdmin.from("deal_applications").select("id", { count: "exact", head: true }).eq("status", "pending")),
     ]);
-    return { users, creators, businesses, videosReady, videosPending, videosHidden, dealsActive, appsPending };
+
+    // KPIs: 30d GMV + commission + 7d/30d redemption volume, outstanding liability, verified business count.
+    const since30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const since7 = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const [r30, r7, outstanding, verifiedBiz, pendingFlags] = await Promise.all([
+      supabaseAdmin
+        .from("deal_redemptions")
+        .select("order_value_cents,commission_cents")
+        .eq("status", "confirmed")
+        .gte("confirmed_at", since30),
+      supabaseAdmin
+        .from("deal_redemptions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "confirmed")
+        .gte("confirmed_at", since7),
+      supabaseAdmin
+        .from("deal_redemptions")
+        .select("commission_cents")
+        .eq("status", "confirmed")
+        .is("payout_run_id", null),
+      supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("is_verified", true),
+      supabaseAdmin
+        .from("moderation_flags")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "auto_hidden"]),
+    ]);
+    const sum = (rows: any[] | null, key: string) =>
+      (rows ?? []).reduce((acc, r) => acc + (r[key] ?? 0), 0);
+    const gmv30dCents = sum(r30.data as any, "order_value_cents");
+    const commission30dCents = sum(r30.data as any, "commission_cents");
+    const outstandingLiabilityCents = sum(outstanding.data as any, "commission_cents");
+
+    return {
+      users, creators, businesses, videosReady, videosPending, videosHidden, dealsActive, appsPending,
+      gmv30dCents,
+      commission30dCents,
+      outstandingLiabilityCents,
+      redemptions30d: (r30.data ?? []).length,
+      redemptions7d: r7.count ?? 0,
+      verifiedBusinesses: verifiedBiz.count ?? 0,
+      pendingModerationFlags: pendingFlags.count ?? 0,
+    };
   });
 
 export const listAdminVideos = createServerFn({ method: "GET" })
@@ -113,7 +157,7 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("profiles")
-      .select("id,username,display_name,avatar_url,created_at")
+      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at")
       .order("created_at", { ascending: false })
       .limit(50);
     if (data.q) q = q.or(`username.ilike.%${data.q}%,display_name.ilike.%${data.q}%`);
