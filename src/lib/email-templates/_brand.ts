@@ -2,13 +2,13 @@
 // Email clients do not support oklch — these are hex approximations of the
 // design tokens in src/styles.css.
 export const brand = {
-  primary: '#ee7a4a',
-  primaryForeground: '#1a1a2e',
-  background: '#0e1421',
-  surface: '#161e2e',
-  foreground: '#f4f7fa',
-  muted: '#8a93a6',
-  border: '#222b3d',
+  primary: '#ff5a8a',
+  primaryForeground: '#ffffff',
+  background: '#fff8f0',
+  surface: '#ffffff',
+  foreground: '#2a1b3d',
+  muted: '#7a6480',
+  border: '#f0e4d6',
 }
 
 export const main = {
