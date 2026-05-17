@@ -1639,6 +1639,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cron_expire_deals: { Args: never; Returns: number }
+      cron_publish_scheduled_videos: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
