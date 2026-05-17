@@ -38,7 +38,7 @@ export const listNotifications = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("notifications")
       .select(
-        "id,type,video_id,comment_id,deal_id,read_at,created_at,actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_url),video:videos!notifications_video_id_fkey(id,title,thumbnail_url)"
+        "id,type,video_id,comment_id,deal_id,redemption_id,read_at,created_at,actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_url),video:videos!notifications_video_id_fkey(id,title,thumbnail_url)"
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -47,7 +47,7 @@ export const listNotifications = createServerFn({ method: "GET" })
       // Fallback without FK alias if PostgREST can't infer relationships
       const { data: rows } = await supabaseAdmin
         .from("notifications")
-        .select("id,type,video_id,comment_id,deal_id,read_at,created_at,actor_id")
+        .select("id,type,video_id,comment_id,deal_id,redemption_id,read_at,created_at,actor_id")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(80);
@@ -70,6 +70,7 @@ export const listNotifications = createServerFn({ method: "GET" })
           video_id: r.video_id,
           comment_id: r.comment_id,
           deal_id: r.deal_id,
+          redemption_id: r.redemption_id,
           read_at: r.read_at,
           created_at: r.created_at,
           actor: aMap.get(r.actor_id) ?? null,
