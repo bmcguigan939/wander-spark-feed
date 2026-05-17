@@ -1,5 +1,9 @@
 # Travidz — get everything functional pre-Stripe (next week)
 
+## Status
+- **Phase A: shipped** — daily expiring-deals cron at 09:00 UTC; 3 transactional email templates wired (`redemption_confirmed_creator`, `redemption_confirmed_traveller`, `deal_expiring`) with suppression + per-user category preference checks; notification bell + realtime unread badge already live from prior phase.
+- **Phase B–D: pending** — see below.
+
 Stripe lands next week. Goal: ship every non-Stripe piece now so when Stripe goes in, it's a focused 1–2 day swap (onboarding + transfers) on top of a fully working app. Everything below is independent of banking.
 
 ## Phase A — Close prior loops (1–2 days)
