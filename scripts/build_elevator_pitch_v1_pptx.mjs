@@ -141,11 +141,11 @@ team.forEach((r,i)=>{
 // Ask
 const ax=RX+teamW+gap;
 panel(ax,y,askW,botH,"THE ASK  ·  £2.5M SAFE");
-s.addText("£2.5M",{x:ax+0.2,y:y+0.45,w:1.2,h:0.55,fontSize:28,bold:true,color:INK,fontFace:"Calibri"});
-s.addText("Seed · 18-month runway",{x:ax+1.45,y:y+0.6,w:askW-1.55,h:0.3,fontSize:10,color:MUTED,fontFace:"Calibri"});
+s.addText("£2.5M",{x:ax+0.2,y:y+0.45,w:1.6,h:0.5,fontSize:24,bold:true,color:INK,fontFace:"Calibri"});
+s.addText("Seed · 18-month runway",{x:ax+1.85,y:y+0.6,w:askW-1.55,h:0.3,fontSize:10,color:MUTED,fontFace:"Calibri"});
 
 // allocation bar
-const barX=ax+0.2, barY=y+1.15, barW=askW-0.4, barH=0.18;
+const barX=ax+0.2, barY=y+1.05, barW=askW-0.4, barH=0.18;
 const alloc=[["GTM",0.40,PRIMARY],["Eng",0.35,GLOW],["Supply",0.15,CYAN],["G&A",0.10,MUTED]];
 let bx=barX;
 alloc.forEach(([l,p,col])=>{
@@ -159,12 +159,12 @@ alloc.forEach(([l,p,col])=>{
   s.addShape("rect",{x:lx,y:barY+0.3,w:0.14,h:0.14,fill:{color:col},line:{color:col}});
   const t=`${l} ${Math.round(p*100)}%`;
   s.addText(t,{x:lx+0.18,y:barY+0.27,w:1.0,h:0.22,fontSize:9,bold:true,color:INK,fontFace:"Calibri"});
-  lx+=1.05;
+  lx+=0.85;
 });
 
 // Gates & contact
-s.addText("Phase 1 gates: 2.4k creators · £44M GBV · 4.12% take · UK live",{x:ax+0.2,y:y+botH-0.6,w:askW-0.4,h:0.25,fontSize:9,bold:true,color:CYAN,fontFace:"Calibri"});
-s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+botH-0.35,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
+s.addText("Phase 1 gates: 2.4k cr · £44M GBV · 4.12% take · UK live",{x:ax+0.2,y:y+botH-0.55,w:askW-0.4,h:0.22,fontSize:8.5,bold:true,color:CYAN,fontFace:"Calibri"});
+s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+botH-0.3,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
 
 await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v1.pptx"});
 console.log("OK");
