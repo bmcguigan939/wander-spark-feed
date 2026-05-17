@@ -37,7 +37,6 @@ import { Route as StudioVideosRouteImport } from './routes/studio.videos'
 import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
-import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as LegalDmcaRouteImport } from './routes/legal.dmca'
@@ -212,11 +211,6 @@ const StudioLinksRoute = StudioLinksRouteImport.update({
 const SoundsIdRoute = SoundsIdRouteImport.update({
   id: '/sounds/$id',
   path: '/sounds/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RCodeRoute = RCodeRouteImport.update({
-  id: '/r/$code',
-  path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
@@ -435,7 +429,6 @@ export interface FileRoutesByFullPath {
   '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
-  '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -499,7 +492,6 @@ export interface FileRoutesByTo {
   '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
-  '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -565,7 +557,6 @@ export interface FileRoutesById {
   '/legal/dmca': typeof LegalDmcaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
-  '/r/$code': typeof RCodeRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -633,7 +624,6 @@ export interface FileRouteTypes {
     | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
-    | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -697,7 +687,6 @@ export interface FileRouteTypes {
     | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
-    | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -762,7 +751,6 @@ export interface FileRouteTypes {
     | '/legal/dmca'
     | '/legal/privacy'
     | '/legal/terms'
-    | '/r/$code'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -823,7 +811,6 @@ export interface RootRouteChildren {
   LegalDmcaRoute: typeof LegalDmcaRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
-  RCodeRoute: typeof RCodeRoute
   SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -1041,13 +1028,6 @@ declare module '@tanstack/react-router' {
       path: '/sounds/$id'
       fullPath: '/sounds/$id'
       preLoaderRoute: typeof SoundsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/r/$code': {
-      id: '/r/$code'
-      path: '/r/$code'
-      fullPath: '/r/$code'
-      preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal/terms': {
@@ -1404,7 +1384,6 @@ const rootRouteChildren: RootRouteChildren = {
   LegalDmcaRoute: LegalDmcaRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
-  RCodeRoute: RCodeRoute,
   SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
@@ -1428,3 +1407,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
