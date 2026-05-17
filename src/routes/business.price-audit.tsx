@@ -262,6 +262,83 @@ function PriceAuditPage() {
             ))}
           </div>
         )}
+
+        {tab === "listings" && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Mark a listing parity-exempt only when you have a contractual reason — e.g. a
+              members-only rate, a packaged inclusion, or a third-party OTA price that
+              isn't comparable. A written reason is required and will be visible to Travidz
+              support during disputes.
+            </p>
+            {(data?.links ?? []).length === 0 && !isLoading && (
+              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground text-center">
+                No tracked listings yet.
+              </div>
+            )}
+            {(data?.links ?? []).map((l: any) => (
+              <div key={l.id} className="rounded-xl border bg-card p-3 text-sm space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <div className="font-semibold">{l.label}</div>
+                    {l.parity_exempt ? (
+                      <div className="mt-1 text-xs text-amber-600">
+                        Parity-exempt · {l.parity_exempt_reason || "no reason"}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-muted-foreground">Active — price-match checks run on every click</div>
+                    )}
+                  </div>
+                  {l.parity_exempt ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => exempt.mutate({ linkId: l.id, exempt: false })}
+                      disabled={exempt.isPending}
+                    >
+                      Re-enable
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setExemptingId(l.id);
+                        setExemptReason("");
+                      }}
+                    >
+                      <ShieldOff className="h-3.5 w-3.5 mr-1" /> Mark exempt
+                    </Button>
+                  )}
+                </div>
+                {exemptingId === l.id && !l.parity_exempt && (
+                  <div className="space-y-2 pt-1">
+                    <Textarea
+                      rows={2}
+                      placeholder="Reason this listing should be exempt (required, min 5 chars)"
+                      value={exemptReason}
+                      onChange={(e) => setExemptReason(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          exempt.mutate({ linkId: l.id, exempt: true, reason: exemptReason })
+                        }
+                        disabled={exempt.isPending || exemptReason.trim().length < 5}
+                      >
+                        Confirm exempt
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setExemptingId(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </MobileShell>
   );
