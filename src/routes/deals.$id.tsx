@@ -11,7 +11,8 @@ import {
   withdrawApplication,
 } from "@/lib/deal-applications.functions";
 import { useAuth } from "@/lib/auth";
-import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck } from "lucide-react";
+import { claimRedemption } from "@/lib/redemptions.functions";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,7 @@ function DealDetail() {
             >
               <ExternalLink className="h-4 w-4" /> View deal
             </button>
+            {user && <ClaimRedemptionBlock />}
             {user && isCreator && deal.business_id !== user.id && (
               <CreatorApplyBlock dealId={id} />
             )}
