@@ -66,6 +66,7 @@ const upsertSchema = z.object({
   lng: z.number().min(-180).max(180).optional().nullable(),
   parity_exempt: z.boolean().optional(),
   parity_exempt_reason: z.string().max(500).optional().nullable(),
+  category: z.enum(["stay", "eat", "do", "tour", "transport", "other"]).optional(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })
