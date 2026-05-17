@@ -95,4 +95,11 @@ Next wk:  Stripe Connect swap-in (separate plan)
   - ✅ Business onboarding checklist on `/business` (agreement → verified → first deal → first confirmed booking, with progress bar, dismissable)
   - ✅ Error monitoring: `client_error_logs` table + `logClientError` server fn + `ErrorReporter` global listener + admin `/admin/errors` console
 - **Phase C ✅ complete**
-- **Phase D / Stripe** — not started.
+- **Phase D (in progress)**
+  - ✅ EU cookie consent banner (`CookieConsent`) mounted globally, deep-links to `/legal/cookies`, stores choice in `localStorage` with `hasOptionalCookieConsent()` helper for future analytics gating
+  - ✅ Backup & restore drill runbook (`docs/backup-restore-drill.md`) with monthly drill log + incident runbook
+  - ✅ Sitemap + robots already in place (`/sitemap.xml` server route covers deals, destinations, creators, itineraries, collections, sounds, legal)
+  - ⏳ Custom domain + production email DNS — requires user action in Project Settings → Domains
+  - ⏳ Legal review pass on `/legal/*` — needs human/legal sign-off
+  - ⏳ Submit sitemap to Search Console — requires user action once custom domain is live
+- **Stripe** — not started (waiting on business bank account).
