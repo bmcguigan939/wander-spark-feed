@@ -98,14 +98,16 @@ Automated tests: none exist (`*.test.*` returns 0 files). Recommend smoke-level 
 
 ---
 
-### Suggested implementation order (this week)
+### Implementation status
 
-1. B1 direct-price lookup + B2 settlement linkage (closes the loop on best-price).
-2. B7 screenshot evidence (makes the audit page genuinely auditable).
-3. B6 parity-exempt toggle.
-4. B4 schedule cron + B3 admin dispute queue.
-5. B8 marketing sweep + B9 seed content.
-6. B5 weekly digest (last; nice-to-have for launch).
-7. Run the QA matrix in §4 + linter + commission steps in §5.
+- B1 direct-price lookup — **done**
+- B2 match-code settlement — **done**
+- B3 admin dispute queue — **done** (`/admin/disputes`)
+- B4 cron scheduling — **done** (4 jobs live in `cron.job`: discover hourly, expiring daily 08:00, parity sweep every 6h, business digest Mondays 09:00)
+- B5 weekly business digest — **done** (`business-digest.tsx` template + `/api/public/cron/business-digest`)
+- B6 parity-exempt toggle — **done**
+- B7 screenshot evidence — **done**
+- B8 marketing sweep — **done** (best-price bullet added to business invite offer card; no stale 10% copy remains)
+- B9 seed demo content — **deferred to you**: needs real auth.users sign-ups for demo creators/businesses; can be done from the admin tools without code changes.
 
-Once approved, I'll implement B1 → B9 in order, with QA checkpoints between B2, B4 and B9.
+Remaining for launch: run the QA matrix in §4, run `supabase--linter`, and complete C1–C9 commissioning steps in §5 (banking still next week).
