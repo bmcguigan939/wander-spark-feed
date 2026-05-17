@@ -1,60 +1,75 @@
-# Rebrand: dark/orange → bright sunny Golden Hour
+# What's left to ship Travidz (excluding banking/payments)
 
-Shift Travidz from the current dark-first / single-orange brand to a **light-mode sunset gradient** that blends cream → peach → coral → pink → twilight violet.
+Phases 0 and 1 are done: schema FKs, triggers, legal pages, notifications wiring, analytics rate-limiting, account delete + export, sitemap/robots, onboarding/error boundaries, security pass, and the new Golden Hour rebrand (incl. email templates). Below is everything still queued.
 
-## New palette (Golden Hour)
+## Phase 2 — Feature completeness
 
-| Token | Hex | Role |
-|---|---|---|
-| `--background` | `#fff8f0` | Warm cream page |
-| `--foreground` | `#2a1b3d` | Deep twilight ink |
-| `--card` / `--surface-1` | `#ffffff` | Clean white cards |
-| `--surface-2` | `#fff1e3` | Soft peach panel |
-| `--surface-3` | `#ffe1d0` | Apricot raise |
-| `--primary` | `#ff5a8a` (sunset pink) | CTAs, links, focus ring |
-| `--primary-foreground` | `#ffffff` | |
-| `--accent` | `#ff8e72` (coral) | Secondary highlights |
-| `--secondary` | `#fff1f5` | Quiet chips |
-| `--muted-foreground` | `#7a6480` | |
-| `--border` | `rgba(42,27,61,0.08)` | Soft warm hairline |
-| `--sunset` | `#ffd29a` | Golden glow |
-| `--coral` | `#ff8e72` | |
-| `--ocean` (rename to `--twilight`) | `#a14b9c` | Dusk anchor |
-| `--destructive` | `#e5384d` | Keep red, slightly warmer |
+### Scheduled jobs (single migration + `/api/public/cron/*` routes)
+- Publish scheduled videos when `scheduled_at <= now()`.
+- Expire deals: set `is_active = false` when `ends_at < now()`.
+- Refresh destination AI summaries for (city, country) pairs with ≥3 videos and no recent summary.
+- Nightly deal discovery re-scoring (quality / freshness).
+- Recompute creator analytics rollups.
 
-`--gradient-aurora` becomes the full sunset blend:
-`linear-gradient(135deg, #fff4ea 0%, #ffd29a 25%, #ff8e72 55%, #ff5a8a 80%, #a14b9c 100%)`
+### Search (`/search`)
+Extend hybrid search beyond videos to deals, destinations, creators, itineraries. Tabbed result UI.
 
-All values authored in `oklch()` in `src/styles.css` (hex above is for reference). Shadows recoloured to a warm pink tint (`color-mix(... var(--primary) 30% ...)`).
+### Map (`/map`)
+Render video + deal `lat/lng` markers, cluster above 100, sync with URL bbox.
 
-## Files to change
+### Collections
+Public discovery page, "add to collection" button on video cards, shareable links.
 
-1. **`src/styles.css`** — single source of truth.
-   - Replace `:root` token block with the new light-mode tokens.
-   - Rewrite `--gradient-aurora`, `--shadow-cinematic`, `--shadow-soft` to warm tints.
-   - Adjust `.glass` to use `white 55%` over warm surfaces instead of dark cards.
-   - Rewrite `.scrim-top` / `.scrim-bottom` so video legibility still works on a light page (keep dark scrims — they sit over video, not over the page background).
-   - Remove `.dark` body class assumption if present; site becomes light-first.
-   - Keep the `--font-display: Fraunces` pairing — fits the warm editorial sunset feel.
+### Itineraries
+Public visibility flag, share / export to PDF, "remix" another user's public itinerary.
 
-2. **`src/lib/email-templates/_brand.ts`** — update the email brand to match:
-   - `background: #fff8f0`, `surface: #ffffff`, `foreground: #2a1b3d`
-   - `primary: #ff5a8a`, `primaryForeground: #ffffff`
-   - `muted: #7a6480`, `border: #f0e4d6`
-   - Brand mark colour switches to `--primary` pink.
+### Sounds / music
+Wire `music_track_id` end-to-end through `/create`; "use this sound" CTA on `/sounds/$id` deeplinks into the recorder.
 
-3. **Spot sweep** — grep for any hard-coded `bg-black`, `text-white`, `bg-zinc-9*`, `bg-slate-9*`, `from-orange-*`, `to-orange-*` in `src/components` and `src/routes` and swap them to semantic tokens (`bg-background`, `text-foreground`, `bg-aurora`, `text-primary`). No component logic changes.
+### Studio
+- `studio.schedule.tsx`: confirm cron flips scheduled videos to `ready`.
+- `studio.links.tsx`: inject `affiliate_partners.tracking_param` into outgoing URLs.
+- Video edit: deal-suggestion accept flow writes to `video_deals`.
 
-4. **Video player & feed surfaces** — these intentionally stay dark for video legibility. Keep the video card, scrim overlays, and fullscreen feed using a local dark container (`bg-[#0e0a18]` → replace with a new `--video-shell` token) so the rest of the app can go light without hurting playback contrast.
+### Business (tracking only — no money handling)
+- `business.calculator.tsx`: real commission math from `commission_pct`.
+- Application lifecycle: approved → unique `approved_code` → `deal_redemptions` table → dashboard reads conversions.
+- Deal performance dashboard: impressions / clicks / CTR / top creators.
 
-## Non-goals
+### Creator
+- `creator.analytics.tsx`: verify charts read `video_views`, `likes`, `saves`, `affiliate_clicks` (likely needs a service-role server fn since `video_views` has no SELECT policy).
+- Followers list + follower-only feed filter.
 
-- No layout / copy / route changes.
-- No font family change (Fraunces + Inter stays).
-- No dark mode toggle this pass — pure light rebrand. We can add a dark variant later.
+### Admin
+- `admin.users.tsx`: role grant/revoke audited into `admin_actions`.
+- Moderation queue: bulk actions + appeal flow (uses existing `moderation_flags.status`).
+- Feature-flag table + admin toggle UI.
 
-## Verification
+### Referral redirect (`/r/$code`)
+Verify it logs to `deal_redirects`, increments `deal_clicks`, then 302s.
 
-- Visual pass on `/` (feed), `/login`, `/legal/*`, `/settings`, `/u/$username`, `/business`, `/studio`, `/admin`.
-- Contrast check: foreground on background, primary-foreground on primary, muted-foreground on surface-2.
-- Confirm CTAs, focus rings, and the aurora gradient hero all read as "sunset" not "candy".
+### Public profile (`/u/$username`)
+Tabs (videos / collections / public itineraries / sounds), follow button, share.
+
+## Phase 3 — Polish & ops
+
+- Loading skeletons on feed, search, destination, profile.
+- Empty states on every list (collections, notifications, applications, invites, moderation, itineraries).
+- Mobile sweep at 375px: `/create`, `/studio/*`, `/business/*`, admin.
+- Accessibility: video player keyboard controls, comment dialog focus trap, alt text on every `image_url` / `thumbnail_url`.
+- Realtime: add `comments`, `video_views` (count only) to `supabase_realtime` if useful for live counts.
+- Observability: error boundary → server-fn log surfaced in `/admin`.
+- Performance: image lazy-load, tune `match_videos` / `match_deals` ivfflat indexes if cold queries are slow.
+- Rebrand QA pass: visit `/`, `/login`, `/legal/*`, `/settings`, `/u/$username`, `/business`, `/studio`, `/admin` and fix any contrast/legibility regressions from the dark→light switch.
+
+## Suggested execution order
+
+1. Cron jobs (Phase 2) — unlocks scheduled publishing + deal expiry + fresh destination content automatically.
+2. Referral redirect + business tracking lifecycle (`deal_redemptions`) — these monetisation surfaces are dead without it.
+3. Creator analytics + admin moderation — power-user tools.
+4. Search / map / collections / itineraries / sounds / profile — discovery & engagement surfaces.
+5. Phase 3 polish as small follow-up PRs once features land.
+
+## Explicitly excluded (deferred until Ltd + bank + Stripe)
+
+Stripe Connect onboarding, payouts, ledger, invoicing, tax, subscriptions, boosted-deal monetisation, and creator earnings.
