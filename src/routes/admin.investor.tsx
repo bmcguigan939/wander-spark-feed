@@ -108,8 +108,8 @@ function InvestorModelPage() {
 function HeadlineStrip({ y5, market }: { y5: ReturnType<typeof computeRevenue>[number]; market: ReturnType<typeof computeMarket> }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <Stat label="TAM (GBV)" value={fmtGBP(market.tamGBV, { compact: true })} hint="UK + key EU travel" />
-      <Stat label="Year 5 GBV" value={fmtGBP(y5.gbv, { compact: true })} hint={`vs SOM ${fmtGBP(market.somGBVByYear[4], { compact: true })}`} />
+      <Stat label="TAM (UK only)" value={fmtGBP(market.tamGBV, { compact: true })} hint={`UK + EU-5: ${fmtGBP(market.tamGBVAll, { compact: true })}`} />
+      <Stat label="Year 5 GBV" value={fmtGBP(y5.gbv, { compact: true })} hint={`${fmtPct(y5.gbv / market.samGBV, 2)} of UK SAM`} />
       <Stat label="Year 5 Travidz net" value={fmtGBP(y5.travidzNet, { compact: true })} hint={`take-rate ${fmtPct(y5.blendedTakeRatePct, 2)}`} />
       <Stat label="Year 5 creator payout" value={fmtGBP(y5.creatorPayout, { compact: true })} hint={`avg share ${fmtPct(y5.blendedCreatorSharePct, 0)} of 8%`} />
     </div>
@@ -136,9 +136,9 @@ function OverviewPane({
   cohorts: ReturnType<typeof computeCreatorCohorts>;
 }) {
   const funnelData = [
-    { label: "TAM", value: market.tamGBV },
-    { label: "SAM", value: market.samGBV },
-    { label: "SOM (Y5)", value: market.somGBVByYear[4] },
+    { label: "TAM (UK)", value: market.tamGBV },
+    { label: "TAM (UK+EU5)", value: market.tamGBVAll },
+    { label: "SAM (UK)", value: market.samGBV },
     { label: "Travidz Y5 GBV", value: revenue[4].gbv },
   ];
   const series = revenue.map((r, i) => ({
