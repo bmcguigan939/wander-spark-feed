@@ -108,13 +108,13 @@ def stat_card(x, y, w, h, label, big, sub):
     c.setStrokeColor(LINE); c.setLineWidth(0.5)
     c.roundRect(x, y, w, h, 8, fill=0, stroke=1)
     c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7); c.drawString(x+10, y+h-14, label.upper())
-    c.setFillColor(INK); c.setFont("Helvetica-Bold", 16); c.drawString(x+10, y+h-34, big)
+    c.setFillColor(INK); c.setFont("Helvetica-Bold", 13); c.drawString(x+10, y+h-32, big)
     c.setFillColor(CYAN); c.setFont("Helvetica", 8); c.drawString(x+10, y+10, sub)
 
 section_title(RX, y, "Why now  ·  Market (UK / UK+EU-5)")
 stat_card(RX,                 M_Y, card_w, 56, "TAM",  "£87.6B / £343B",  "ONS · VisitBritain · Eurostat")
 stat_card(RX+card_w+gap,      M_Y, card_w, 56, "SAM",  "£23.2B / £82.9B", "Phocuswright · GWI · Skift")
-stat_card(RX+2*(card_w+gap),  M_Y, card_w, 56, "Y5 SOM","£444M GBV · £20.7M net", "4.65% blended take-rate")
+stat_card(RX+2*(card_w+gap),  M_Y, card_w, 56, "Y5 SOM","£444M  ·  £20.7M", "GBV · net rev · 4.65% take")
 
 y = M_Y - 12
 
@@ -142,7 +142,7 @@ for i,(lbl,val) in enumerate(items):
 mx = RX + col_w + gap
 panel(mx, STRIP_Y, col_w, STRIP_H, "Business model")
 c.setFillColor(INK); c.setFont("Helvetica", 8)
-lines = ["• 4-7% take-rate on bookings (stays, tours, experiences)",
+lines = ["• 4-7% take-rate (stays · tours · experiences)",
          "• Creator rev-share 30-50% of net",
          "• Tiered creator subs · brand partnerships",
          "• Blended Y5 take 4.65%"]
@@ -151,11 +151,11 @@ for i,ln in enumerate(lines):
 
 # Growth plan
 gx = RX + 2*(col_w+gap)
-panel(gx, STRIP_Y, col_w, STRIP_H, "Growth plan: Prove → Scale → Defend")
+panel(gx, STRIP_Y, col_w, STRIP_H, "Growth plan")
 phases = [
-    ("PROVE",  "M0-18 · UK · 2.4k creators · £44M GBV"),
-    ("SCALE",  "M18-44 · EU-5 · 14k creators · £259M GBV"),
-    ("DEFEND", "M44-60+ · Moat · 24k creators · £444M GBV"),
+    ("PROVE",  "M0-18 · UK · 2.4k cr · £44M"),
+    ("SCALE",  "M18-44 · EU-5 · 14k cr · £259M"),
+    ("DEFEND", "M44-60+ · Moat · 24k cr · £444M"),
 ]
 for i,(p,desc) in enumerate(phases):
     yy = STRIP_Y + STRIP_H - 36 - i*22
@@ -163,7 +163,7 @@ for i,(p,desc) in enumerate(phases):
     pw = c.stringWidth(p, "Helvetica-Bold", 7) + 14
     c.setFillColor(PRIMARY); c.roundRect(gx+14, yy-3, pw, 12, 6, fill=1, stroke=0)
     c.setFillColor(white); c.setFont("Helvetica-Bold", 7); c.drawString(gx+21, yy+1, p)
-    c.setFillColor(INK); c.setFont("Helvetica", 7.5); c.drawString(gx+14+pw+6, yy+1, desc)
+    c.setFillColor(INK); c.setFont("Helvetica", 7); c.drawString(gx+14+pw+5, yy+1, desc)
 
 y = STRIP_Y - 10
 
@@ -175,7 +175,7 @@ ask_w  = RW - team_w - gap
 # Team
 panel(RX, 18, team_w, BOT_H, "Team")
 team = [
-    ("Founder One",  "CEO · ex-Booking.com, scaled supply across EMEA"),
+    ("Founder One",  "CEO · ex-Booking.com, EMEA supply"),
     ("Founder Two",  "CTO · ex-TikTok Shop, recommender systems"),
     ("Founder Three","CPO · ex-Airbnb, marketplace product"),
 ]
@@ -208,11 +208,11 @@ for lbl,pct,col in alloc:
     c.setFillColor(INK); c.setFont("Helvetica-Bold", 8)
     txt = f"{lbl} {int(pct*100)}%"
     c.drawString(lx+12, ly+1, txt)
-    lx += c.stringWidth(txt,"Helvetica-Bold",8) + 26
+    lx += c.stringWidth(txt,"Helvetica-Bold",8) + 14
 
 # Gates
-c.setFillColor(CYAN); c.setFont("Helvetica-Bold", 8)
-c.drawString(ax+14, 36, "Phase 1 gates: 2,400 creators · £44M GBV · 4.12% take · UK live")
+c.setFillColor(CYAN); c.setFont("Helvetica-Bold", 7.5)
+c.drawString(ax+14, 36, "Phase 1 gates: 2.4k creators · £44M GBV · 4.12% take · UK live")
 c.setFillColor(MUTED); c.setFont("Helvetica", 7)
 c.drawString(ax+14, 24, "Contact: founders@travidz.app  ·  travidz.app")
 
