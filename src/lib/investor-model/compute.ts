@@ -53,9 +53,10 @@ export function computeRevenue(a: Assumptions): RevenueYear[] {
   const market = computeMarket(a);
   return a.creatorsActiveByYear.map((creators, i) => {
     const year = i + 1;
-    // GBV = lesser of (creator-driven capacity, SOM) — keep both visible by using min
-    const creatorDrivenGBV = creators * a.gbvPerActiveCreator;
-    const gbv = Math.min(creatorDrivenGBV, market.somGBVByYear[i]);
+    // GBV is bottom-up from creator funnel (matches financial model).
+    // SAM ceiling is shown separately in MarketPane as a sanity check.
+    void market;
+    const gbv = creators * a.gbvPerActiveCreator;
     const mix = a.tierMixByYear[i];
     const gbvByTier = Object.fromEntries(
       TIER_ORDER.map((t) => [t, gbv * (mix[t] ?? 0)]),
