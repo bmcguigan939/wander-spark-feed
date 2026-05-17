@@ -164,7 +164,7 @@ alloc.forEach(([l,p,col])=>{
 
 // Gates & contact
 s.addText("Phase 1 gates: 2.4k cr · £44M GBV · 4.12% take · UK live",{x:ax+0.2,y:y+0.95,w:askW-0.4,h:0.22,fontSize:8.5,bold:true,color:CYAN,fontFace:"Calibri"});
-s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+botH-0.22,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
+s.addText("Contact: founders@travidz.app  ·  travidz.app",{x:ax+0.2,y:y+1.85,w:askW-0.4,h:0.25,fontSize:8.5,color:MUTED,fontFace:"Calibri"});
 
 await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v1.pptx"});
 console.log("OK");
