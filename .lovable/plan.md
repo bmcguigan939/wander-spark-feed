@@ -1,84 +1,63 @@
-## Goal
+## Travidz · One-Page VC Elevator Pitch (Landscape PDF)
 
-Refresh the Travidz investor pitch with the brighter Travidz brand palette, keep the original v1 narrative intact, and weave in a **Prove → Scale → Defend** 3-phase growth plan. Ship as PPTX + PDF + interactive in-app deck.
+A single A4 landscape page (297×210mm) designed to be skim-read in 60 seconds by a VC partner. Travidz brand palette (deep slate `#0F172A`, electric blue `#3B82F6`, cyan accent `#22D3EE`, paper `#F8FAFC`). SF Pro Display / Inter typography. Built with ReportLab → PDF, plus a matching PPTX export for re-use.
 
-## Palette (all three formats)
+### Layout (landscape, 12-column grid)
 
-Aligned with project core memory — bright, Apple-like, electric blue on deep slate.
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TRAVIDZ  │  Creator-led travel commerce  │  Seed · £2.5M · 18-mo runway     │  ← top bar
+├──────────────────────┬───────────────────────────────────────────────────────┤
+│                      │  PROBLEM                                              │
+│                      │  £343B booked blind. Creators drive intent,           │
+│   CENTRAL HERO       │  earn nothing on the booking.                         │
+│   IMAGE              │                                                       │
+│   (phone mockup of   │  SOLUTION                                             │
+│    Travidz feed +    │  Shoppable travel feed. Creator → booking → payout.   │
+│    booking, on a     │                                                       │
+│    brand-gradient    │  WHY NOW · TAM/SAM/SOM strip                          │
+│    backdrop)         │  TAM £87.6B UK / £343B UK+EU-5                        │
+│                      │  SAM £23.2B / £82.9B                                  │
+│                      │  Y5 SOM £444M GBV · £20.7M net · 4.65% take          │
+├──────────────────────┴───────────────────────────────────────────────────────┤
+│  TRACTION   │   BUSINESS MODEL   │   GROWTH PLAN: Prove → Scale → Defend     │
+│   3 KPIs    │   Take-rate + tiers│   3 phase chips with gates                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  TEAM (3 founders, 1-line each)   │   THE ASK  £2.5M · 40 GTM / 35 Eng / …   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-| Token | Hex | Use |
-|---|---|---|
-| `bg-deep` | `#0F172A` | Slide backgrounds (title + closer) |
-| `bg-light` | `#F8FAFC` | Slide backgrounds (content) |
-| `primary` | `#3B82F6` | Headlines, accent bars, phase highlights |
-| `primary-glow` | `#60A5FA` | Gradients, hover/active states |
-| `ink` | `#0F172A` | Body text on light |
-| `paper` | `#F8FAFC` | Body text on dark |
-| `muted` | `#64748B` | Captions, sources |
-| `success` | `#22D3EE` | Positive metrics, gates met |
+### Content blocks (final copy, locked to v8 model)
 
-Typography: SF Pro Display (headings) / Inter (body) — matches project core.
+1. **Header bar** — Logo · tagline · round/size/runway.
+2. **Hero image** (left third) — phone mockup of the Travidz feed + booking sheet on the brand gradient. Generated via `imagegen` at 1024×1536 portrait, transparent background, dropped onto a deep-slate panel with a cyan glow.
+3. **Problem** — 2 lines.
+4. **Solution** — 2 lines + 3-icon row (Discover · Book · Earn).
+5. **Market strip** — TAM/SAM/SOM as 3 stacked numbers with source chips (ONS, VisitBritain, Eurostat, Phocuswright).
+6. **Traction** — 3 KPI tiles (waitlist, creator LOIs, supply partners) — placeholders flagged for founder fill-in.
+7. **Business model** — take-rate ladder 4.12% → 4.72% → 4.65%; revenue mix bar.
+8. **Growth plan** — Prove (M0-18, UK, 2.4k creators, £44M GBV) · Scale (M18-44, EU-5, 14k, £259M) · Defend (M44-60+, platform moat, 24k, £444M). Three chips, one line of exit gates each.
+9. **Team** — 3 founder one-liners (placeholder names retained from v1).
+10. **The Ask** — £2.5M SAFE · use of funds donut (40/35/15/10) · 18-month gates · contact line.
 
-Replaces v1's flatter Midnight Indigo navy. Brighter, more confident, consistent across PPTX + PDF + app.
+### Files & process
 
-## Original v1 narrative — preserved
+- `scripts/build_elevator_pitch_v1.py` — ReportLab landscape A4, embedded fonts (Inter/SF fallback to Helvetica), embeds hero JPG as base64.
+- `src/assets/elevator_hero.png` — generated phone mockup (premium imagegen, transparent bg, composited onto gradient panel inside the PDF).
+- Output: `/mnt/documents/Travidz_Elevator_Pitch_v1.pdf` (+ matching `.pptx` via pptxgenjs single-slide 13.33×7.5").
+- QA: render to JPG at 200dpi, inspect for overlap/clipping/contrast, fix, re-render. Report findings.
 
-All 15 v1 slides keep their headlines, body copy, and visual structure. Only changes:
-- Recolour to Travidz palette above
-- Refresh numbers to v8 / financial model (TAM £87.6B UK / £343B UK+EU-5; SAM £23.2B / £82.9B; Y5 SOM £444M GBV / £20.7M net / 4.65% take; sources → ONS, VisitBritain, Eurostat, Phocuswright, GWI, Skift)
-- Update 18-month milestones on Ask slide to match Phase 1 gates
+### Out of scope
 
-## 3-phase plan — woven in (not bolted on)
+- In-app interactive deck (deferred per user).
+- Editing v8 workbook or financial assumptions.
+- Multi-page or portrait variants.
+- Founder bios beyond v1 placeholders.
 
-**New slide (inserted after Slide 11 — Go-to-Market):**
+### Deliverables
 
-**Slide 12 — Growth plan: Prove → Scale → Defend**
+1. `Travidz_Elevator_Pitch_v1.pdf` (landscape, single page)
+2. `Travidz_Elevator_Pitch_v1.pptx` (matching single slide)
+3. Short QA summary listing issues found and fixes applied.
 
-Horizontal 3-column timeline. Each column is a phase card on dark gradient with primary-blue accent bar.
-
-| Phase | Window · Raise | Headline | KPI gates (exit criteria) | Use of funds |
-|---|---|---|---|---|
-| **1 · Prove** | M0–18 · Seed £2M | UK-only. Founding-500 lock-in. Prove unit economics. | 2,400 creators · £44M GBV · 4.12% take · 100 power-tier locks · 250 operators | 40% creator GTM · 35% eng · 15% supply · 10% G&A |
-| **2 · Scale** | M18–44 · Series A £8M | EU-5 rollout (FR/DE/ES/IT/NL). Paid-UA flywheel. Double engineering. | 14,000 creators · £259M GBV · 4.72% take · £12M ARR | EU expansion · ranking/personalisation · ops scale |
-| **3 · Defend** | M44–60+ · Series B £20M | Platform moat. Supply-side network effects. US entry options. | 24,000 creators · £444M GBV · 4.65% blended · category default | US entry · partnerships · trust/safety · data moat |
-
-**Cross-references in existing slides (light touch, no rewrites):**
-- Slide 11 (GTM): add phase chip ("Phase 1 · Prove") to the founding-500 column; ("Phase 2 · Scale") to power-tier; ("Phase 3 · Defend") to operator pull
-- Slide 14 (Ask): retitle "18-MONTH MILESTONES" → "PHASE 1 · PROVE — 18-month gates" and align bullets to Phase 1 exit criteria
-
-Final deck length: **16 slides** (was 15).
-
-## Three deliverables
-
-### 1. PPTX — `Travidz_Investor_Deck_Seed_v2.pptx`
-- Rebuild via `pptxgenjs` reusing v1 layout/content
-- Apply Travidz palette globally
-- New Phase slide: 3 cards, primary-blue top borders, phase number large in `primary-glow`, dark gradient bg
-- Save to `/mnt/documents/`
-
-### 2. PDF — `Travidz_Investor_Deck_Seed_v2.pdf`
-- LibreOffice headless conversion from PPTX
-- Visual QA: render each slide → JPG → inspect for overflow/contrast/overlap → fix → re-render until clean
-
-### 3. In-app interactive deck — `/investor/deck`
-- TanStack route `src/routes/investor.deck.tsx`
-- Follow `slides-app` knowledge: fixed 1920×1080 slides + scale transform, scoped font scaling, dark backdrop
-- 16 React slide components in `src/components/investor-deck/slides/`
-- Shell: keyboard nav (← → Space Esc), F for fullscreen, G for thumbnail grid, slide counter
-- Public route, `noindex` meta — founder can share link
-- "Open pitch deck" link added to `/admin/investor` header
-- Reuses palette via CSS variables in `src/styles.css` (extends existing tokens, no breaking changes)
-
-## Sequencing
-1. Build PPTX (all 16 slides, new palette, phase slide) → render → QA → fix → re-render until clean
-2. Convert clean PPTX → PDF
-3. Build in-app deck (route + 16 slides + shell) — mirrors PPTX
-4. Cross-check numbers across all three formats match v8 + financial model
-
-## Out of scope
-- Rewriting v1 headlines or restructuring slide order
-- Editing v8 workbook or financial model
-- Founder placeholders (team names, live traction) — left as `[ ... ]`
-- Changes to `src/lib/investor-model/` assumptions
-
-No new dependencies, migrations, or server functions.
+Approve and I'll generate the hero image, build both files, and run visual QA before handing them over.
