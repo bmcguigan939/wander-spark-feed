@@ -126,12 +126,12 @@ function ProfilePage() {
           </button>
         </div>
       </header>
-      <div className="px-5 pt-4">
-        <div className="flex items-end gap-4">
+      <div className="px-5 pt-5">
+        <div className="flex items-center gap-4">
           <img
             src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
             alt={p.username}
-            className="-mt-8 h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
+            className="h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
           />
           <div className="min-w-0 flex-1 pb-1">
             <h1 className="truncate font-display text-2xl font-semibold leading-tight">@{p.username}</h1>
