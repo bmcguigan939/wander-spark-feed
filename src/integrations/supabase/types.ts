@@ -900,6 +900,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_preferences: {
+        Row: {
+          notify_applications: boolean
+          notify_expiry: boolean
+          notify_redemption: boolean
+          notify_social: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          notify_applications?: boolean
+          notify_expiry?: boolean
+          notify_redemption?: boolean
+          notify_social?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          notify_applications?: boolean
+          notify_expiry?: boolean
+          notify_redemption?: boolean
+          notify_social?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1196,6 +1223,7 @@ export type Database = {
           deal_id: string | null
           id: string
           read_at: string | null
+          redemption_id: string | null
           type: Database["public"]["Enums"]["notification_type"]
           user_id: string
           video_id: string | null
@@ -1207,6 +1235,7 @@ export type Database = {
           deal_id?: string | null
           id?: string
           read_at?: string | null
+          redemption_id?: string | null
           type: Database["public"]["Enums"]["notification_type"]
           user_id: string
           video_id?: string | null
@@ -1218,6 +1247,7 @@ export type Database = {
           deal_id?: string | null
           id?: string
           read_at?: string | null
+          redemption_id?: string | null
           type?: Database["public"]["Enums"]["notification_type"]
           user_id?: string
           video_id?: string | null
@@ -1719,7 +1749,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      creator_earnings_monthly: {
+        Row: {
+          commission_cents_total: number | null
+          creator_id: string | null
+          gross_order_cents: number | null
+          month: string | null
+          payable_cents: number | null
+          pending_cents: number | null
+          redemption_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_redemptions_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cron_expire_deals: { Args: never; Returns: number }
@@ -1771,6 +1820,7 @@ export type Database = {
         }
         Returns: number
       }
+      notify_expiring_deals: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1792,6 +1842,9 @@ export type Database = {
         | "deal_application"
         | "deal_application_decided"
         | "business_invite_received"
+        | "redemption_confirmed"
+        | "redemption_rejected"
+        | "deal_expiring_soon"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1930,6 +1983,9 @@ export const Constants = {
         "deal_application",
         "deal_application_decided",
         "business_invite_received",
+        "redemption_confirmed",
+        "redemption_rejected",
+        "deal_expiring_soon",
       ],
     },
   },
