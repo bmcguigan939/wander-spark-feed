@@ -7,7 +7,6 @@ import {
   Link as LinkIcon,
   ExternalLink,
   Play,
-  Mail,
   Check,
   Sparkles,
   TrendingUp,
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 
 const SHARE_URL = "https://wander-spark-feed.lovable.app/invest";
-const CONTACT_EMAIL = "founders@travidz.com";
 
 export const Route = createFileRoute("/invest")({
   head: () => ({
@@ -105,12 +103,6 @@ function StickyBar() {
             className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/10 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" /> PPTX
-          </a>
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=Travidz%20SAFE`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ff5a8a] to-[#ff8e72] px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-[#ff5a8a]/20 transition hover:opacity-90"
-          >
-            <Mail className="h-3.5 w-3.5" /> Let's talk
           </a>
         </div>
       </div>
@@ -602,12 +594,6 @@ function FooterCTA() {
           15 minutes is enough to walk through the model, the product, and the round.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=Travidz%20SAFE%20intro`}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff5a8a] to-[#ff8e72] px-6 py-3 text-sm font-semibold shadow-xl shadow-[#ff5a8a]/25 transition hover:opacity-90"
-          >
-            <Mail className="h-4 w-4" /> {CONTACT_EMAIL}
-          </a>
           <Link
             to="/"
             target="_blank"

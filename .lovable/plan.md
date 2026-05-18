@@ -1,16 +1,13 @@
-# Add live pitch link to elevator pitch
-
-Update both v3 artifacts to surface the in-app investor pitch URL: **https://wander-spark-feed.lovable.app/invest**
+## Goal
+Remove the `founders@travidz.com` contact email entirely from the live investor pitch page (`/invest`) so investors do not mistake it for a direct line.
 
 ## Changes
 
-1. **`scripts/build_elevator_pitch_v3.py`** (PDF)
-   - Add a call-to-action strip in the footer / under the hero: "Experience the product → wander-spark-feed.lovable.app/invest"
-   - Make the URL a clickable link annotation (reportlab `linkURL`).
+### `src/routes/invest.tsx`
+1. **Remove** the `CONTACT_EMAIL` constant (line 22).
+2. **Remove** the sticky-bar "Let's talk" mailto button (lines 109–114). Keep the Copy link, PDF, and PPTX buttons.
+3. **Remove** the footer CTA mailto button (lines 605–610). Keep the "Explore the live app" button and the rest of the footer copy.
+4. **Remove** the `Mail` import from `lucide-react` if no longer used.
 
-2. **`scripts/build_elevator_pitch_v3_pptx.mjs`** (PPTX)
-   - Add the same CTA line with `hyperlink: { url: ... }` so it's clickable in PowerPoint/Keynote.
-
-3. Regenerate both files to `/mnt/documents/Travidz_Elevator_Pitch_v3.pdf` and `.pptx`, then visual-QA via `pdftoppm`.
-
-No app code changes. No new files.
+## Outcome
+The investor pitch page will no longer display or link to `founders@travidz.com` anywhere.
