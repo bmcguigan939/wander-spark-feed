@@ -31,9 +31,9 @@ function mcell(i,label,big,sub){
   s.addText(big,{x:x+0.25,y:BY+0.32,w:cw-0.4,h:0.42,fontSize:18,bold:true,color:INK,fontFace:"Calibri"});
   s.addText(sub,{x:x+0.25,y:BY+BH-0.32,w:cw-0.4,h:0.25,fontSize:9,color:CYAN,fontFace:"Calibri"});
 }
-mcell(0,"TAM","£87.6B / £343B","UK / UK+EU-5 · ONS · Eurostat");
-mcell(1,"SAM","£23.2B / £82.9B","36% creator-influenced × 80% bookable");
-mcell(2,"Y5 SOM","£444M · £20.7M","GBV · net rev @ 4.65% (1.9% of UK SAM)");
+mcell(0,"TAM","£87.6B / £675B","UK / Global · ONS · Eurostat · UNWTO");
+mcell(1,"SAM","£23.2B / £175B","26% creator-influenced × bookable (global blend)");
+mcell(2,"Y5 SOM","£350M → £1.32B","UK Base → Global Viral · £16.2M → £61.6M net @ 4.65%");
 
 // Ask cell with allocation bar
 const ax=0.2+3*cw;
@@ -60,9 +60,9 @@ const IMG_H=IMG_AREA_H;
 s.addShape("roundRect",{x:IMG_X-0.1,y:IMG_Y,w:IMG_W+0.2,h:IMG_H,rectRadius:0.15,fill:{color:PANEL},line:{color:CYAN,width:0.75}});
 
 // Image
-const imgB64=fs.readFileSync("/tmp/elevator_hero.png").toString("base64");
+const imgB64=fs.readFileSync("/tmp/elevator_hero.jpg").toString("base64");
 const isz=Math.min(IMG_W-0.2, IMG_H-1.7);
-s.addImage({data:`image/png;base64,${imgB64}`,x:IMG_X+(IMG_W-isz)/2, y:IMG_Y+0.2, w:isz, h:isz});
+s.addImage({data:`image/jpeg;base64,${imgB64}`,x:IMG_X+(IMG_W-isz)/2, y:IMG_Y+0.2, w:isz, h:isz});
 
 // Tagline under image
 s.addText("Discover. Book. Earn.",{x:IMG_X,y:IMG_Y+IMG_H-1.4,w:IMG_W,h:0.32,align:"center",fontSize:15,bold:true,color:INK,fontFace:"Calibri"});
@@ -109,8 +109,8 @@ const lyTm= colTop+2*(cardH+0.12);
 panel(LX,lyP,LW,cardH,"PROBLEM");
 s.addText([
   {text:"Discovery moved to creators; booking didn't. ",options:{color:INK}},
-  {text:"£343B",options:{bold:true,color:INK}},
-  {text:" flows through OTAs that pay creators ",options:{color:INK}},
+  {text:"£675B",options:{bold:true,color:INK}},
+  {text:" of global leisure-travel bookings flow through OTAs that pay creators ",options:{color:INK}},
   {text:"£0",options:{bold:true,color:INK}},
   {text:" and own the customer. Creators send the intent — OTAs keep the margin and the data.",options:{color:INK}}
 ],{x:LX+0.2,y:lyP+0.45,w:LW-0.4,h:cardH-0.55,fontSize:9.5,fontFace:"Calibri",valign:"top"});
@@ -151,12 +151,12 @@ panel(RX,ryB,RW,cardH,"BUSINESS MODEL");
 panel(RX,ryG,RW,cardH,"GROWTH PLAN: PROVE → SCALE → DEFEND");
 [["PROVE","M0-18 · UK · 2.4k cr · £44M GBV · 40% M3 retention"],
  ["SCALE","M18-44 · EU-5 · 14k cr · £259M · CAC payback <6mo"],
- ["DEFEND","M44-60 · 24k cr · £444M · ledger + supply lock-in"]].forEach(([p,desc],i)=>{
+ ["DEFEND","M44-60 · 24k cr · £350M UK Base · Global Viral upside £1.32B"]].forEach(([p,desc],i)=>{
   const ry=ryG+0.5+i*0.34;
   s.addShape("roundRect",{x:RX+0.2,y:ry+0.04,w:0.7,h:0.22,rectRadius:0.11,fill:{color:PRIMARY},line:{color:PRIMARY}});
   s.addText(p,{x:RX+0.2,y:ry+0.04,w:0.7,h:0.22,fontSize:8,bold:true,color:WHITE,align:"center",fontFace:"Calibri"});
   s.addText(desc,{x:RX+0.95,y:ry,w:RW-1.1,h:0.3,fontSize:7.5,color:INK,fontFace:"Calibri"});
 });
 
-await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v3.pptx"});
+await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v5.pptx"});
 console.log("OK");
