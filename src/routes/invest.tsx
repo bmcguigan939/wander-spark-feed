@@ -583,7 +583,7 @@ function GrowthPlan() {
     {
       n: "Defend",
       t: "M44–60",
-      kpis: ["24,000 creators", "£444M GBV", "Creator ledger lock-in", "Supply exclusivity"],
+      kpis: ["24,000 creators", "£350M GBV (UK Base)", "Creator ledger lock-in", "Supply exclusivity"],
     },
   ];
   return (
