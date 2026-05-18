@@ -28,6 +28,38 @@ export type Assumptions = {
   creatorSharePctByTier: Record<CreatorTier, number>; // 0.5, 0.5, 0.5, 0.4, 0.3
 };
 
+// Global market layer — matches the `regions` sheet of
+// Travidz_Financial_Model_v2_Global.xlsx. Used to size the global TAM/SAM
+// shown on /invest. UK Base remains the funded plan; global is optionality.
+export type Region = {
+  name: string;
+  travellersM: number; // reachable leisure travellers (millions)
+  abv: number; // blended £ per booking
+};
+
+export const GLOBAL_REGIONS: Region[] = [
+  { name: "United Kingdom", travellersM: 25, abv: 480 },
+  { name: "EU-5", travellersM: 150, abv: 460 },
+  { name: "USA", travellersM: 180, abv: 540 },
+  { name: "Australia / NZ", travellersM: 18, abv: 580 },
+  { name: "LATAM", travellersM: 110, abv: 280 },
+  { name: "MENA", travellersM: 70, abv: 380 },
+  { name: "Africa", travellersM: 90, abv: 220 },
+  { name: "India", travellersM: 140, abv: 200 },
+  { name: "SEA", travellersM: 160, abv: 240 },
+  { name: "Greater China", travellersM: 280, abv: 420 },
+];
+
+export const GLOBAL_MARKET = {
+  bookingsPerTraveller: 1.5, // matches Global Viral column in the workbook
+  samPct: 0.26, // creator-influenced × bookable, global blend
+  // Y5 SOM anchors (from workbook)
+  somGBVBaseY5: 350_000_000, // UK Base Y5 GBV
+  somNetBaseY5: 16_200_000, // UK Base Y5 Travidz net
+  somGBVGlobalY5: 1_322_400_000, // Global Viral Y5 GBV
+  somNetGlobalY5: 61_570_944, // Global Viral Y5 Travidz net
+} as const;
+
 // v7 defaults — UK-first, derived from Travidz_Market_Research_TAM_SOM_v7.xlsx
 // UK TAM: 60.7M outbound × £870 + 118M domestic × £295 = £87.6B
 // SAM = 36% creator-influenced × 80% bookable = 28.8% of TAM
