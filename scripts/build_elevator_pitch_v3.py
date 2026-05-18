@@ -11,7 +11,7 @@ BG=HexColor("#0F172A"); PANEL=HexColor("#111C36"); CARD=HexColor("#1B2742")
 PRIMARY=HexColor("#3B82F6"); GLOW=HexColor("#60A5FA"); CYAN=HexColor("#22D3EE")
 INK=HexColor("#F8FAFC"); MUTED=HexColor("#94A3B8"); LINE=HexColor("#243049")
 
-OUT="/mnt/documents/Travidz_Elevator_Pitch_v2.pdf"
+OUT="/mnt/documents/Travidz_Elevator_Pitch_v3.pdf"
 HERO="/tmp/elevator_hero.png"
 
 c = canvas.Canvas(OUT, pagesize=landscape(A4))
@@ -24,7 +24,7 @@ c.setFillColor(PRIMARY); c.circle(26, H-20, 9, fill=1, stroke=0)
 c.setFillColor(white); c.setFont("Helvetica-Bold", 13); c.drawString(40, H-24, "TRAVIDZ")
 c.setFillColor(MUTED); c.setFont("Helvetica", 9); c.drawString(110, H-24, "Creator-led travel commerce  ·  Seed round")
 c.setFillColor(CYAN); c.setFont("Helvetica-Bold", 10)
-c.drawRightString(W-22, H-24, "Raising £2.5M SAFE  ·  18-month runway  ·  UK → EU-5")
+c.drawRightString(W-22, H-24, "£2.5M SAFE  ·  18-mo runway  ·  Next: Series A at £18M ARR run-rate")
 
 # Bottom market strip (full width, contains TAM/SAM/SOM + Ask)
 BOT_H=78
@@ -48,8 +48,8 @@ def market_cell(i, label, big, sub, accent=CYAN):
     c.drawString(x+18, BOT_Y+12, sub)
 
 market_cell(0, "TAM",   "£87.6B / £343B",  "UK / UK+EU-5 · ONS · Eurostat")
-market_cell(1, "SAM",   "£23.2B / £82.9B", "Phocuswright · GWI · Skift")
-market_cell(2, "Y5 SOM","£444M · £20.7M",  "GBV · net rev · 4.65% take")
+market_cell(1, "SAM",   "£23.2B / £82.9B", "36% creator-influenced × 80% bookable")
+market_cell(2, "Y5 SOM","£444M · £20.7M",  "GBV · net rev @ 4.65% (1.9% of UK SAM)")
 # Ask cell
 x = cells_x + 3*cw
 c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 8)
@@ -57,7 +57,7 @@ c.drawString(x+18, BOT_Y+BOT_H-18, "THE ASK · £2.5M SAFE")
 c.setFillColor(INK); c.setFont("Helvetica-Bold", 17)
 c.drawString(x+18, BOT_Y+BOT_H-40, "£2.5M")
 c.setFillColor(MUTED); c.setFont("Helvetica", 8)
-c.drawString(x+72, BOT_Y+BOT_H-38, "Seed · 18-mo runway")
+c.drawString(x+72, BOT_Y+BOT_H-38, "Seed · post → Series A")
 # mini allocation bar
 bx = x+18; by = BOT_Y+22; bw = cw-36; bh=8
 alloc=[("GTM",0.40,PRIMARY),("Eng",0.35,GLOW),("Sup",0.15,CYAN),("G&A",0.10,MUTED)]
@@ -144,51 +144,51 @@ def col_card(x, idx, w, title, accent=PRIMARY):
 # LEFT COLUMN: Problem, Traction, Team
 y1 = col_card(LX, 0, LW, "Problem")
 body(LX+14, y1+card_h-30, LW-28,
-     "Travel is a <b>£343B</b> market booked blind. Gen-Z & Millennials discover trips on creators and TikTok, then jump to OTAs that pay creators nothing.",
-     size=9, leading=11)
+     "Discovery moved to creators; booking didn't. <b>£343B</b> flows through OTAs that pay creators <b>£0</b> and own the customer. Creators send the intent — OTAs keep the margin and the data.",
+     size=8.5, leading=10.5)
 
 y2 = col_card(LX, 1, LW, "Traction")
-items=[("Waitlist","3,200+"),("Creator LOIs","85"),("Supply partners","12")]
+items=[("Waitlist (organic, UK)","3,200+"),("Creator LOIs · 4.2M reach","85"),("Supply signed · 3 cities","12")]
 for i,(lbl,val) in enumerate(items):
     yy = y2 + card_h - 32 - i*18
-    c.setFillColor(MUTED); c.setFont("Helvetica", 8.5); c.drawString(LX+18, yy, lbl)
+    c.setFillColor(MUTED); c.setFont("Helvetica", 8); c.drawString(LX+18, yy, lbl)
     c.setFillColor(CYAN);  c.setFont("Helvetica-Bold", 11); c.drawRightString(LX+LW-14, yy, val)
 
 y3 = col_card(LX, 2, LW, "Team")
-team=[("Founder One","CEO · ex-Booking.com"),
-      ("Founder Two","CTO · ex-TikTok Shop"),
-      ("Founder Three","CPO · ex-Airbnb")]
+team=[("CEO","ex-Booking.com · scaled supply 0→1"),
+      ("CTO","ex-TikTok Shop · creator-commerce rails"),
+      ("CPO","ex-Airbnb · marketplace growth")]
 for i,(n,b) in enumerate(team):
     yy = y3 + card_h - 32 - i*18
     c.setFillColor(CYAN); c.circle(LX+22, yy+3, 4, fill=1, stroke=0)
     c.setFillColor(INK); c.setFont("Helvetica-Bold", 8.5); c.drawString(LX+32, yy, n)
-    c.setFillColor(MUTED); c.setFont("Helvetica", 8); c.drawString(LX+32+c.stringWidth(n,"Helvetica-Bold",8.5)+6, yy, b)
+    c.setFillColor(MUTED); c.setFont("Helvetica", 7.5); c.drawString(LX+32+c.stringWidth(n,"Helvetica-Bold",8.5)+6, yy, b)
 
 # RIGHT COLUMN: Solution, Business Model, Growth Plan
 y1 = col_card(RX, 0, RW, "Solution")
 body(RX+14, y1+card_h-30, RW-28,
-     "<b>Travidz</b> is a shoppable travel feed. Creators post trips → travellers book in-app → creators earn on every booking. One feed. One checkout. One ledger.",
-     size=9, leading=11)
+     "Shoppable travel feed. Creator posts trip → traveller books in 2 taps → creator earns for life. Native checkout, unified inventory (stays · tours · experiences), persistent attribution.",
+     size=8.5, leading=10.5)
 
 y2 = col_card(RX, 1, RW, "Business model")
-lines=["• 4-7% take-rate (stays · tours · experiences)",
+lines=["• Take-rate 4-7%  ·  blended Y5 4.65%",
        "• Creator rev-share 30-50% of net",
-       "• Tiered creator subs · brand partnerships",
-       "• Blended Y5 take 4.65%"]
+       "• ~55% contribution margin at scale",
+       "• Zero paid acquisition Y1-2 (creator-led)"]
 for i,ln in enumerate(lines):
     c.setFillColor(INK); c.setFont("Helvetica", 8.5)
     c.drawString(RX+18, y2+card_h-30-i*14, ln)
 
 y3 = col_card(RX, 2, RW, "Growth plan: Prove → Scale → Defend")
-phases=[("PROVE",  "M0-18 · UK · 2.4k cr · £44M GBV"),
-        ("SCALE",  "M18-44 · EU-5 · 14k cr · £259M"),
-        ("DEFEND", "M44-60+ · Moat · 24k cr · £444M")]
+phases=[("PROVE",  "M0-18 · UK · 2.4k cr · £44M GBV · gate: 40% M3 retention"),
+        ("SCALE",  "M18-44 · EU-5 · 14k cr · £259M · gate: CAC payback <6mo"),
+        ("DEFEND", "M44-60 · 24k cr · £444M · moat: ledger + supply lock-in")]
 for i,(p,desc) in enumerate(phases):
     yy = y3 + card_h - 32 - i*18
     pw = c.stringWidth(p,"Helvetica-Bold",7)+14
     c.setFillColor(PRIMARY); c.roundRect(RX+18, yy-3, pw, 12, 6, fill=1, stroke=0)
     c.setFillColor(white); c.setFont("Helvetica-Bold", 7); c.drawString(RX+25, yy+1, p)
-    c.setFillColor(INK); c.setFont("Helvetica", 7.5); c.drawString(RX+18+pw+6, yy+1, desc)
+    c.setFillColor(INK); c.setFont("Helvetica", 6.8); c.drawString(RX+18+pw+6, yy+1, desc)
 
 c.showPage(); c.save()
 print("OK", OUT)
