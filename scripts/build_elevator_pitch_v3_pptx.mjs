@@ -69,12 +69,12 @@ s.addText("Discover. Book. Earn.",{x:IMG_X,y:IMG_Y+IMG_H-1.4,w:IMG_W,h:0.32,alig
 s.addText("The shoppable feed for travel.",{x:IMG_X,y:IMG_Y+IMG_H-1.1,w:IMG_W,h:0.26,align:"center",fontSize:10,color:MUTED,fontFace:"Calibri"});
 
 // Live pitch CTA pill (clickable)
-const ctaW=3.1, ctaH=0.3;
-const ctaX=IMG_X+(IMG_W-ctaW)/2, ctaY=IMG_Y+IMG_H-0.78;
+const ctaW=3.4, ctaH=0.34;
+const ctaX=IMG_X+(IMG_W-ctaW)/2, ctaY=IMG_Y+IMG_H-0.8;
 s.addShape("roundRect",{x:ctaX,y:ctaY,w:ctaW,h:ctaH,rectRadius:0.15,fill:{color:PRIMARY},line:{color:PRIMARY}});
-s.addText("▶  Try the live pitch  ·  "+LIVE_LABEL,{
+s.addText("▶  Live pitch · "+LIVE_LABEL,{
   x:ctaX,y:ctaY,w:ctaW,h:ctaH,align:"center",valign:"middle",
-  fontSize:9,bold:true,color:WHITE,fontFace:"Calibri",
+  fontSize:8.5,bold:true,color:WHITE,fontFace:"Calibri",margin:0,
   hyperlink:{url:LIVE_URL,tooltip:"Open the live investor pitch"}
 });
 
