@@ -54,7 +54,7 @@ function InvestPage() {
       <ProblemSolution />
       <HowItWorks />
       <BusinessModel />
-      <Market market={market} y5={y5} />
+      <Market market={market} />
       <GlobalExpansion />
       <GrowthPlan />
       <Team />
@@ -399,7 +399,7 @@ function BusinessModel() {
 
 /* ───────── Market ───────── */
 
-function Market({ market, y5 }: { market: ReturnType<typeof computeMarket>; y5: ReturnType<typeof computeRevenue>[number] }) {
+function Market({ market }: { market: ReturnType<typeof computeMarket> }) {
   return (
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
