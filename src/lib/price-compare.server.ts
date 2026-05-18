@@ -1,4 +1,3 @@
-import Firecrawl from "@mendable/firecrawl-js";
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getFxRate } from "@/lib/fx.server";
@@ -35,10 +34,39 @@ function hash(payload: string) {
   return createHash("sha256").update(payload).digest("hex");
 }
 
-function getFirecrawl(): Firecrawl | null {
+type FirecrawlClient = { apiKey: string };
+
+function getFirecrawl(): FirecrawlClient | null {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return null;
-  return new Firecrawl({ apiKey });
+  return { apiKey };
+}
+
+async function firecrawlFetch(
+  client: FirecrawlClient,
+  path: string,
+  body: unknown,
+  timeoutMs: number,
+): Promise<any> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`https://api.firecrawl.dev${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${client.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function toCents(price: number, currency: string): number {
@@ -48,21 +76,31 @@ function toCents(price: number, currency: string): number {
 }
 
 async function scrapeOne(
-  firecrawl: Firecrawl,
+  firecrawl: FirecrawlClient,
   network: string,
   url: string,
 ): Promise<CompetitorQuote | null> {
   try {
-    const result = (await Promise.race([
-      firecrawl.scrape(url, {
+    const response = await firecrawlFetch(
+      firecrawl,
+      "/v2/scrape",
+      {
+        url,
         formats: [
-          { type: "json", schema: PRICE_SCHEMA, prompt: "Extract the lowest total bookable price visible on this page for the default dates/party size." } as any,
+          {
+            type: "json",
+            schema: PRICE_SCHEMA,
+            prompt:
+              "Extract the lowest total bookable price visible on this page for the default dates/party size.",
+          },
           "screenshot",
         ],
         onlyMainContent: true,
-      }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000)),
-    ])) as any;
+      },
+      8000,
+    );
+    const result = response?.data ?? response;
+    if (!result) return null;
     const json = result?.json ?? result?.data?.json;
     if (!json || typeof json.price !== "number") return null;
     const currency = (json.currency || "GBP").toString().toUpperCase();
@@ -87,15 +125,19 @@ async function scrapeOne(
 }
 
 async function searchCompetitorUrls(
-  firecrawl: Firecrawl,
+  firecrawl: FirecrawlClient,
   query: string,
   site: string,
 ): Promise<string | null> {
   try {
-    const result = (await Promise.race([
-      firecrawl.search(`${query} site:${site}`, { limit: 1 }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 5000)),
-    ])) as any;
+    const response = await firecrawlFetch(
+      firecrawl,
+      "/v2/search",
+      { query: `${query} site:${site}`, limit: 1 },
+      5000,
+    );
+    const result = response?.data ?? response;
+    if (!result) return null;
     const items = result?.web ?? result?.data ?? [];
     const first = Array.isArray(items) ? items[0] : null;
     return first?.url ?? null;
