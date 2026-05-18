@@ -110,6 +110,12 @@ function StickyBar() {
           >
             <Download className="h-3.5 w-3.5" /> Model v2
           </a>
+          <a
+            href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+            className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
+          >
+            <Download className="h-3.5 w-3.5" /> Market v9
+          </a>
         </div>
       </div>
     </div>
@@ -135,9 +141,9 @@ function Hero() {
             </span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/70">
-            £343B flows through OTAs that pay creators £0 and own the customer. Travidz is the
-            shoppable travel feed — creators post the trip, travellers book in two taps, creators
-            earn on every booking, for life.
+            £675B of global leisure-travel bookings flow through OTAs that pay creators £0 and
+            own the customer. Travidz is the shoppable travel feed — creators post the trip,
+            travellers book in two taps, creators earn on every booking, for life.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
@@ -156,7 +162,7 @@ function Hero() {
           <dl className="mt-10 grid max-w-md grid-cols-3 gap-4">
             {[
               { k: "Global TAM", v: "£675B" },
-              { k: "Y5 GBV", v: "£444M" },
+              { k: "Y5 GBV", v: "£350M → £1.32B" },
               { k: "Take", v: "4.65%" },
             ].map((s) => (
               <div key={s.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -291,8 +297,8 @@ function ProblemSolution() {
           </h3>
           <p className="mt-4 text-white/70">
             Discovery has moved to short-form video — 70%+ of Gen Z plans trips from a feed. Yet
-            every booking still flows through Booking, Expedia, Airbnb. £343B transacted; £0 paid
-            to the creator who sourced the customer.
+            every booking still flows through Booking, Expedia, Airbnb. £675B transacted globally;
+            £0 paid to the creator who sourced the customer.
           </p>
         </Card>
         <Card highlight>
@@ -535,9 +541,10 @@ function GlobalExpansion() {
             </table>
           </div>
           <p className="mt-4 text-xs text-white/50">
-            Illustrative scenario layered on the v6 model. Assumes one breakout region per
-            year and a TikTok-style creator loop. UK Base remains our funded plan and what
-            the £2.5M SAFE underwrites. Still &lt; 0.4% of the global SAM at Y5.
+            Illustrative scenario layered on the v2 global model, reconciled to the v9 TAM/SOM
+            workbook. Assumes one breakout region per year and a TikTok-style creator loop.
+            UK Base remains our funded plan and what the £2.5M SAFE underwrites. Still &lt; 0.4%
+            of the global SAM at Y5.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <a
@@ -545,6 +552,12 @@ function GlobalExpansion() {
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
               <Download className="h-3.5 w-3.5" /> Financial model v2 (Global)
+            </a>
+            <a
+              href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
+            >
+              <Download className="h-3.5 w-3.5" /> Market research v9 (Global)
             </a>
           </div>
         </Card>
@@ -700,7 +713,7 @@ function FooterCTA() {
           </Link>
         </div>
         <p className="mt-10 text-xs text-white/40">
-          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v8 market model
+          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v9 market model
         </p>
       </div>
     </section>
