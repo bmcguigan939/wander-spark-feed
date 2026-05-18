@@ -1,37 +1,52 @@
-## Problem
+## Goal
 
-The v2 workbook is full of `#VALUE!` because inserting the **Global Viral** column on the `assumptions` sheet shifted the layout but I didn't update the rest of the workbook:
+Bring the **TAM / SAM / SOM** numbers on `/invest` and in `src/lib/investor-model/` in line with the **v2 global financial model**, so the Market section reflects the same world that the v2 workbook does (UK + EU-5 + USA + AUS/NZ + LATAM + MENA + Africa + India + SEA + Greater China).
 
-```
-v1:  B=Base   C=Bear   D=Bull   E=Notes   F=Active   (scenario picker)
-v2:  B=Base   C=Bear   D=Bull   E=Global  F=Notes    G=Active   ← Active moved!
-```
+## What changes
 
-Every other sheet still reads `assumptions!$F$xx` for live values — but column F is now the text "Notes" column, so every formula that multiplies/rounds it returns `#VALUE!`. On top of that, the scenario picker formulas still say `=CHOOSE(scenario_idx, B, C, D)` — there is no 4th branch, so even selecting Global Viral wouldn't pull the new column.
+### 1. Market constants in `src/lib/investor-model/assumptions.ts`
 
-## Fix
+Add a global market layer alongside the existing UK base, derived from the v2 workbook's `regions` sheet:
 
-Rebuild `Travidz_Financial_Model_v2_Global.xlsx` correctly. One script, three passes:
+| Lever | Today (UK + EU-5) | After |
+|---|---|---|
+| Reachable travellers (global) | — | **1.22B** (sum of regions sheet: UK 25M + EU-5 150M + USA 180M + AUS/NZ 18M + LATAM 110M + MENA 70M + Africa 90M + India 140M + SEA 160M + Greater China 280M) |
+| Blended ABV (global) | £490 (UK) | **~£380** (region-weighted from workbook) |
+| Attach rate | 1.0 | **1.5 bookings/yr** (matches Global Viral column) |
+| SAM % | 28.8% | **26%** (matches Global Viral) |
+| **Global TAM (GBV)** | £343B (UK + EU-5) | **~£700B** (1.22B × 1.5 × £380) |
+| **Global SAM (GBV)** | £99B | **~£180B** |
 
-1. **Repoint every cross-sheet reference from column F → column G** on `assumptions`. Sweep `creator_cohorts`, `headcount_uk`, `operator_supply`, `combined_pnl_cash`, `summary_dashboard`, `channel_cac`, `global_viral_summary` for `assumptions!$F$` / `assumptions!F` and rewrite to `$G$` / `G`.
-2. **Extend the scenario picker to 4 branches** on every Active-column formula in `assumptions` column G: `=CHOOSE(scenario_idx, B, C, D)` → `=CHOOSE(scenario_idx, B, C, D, E)`. Confirm `scenario_idx` (named range on `summary_dashboard`) accepts 1–4; widen its data-validation list to include "Global Viral".
-3. **Verify `global_viral_summary` and `regions`** formulas reference the now-shifted Active column (G) where appropriate, or stay locked to column E if they're meant to be Global-Viral-only views.
+Add a new field `regionTravellersM` (per region) so the Market and Global Expansion sections share one source of truth.
 
-## QA
+### 2. Update `computeMarket` in `src/lib/investor-model/compute.ts`
 
-- Run `recalculate_formulas.py` on the workbook.
-- Assert zero `#VALUE! / #REF! / #DIV/0! / #NAME?` across all sheets.
-- Convert all sheets to images and visually confirm:
-  - With `scenario_idx = 1` (Base): Y5 numbers match v1 (~£350M GBV / ~£16M Travidz net).
-  - With `scenario_idx = 4` (Global Viral): Y5 ≈ £1.7B GBV / ~£79M net, ~120k creators.
-- Save to `/mnt/documents/Travidz_Financial_Model_v2_Global.xlsx` and copy to `public/decks/` so the `/invest` download link picks it up.
+Extend the returned `MarketSizing` with:
 
-## Out of scope
+- `tamGBVGlobal` — global TAM (1.22B travellers × attach × blended ABV)
+- `samGBVGlobal` — global SAM
+- `somGBVBaseY5` — UK Base Y5 (`~£350M`, unchanged)
+- `somGBVGlobalY5` — Global Viral Y5 (`~£1.32B`, from workbook)
 
-- No changes to `/invest` page (it's already pointing at the v2 file).
-- No changes to the runtime React model in `src/lib/investor-model/*`.
-- No PDF/PPTX regeneration.
+The existing UK-only fields stay so nothing else breaks.
+
+### 3. `/invest` page — `src/routes/invest.tsx`
+
+- **Hero stat strip** (line 156-167): swap `{ TAM: "£343B" }` for `{ TAM: "£700B" }` global, keep Y5 GBV `£444M` (UK Base, what the SAFE underwrites), keep Take `4.65%`.
+- **Market section** (line 410-426): make the three KPI cards explicit about scope:
+  - **Global TAM:** `~£700B` (sub: "1.22B leisure travellers, ONS / Eurostat / UNWTO")
+  - **Global SAM:** `~£180B` (sub: "26% creator-influenced × bookable")
+  - **Y5 SOM:** dual line — `£350M UK Base · £1.32B Global Viral` (sub: net £16M / £62M)
+- **SAM penetration bars** (line 428-447): switch the bars to **Global SAM penetration** with both UK Base and Global Viral tracks, so investors see we're <0.05% of global SAM even in the bull case.
+- **Global expansion section** (line 454-548): keep as-is — already correct from the v2 model — just re-link to the same workbook (already done).
+
+### 4. Out of scope
+
+- No changes to the workbook itself (already correct after last turn).
+- No changes to the runtime creator funnel (`creatorsActiveByYear`, `gbvPerActiveCreator`) — Y5 numbers stay the same.
+- No PDF / PPTX deck regeneration.
+- No changes to other surfaces (admin, calculator).
 
 ## Outcome
 
-The workbook recalculates cleanly across all four scenarios, the "Global Viral" column actually flows through every sheet, and the same file at `/decks/Travidz_Financial_Model_v2_Global.xlsx` keeps working on the live `/invest` page.
+`/invest` Market section tells the truth the v2 workbook now models: **£700B global TAM, £180B SAM, UK SOM £350M Y5, Global Viral SOM £1.32B Y5**. UK Base remains the funded plan; global is the optionality narrative.

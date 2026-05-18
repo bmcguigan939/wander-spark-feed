@@ -1,6 +1,6 @@
 import type { CreatorTier } from "@/lib/commission";
 import type { Assumptions, TierMix } from "./assumptions";
-import { TIER_ORDER } from "./assumptions";
+import { TIER_ORDER, GLOBAL_REGIONS, GLOBAL_MARKET } from "./assumptions";
 
 export type MarketSizing = {
   tamGBV: number; // UK-only TAM
@@ -9,6 +9,15 @@ export type MarketSizing = {
   samGBVAll: number; // UK + EU-5 SAM
   somGBVByYear: number[]; // top-down ceiling check: % of UK SAM
   somBottomUpGBVByYear: number[]; // bottom-up SOM from creator funnel (matches financial model)
+  // Global layer — sums every region in GLOBAL_REGIONS at the global attach rate.
+  tamGBVGlobal: number;
+  samGBVGlobal: number;
+  globalTravellersM: number;
+  blendedGlobalABV: number;
+  somGBVBaseY5: number; // UK Base Y5 GBV (funded plan)
+  somNetBaseY5: number;
+  somGBVGlobalY5: number; // Global Viral Y5 GBV
+  somNetGlobalY5: number;
 };
 
 export function computeMarket(a: Assumptions): MarketSizing {
@@ -18,7 +27,32 @@ export function computeMarket(a: Assumptions): MarketSizing {
   const samGBVAll = tamGBVAll * a.samPct;
   const somGBVByYear = a.somSharePctByYear.map((p) => samGBV * p);
   const somBottomUpGBVByYear = a.creatorsActiveByYear.map((c) => c * a.gbvPerActiveCreator);
-  return { tamGBV, tamGBVAll, samGBV, samGBVAll, somGBVByYear, somBottomUpGBVByYear };
+
+  // Global TAM/SAM — region-by-region build (matches workbook's `regions` sheet).
+  const globalTravellersM = GLOBAL_REGIONS.reduce((s, r) => s + r.travellersM, 0);
+  const tamGBVGlobal = GLOBAL_REGIONS.reduce(
+    (s, r) => s + r.travellersM * 1_000_000 * GLOBAL_MARKET.bookingsPerTraveller * r.abv,
+    0,
+  );
+  const samGBVGlobal = tamGBVGlobal * GLOBAL_MARKET.samPct;
+  const blendedGlobalABV = tamGBVGlobal / (globalTravellersM * 1_000_000 * GLOBAL_MARKET.bookingsPerTraveller);
+
+  return {
+    tamGBV,
+    tamGBVAll,
+    samGBV,
+    samGBVAll,
+    somGBVByYear,
+    somBottomUpGBVByYear,
+    tamGBVGlobal,
+    samGBVGlobal,
+    globalTravellersM,
+    blendedGlobalABV,
+    somGBVBaseY5: GLOBAL_MARKET.somGBVBaseY5,
+    somNetBaseY5: GLOBAL_MARKET.somNetBaseY5,
+    somGBVGlobalY5: GLOBAL_MARKET.somGBVGlobalY5,
+    somNetGlobalY5: GLOBAL_MARKET.somNetGlobalY5,
+  };
 }
 
 export type CreatorYear = {
