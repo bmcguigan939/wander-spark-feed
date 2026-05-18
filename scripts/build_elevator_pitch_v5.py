@@ -104,7 +104,7 @@ c.setFillColor(MUTED); c.setFont("Helvetica", 8.5)
 c.drawCentredString(IMG_X+IMG_W/2, IMG_Y+52, "The shoppable feed for travel.")
 
 # Live pitch CTA pill (clickable)
-cta_label = "▶  Try the live pitch  ·  " + LIVE_LABEL
+cta_label = "▶  Live pitch  ·  " + LIVE_LABEL
 cta_font = "Helvetica-Bold"; cta_size = 8.5
 cta_w = c.stringWidth(cta_label, cta_font, cta_size) + 22
 cta_h = 18
