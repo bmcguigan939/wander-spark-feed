@@ -7,6 +7,8 @@ const W=13.333, H=7.5;
 
 const BG="0F172A", PANEL="111C36", CARD="1B2742", PRIMARY="3B82F6",
       GLOW="60A5FA", CYAN="22D3EE", INK="F8FAFC", MUTED="94A3B8", LINE="243049", WHITE="FFFFFF";
+const LIVE_URL="https://wander-spark-feed.lovable.app/invest";
+const LIVE_LABEL="wander-spark-feed.lovable.app/invest";
 
 const s = pres.addSlide();
 s.background = { color: BG };
@@ -59,12 +61,22 @@ s.addShape("roundRect",{x:IMG_X-0.1,y:IMG_Y,w:IMG_W+0.2,h:IMG_H,rectRadius:0.15,
 
 // Image
 const imgB64=fs.readFileSync("/tmp/elevator_hero.png").toString("base64");
-const isz=Math.min(IMG_W-0.2, IMG_H-1.3);
+const isz=Math.min(IMG_W-0.2, IMG_H-1.7);
 s.addImage({data:`image/png;base64,${imgB64}`,x:IMG_X+(IMG_W-isz)/2, y:IMG_Y+0.2, w:isz, h:isz});
 
 // Tagline under image
-s.addText("Discover. Book. Earn.",{x:IMG_X,y:IMG_Y+IMG_H-1.0,w:IMG_W,h:0.35,align:"center",fontSize:15,bold:true,color:INK,fontFace:"Calibri"});
-s.addText("The shoppable feed for travel.",{x:IMG_X,y:IMG_Y+IMG_H-0.7,w:IMG_W,h:0.28,align:"center",fontSize:10,color:MUTED,fontFace:"Calibri"});
+s.addText("Discover. Book. Earn.",{x:IMG_X,y:IMG_Y+IMG_H-1.4,w:IMG_W,h:0.32,align:"center",fontSize:15,bold:true,color:INK,fontFace:"Calibri"});
+s.addText("The shoppable feed for travel.",{x:IMG_X,y:IMG_Y+IMG_H-1.1,w:IMG_W,h:0.26,align:"center",fontSize:10,color:MUTED,fontFace:"Calibri"});
+
+// Live pitch CTA pill (clickable)
+const ctaW=3.1, ctaH=0.3;
+const ctaX=IMG_X+(IMG_W-ctaW)/2, ctaY=IMG_Y+IMG_H-0.78;
+s.addShape("roundRect",{x:ctaX,y:ctaY,w:ctaW,h:ctaH,rectRadius:0.15,fill:{color:PRIMARY},line:{color:PRIMARY}});
+s.addText("▶  Try the live pitch  ·  "+LIVE_LABEL,{
+  x:ctaX,y:ctaY,w:ctaW,h:ctaH,align:"center",valign:"middle",
+  fontSize:9,bold:true,color:WHITE,fontFace:"Calibri",
+  hyperlink:{url:LIVE_URL,tooltip:"Open the live investor pitch"}
+});
 
 // Chips
 const chips=["Creators","Travellers","Suppliers"];
@@ -72,8 +84,8 @@ const chipW=0.9, chipGap=0.1;
 const totalCW = chips.length*chipW + (chips.length-1)*chipGap;
 let cx=IMG_X+(IMG_W-totalCW)/2;
 chips.forEach(t=>{
-  s.addShape("roundRect",{x:cx,y:IMG_Y+IMG_H-0.38,w:chipW,h:0.26,rectRadius:0.13,fill:{color:CARD},line:{color:CARD}});
-  s.addText(t,{x:cx,y:IMG_Y+IMG_H-0.38,w:chipW,h:0.26,align:"center",fontSize:9,bold:true,color:CYAN,fontFace:"Calibri"});
+  s.addShape("roundRect",{x:cx,y:IMG_Y+IMG_H-0.36,w:chipW,h:0.26,rectRadius:0.13,fill:{color:CARD},line:{color:CARD}});
+  s.addText(t,{x:cx,y:IMG_Y+IMG_H-0.36,w:chipW,h:0.26,align:"center",fontSize:9,bold:true,color:CYAN,fontFace:"Calibri"});
   cx+=chipW+chipGap;
 });
 
