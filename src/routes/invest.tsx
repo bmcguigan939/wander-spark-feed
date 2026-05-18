@@ -409,42 +409,48 @@ function Market({ market, y5 }: { market: ReturnType<typeof computeMarket>; y5: 
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           <Stat
-            k="TAM"
-            v={fmtGBP(market.tamGBVAll, { compact: true })}
-            sub={`UK ${fmtGBP(market.tamGBV, { compact: true })} · ONS, Eurostat`}
+            k="Global TAM"
+            v={fmtGBP(market.tamGBVGlobal, { compact: true })}
+            sub={`${market.globalTravellersM.toFixed(0)}M reachable travellers · ONS, Eurostat, UNWTO`}
           />
           <Stat
-            k="SAM"
-            v={fmtGBP(market.samGBVAll, { compact: true })}
-            sub="36% creator-influenced × 80% bookable"
+            k="Global SAM"
+            v={fmtGBP(market.samGBVGlobal, { compact: true })}
+            sub="26% creator-influenced × bookable"
           />
           <Stat
             k="Y5 SOM (GBV)"
-            v={fmtGBP(y5.gbv, { compact: true })}
-            sub={`${fmtGBP(y5.travidzNet, { compact: true })} net @ 4.65% take`}
+            v={`${fmtGBP(market.somGBVBaseY5, { compact: true })} → ${fmtGBP(market.somGBVGlobalY5, { compact: true })}`}
+            sub={`UK Base ${fmtGBP(market.somNetBaseY5, { compact: true })} net · Global Viral ${fmtGBP(market.somNetGlobalY5, { compact: true })} net`}
           />
         </div>
         <Card className="mt-6">
-          <div className="mb-3 text-xs uppercase tracking-wider text-white/50">UK SAM penetration by year</div>
-          <div className="space-y-2">
-            {computeRevenue(V6_DEFAULTS).map((r) => {
-              const pct = (r.gbv / market.samGBV) * 100;
+          <div className="mb-3 text-xs uppercase tracking-wider text-white/50">Global SAM penetration at Y5</div>
+          <div className="space-y-3">
+            {[
+              { label: "UK Base (funded plan)", gbv: market.somGBVBaseY5, color: "from-[#3B82F6] to-[#60A5FA]" },
+              { label: "Global Viral (illustrative)", gbv: market.somGBVGlobalY5, color: "from-[#ff5a8a] to-[#ff8e72]" },
+            ].map((row) => {
+              const pct = (row.gbv / market.samGBVGlobal) * 100;
               return (
-                <div key={r.year} className="flex items-center gap-3 text-xs">
-                  <div className="w-12 text-white/60">Y{r.year}</div>
+                <div key={row.label} className="flex items-center gap-3 text-xs">
+                  <div className="w-44 text-white/70">{row.label}</div>
                   <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-white/5">
                     <div
-                      className="h-full bg-gradient-to-r from-[#ff5a8a] to-[#ff8e72]"
-                      style={{ width: `${Math.min(pct * 30, 100)}%` }}
+                      className={`h-full bg-gradient-to-r ${row.color}`}
+                      style={{ width: `${Math.min(pct * 200, 100)}%` }}
                     />
                   </div>
-                  <div className="w-32 text-right font-mono text-white/80">
-                    {fmtGBP(r.gbv, { compact: true })} · {pct.toFixed(2)}%
+                  <div className="w-40 text-right font-mono text-white/80">
+                    {fmtGBP(row.gbv, { compact: true })} · {pct.toFixed(3)}%
                   </div>
                 </div>
               );
             })}
           </div>
+          <p className="mt-3 text-[11px] text-white/45">
+            Even the Global Viral case captures &lt; 1% of the global SAM at Y5 — the ceiling is the size of the opportunity, not the limit.
+          </p>
         </Card>
       </div>
     </section>
