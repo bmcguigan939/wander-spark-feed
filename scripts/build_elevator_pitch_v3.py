@@ -13,6 +13,8 @@ INK=HexColor("#F8FAFC"); MUTED=HexColor("#94A3B8"); LINE=HexColor("#243049")
 
 OUT="/mnt/documents/Travidz_Elevator_Pitch_v3.pdf"
 HERO="/tmp/elevator_hero.png"
+LIVE_URL="https://wander-spark-feed.lovable.app/invest"
+LIVE_LABEL="wander-spark-feed.lovable.app/invest"
 
 c = canvas.Canvas(OUT, pagesize=landscape(A4))
 c.setFillColor(BG); c.rect(0,0,W,H,fill=1,stroke=0)
@@ -88,8 +90,8 @@ iw,ih = img.getSize()
 # fit
 target_w = IMG_W
 target_h = target_w*ih/iw
-if target_h > IMG_H - 70:
-    target_h = IMG_H - 70
+if target_h > IMG_H - 90:
+    target_h = IMG_H - 90
     target_w = target_h*iw/ih
 ix = IMG_X + (IMG_W - target_w)/2
 iy = IMG_Y + IMG_H - target_h - 14
@@ -97,12 +99,25 @@ c.drawImage(img, ix, iy, target_w, target_h, mask='auto')
 
 # Tagline + chips under image (inside center panel)
 c.setFillColor(INK); c.setFont("Helvetica-Bold", 13)
-c.drawCentredString(IMG_X+IMG_W/2, IMG_Y+50, "Discover. Book. Earn.")
+c.drawCentredString(IMG_X+IMG_W/2, IMG_Y+66, "Discover. Book. Earn.")
 c.setFillColor(MUTED); c.setFont("Helvetica", 8.5)
-c.drawCentredString(IMG_X+IMG_W/2, IMG_Y+36, "The shoppable feed for travel.")
+c.drawCentredString(IMG_X+IMG_W/2, IMG_Y+52, "The shoppable feed for travel.")
+
+# Live pitch CTA pill (clickable)
+cta_label = "▶  Try the live pitch  ·  " + LIVE_LABEL
+cta_font = "Helvetica-Bold"; cta_size = 8.5
+cta_w = c.stringWidth(cta_label, cta_font, cta_size) + 22
+cta_h = 18
+cta_x = IMG_X + (IMG_W - cta_w)/2
+cta_y = IMG_Y + 28
+c.setFillColor(PRIMARY); c.roundRect(cta_x, cta_y, cta_w, cta_h, 9, fill=1, stroke=0)
+c.setFillColor(white); c.setFont(cta_font, cta_size)
+c.drawCentredString(IMG_X+IMG_W/2, cta_y+5, cta_label)
+c.linkURL(LIVE_URL, (cta_x, cta_y, cta_x+cta_w, cta_y+cta_h), relative=0)
+
 chips=["Creators","Travellers","Suppliers"]
 total = sum(c.stringWidth(t,"Helvetica-Bold",8)+18 for t in chips) + 8*(len(chips)-1)
-cx = IMG_X + (IMG_W - total)/2; cy = IMG_Y+10
+cx = IMG_X + (IMG_W - total)/2; cy = IMG_Y+6
 for t in chips:
     w = c.stringWidth(t,"Helvetica-Bold",8)+18
     c.setFillColor(CARD); c.roundRect(cx, cy, w, 16, 8, fill=1, stroke=0)
