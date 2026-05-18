@@ -189,7 +189,8 @@ y2 = col_card(RX, 1, RW, "Business model")
 lines=["• Take-rate 4-7%  ·  blended Y5 4.65%",
        "• Creator rev-share 30-50% of net",
        "• ~55% contribution margin at scale",
-       "• Zero paid acquisition Y1-2 (creator-led)"]
+       "• Zero paid acquisition Y1-2 (creator-led)",
+       "• EBITDA breakeven M48 · Y1 EBITDA −£1.56M · £2.5M covers peak deficit +£181k"]
 for i,ln in enumerate(lines):
     c.setFillColor(INK); c.setFont("Helvetica", 8.5)
     c.drawString(RX+18, y2+card_h-30-i*14, ln)
