@@ -451,6 +451,102 @@ function Market({ market, y5 }: { market: ReturnType<typeof computeMarket>; y5: 
   );
 }
 
+/* ───────── Global expansion ───────── */
+
+function GlobalExpansion() {
+  const regions = [
+    { name: "United Kingdom", travellers: "25M" },
+    { name: "EU-5", travellers: "150M" },
+    { name: "USA", travellers: "180M" },
+    { name: "Australia / NZ", travellers: "18M" },
+    { name: "LATAM", travellers: "110M" },
+    { name: "MENA", travellers: "70M" },
+    { name: "Africa", travellers: "90M" },
+    { name: "India", travellers: "140M" },
+    { name: "SEA", travellers: "160M" },
+    { name: "Greater China", travellers: "280M" },
+  ];
+  const compare = [
+    { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
+    { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
+    { label: "Travidz net revenue (Y5)", uk: "£16.2M", gv: "£61.6M", mult: "3.8x" },
+    { label: "Blended take-rate", uk: "4.6%", gv: "4.7%", mult: "—" },
+  ];
+  return (
+    <section className="border-b border-white/5 bg-gradient-to-b from-[#0a0612] via-[#120824] to-[#0a0612] py-20">
+      <div className="mx-auto max-w-6xl px-4">
+        <SectionLabel icon={<Globe2 className="h-3.5 w-3.5" />}>Global expansion</SectionLabel>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+          UK is the wedge. The model is global.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm text-white/65">
+          Travel video has no language barrier. The same creator loop that lights up the UK
+          compounds across every leisure-travel market on earth. Here's what Y5 looks like
+          when one breakout region lands per year — US, AUS/NZ, LATAM, MENA, SEA, India,
+          Greater China.
+        </p>
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          {regions.map((r) => (
+            <span
+              key={r.name}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/30 bg-[#7C3AED]/10 px-3 py-1.5 text-xs text-white/85"
+            >
+              <span className="font-medium">{r.name}</span>
+              <span className="text-white/50">·</span>
+              <span className="tabular-nums text-[#c4b5fd]">{r.travellers}</span>
+            </span>
+          ))}
+        </div>
+
+        <Card className="mt-8 border-[#7C3AED]/30 bg-gradient-to-br from-[#1a0f2e]/80 to-[#0f0820]/80">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold tracking-tight">Y5 side-by-side</h3>
+            <span className="rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#c4b5fd]">
+              Global Viral scenario
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wider text-white/50">
+                  <th className="py-2 font-medium">Metric</th>
+                  <th className="py-2 font-medium">UK Base (funded plan)</th>
+                  <th className="py-2 font-medium text-[#c4b5fd]">Global Viral</th>
+                  <th className="py-2 text-right font-medium">vs UK</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compare.map((r) => (
+                  <tr key={r.label} className="border-b border-white/5 last:border-0">
+                    <td className="py-3 text-white/80">{r.label}</td>
+                    <td className="py-3 tabular-nums text-white/70">{r.uk}</td>
+                    <td className="py-3 text-base font-semibold tabular-nums text-white">{r.gv}</td>
+                    <td className="py-3 text-right text-sm font-semibold tabular-nums text-[#c4b5fd]">{r.mult}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-xs text-white/50">
+            Illustrative scenario layered on the v6 model. Assumes one breakout region per
+            year and a TikTok-style creator loop. UK Base remains our funded plan and what
+            the £2.5M SAFE underwrites. Still &lt; 0.4% of the global SAM at Y5.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a
+              href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
+            >
+              <Download className="h-3.5 w-3.5" /> Financial model v2 (Global)
+            </a>
+          </div>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 /* ───────── Growth plan ───────── */
 
 function GrowthPlan() {
