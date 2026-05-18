@@ -93,13 +93,13 @@ function StickyBar() {
             {copied ? "Copied" : "Copy link"}
           </button>
           <a
-            href="/decks/Travidz_Elevator_Pitch_v3.pdf"
+            href="/decks/Travidz_Elevator_Pitch_v5.pdf"
             className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/10 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" /> PDF
           </a>
           <a
-            href="/decks/Travidz_Elevator_Pitch_v3.pptx"
+            href="/decks/Travidz_Elevator_Pitch_v5.pptx"
             className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/10 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" /> PPTX
@@ -153,7 +153,7 @@ function Hero() {
               <Play className="h-4 w-4" /> Try the product
             </a>
             <a
-              href="/decks/Travidz_Elevator_Pitch_v3.pdf"
+              href="/decks/Travidz_Elevator_Pitch_v5.pdf"
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/10"
             >
               <Download className="h-4 w-4" /> Download deck
