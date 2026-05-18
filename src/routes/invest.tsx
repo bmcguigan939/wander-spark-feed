@@ -54,7 +54,6 @@ function InvestPage() {
       <ProblemSolution />
       <HowItWorks />
       <BusinessModel />
-      <Traction />
       <Market market={market} y5={y5} />
       <GrowthPlan />
       <Team />
@@ -391,24 +390,6 @@ function BusinessModel() {
   );
 }
 
-/* ───────── Traction ───────── */
-
-function Traction() {
-  return (
-    <section className="border-b border-white/5 py-20">
-      <div className="mx-auto max-w-6xl px-4">
-        <SectionLabel icon={<Users className="h-3.5 w-3.5" />}>Traction</SectionLabel>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Demand is already pulling.</h2>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          <Stat k="Waitlist" v="3,200+" sub="organic, UK" />
-          <Stat k="Creator LOIs" v="85" sub="~4.2M aggregate followers" />
-          <Stat k="Supply partners" v="12" sub="boutique stays + tours, 3 cities" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ───────── Market ───────── */
 
 function Market({ market, y5 }: { market: ReturnType<typeof computeMarket>; y5: ReturnType<typeof computeRevenue>[number] }) {
@@ -515,16 +496,23 @@ function GrowthPlan() {
 
 function Team() {
   const team = [
-    { n: "Founder One", r: "CEO", c: "ex-Booking.com · scaled supply 0→1" },
-    { n: "Founder Two", r: "CTO", c: "ex-fintech · payments + ledger at scale" },
-    { n: "Founder Three", r: "Creator & GTM", c: "1M+ followers in travel · ran 7-fig brand deals" },
+    {
+      n: "Brendan McGuigan",
+      r: "Co-founder & CEO",
+      c: "Co-director of a 6-year construction business · operator who ships on time and on budget · lifelong traveller turning a personal obsession with travel video into a product.",
+    },
+    {
+      n: "Linda McGuigan",
+      r: "Co-founder & COO",
+      c: "Co-director of a 6-year construction business · runs ops, finance and partnerships · creator-side instinct for travel content that actually converts.",
+    },
   ];
   return (
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
         <SectionLabel icon={<Users className="h-3.5 w-3.5" />}>Team</SectionLabel>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Operators who've shipped this before.</h2>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Founders who've built and run a business together.</h2>
+        <div className="mx-auto mt-10 grid max-w-3xl gap-4 md:grid-cols-2">
           {team.map((m) => (
             <Card key={m.n}>
               <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#ff5a8a] to-[#ff8e72]" />
