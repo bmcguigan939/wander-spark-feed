@@ -155,7 +155,7 @@ function Hero() {
           </div>
           <dl className="mt-10 grid max-w-md grid-cols-3 gap-4">
             {[
-              { k: "TAM", v: "£343B" },
+              { k: "Global TAM", v: "£675B" },
               { k: "Y5 GBV", v: "£444M" },
               { k: "Take", v: "4.65%" },
             ].map((s) => (
