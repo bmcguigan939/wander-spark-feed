@@ -144,7 +144,8 @@ panel(RX,ryB,RW,cardH,"BUSINESS MODEL");
 ["• Take-rate 4-7%  ·  blended Y5 4.65%",
  "• Creator rev-share 30-50% of net",
  "• ~55% contribution margin at scale",
- "• Zero paid acquisition Y1-2 (creator-led)"].forEach((t,i)=>{
+ "• Zero paid acquisition Y1-2 (creator-led)",
+ "• Breakeven M48 · Y1 −£1.56M · +£181k cushion"].forEach((t,i)=>{
   s.addText(t,{x:RX+0.2,y:ryB+0.48+i*0.26,w:RW-0.3,h:0.26,fontSize:9.5,color:INK,fontFace:"Calibri"});
 });
 
