@@ -1,32 +1,16 @@
-# Fix: `/invest` 404 on published site
+# Add live pitch link to elevator pitch
 
-## Diagnosis
+Update both v3 artifacts to surface the in-app investor pitch URL: **https://wander-spark-feed.lovable.app/invest**
 
-The `/invest` route exists and is correctly wired:
-- `src/routes/invest.tsx` is present
-- `src/routeTree.gen.ts` registers `/invest` (lines 156, 1166–1169, etc.)
-- The page renders fine on the **preview** URL
+## Changes
 
-The 404 you're seeing is from the **published** URL (`wander-spark-feed.lovable.app/invest`). That deployment was created *before* the `/invest` route was added, so the published bundle doesn't contain it yet. TanStack route files only ship to production on republish.
+1. **`scripts/build_elevator_pitch_v3.py`** (PDF)
+   - Add a call-to-action strip in the footer / under the hero: "Experience the product → wander-spark-feed.lovable.app/invest"
+   - Make the URL a clickable link annotation (reportlab `linkURL`).
 
-## Fix
+2. **`scripts/build_elevator_pitch_v3_pptx.mjs`** (PPTX)
+   - Add the same CTA line with `hyperlink: { url: ... }` so it's clickable in PowerPoint/Keynote.
 
-Republish the project. No code changes required.
+3. Regenerate both files to `/mnt/documents/Travidz_Elevator_Pitch_v3.pdf` and `.pptx`, then visual-QA via `pdftoppm`.
 
-After republish, the share link will be:
-`https://wander-spark-feed.lovable.app/invest`
-
-## If you'd rather not republish yet
-
-You can share the preview URL in the meantime:
-`https://id-preview--144ee3b9-80e0-4ec8-883d-e0d5686cb4a1.lovable.app/invest`
-
-(Preview URLs are fine for quick VC reviews but rotate per project; the published URL is the stable one.)
-
-## Optional follow-ups (only if you want them)
-
-- Add per-VC tracking: `/invest?ref=sequoia` — already supported in the page; we'd just log views to a `pitch_views` table.
-- Add a Calendly link to the "Let's talk" CTA (currently `mailto:founders@travidz.com`).
-- Toggle `noindex` off if you want the page Google-indexable (currently hidden from search).
-
-Let me know if you want any of these before/after republishing.
+No app code changes. No new files.
