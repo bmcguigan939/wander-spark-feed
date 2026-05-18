@@ -21,6 +21,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InvestRouteImport } from './routes/invest'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -149,6 +150,11 @@ const MapRoute = MapRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestRoute = InvestRouteImport.update({
+  id: '/invest',
+  path: '/invest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateRoute = CreateRouteImport.update({
@@ -509,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -591,6 +598,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -673,6 +681,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -758,6 +767,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/collections'
     | '/create'
+    | '/invest'
     | '/login'
     | '/map'
     | '/notifications'
@@ -840,6 +850,7 @@ export interface FileRouteTypes {
     | '/'
     | '/collections'
     | '/create'
+    | '/invest'
     | '/login'
     | '/map'
     | '/notifications'
@@ -921,6 +932,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/collections'
     | '/create'
+    | '/invest'
     | '/login'
     | '/map'
     | '/notifications'
@@ -1005,6 +1017,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
+  InvestRoute: typeof InvestRoute
   LoginRoute: typeof LoginRoute
   MapRoute: typeof MapRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -1148,6 +1161,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invest': {
+      id: '/invest'
+      path: '/invest'
+      fullPath: '/invest'
+      preLoaderRoute: typeof InvestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create': {
@@ -1738,6 +1758,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
+  InvestRoute: InvestRoute,
   LoginRoute: LoginRoute,
   MapRoute: MapRoute,
   NotificationsRoute: NotificationsRoute,
