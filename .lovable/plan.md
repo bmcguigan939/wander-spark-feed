@@ -1,52 +1,63 @@
 ## Goal
 
-Bring the **TAM / SAM / SOM** numbers on `/invest` and in `src/lib/investor-model/` in line with the **v2 global financial model**, so the Market section reflects the same world that the v2 workbook does (UK + EU-5 + USA + AUS/NZ + LATAM + MENA + Africa + India + SEA + Greater China).
+Update `Travidz_Market_Research_TAM_SOM_v8-2.xlsx` so the **TAM / SAM / SOM** build reflects the new global v2 financial model (UK + EU-5 + USA + AUS/NZ + LATAM + MENA + Africa + India + SEA + Greater China), and reconciles cleanly to `Travidz_Financial_Model_v2_Global.xlsx`.
 
-## What changes
+Save as **`Travidz_Market_Research_TAM_SOM_v9_Global.xlsx`** in `/mnt/documents/` and copy to `public/decks/` so it's downloadable from the live `/invest` page.
 
-### 1. Market constants in `src/lib/investor-model/assumptions.ts`
+## Source of truth
 
-Add a global market layer alongside the existing UK base, derived from the v2 workbook's `regions` sheet:
+Use the same regions block already in the v2 financial model (and now mirrored in `src/lib/investor-model/assumptions.ts` as `GLOBAL_REGIONS`):
 
-| Lever | Today (UK + EU-5) | After |
-|---|---|---|
-| Reachable travellers (global) | — | **1.22B** (sum of regions sheet: UK 25M + EU-5 150M + USA 180M + AUS/NZ 18M + LATAM 110M + MENA 70M + Africa 90M + India 140M + SEA 160M + Greater China 280M) |
-| Blended ABV (global) | £490 (UK) | **~£380** (region-weighted from workbook) |
-| Attach rate | 1.0 | **1.5 bookings/yr** (matches Global Viral column) |
-| SAM % | 28.8% | **26%** (matches Global Viral) |
-| **Global TAM (GBV)** | £343B (UK + EU-5) | **~£700B** (1.22B × 1.5 × £380) |
-| **Global SAM (GBV)** | £99B | **~£180B** |
+| Region | Travellers (M) | Blended ABV (£) |
+|---|---:|---:|
+| UK | 25 | 480 |
+| EU-5 | 150 | 460 |
+| USA | 180 | 540 |
+| AUS / NZ | 18 | 580 |
+| LATAM (Brazil-led) | 110 | 280 |
+| MENA | 70 | 380 |
+| Africa | 90 | 220 |
+| India | 140 | 200 |
+| SEA | 160 | 240 |
+| Greater China | 280 | 420 |
+| **Total** | **1,223 M** | — |
 
-Add a new field `regionTravellersM` (per region) so the Market and Global Expansion sections share one source of truth.
+Attach rate 1.5 bookings/yr, SAM share 26% (creator-influenced × bookable, global blend). These match the Global Viral column of the financial model.
 
-### 2. Update `computeMarket` in `src/lib/investor-model/compute.ts`
+## Edits per sheet
 
-Extend the returned `MarketSizing` with:
+**1. Cover** — Update geography line to "UK Y1-Y2 · EU-5 Y3 · Global Viral upside Y3-Y5"; bump version banner to v9 and reconcile-to to `Travidz_Financial_Model_v2_Global.xlsx`.
 
-- `tamGBVGlobal` — global TAM (1.22B travellers × attach × blended ABV)
-- `samGBVGlobal` — global SAM
-- `somGBVBaseY5` — UK Base Y5 (`~£350M`, unchanged)
-- `somGBVGlobalY5` — Global Viral Y5 (`~£1.32B`, from workbook)
+**3. TAM** — Keep the UK and EU-5 blocks intact. Append a new **"Global expansion layer"** block listing the 8 additional regions with `Travellers / Attach / ABV / GBV` columns and a subtotal. Add two new conclusion lines: `TAM (Global)` and `Global commission pool (8%)`. UK and UK+EU-5 totals remain so the existing pitch line stays valid.
 
-The existing UK-only fields stay so nothing else breaks.
+**4. SAM** — Append rows for the 8 additional regions in the per-country table (Travellers M, smartphone %, creator-discovery share — using region-specific defaults sourced from GWI / Statista). Add `SAM (Global)` row using 26% blended share × bookable, and a `Global commission pool` line.
 
-### 3. `/invest` page — `src/routes/invest.tsx`
+**5. SOM** — Add a **4th scenario column "Global Viral"** alongside Bear / Base / Bull with the v2 financial-model anchors:
+- Active creators Y1-Y5: 1,500 / 9,000 / 32,000 / 70,000 / 120,000
+- GBV per active / yr: £11,020 (back-solved from £1.32B / 120k Y5, blended down across regions)
+- Take rate Y5: 4.65% (unchanged)
+- Y5 GBV £1.32B, Y5 net £61.6M
+Add a `Global Viral` row to the "Scenario comparison — Y5 Travidz net revenue" block.
 
-- **Hero stat strip** (line 156-167): swap `{ TAM: "£343B" }` for `{ TAM: "£700B" }` global, keep Y5 GBV `£444M` (UK Base, what the SAFE underwrites), keep Take `4.65%`.
-- **Market section** (line 410-426): make the three KPI cards explicit about scope:
-  - **Global TAM:** `~£700B` (sub: "1.22B leisure travellers, ONS / Eurostat / UNWTO")
-  - **Global SAM:** `~£180B` (sub: "26% creator-influenced × bookable")
-  - **Y5 SOM:** dual line — `£350M UK Base · £1.32B Global Viral` (sub: net £16M / £62M)
-- **SAM penetration bars** (line 428-447): switch the bars to **Global SAM penetration** with both UK Base and Global Viral tracks, so investors see we're <0.05% of global SAM even in the bull case.
-- **Global expansion section** (line 454-548): keep as-is — already correct from the v2 model — just re-link to the same workbook (already done).
+**2. Exec Summary** — Add a Global TAM column to the headline market-size table (Global ~£675B, SAM ~£175B, commission pool ~£54B). Add a "Y5 Global Viral upside" row to the bottom-up build mirroring sheet 5. Refresh the "Top 5 pitch-ready stats" so two stats reference the global story (`£675B global TAM`, `Y5 Global Viral GBV £1.32B = <1% of global SAM`).
 
-### 4. Out of scope
+**10. Sensitivity** — Add a second tornado row labelled "Global Viral Y5 net (£62M base)" so investors see both UK Base and Global Viral sensitivity ranges.
 
-- No changes to the workbook itself (already correct after last turn).
-- No changes to the runtime creator funnel (`creatorsActiveByYear`, `gbvPerActiveCreator`) — Y5 numbers stay the same.
-- No PDF / PPTX deck regeneration.
-- No changes to other surfaces (admin, calculator).
+**12. Rev-Share Scenarios** — Update the Y5 GBV reference from `£444M` to two columns: UK Base £444M and Global Viral £1,322M, so the rev-share lever can be tested against both worlds.
 
-## Outcome
+**13. Reconciliation** — Add a second reconciliation block: "Global Viral vs Travidz_Financial_Model_v2_Global.xlsx" with the same creator / GBV / net / take-rate rows, Y1-Y5 anchors from the v2 workbook, and PASS/REVIEW status formulas.
 
-`/invest` Market section tells the truth the v2 workbook now models: **£700B global TAM, £180B SAM, UK SOM £350M Y5, Global Viral SOM £1.32B Y5**. UK Base remains the funded plan; global is the optionality narrative.
+**11. Sources** — Append `[S26] UNWTO World Tourism Barometer 2024`, `[S27] Statista Asia-Pacific outbound 2024`, `[S28] WTTC Regional EIR 2024` for the new regions.
+
+## QA
+
+- Run `recalculate_formulas.py`; assert zero `#VALUE / #REF / #DIV / #NAME` across all 13 sheets.
+- Verify reconciliation sheet ends in PASS for both UK Base and Global Viral.
+- Convert to PDF and visually inspect every sheet — confirm the three conclusion numbers match the live `/invest` page: `Global TAM ~£675B`, `Global SAM ~£175B`, `Y5 SOM £350M → £1.32B`.
+- Save to `/mnt/documents/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx` and copy to `public/decks/`.
+
+## Out of scope
+
+- No changes to the financial model itself (already correct).
+- No changes to the `/invest` page wiring (already pointing at the v2 model and quoting the same global numbers).
+- No PDF/PPTX deck regeneration.
