@@ -145,7 +145,7 @@ panel(RX,ryB,RW,cardH,"BUSINESS MODEL");
  "• Creator rev-share 30-50% of net",
  "• ~55% contribution margin at scale",
  "• Zero paid acquisition Y1-2 (creator-led)",
- "• EBITDA breakeven M48 · Y1 EBITDA −£1.56M · £2.5M covers peak deficit +£181k"].forEach((t,i)=>{
+ "• EBITDA breakeven M48 · Y1 EBITDA −£1.56M · +£181k cash cushion"].forEach((t,i)=>{
   s.addText(t,{x:RX+0.2,y:ryB+0.48+i*0.26,w:RW-0.3,h:0.26,fontSize:9.5,color:INK,fontFace:"Calibri"});
 });
 
