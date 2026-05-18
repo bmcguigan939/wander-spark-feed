@@ -55,6 +55,7 @@ function InvestPage() {
       <HowItWorks />
       <BusinessModel />
       <Market market={market} y5={y5} />
+      <GlobalExpansion />
       <GrowthPlan />
       <Team />
       <TheAsk />
@@ -102,6 +103,12 @@ function StickyBar() {
             className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/10 md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" /> PPTX
+          </a>
+          <a
+            href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+            className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
+          >
+            <Download className="h-3.5 w-3.5" /> Model v2
           </a>
         </div>
       </div>
