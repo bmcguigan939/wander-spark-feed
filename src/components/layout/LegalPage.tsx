@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -20,14 +20,26 @@ export function LegalPage({
   updated: string;
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.history.back();
+    } else {
+      router.navigate({ to: "/" });
+    }
+  };
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="border-b border-border/40">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 py-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back
-          </Link>
+          </button>
           <span className="ml-auto font-display text-lg font-semibold">Travidz</span>
         </div>
       </header>
