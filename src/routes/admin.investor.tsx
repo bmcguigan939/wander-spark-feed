@@ -111,7 +111,7 @@ function HeadlineStrip({ y5, market }: { y5: ReturnType<typeof computeRevenue>[n
       <Stat label="TAM (UK only)" value={fmtGBP(market.tamGBV, { compact: true })} hint={`UK + EU-5: ${fmtGBP(market.tamGBVAll, { compact: true })}`} />
       <Stat label="Year 5 GBV" value={fmtGBP(y5.gbv, { compact: true })} hint={`${fmtPct(y5.gbv / market.samGBV, 2)} of UK SAM`} />
       <Stat label="Year 5 Travidz net" value={fmtGBP(y5.travidzNet, { compact: true })} hint={`take-rate ${fmtPct(y5.blendedTakeRatePct, 2)}`} />
-      <Stat label="Year 5 creator payout" value={fmtGBP(y5.creatorPayout, { compact: true })} hint={`avg share ${fmtPct(y5.blendedCreatorSharePct, 0)} of 8%`} />
+      <Stat label="Year 5 creator payout" value={fmtGBP(y5.creatorPayout, { compact: true })} hint={`avg share ${fmtPct(y5.blendedCreatorSharePct, 0)} of net pool`} />
     </div>
   );
 }
@@ -208,7 +208,7 @@ function OverviewPane({
           <tbody className="divide-y divide-border">
             <Row label="Active creators" values={cohorts.map((c) => fmtNum(c.activeCreators))} />
             <Row label="GBV" values={revenue.map((r) => fmtGBP(r.gbv, { compact: true }))} />
-            <Row label="Gross commission (8%)" values={revenue.map((r) => fmtGBP(r.grossCommission, { compact: true }))} />
+            <Row label="Gross commission (11%)" values={revenue.map((r) => fmtGBP(r.grossCommission, { compact: true }))} />
             <Row label="Creator payout" values={revenue.map((r) => fmtGBP(r.creatorPayout, { compact: true }))} />
             <Row label="Travidz net" values={revenue.map((r) => fmtGBP(r.travidzNet, { compact: true }))} strong />
             <Row label="Blended take-rate" values={revenue.map((r) => fmtPct(r.blendedTakeRatePct, 2))} />
@@ -426,7 +426,7 @@ function RevenuePane({
         <PctSlider label="Gross commission (charged to business)" value={assumptions.grossCommissionPct} max={0.2} step={0.005}
           onChange={(v) => update({ grossCommissionPct: v })} />
         <div className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Creator share of the 8% by tier</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Creator share of the net pool by tier</div>
           {TIER_ORDER.map((t) => (
             <PctSlider
               key={t}
@@ -468,7 +468,7 @@ function RevenuePane({
             <KV k="Creator payout" v={fmtGBP(r.creatorPayout, { compact: true })} />
             <KV k="Travidz net" v={fmtGBP(r.travidzNet, { compact: true })} strong />
             <KV k="Blended take-rate" v={fmtPct(r.blendedTakeRatePct, 2)} />
-            <KV k="Avg creator share of 8%" v={fmtPct(r.blendedCreatorSharePct, 0)} />
+            <KV k="Avg creator share of net pool" v={fmtPct(r.blendedCreatorSharePct, 0)} />
           </>
         ); })()}
       </Card>
