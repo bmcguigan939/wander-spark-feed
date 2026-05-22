@@ -53,6 +53,7 @@ import {
 } from "@/lib/business-suggestions.functions";
 import { COMMISSION } from "@/lib/commission";
 import { supabase } from "@/integrations/supabase/client";
+import { updateVideoCrossLinks, CROSS_LINK_PLATFORMS, type CrossLinkPlatform } from "@/lib/cross-links.functions";
 
 export const Route = createFileRoute("/studio/videos/$id")({
   head: () => ({ meta: [{ title: "Video insights — Travidz Studio" }] }),
@@ -219,6 +220,8 @@ function InsightsPage() {
         <span className="inline-flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-foreground" /> Likes</span>
         <span className="inline-flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-muted-foreground" /> Saves</span>
       </div>
+
+      <CrossLinksPanel videoId={id} initial={v.cross_links ?? []} />
 
       <div className="mt-8 flex items-center justify-between">
         <h3 className="font-display text-base font-semibold">Businesses featured</h3>
