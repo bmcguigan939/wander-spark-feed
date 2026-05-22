@@ -42,6 +42,8 @@ import {
   type StudioVideo,
 } from "@/lib/studio.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { getPlatformStyle } from "@/lib/platform-style";
+import { Instagram, Youtube, Facebook, Twitter, Music2, Video as VideoIcon } from "lucide-react";
 
 type Filter = "all" | "live" | "scheduled" | "draft" | "processing";
 
@@ -185,7 +187,7 @@ function VideosPage() {
           {videos.map((v) => (
             <li key={v.id} className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-3">
               <Link to="/studio/videos/$id" params={{ id: v.id }} className="block h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
-                {v.thumbnail_url ? <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" /> : null}
+                <Thumb thumbnail={v.thumbnail_url} platform={v.source_platform} />
               </Link>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-2">
