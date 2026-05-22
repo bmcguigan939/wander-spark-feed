@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { seedDemoContent, resetDemoContent } from "@/lib/admin-seed.functions";
-import { syncTikTokOfficial } from "@/lib/social.functions";
-import { Sparkles, Trash2, RefreshCw } from "lucide-react";
+import { syncTikTokOfficial, repairBlankImportedThumbnails } from "@/lib/social.functions";
+import { Sparkles, Trash2, RefreshCw, ImageOff } from "lucide-react";
 
 export const Route = createFileRoute("/admin/seed")({
   head: () => ({ meta: [{ title: "Seed demo content — Admin" }] }),
@@ -17,6 +17,7 @@ function SeedPage() {
   const seedFn = useServerFn(seedDemoContent);
   const resetFn = useServerFn(resetDemoContent);
   const syncTikTokFn = useServerFn(syncTikTokOfficial);
+  const repairThumbsFn = useServerFn(repairBlankImportedThumbnails);
   const [result, setResult] = useState<any>(null);
 
   const seed = useMutation({
@@ -36,6 +37,12 @@ function SeedPage() {
     mutationFn: () => syncTikTokFn({ data: undefined as any }),
     onSuccess: (r: any) => toast.success(`Synced ${r?.synced ?? 0} of ${r?.scanned ?? 0} TikToks`),
     onError: (e: any) => toast.error(e?.message ?? "TikTok sync failed"),
+  });
+  const repairThumbs = useMutation({
+    mutationFn: () => repairThumbsFn({ data: undefined as any }),
+    onSuccess: (r: any) =>
+      toast.success(`Repaired ${r?.repaired ?? 0} of ${r?.attempted ?? 0} blank thumbnails`),
+    onError: (e: any) => toast.error(e?.message ?? "Repair failed"),
   });
 
   return (
@@ -63,6 +70,17 @@ function SeedPage() {
         <Button onClick={() => syncTikTok.mutate()} disabled={syncTikTok.isPending} variant="secondary">
           <RefreshCw className={`h-4 w-4 mr-1 ${syncTikTok.isPending ? "animate-spin" : ""}`} />
           {syncTikTok.isPending ? "Syncing…" : "Sync official TikTok now"}
+        </Button>
+      </div>
+      <div className="rounded-xl border bg-card p-4">
+        <div className="text-sm font-semibold mb-1">Repair blank imported thumbnails</div>
+        <p className="text-xs text-muted-foreground mb-2">
+          Re-runs preview against every link-card video that imported with an empty thumbnail
+          (typically Instagram/Facebook posts), and persists whatever the reader proxy can recover.
+        </p>
+        <Button onClick={() => repairThumbs.mutate()} disabled={repairThumbs.isPending} variant="secondary">
+          <ImageOff className={`h-4 w-4 mr-1 ${repairThumbs.isPending ? "animate-spin" : ""}`} />
+          {repairThumbs.isPending ? "Repairing…" : "Repair blank thumbnails"}
         </Button>
       </div>
       {result?.users && (
