@@ -40,8 +40,8 @@ export type CreatorSplitInput = {
 
 export type CreatorSplit = {
   tier: CreatorTier;
-  creatorPct: number; // share of the 8% taken by the creator
-  platformPct: number; // share of the 8% taken by Travidz
+  creatorPct: number; // share of the net pool taken by the creator
+  platformPct: number; // share of the net pool taken by Travidz
 };
 
 function monthsBetween(a: Date, b: Date): number {
