@@ -40,7 +40,7 @@ function CalculatorPage() {
   const [clicks, setClicks] = useState(2000);
   const [conversion, setConversion] = useState(3); // %
   const [aov, setAov] = useState(120); // $
-  const [commission, setCommission] = useState(15); // %
+  const [commission, setCommission] = useState(11); // % — Travidz flat commission (v6 model)
   const [creators, setCreators] = useState(5);
 
   const calc = useMemo(() => {
@@ -100,14 +100,14 @@ function CalculatorPage() {
           <SliderRow label="Monthly clicks" value={clicks} setValue={setClicks} min={0} max={50000} step={100} suffix="" />
           <SliderRow label="Conversion rate" value={conversion} setValue={setConversion} min={0} max={20} step={0.5} suffix="%" />
           <SliderRow label="Average order value" value={aov} setValue={setAov} min={0} max={2000} step={10} prefix="$" />
-          <SliderRow label="Creator commission" value={commission} setValue={setCommission} min={0} max={50} step={1} suffix="%" />
+          <SliderRow label="Travidz commission" value={commission} setValue={setCommission} min={0} max={50} step={1} suffix="%" />
           <SliderRow label="Creators promoting" value={creators} setValue={setCreators} min={1} max={50} step={1} />
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <Stat icon={<Users className="h-3.5 w-3.5" />} label="Bookings / mo" value={fmt(calc.conversions)} />
           <Stat icon={<DollarSign className="h-3.5 w-3.5" />} label="Gross revenue" value={money(calc.revenue)} />
-          <Stat icon={<TrendingUp className="h-3.5 w-3.5" />} label="Creator payout" value={money(calc.creatorPayout)} accent />
+          <Stat icon={<TrendingUp className="h-3.5 w-3.5" />} label="Travidz commission" value={money(calc.creatorPayout)} accent />
           <Stat icon={<DollarSign className="h-3.5 w-3.5" />} label="Net to you" value={money(calc.netToBusiness)} />
         </div>
 
