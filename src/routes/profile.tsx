@@ -433,6 +433,48 @@ function ProfilePage() {
             {bulkResult && (
               <div className="mt-3 space-y-1 text-[11px]">
                 <div className="font-semibold">Imported: {bulkResult.imported}</div>
+                {bulkResult.items && bulkResult.items.some((i) => !i.hasThumbnail) && (
+                  <div className="mt-2 space-y-2 rounded-xl border border-border bg-card p-2">
+                    <div className="text-[11px] text-muted-foreground">
+                      We couldn't fetch a thumbnail for these. Paste an image URL to set one:
+                    </div>
+                    {bulkResult.items.filter((i) => !i.hasThumbnail).map((i) => (
+                      <div key={i.videoId} className="space-y-1">
+                        <div className="truncate text-[10px] text-muted-foreground">{i.url}</div>
+                        {thumbSaved[i.videoId] ? (
+                          <div className="text-[11px] text-primary">✓ Thumbnail saved</div>
+                        ) : (
+                          <div className="flex gap-1.5">
+                            <input
+                              type="url"
+                              value={thumbDrafts[i.videoId] ?? ""}
+                              onChange={(e) =>
+                                setThumbDrafts((d) => ({ ...d, [i.videoId]: e.target.value }))
+                              }
+                              placeholder="https://…/image.jpg"
+                              className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-[11px] outline-none focus:border-primary"
+                            />
+                            <button
+                              type="button"
+                              disabled={
+                                setThumbM.isPending || !(thumbDrafts[i.videoId] ?? "").trim()
+                              }
+                              onClick={() =>
+                                setThumbM.mutate({
+                                  videoId: i.videoId,
+                                  thumbnailUrl: (thumbDrafts[i.videoId] ?? "").trim(),
+                                })
+                              }
+                              className="rounded-lg bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {bulkResult.skipped.length > 0 && (
                   <ul className="space-y-0.5 text-muted-foreground">
                     {bulkResult.skipped.map((s) => (
