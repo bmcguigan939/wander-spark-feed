@@ -131,7 +131,7 @@ function Hero() {
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-white/70">
-            <Sparkles className="h-3.5 w-3.5 text-[#ffb38a]" /> Seed · £2.5M SAFE · Open
+            <Sparkles className="h-3.5 w-3.5 text-[#ffb38a]" /> Seed · £2.0M SAFE · Open
           </div>
           <h1 className="text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl">
             Travel discovery has moved to creators.
@@ -163,7 +163,7 @@ function Hero() {
             {[
               { k: "Global TAM", v: "£675B" },
               { k: "Y5 GBV", v: "£350M → £1.32B" },
-              { k: "Take", v: "4.65%" },
+              { k: "Take", v: "4.68%" },
             ].map((s) => (
               <div key={s.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <dt className="text-[10px] uppercase tracking-wider text-white/50">{s.k}</dt>
