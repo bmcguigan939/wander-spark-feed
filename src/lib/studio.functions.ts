@@ -164,7 +164,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     const { data: v, error } = await supabaseAdmin
       .from("videos")
-      .select("id,title,thumbnail_url,mux_playback_id,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
+      .select("id,title,thumbnail_url,mux_playback_id,source_platform,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
       .eq("id", data.videoId)
       .eq("creator_id", context.userId)
       .maybeSingle();
