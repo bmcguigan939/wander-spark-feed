@@ -246,6 +246,16 @@ async function previewByOgTags(
       thumbnail = og("og:image");
     }
   } catch {}
+  // Instagram/Facebook serve a login wall to server-side fetches, so the
+  // direct og:image scrape usually comes back empty. Fall back to a public
+  // reader proxy (r.jina.ai) which renders the page server-side and returns
+  // markdown we can mine for the post image + first line of text.
+  if ((platform === "instagram" || platform === "facebook") && !thumbnail) {
+    const viaReader = await previewViaReader(url);
+    if (viaReader.thumbnail) thumbnail = viaReader.thumbnail;
+    if (!title && viaReader.title) title = viaReader.title;
+    if (!description && viaReader.description) description = viaReader.description;
+  }
   return {
     platform,
     sourceId,
@@ -256,6 +266,48 @@ async function previewByOgTags(
     durationSec: null,
     authorName: null,
   };
+}
+
+/**
+ * Public reader proxy fallback. r.jina.ai renders the target URL server-side
+ * and returns clean markdown — useful for sites that gate raw HTML behind a
+ * login wall (Instagram, Facebook). No API key required for low volume.
+ */
+async function previewViaReader(
+  url: string,
+): Promise<{ title: string | null; description: string | null; thumbnail: string | null }> {
+  try {
+    const proxied = `https://r.jina.ai/${url}`;
+    const res = await fetch(proxied, {
+      headers: {
+        accept: "text/markdown",
+        "user-agent": "Mozilla/5.0 (compatible; TravidzBot/1.0)",
+      },
+    });
+    if (!res.ok) return { title: null, description: null, thumbnail: null };
+    const md = await res.text();
+    // First markdown image: ![alt](url)
+    const imgMatch = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/.exec(md);
+    const thumbnail = imgMatch?.[1] ?? null;
+    // Title: prefer the "Title:" header r.jina.ai emits, else first non-empty
+    // non-image markdown line.
+    let title: string | null = null;
+    const titleHeader = /^Title:\s*(.+)$/m.exec(md);
+    if (titleHeader) title = titleHeader[1].trim();
+    if (!title) {
+      const firstLine = md
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l && !l.startsWith("!") && !l.startsWith("URL Source") && !l.startsWith("Markdown Content"));
+      if (firstLine) title = firstLine.replace(/^#+\s*/, "").slice(0, 160);
+    }
+    // Description: a Description: header if present, else null.
+    const descHeader = /^Description:\s*(.+)$/m.exec(md);
+    const description = descHeader ? descHeader[1].trim().slice(0, 500) : null;
+    return { title, description, thumbnail };
+  } catch {
+    return { title: null, description: null, thumbnail: null };
+  }
 }
 
 export const previewExternalVideo = createServerFn({ method: "POST" })
@@ -434,7 +486,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
     const { userId } = context;
     await ensureCreatorRole(userId);
 
-    const imported: { url: string; videoId: string }[] = [];
+    const imported: { url: string; videoId: string; hasThumbnail: boolean }[] = [];
     const skipped: { url: string; reason: string }[] = [];
     const failed: { url: string; error: string }[] = [];
 
@@ -457,7 +509,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
         }
         const res = await insertExternalVideoRow({ creatorId: userId, preview });
         if (res.skipped) skipped.push({ url, reason: "Already imported" });
-        else imported.push({ url, videoId: res.videoId });
+        else imported.push({ url, videoId: res.videoId, hasThumbnail: !!preview.thumbnail });
       } catch (e: any) {
         failed.push({ url, error: e?.message ?? "Import failed" });
       }
@@ -470,6 +522,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
       skipped,
       failed,
       ids: imported.map((i) => i.videoId),
+      items: imported,
     };
   });
 
@@ -677,4 +730,91 @@ export const syncTikTokOfficial = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!adminRow) throw new Error("Admin only");
     return syncTikTokOfficialAdmin();
+  });
+
+// ---------- Imported-video thumbnail repair ----------
+
+export const setImportedThumbnail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        videoId: z.string().uuid(),
+        thumbnailUrl: z.string().url().max(500),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: row } = await supabaseAdmin
+      .from("videos")
+      .select("id, creator_id")
+      .eq("id", data.videoId)
+      .maybeSingle();
+    if (!row) throw new Error("Video not found");
+    if ((row as any).creator_id !== userId) throw new Error("Not your video");
+    const { error } = await (supabaseAdmin.from("videos") as any)
+      .update({ thumbnail_url: data.thumbnailUrl })
+      .eq("id", data.videoId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Admin-only: re-run preview against the stored source_url for every
+ * link-card video whose thumbnail is still empty, and persist any new
+ * thumbnail/title we can recover. Idempotent.
+ */
+export const repairBlankImportedThumbnails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: adminRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!adminRow) throw new Error("Admin only");
+
+    const { data: rows } = await supabaseAdmin
+      .from("videos")
+      .select("id, source_url, source_platform, source_video_id, title")
+      .eq("embed_mode", "link_card")
+      .is("thumbnail_url", null)
+      .limit(50);
+
+    let repaired = 0;
+    let attempted = 0;
+    for (const r of (rows ?? []) as any[]) {
+      if (!r.source_url) continue;
+      attempted++;
+      try {
+        const det = detectPlatform(r.source_url);
+        if (!det) continue;
+        let preview: PreviewResult;
+        if (det.platform === "youtube") {
+          preview = await previewYouTube(det.sourceId, r.source_url);
+        } else if (det.platform === "tiktok") {
+          preview = await previewTikTok(r.source_url, det.sourceId);
+        } else {
+          preview = await previewByOgTags(r.source_url, det.platform, det.sourceId);
+        }
+        const patch: Record<string, any> = {};
+        if (preview.thumbnail) patch.thumbnail_url = preview.thumbnail;
+        // Only overwrite an obviously placeholder title (e.g. "instagram post").
+        if (
+          preview.title &&
+          (r.title === `${det.platform} post` || !r.title?.trim())
+        ) {
+          patch.title = preview.title.slice(0, 160);
+        }
+        if (Object.keys(patch).length) {
+          await (supabaseAdmin.from("videos") as any).update(patch).eq("id", r.id);
+          if (patch.thumbnail_url) repaired++;
+        }
+      } catch (e) {
+        console.error("repair thumbnail failed", r.id, e);
+      }
+    }
+    return { repaired, attempted, scanned: rows?.length ?? 0 };
   });

@@ -10,7 +10,7 @@ import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, S
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
-import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk } from "@/lib/social.functions";
+import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -33,6 +33,7 @@ function ProfilePage() {
   const syncYtFn = useServerFn(syncYouTubeForCreator);
   const syncTikTokFn = useServerFn(syncTikTokOfficial);
   const bulkImportFn = useServerFn(importExternalVideosBulk);
+  const setThumbFn = useServerFn(setImportedThumbnail);
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
@@ -69,7 +70,20 @@ function ProfilePage() {
     imported: number;
     skipped: { url: string; reason: string }[];
     failed: { url: string; error: string }[];
+    items?: { url: string; videoId: string; hasThumbnail: boolean }[];
   } | null>(null);
+  const [thumbDrafts, setThumbDrafts] = useState<Record<string, string>>({});
+  const [thumbSaved, setThumbSaved] = useState<Record<string, boolean>>({});
+  const setThumbM = useMutation({
+    mutationFn: (args: { videoId: string; thumbnailUrl: string }) =>
+      setThumbFn({ data: args }),
+    onSuccess: (_r, vars) => {
+      setThumbSaved((s) => ({ ...s, [vars.videoId]: true }));
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast("Thumbnail saved");
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't save thumbnail"),
+  });
 
   const socialsQ = useQuery({
     queryKey: ["my-socials"],
@@ -419,6 +433,48 @@ function ProfilePage() {
             {bulkResult && (
               <div className="mt-3 space-y-1 text-[11px]">
                 <div className="font-semibold">Imported: {bulkResult.imported}</div>
+                {bulkResult.items && bulkResult.items.some((i) => !i.hasThumbnail) && (
+                  <div className="mt-2 space-y-2 rounded-xl border border-border bg-card p-2">
+                    <div className="text-[11px] text-muted-foreground">
+                      We couldn't fetch a thumbnail for these. Paste an image URL to set one:
+                    </div>
+                    {bulkResult.items.filter((i) => !i.hasThumbnail).map((i) => (
+                      <div key={i.videoId} className="space-y-1">
+                        <div className="truncate text-[10px] text-muted-foreground">{i.url}</div>
+                        {thumbSaved[i.videoId] ? (
+                          <div className="text-[11px] text-primary">✓ Thumbnail saved</div>
+                        ) : (
+                          <div className="flex gap-1.5">
+                            <input
+                              type="url"
+                              value={thumbDrafts[i.videoId] ?? ""}
+                              onChange={(e) =>
+                                setThumbDrafts((d) => ({ ...d, [i.videoId]: e.target.value }))
+                              }
+                              placeholder="https://…/image.jpg"
+                              className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-[11px] outline-none focus:border-primary"
+                            />
+                            <button
+                              type="button"
+                              disabled={
+                                setThumbM.isPending || !(thumbDrafts[i.videoId] ?? "").trim()
+                              }
+                              onClick={() =>
+                                setThumbM.mutate({
+                                  videoId: i.videoId,
+                                  thumbnailUrl: (thumbDrafts[i.videoId] ?? "").trim(),
+                                })
+                              }
+                              className="rounded-lg bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {bulkResult.skipped.length > 0 && (
                   <ul className="space-y-0.5 text-muted-foreground">
                     {bulkResult.skipped.map((s) => (
