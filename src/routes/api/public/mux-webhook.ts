@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runAutoTag } from "@/lib/ai.functions";
 import { moderateVideo } from "@/lib/moderation.functions";
+import { autoTrustOnActivity } from "@/lib/verification.functions";
 
 export const Route = createFileRoute("/api/public/mux-webhook")({
   server: {
@@ -61,6 +62,16 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
           if (row?.id) {
             try { await runAutoTag(row.id); } catch (e) { console.error("[mux-webhook] auto-tag failed", e); }
             try { await moderateVideo(row.id); } catch (e) { console.error("[mux-webhook] moderation failed", e); }
+            try {
+              const { data: v } = await supabaseAdmin
+                .from("videos")
+                .select("creator_id")
+                .eq("id", row.id)
+                .maybeSingle();
+              if (v?.creator_id) await autoTrustOnActivity(v.creator_id);
+            } catch (e) {
+              console.error("[mux-webhook] auto-trust failed", e);
+            }
           }
         } else if (event.type === "video.asset.errored" || event.type === "video.upload.errored") {
           const uploadId = event.data?.upload_id as string | undefined;
