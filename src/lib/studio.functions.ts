@@ -19,6 +19,7 @@ export type StudioVideo = {
   status: string;
   thumbnail_url: string | null;
   mux_playback_id: string | null;
+  source_platform: string | null;
   is_draft: boolean;
   is_hidden: boolean;
   scheduled_at: string | null;
@@ -51,7 +52,7 @@ export const listMyVideos = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     let q = supabaseAdmin
       .from("videos")
-      .select("id,title,status,thumbnail_url,mux_playback_id,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count")
+      .select("id,title,status,thumbnail_url,mux_playback_id,source_platform,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count")
       .eq("creator_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(200);
