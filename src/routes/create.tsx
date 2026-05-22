@@ -315,6 +315,7 @@ function ImportFlow() {
 
   const [url, setUrl] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [customThumb, setCustomThumb] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState<keyof typeof PLATFORM_META | null>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const pasteCardRef = useRef<HTMLDivElement>(null);
@@ -342,7 +343,7 @@ function ImportFlow() {
       url: preview!.sourceUrl,
       title,
       description: description || undefined,
-      thumbnail: preview!.thumbnail ?? undefined,
+      thumbnail: (customThumb.trim() || preview!.thumbnail) ?? undefined,
       destination: destination || undefined,
       country: country || undefined,
       city: city || undefined,
