@@ -23,6 +23,8 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { Instagram, Youtube, Facebook, Twitter, Music2, Video as VideoIcon } from "lucide-react";
+import { getPlatformStyle } from "@/lib/platform-style";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import {
   AlertDialog,
@@ -170,7 +172,7 @@ function InsightsPage() {
 
       <div className="mt-4 flex gap-3 rounded-2xl border border-border/60 bg-card p-3">
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
-          {v.thumbnail_url ? <img src={v.thumbnail_url} alt="" className="h-full w-full object-cover" /> : null}
+          <DetailThumb thumbnail={v.thumbnail_url} platform={(v as any).source_platform ?? null} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{v.title || "Untitled"}</div>
