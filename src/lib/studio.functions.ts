@@ -205,6 +205,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
         title: v.title,
         thumbnail_url: v.thumbnail_url,
         mux_playback_id: v.mux_playback_id,
+        source_platform: (v as any).source_platform ?? null,
         view_count: v.view_count ?? 0,
         like_count: v.like_count ?? 0,
         save_count: v.save_count ?? 0,
