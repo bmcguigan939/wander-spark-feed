@@ -26,13 +26,13 @@ export const Route = createFileRoute("/invest")({
       {
         name: "description",
         content:
-          "Travidz is a shoppable travel feed. £2.5M SAFE. Creators send the intent; we keep the booking. Experience the product and the pitch.",
+          "Travidz is a shoppable travel feed. £2.0M SAFE. Creators send the intent; we keep the booking. Experience the product and the pitch.",
       },
       { name: "robots", content: "noindex,nofollow" },
       { property: "og:title", content: "Travidz — Investor Pitch" },
       {
         property: "og:description",
-        content: "Discover · Book · Earn. The shoppable travel feed. £2.5M SAFE round open.",
+        content: "Discover · Book · Earn. The shoppable travel feed. £2.0M SAFE round open.",
       },
       { property: "og:url", content: SHARE_URL },
       { property: "og:type", content: "website" },
