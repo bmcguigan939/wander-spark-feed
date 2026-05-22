@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { crossLinksSchema } from "./cross-links.functions";
 
 async function muxClient() {
   // Lazy import keeps Mux SDK out of any code path that doesn't call it.
@@ -83,6 +84,7 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
       publish_mode: z.enum(["now", "draft", "schedule"]).default("now"),
       scheduled_at: z.string().datetime().nullable().optional(),
       music_track_id: z.string().uuid().nullable().optional(),
+      cross_links: crossLinksSchema.optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
@@ -116,6 +118,7 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
         scheduled_at: scheduledAt,
         published_at: publishedAt,
         music_track_id: data.music_track_id ?? null,
+        cross_links: (data.cross_links ?? []) as any,
       })
       .eq("id", data.videoId)
       .eq("creator_id", userId);
