@@ -277,6 +277,34 @@ function UploadFlowBody() {
                 />
               )}
             </Field>
+            <Field label="Links to this video on other platforms (optional)">
+              <div className="space-y-2">
+                {CROSS_LINK_PLATFORMS.map((p) => {
+                  const Icon = p === "instagram" ? Instagram
+                    : p === "tiktok" ? Link2
+                    : p === "facebook" ? Facebook
+                    : p === "youtube" ? Youtube
+                    : Twitter;
+                  const label = p === "x" ? "X (Twitter)" : p.charAt(0).toUpperCase() + p.slice(1);
+                  return (
+                    <div key={p} className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <input
+                        value={crossLinks[p]}
+                        onChange={(e) => setCrossLinks((cl) => ({ ...cl, [p]: e.target.value }))}
+                        placeholder={`Paste ${label} URL`}
+                        className={inputCls}
+                      />
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-muted-foreground">
+                  Viewers see a small chip and can open the same video on your social profile. Travidz still plays the upload natively.
+                </p>
+              </div>
+            </Field>
             <button
               disabled={finalizeM.isPending || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
               className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
