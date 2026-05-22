@@ -24,6 +24,7 @@ export type FeedVideo = {
   source_platform?: string | null;
   source_url?: string | null;
   embed_mode?: string | null;
+  cross_links?: Array<{ platform: string; url: string }>;
   creator: {
     id: string;
     username: string;
