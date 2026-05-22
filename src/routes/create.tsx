@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
 import { previewExternalVideo, importExternalVideo, type PreviewResult } from "@/lib/social.functions";
 import { toast } from "sonner";
-import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Globe } from "lucide-react";
+import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Globe, Instagram, Twitter } from "lucide-react";
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
@@ -299,12 +299,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ---------- Import from socials ----------
 
-const PLATFORM_META: Record<string, { label: string; hint: string; Icon: typeof Link2 }> = {
-  youtube: { label: "YouTube", hint: "youtube.com/watch?v=…  or  /shorts/…", Icon: Youtube },
-  tiktok: { label: "TikTok", hint: "tiktok.com/@user/video/…", Icon: Link2 },
-  instagram: { label: "Instagram", hint: "instagram.com/reel/…  or  /p/…", Icon: Link2 },
-  facebook: { label: "Facebook", hint: "facebook.com/…/videos/…  or  fb.watch/…", Icon: Link2 },
-  x: { label: "X (Twitter)", hint: "x.com/user/status/…", Icon: Link2 },
+const PLATFORM_META: Record<string, { label: string; hint: string; placeholder: string; Icon: typeof Link2 }> = {
+  youtube: { label: "YouTube", hint: "youtube.com/watch?v=…  or  /shorts/…", placeholder: "https://youtube.com/shorts/…", Icon: Youtube },
+  tiktok: { label: "TikTok", hint: "tiktok.com/@user/video/…", placeholder: "https://tiktok.com/@user/video/…", Icon: Link2 },
+  instagram: { label: "Instagram", hint: "instagram.com/reel/…  or  /p/…", placeholder: "https://instagram.com/reel/…", Icon: Instagram },
+  facebook: { label: "Facebook", hint: "facebook.com/…/videos/…  or  fb.watch/…", placeholder: "https://facebook.com/…/videos/…", Icon: Link2 },
+  x: { label: "X (Twitter)", hint: "x.com/user/status/…", placeholder: "https://x.com/user/status/…", Icon: Twitter },
 };
 
 function ImportFlow() {
@@ -315,6 +315,9 @@ function ImportFlow() {
 
   const [url, setUrl] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<keyof typeof PLATFORM_META | null>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const pasteCardRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [country, setCountry] = useState("");
@@ -363,26 +366,45 @@ function ImportFlow() {
           <div className="grid grid-cols-2 gap-2">
             {(["youtube", "tiktok", "instagram", "x"] as const).map((p) => {
               const M = PLATFORM_META[p];
+              const isSelected = selectedPlatform === p;
               return (
-                <div key={p} className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-3">
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlatform(p);
+                    requestAnimationFrame(() => {
+                      pasteCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      urlInputRef.current?.focus();
+                    });
+                  }}
+                  className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left transition active:scale-[0.98] ${
+                    isSelected
+                      ? "border-primary bg-primary/10 ring-2 ring-primary"
+                      : "border-border bg-card hover:border-primary/50"
+                  }`}
+                >
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
                     <M.Icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold leading-tight">{M.label}</div>
-                    <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">supported</div>
+                    <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {isSelected ? "selected" : "supported"}
+                    </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
-          <div className="rounded-3xl border border-border bg-card p-4">
+          <div ref={pasteCardRef} className="rounded-3xl border border-border bg-card p-4">
             <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paste a link</label>
             <div className="mt-2 flex gap-2">
               <input
+                ref={urlInputRef}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://youtube.com/shorts/…"
+                placeholder={selectedPlatform ? PLATFORM_META[selectedPlatform].placeholder : "https://youtube.com/shorts/…"}
                 className={inputCls}
               />
               <button
