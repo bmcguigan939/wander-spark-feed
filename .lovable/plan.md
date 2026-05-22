@@ -1,100 +1,133 @@
-## Goal
+## Scope
 
-Bring the live app end-to-end into sync with the v6 financial model already reflected on `/invest` and in `src/lib/investor-model/*`:
+1. **Instagram + Facebook** — Option A: handle becomes outbound link on the public profile; add `facebook_handle`; helper copy.
+2. **YouTube auto-sync (per creator, opt-in)** — pull a creator's latest public uploads via the existing `YOUTUBE_API_KEY`.
+3. **TikTok auto-sync (Travidz official only, opt-in)** — via the Lovable TikTok connector gateway.
+4. **"Import from socials" (no-link path)** — every creator can paste single or bulk video URLs (YouTube / TikTok / Instagram / Facebook / X) without linking an account. Built on the existing `importExternalVideo`.
+5. **Auto-verify on activity** (carried over).
 
-- **Gross commission**: 8% → **11%** of GBV
-- **Stripe fee** (2.9% + £0.20/txn) deducted from gross commission off the top
-- **Net pool** = gross commission − Stripe fee → split per tier
-- **Creator tier splits unchanged**: founding/power/new 50%, maturing 40%, mature 30% (now applied to the net pool, not gross)
-- Existing redemption rows keep their stamped split (historical correctness via `resolveSplit`)
+Every path writes to the same `videos` table, dedupes on `creator_id + source_platform + source_video_id`, and uses `embed_mode: 'link_card'`.
 
-## Open question (please confirm before I build)
+---
 
-How should the **business-facing commission** be framed?
+## 1. Instagram + Facebook handle-as-link
 
-- **Option A — "11% all-in" (recommended)**: Business sees a single flat 11% deducted; Travidz absorbs the Stripe fee out of its own share. Simplest copy, matches what `/invest` already shows, and what the investor model assumes ("Stripe shared off the top" reduces Travidz + creator net, not what the business pays).
-- **Option B — "11% + Stripe pass-through"**: Business sees `11% commission + Stripe processing fees` itemised on their statement. More accurate to wholesale economics but requires extra UI everywhere a business sees a number.
+**Migration**
+- `profile_socials`: add `facebook_handle text` (nullable).
 
-I'll assume **Option A** unless you say otherwise — it matches the v6 model + investor deck wording ("post-Stripe net commission") and only changes Travidz/creator net, not business net.
+**`src/lib/social.functions.ts`**
+- Extend `Platform`, `ProfileSocials`, and `socialsInput` with `facebook_handle`.
+- Extend `detectPlatform` to recognise `facebook.com/(reel|watch|videos)/...` and `fb.watch/...`, returning `{ platform: 'facebook', sourceId }`. `previewByOgTags` already handles it.
 
-## Single source of truth
+**`src/routes/profile.tsx` — Socials sheet redesign**
+- Three clear sub-sections:
+  - **Your handles** — inputs for IG, FB, TikTok, YouTube, X, website. Saved via existing `upsertMySocials`. Helper: *"Shown as links on your profile so visitors can find you elsewhere."*
+  - **Auto-sync** — toggles per platform that actually support it (YouTube always, TikTok admin-only). For Instagram/Facebook, show a disabled toggle with tooltip *"Not available — use Import instead"*.
+  - **Import videos** — a textarea labelled *"Paste one or more video URLs (YouTube, TikTok, Instagram, Facebook, X) — one per line"* and an Import button. No account linking needed.
 
-`src/lib/commission.ts`
-- `totalPct: 8` → `11`
-- Add `stripeVariablePct: 0.029`, `stripeFixedPenceGBP: 20`
-- Add helper `computeNetPoolCents(gbvCents)` → `gross − stripeFee` (floor at 0)
-- Keep `resolveSplit()` and `splitCommissionCents()` unchanged — they already operate on whatever total you hand them
-- Update file header comment to reflect 11% gross / net-pool split
+**`src/routes/u.$username.tsx`**
+- Render a row of outbound social icons for each saved handle (IG, FB, TikTok, YouTube, X, website). `target="_blank" rel="noopener noreferrer nofollow"`.
 
-`src/lib/commission.server.ts`
-- `stampRedemptionSplit()`: compute `totalCents` from `gbv × 11%`, then subtract Stripe fee → pass net pool into `splitCommissionCents()`
-- Persisted columns: `commission_cents` stores gross (11%), new fields stamp the net pool split (already covered by `creator_commission_cents` / `platform_commission_cents`)
-- DB schema change: none required (existing columns suffice). Old rows with `commission_rate = 8` continue to settle at 8% (correct historical behaviour).
+**`src/routes/create.tsx`**
+- Update placeholder examples to include Instagram and TikTok URLs.
 
-`src/routes/api/public/attribute.ts`
-- `commission_rate: COMMISSION.totalPct` → now writes 11 for new redemptions
-- Recomputed `commission_cents` uses 11%
+---
 
-`src/lib/match-codes.server.ts`
-- `COMMISSION_PCT` already re-exports `COMMISSION.totalPct` — auto-updates
-- Comment "8% commission" → "11% commission"
+## 4. "Import from socials" — no-link bulk import
 
-## Calculators
+**Why this is its own section:** the user wants a path for creators who don't want to link or auto-sync.
 
-`src/routes/creator.calculator.tsx`
-- Replace hard-coded "8%" copy → use `COMMISSION.totalPct`
-- Show two-line breakdown: `Gross commission (11%) − Stripe fee = Net pool` so per-tier numbers reconcile
-- Recompute `perBooking` against net pool, not gross
+**New server fn** in `src/lib/social.functions.ts`:
+- `importExternalVideosBulk({ urls: string[] })`
+  - Validate: 1–25 URLs, each ≤500 chars.
+  - For each URL: run `detectPlatform` → `previewYouTube` / `previewTikTok` / `previewByOgTags`, then the same insert logic as `importExternalVideo` (dedupe, owner = current user, `status='ready'`, `embed_mode='link_card'`, AI auto-tag re-run if available).
+  - Return `{ imported: n, skipped: [{ url, reason }], failed: [{ url, error }] }`.
 
-`src/routes/business.calculator.tsx`
-- Default `commission` slider 15 → 11; update slider label/help text to "Travidz commission (11%)"
-- Copy: "We take 11% and pay you weekly" everywhere
+**UI hooks**
+- Profile Socials sheet → "Import videos" section (textarea + Import button, shows per-URL outcome).
+- `/create` already supports single-URL import; keep as-is.
+- Optional: a small "Bulk import" entry point on `/studio` for creators with no videos yet.
 
-`src/routes/business.deals.new.tsx`
-- L62 copy: "We take 8%" → "We take 11%"
+**No new schema, no new secrets.**
 
-## Legal documents
+---
 
-`src/routes/legal.creator-agreement.tsx`
-- Replace all hard-coded "8%" / "£40 on £500" with `COMMISSION.totalPct` references
-- Update worked example: £500 booking → £55 gross commission − £34.70 Stripe (2.9% × £500 + £0.20) = **£20.30 net pool**, Power Creator gets £10.15, Mature gets £6.09. (Numbers are tiny — see Option A vs B note above; if you'd rather the example look more attractive, we can use a larger ticket where Stripe fee proportionally shrinks, e.g. £2,000.)
-- Add a one-paragraph clause explaining Stripe pass-through and that the tier % applies to the **net pool** after payment processing
+## 2. YouTube auto-sync (per creator, public API)
 
-`src/routes/legal.business-agreement.tsx`
-- Already uses `COMMISSION.totalPct` for the headline → auto-updates to 11%
-- Update Booking.com worked example: was "£200 → £16 commission → £184 net (vs £164 after 18%)". New: £200 → £22 commission → £178 net (still meaningfully better than £164).
-- Update commission display to clarify it's pre-Stripe (Option A) — business net is unchanged at "GBV − 11%"
+**New server fn:** `syncYouTubeForCreator({ userId? })` in `src/lib/social.functions.ts`.
 
-`src/routes/legal.index.tsx` — verify summary cards don't quote 8%
+Flow:
+1. Read `profile_socials`; require `youtube_handle` or `youtube_channel_id`.
+2. Resolve handle → channel id via `channels?part=id&forHandle=@<handle>`; cache result back to `profile_socials.youtube_channel_id`.
+3. `channels?part=contentDetails&id=<id>` → uploads playlist id.
+4. `playlistItems?part=snippet,contentDetails&playlistId=<uploads>&maxResults=12`.
+5. Upsert each video into `videos` (same dedupe/shape as `importExternalVideo`).
 
-## User-facing copy / components
+**Triggers**
+- "Sync YouTube now" button in the Socials sheet → calls the server fn for the current user.
+- Auto-kick on `upsertMySocials` save when YouTube handle changes (fire-and-forget; log errors).
+- New cron `src/routes/api/public/cron/sync-youtube.ts` — every 6h iterate creators with a YouTube handle, refresh latest 12. Wire `signature` header check using the existing cron secret pattern.
 
-Sweep for hard-coded "8%" strings (use `COMMISSION.totalPct` where it's a constant, or update to "11%"):
+**Failure handling:** never throw to the UI — return `{ synced, error }`.
 
-- `src/routes/business.onboarding.payout.tsx:134` ("8% platform commission")
-- `src/components/business/PayoutMethodCard.tsx:51` ("minus an 8% commission")
-- `src/lib/email-templates/business-digest.tsx:42` ("commission accrued (8%)")
-- `src/routes/welcome.tsx`, `src/routes/notifications.tsx`, `src/routes/support.tsx`, `src/components/feed/VideoCard.tsx`, `src/components/create/SmartDealsSheet.tsx`, `src/components/studio/TagBusinessSheet.tsx`, `src/components/creator/PayoutDetailsForm.tsx`, `src/routes/studio.videos.$id.tsx`, `src/routes/studio.links.tsx`, `src/routes/deals.$id.tsx`, `src/routes/creator.earnings.tsx`, `src/routes/business.invite.$token.tsx`, `src/routes/business.applications.tsx`, `src/routes/business.redemptions.tsx`
-- Outreach/email/support copy: `src/lib/outreach.functions.ts`, `src/lib/support.functions.ts`, `src/lib/email-templates/*` (founding-creator-welcome, creator-tier-unlocked, redemption-confirmed-creator)
+---
 
-Strategy: prefer `COMMISSION.totalPct` interpolation for resilience; replace bare "8%" with "11%" where templating isn't worth it (emails).
+## 3. TikTok auto-sync (Travidz official account only)
 
-## Admin / investor pages
+Confirms the connector-account constraint: the Lovable TikTok connector authenticates **one** TikTok account (Travidz's). Per-creator TikTok sync would need a full TikTok Login Kit OAuth flow — explicitly out of scope.
 
-- `src/routes/admin.investor.tsx`: hint strings "8%" → "11%" / "gross"
-- `src/routes/admin.index.tsx`: any 8% references
-- No model changes — `src/lib/investor-model/*` is already on v6
+**New server fn:** `syncTikTokOfficial()` in `src/lib/social.functions.ts`.
+
+Flow:
+1. Read `LOVABLE_API_KEY` and `TIKTOK_API_KEY` from `process.env`.
+2. `POST https://connector-gateway.lovable.dev/tiktok/video/list/` with cursor + max_count and fields `id,title,cover_image_url,share_url,video_description,create_time,duration`.
+3. Upsert each video under a designated official creator account (env `TRAVIDZ_OFFICIAL_CREATOR_ID`, or admin-settable in `/admin/seed`).
+
+**Triggers**
+- "Sync TikTok now" admin-only button in `/admin/seed` (or `/admin/videos`).
+- New cron `src/routes/api/public/cron/sync-tiktok.ts` every 6h.
+
+---
+
+## 5. Auto-verify on activity
+
+Unchanged from prior plan:
+- `autoTrustOnActivity({ userId, kind })` in `src/lib/verification.functions.ts` (idempotent, admin client).
+- Called when a video flips to `status='ready'` (Mux webhook + every import/sync path above) → trust creator.
+- Called when a redemption confirms → trust business.
+- Remove "Get verified" step from `src/components/business/OnboardingChecklist.tsx`.
+- Relabel admin UI in `src/routes/admin.users.tsx` — button becomes "Trusted/Untrust"; add "Show untrusted only" filter (default off); muted styling for untrusted brand-new accounts.
+- Backfill migration: flip `is_verified = true` for users with prior activity.
+
+---
+
+## Files touched (summary)
+
+- **Migrations:** add `facebook_handle`; backfill `is_verified`.
+- **`src/lib/social.functions.ts`** — Facebook in schema; `detectPlatform` Facebook; new `importExternalVideosBulk`, `syncYouTubeForCreator`, `syncTikTokOfficial`.
+- **`src/lib/verification.functions.ts`** — `autoTrustOnActivity`.
+- **`src/lib/mux.functions.ts`** — trigger autoTrust on video ready.
+- **`src/routes/api/public/payments/webhook.ts`** (or equivalent confirm path) — trigger autoTrust on confirm.
+- **`src/routes/api/public/cron/sync-youtube.ts`** (new), **`src/routes/api/public/cron/sync-tiktok.ts`** (new).
+- **`src/routes/profile.tsx`** — Socials sheet rebuilt into Handles / Auto-sync / Import sections; "Sync YouTube" button; bulk Import UI.
+- **`src/routes/u.$username.tsx`** — outbound social icons row.
+- **`src/routes/create.tsx`** — placeholder copy.
+- **`src/routes/admin.seed.tsx`** — "Sync TikTok now" + (optional) set/clear official creator id.
+- **`src/routes/admin.users.tsx`** — relabel, filter, muted styling.
+- **`src/components/business/OnboardingChecklist.tsx`** — remove "verified" step.
+
+---
 
 ## Out of scope
 
-- DB migration for existing redemptions (historical split is correct as stamped; `commission_rate` already varies per row)
-- Pricing for in-flight deals (existing `commission_rate` on deals continues to govern those)
-- Visual/design changes
-- Re-deriving Stripe pass-through into invoices (Option B work)
+- Per-user TikTok OAuth (TikTok Login Kit).
+- Instagram / Facebook auto-sync (Meta Graph API + Business account + app review).
+- Badge redesign, legal/agreement copy, billing.
 
-## Verification
+## Verification after build
 
-1. Typecheck passes
-2. `/creator/calculator`, `/business/calculator`, `/legal/creator-agreement`, `/legal/business-agreement` render new numbers
-3. New redemption (test via attribute endpoint) writes `commission_rate = 11`, `creator_commission_cents` = net-pool × tier%
-4. Spot-check 3 user-facing surfaces (welcome, notifications, business onboarding) show 11%
+- `/u/mrslindamcguigan` shows clickable Instagram (and Facebook if added) outbound links.
+- A creator with YouTube handle clicks "Sync YouTube" and their latest videos appear in `/studio`.
+- A creator pastes 5 mixed URLs in the Socials sheet → all import as link cards, dedupe works on repeat.
+- Admin clicks "Sync TikTok now" → official Travidz TikTok videos appear in the feed.
+- New signups never see "Verify" prompts; publishing/redeeming auto-trusts; backfill flips existing active users.
