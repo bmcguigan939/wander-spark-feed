@@ -442,12 +442,13 @@ function ProfilePage() {
   );
 }
 
-function SocialChips({ s }: { s: { youtube_handle: string | null; tiktok_handle: string | null; instagram_handle: string | null; x_handle: string | null; website_url: string | null } | null }) {
+function SocialChips({ s }: { s: { youtube_handle: string | null; tiktok_handle: string | null; instagram_handle: string | null; facebook_handle?: string | null; x_handle: string | null; website_url: string | null } | null }) {
   if (!s) return null;
   const chips: Array<{ label: string; href: string; icon: any }> = [];
   if (s.youtube_handle) chips.push({ label: s.youtube_handle, href: `https://youtube.com/@${s.youtube_handle}`, icon: Youtube });
   if (s.tiktok_handle) chips.push({ label: s.tiktok_handle, href: `https://tiktok.com/@${s.tiktok_handle}`, icon: Video });
   if (s.instagram_handle) chips.push({ label: s.instagram_handle, href: `https://instagram.com/${s.instagram_handle}`, icon: Instagram });
+  if (s.facebook_handle) chips.push({ label: s.facebook_handle, href: `https://facebook.com/${s.facebook_handle}`, icon: Facebook });
   if (s.x_handle) chips.push({ label: s.x_handle, href: `https://x.com/${s.x_handle}`, icon: Link2 });
   if (s.website_url) chips.push({ label: s.website_url.replace(/^https?:\/\//, ""), href: s.website_url, icon: Globe });
   if (!chips.length) return null;
