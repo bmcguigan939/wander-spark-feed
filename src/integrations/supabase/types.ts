@@ -2635,10 +2635,12 @@ export type Database = {
       }
       cron_expire_deals: { Args: never; Returns: number }
       cron_publish_scheduled_videos: { Args: never; Returns: number }
+      decrypt_bank_details: { Args: { c: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      encrypt_bank_details: { Args: { p: Json }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
