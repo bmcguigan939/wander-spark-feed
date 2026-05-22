@@ -1,109 +1,117 @@
-# Plan: Travidz-collects checkout (Stripe, no flights)
+
+# Phase 2 — Business onboarding (Option A: Travidz as merchant)
+
+We're staying on Lovable's built-in Stripe gateway. All customer payments
+land in Travidz's single account. Businesses get paid by Travidz on a
+schedule via manual bank transfer. No Stripe Connect.
 
 ## Goal
-Stop invoicing businesses for the 8%. Instead, the customer pays **Travidz** at checkout via Stripe. Travidz keeps 8%, remits 92% to the business on a payout schedule, and pays the creator their share of the 8% as today.
 
-Catalog scope: experiences, tours, activities, hotels, accommodation. **No flights, no flight-inclusive packages.** This keeps us outside ATOL / Package Travel Regulations.
+A business cannot list a bookable deal until they've supplied a payout
+method (bank details). The data needed to pay them sits on their profile,
+encrypted at rest.
 
-## Why this is a clean win for us
-- Commission is guaranteed (we hold the cash before paying out).
-- Creators get paid faster and more reliably.
-- Better data: refunds, no-shows, cancellations all visible in our system.
-- Stronger trust signal at checkout ("Booked via Travidz").
+## Scope (in)
 
----
+1. **Profile fields already exist** from Phase 1: `payout_method`,
+   `payout_bank_details_encrypted`, `stripe_connect_status` (unused for
+   now — leave the column, mark default `none`).
+2. **New `pgsop` symmetric encryption** for bank details so the service
+   role can read/write but the column is never returned to the browser
+   in plaintext. Use `pgcrypto` + a Vault-stored key
+   (`app.bank_details_key`). Helper SQL functions
+   `encrypt_bank_details(jsonb)` / `decrypt_bank_details(bytea)`.
+3. **Server functions** in `src/lib/payout.functions.ts`:
+   - `getMyPayoutMethod()` → returns `{ payout_method, bank: { account_holder, sort_code_last4, account_last4, iban_last4, country } | null }` (masked).
+   - `saveBankPayoutMethod({ account_holder, country, sort_code?, account_number?, iban?, swift_bic? })` → validates with Zod, encrypts, writes to `profiles`, sets `payout_method='manual_bank'`. Returns the masked view.
+   - `clearPayoutMethod()` → wipes the columns, sets `payout_method='none'`.
+   All three use `requireSupabaseAuth`; only the calling user's row is touched.
+4. **Onboarding step UI** at `/business/onboarding/payout` (and surfaced
+   as a card on `/business/dashboard` when missing):
+   - Country dropdown (GB / IE / EU SEPA / Other).
+   - GB → sort code + account number + account holder name.
+   - SEPA → IBAN + account holder name + (optional) SWIFT/BIC.
+   - Other → IBAN + SWIFT/BIC + account holder name.
+   - Inline validation (sort code 6 digits, IBAN checksum, etc.).
+   - Save → success state showing masked details + "Change" / "Remove" buttons.
+5. **Gate on listing creation**: in the existing "Create deal" flow, if
+   the user toggles `bookable=true` and `payout_method='none'`, block
+   submit with a clear inline message and a deep link to the payout step.
+   (Legacy non-bookable deals stay creatable without payout setup.)
+6. **Admin visibility**: in `/admin` user/business detail, show
+   `payout_method` and masked bank summary so support can verify.
 
-## 1. Policy & legal (must happen alongside code)
-- Add a clear **"No flights or flight-inclusive packages"** rule to the Business Agreement and listing rules.
-- Add a uniform **Travidz Cancellation & Refund Policy** that overrides per-business policies for any booking taken through our checkout. (Suggested default: full refund >7 days out, 50% 2–7 days, no refund <48h — businesses can opt to be stricter, not looser.)
-- Add a **Booking Terms** page customers tick at checkout.
-- Update Privacy Policy to mention payment processing via Stripe.
-- VAT note: as merchant of record we are the seller for VAT. We'll need to be VAT-registered (or use Stripe Tax) before going live with real money. Flagged for accountant.
+## Scope (out — later phases)
 
-## 2. Payments setup
-- Enable Lovable's built-in **Stripe payments** (seamless, no BYOK).
-- Tax handling: **option 2 (Stripe automatic tax calculation + collection)**. Full MOR compliance is digital-only so doesn't apply to accommodation/experiences; option 2 gives us correct tax at checkout while we handle filing.
-- Configure payout schedule (weekly to businesses).
+- Customer checkout (`/book/$dealId`) — Phase 3.
+- Stripe webhook + booking state machine — Phase 4.
+- Business confirm/reject + refund engine — Phase 5.
+- Weekly payout cron + `business_payouts` rollups + admin payouts queue — Phase 6.
+- Stripe Connect (would need a real Stripe account; not in scope).
 
-## 3. Data model changes
-Add to existing schema (no destructive changes):
+## Data model changes
 
-- `deals`: add `bookable boolean default false`, `base_price_cents int`, `currency text default 'GBP'`, `inventory_mode text` (`unlimited` | `fixed` | `request`), `cancellation_policy text`.
-- New `bookings` table: id, deal_id, creator_id (attribution), user_id (customer), travel_date, guests, subtotal_cents, tax_cents, total_cents, currency, stripe_payment_intent_id, stripe_checkout_session_id, status (`pending` | `paid` | `confirmed` | `cancelled` | `refunded` | `no_show`), commission_cents, business_payout_cents, created_at.
-- New `business_payouts` table: id, business_id, period_start, period_end, gross_cents, commission_cents, net_cents, stripe_transfer_id, status (`draft` | `sent` | `paid` | `failed`).
-- New `business_payout_lines`: payout_id, booking_id, gross_cents, commission_cents, net_cents.
-- New `refunds` table: booking_id, amount_cents, reason, stripe_refund_id, initiated_by, created_at.
-- Extend `deal_redemptions` flow so a confirmed `booking` auto-creates the redemption row (keeps existing creator-earnings + payout-run logic working unchanged).
-- `profiles` (business side): add `stripe_connect_account_id`, `payout_method` (`stripe_connect` | `manual_bank`), `bank_details_encrypted`.
+Minor — Phase 1 already added the columns. This phase only adds:
 
-## 4. Business onboarding additions
-- New step in business onboarding: **"How you get paid"** → connect Stripe (Stripe Connect Express) OR enter bank details for manual SEPA/BACS payout.
-- Show clear summary: "Customer pays £100 → you receive £92 within 7 days of booking confirmation."
-- Block listing creation until payout method is set.
+- Vault entry `app.bank_details_key` (32-byte random key, set once via migration).
+- SQL helpers:
+  ```sql
+  create or replace function public.encrypt_bank_details(p jsonb)
+  returns bytea language plpgsql security definer set search_path = public, extensions, vault as $$
+  declare k text;
+  begin
+    select decrypted_secret into k from vault.decrypted_secrets where name = 'app.bank_details_key';
+    return pgp_sym_encrypt(p::text, k);
+  end $$;
 
-## 5. Checkout flow (customer side)
-1. Customer taps **Book** on a deal page (was previously a redirect/code).
-2. New route `/book/$dealId` — pick date, guests, see price breakdown (subtotal, tax, total).
-3. Server fn creates Stripe Checkout Session with Connect `transfer_data` set to the business's connected account, `application_fee_amount` = 8%.
-4. Customer pays on Stripe-hosted page.
-5. Stripe webhook (`/api/public/stripe/webhook`) verifies signature, flips booking → `paid`, emails business + customer, creates pending `deal_redemption` row stamped with creator attribution from the affiliate cookie/code.
+  create or replace function public.decrypt_bank_details(c bytea)
+  returns jsonb language plpgsql security definer set search_path = public, extensions, vault as $$
+  declare k text;
+  begin
+    select decrypted_secret into k from vault.decrypted_secrets where name = 'app.bank_details_key';
+    return pgp_sym_decrypt(c, k)::jsonb;
+  end $$;
 
-## 6. Business confirms fulfilment
-- Business gets the booking in their dashboard with customer name, date, contact.
-- They click **Confirm** (or **Reject** within 24h). Confirm → redemption stamped `confirmed`, commission computed via existing `compute_redemption_commission` trigger, creator earnings flow exactly as today.
-- Reject → automatic refund via Stripe + booking cancelled.
+  revoke execute on function public.encrypt_bank_details(jsonb) from anon, authenticated;
+  revoke execute on function public.decrypt_bank_details(bytea) from anon, authenticated;
+  ```
+- Switch `profiles.payout_bank_details_encrypted` from `text` to `bytea`
+  (currently empty in all rows, so the type change is safe).
 
-## 7. Refunds & cancellations
-- Customer-initiated cancel: applies Travidz policy automatically, issues Stripe refund.
-- Business-initiated cancel: full refund, business flagged (3 strikes → manual review).
-- Refund reverses commission and creator earnings if already accrued.
+## Files to add / edit
 
-## 8. Payouts to businesses
-- With Stripe Connect + `transfer_data`, Stripe handles the 92% transfer automatically per booking — no separate payout cron needed for Connect businesses.
-- For manual-bank businesses (fallback), weekly cron aggregates paid bookings → creates `business_payouts` row → admin marks paid after BACS run.
-
-## 9. Admin
-- New `/admin/bookings` page (list, filter by status, refund button).
-- New `/admin/business-payouts` page (Connect status, manual queue).
-- Update `/admin/index` stats: GMV now = sum of `bookings.total_cents` where status in (`paid`,`confirmed`).
-
-## 10. Migration of existing listings
-- Existing deals stay on legacy "code redemption / self-checkout" flow.
-- New `bookable=true` flag opts a deal into Travidz checkout.
-- Backfill is opt-in per business during a 30-day grace window, then new listings must use Travidz checkout.
-
----
-
-## Out of scope (explicitly)
-- Flights, flight+hotel packages, package holidays (ATOL territory).
-- Multi-currency settlement (GBP only at launch; EUR/USD later).
-- Customer accounts that store cards (Stripe handles via Checkout).
-
-## Technical / sequencing
-```
-Phase 1 (foundation)
-  └─ Enable Stripe payments
-  └─ Migration: bookings, payouts, deals.bookable, profile.stripe_connect_account_id
-  └─ Business Stripe Connect onboarding flow
-
-Phase 2 (checkout)
-  └─ /book/$dealId route + price calc
-  └─ Server fn: create checkout session w/ application_fee + transfer_data
-  └─ /api/public/stripe/webhook handler (signature verify, idempotent)
-  └─ Customer + business confirmation emails
-
-Phase 3 (lifecycle)
-  └─ Business confirm/reject UI
-  └─ Refund engine + cancellation policy enforcement
-  └─ Admin bookings + payouts pages
-
-Phase 4 (policy + go-live)
-  └─ Updated Business Agreement, Booking Terms, Refund Policy
-  └─ VAT / Stripe Tax configuration
-  └─ Soft launch with a single category (experiences) before opening to hotels
+```text
+supabase/migrations/<ts>_payout_encryption.sql   (new)
+src/lib/payout.functions.ts                      (new)
+src/routes/business/onboarding/payout.tsx        (new)
+src/components/business/PayoutMethodCard.tsx     (new — used on dashboard + onboarding)
+src/routes/business/dashboard.tsx                (edit — add card + gate)
+src/routes/business/deals/new.tsx                (edit — bookable + payout gate)
+src/routes/admin/users.$id.tsx                   (edit — show masked payout info)
 ```
 
-## Open questions before I start building
-1. Default cancellation policy numbers (the 7-day / 48h proposal above) — keep or adjust?
-2. Stripe Connect Express (Stripe-hosted onboarding, fastest) vs Custom (full white-label, much more work) — Express recommended.
-3. Should the legacy invoice flow be retired immediately or kept as a fallback for already-onboarded businesses?
+## Validation rules (Zod, server-side)
+
+- `account_holder`: 2–80 chars, letters/spaces/`'-.` only.
+- `country`: ISO-3166 alpha-2.
+- GB: `sort_code` `^\d{6}$`, `account_number` `^\d{8}$`.
+- SEPA/IBAN: strip spaces, length 15–34, mod-97 checksum, uppercase.
+- `swift_bic`: `^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$` when provided.
+- Reject if neither GB pair nor IBAN is present.
+
+## Test plan
+
+1. Onboarding GB happy path: sort code + account → save → masked card shows `••••34`.
+2. SEPA happy path: valid IBAN → save → masked card shows last 4.
+3. Invalid IBAN → 400 with field-level error.
+4. Try to create a `bookable=true` deal with no payout method → blocked with link.
+5. Set payout method, then create bookable deal → succeeds.
+6. As admin, view that business → masked bank summary visible.
+7. SQL check: `select payout_bank_details_encrypted is not null, length(payout_bank_details_encrypted) from profiles where id = '<test user>'` returns a non-trivial bytea (plaintext never stored).
+8. Confirm `decrypt_bank_details` is not callable by `authenticated` role
+   (`select has_function_privilege('authenticated', 'public.decrypt_bank_details(bytea)', 'execute')` → false).
+
+## Open question
+
+Default payout currency at this stage is GBP (matches plan). Confirm
+before I build, or say "GBP only" and I'll proceed.
