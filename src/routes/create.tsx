@@ -365,7 +365,7 @@ function ImportFlow() {
       {!preview && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {(["youtube", "tiktok", "instagram", "x"] as const).map((p) => {
+            {(["youtube", "tiktok", "instagram", "facebook", "x"] as const).map((p) => {
               const M = PLATFORM_META[p];
               const isSelected = selectedPlatform === p;
               return (
