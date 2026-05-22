@@ -246,6 +246,16 @@ async function previewByOgTags(
       thumbnail = og("og:image");
     }
   } catch {}
+  // Instagram/Facebook serve a login wall to server-side fetches, so the
+  // direct og:image scrape usually comes back empty. Fall back to a public
+  // reader proxy (r.jina.ai) which renders the page server-side and returns
+  // markdown we can mine for the post image + first line of text.
+  if ((platform === "instagram" || platform === "facebook") && !thumbnail) {
+    const viaReader = await previewViaReader(url);
+    if (viaReader.thumbnail) thumbnail = viaReader.thumbnail;
+    if (!title && viaReader.title) title = viaReader.title;
+    if (!description && viaReader.description) description = viaReader.description;
+  }
   return {
     platform,
     sourceId,
@@ -256,6 +266,48 @@ async function previewByOgTags(
     durationSec: null,
     authorName: null,
   };
+}
+
+/**
+ * Public reader proxy fallback. r.jina.ai renders the target URL server-side
+ * and returns clean markdown — useful for sites that gate raw HTML behind a
+ * login wall (Instagram, Facebook). No API key required for low volume.
+ */
+async function previewViaReader(
+  url: string,
+): Promise<{ title: string | null; description: string | null; thumbnail: string | null }> {
+  try {
+    const proxied = `https://r.jina.ai/${url}`;
+    const res = await fetch(proxied, {
+      headers: {
+        accept: "text/markdown",
+        "user-agent": "Mozilla/5.0 (compatible; TravidzBot/1.0)",
+      },
+    });
+    if (!res.ok) return { title: null, description: null, thumbnail: null };
+    const md = await res.text();
+    // First markdown image: ![alt](url)
+    const imgMatch = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/.exec(md);
+    const thumbnail = imgMatch?.[1] ?? null;
+    // Title: prefer the "Title:" header r.jina.ai emits, else first non-empty
+    // non-image markdown line.
+    let title: string | null = null;
+    const titleHeader = /^Title:\s*(.+)$/m.exec(md);
+    if (titleHeader) title = titleHeader[1].trim();
+    if (!title) {
+      const firstLine = md
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l && !l.startsWith("!") && !l.startsWith("URL Source") && !l.startsWith("Markdown Content"));
+      if (firstLine) title = firstLine.replace(/^#+\s*/, "").slice(0, 160);
+    }
+    // Description: a Description: header if present, else null.
+    const descHeader = /^Description:\s*(.+)$/m.exec(md);
+    const description = descHeader ? descHeader[1].trim().slice(0, 500) : null;
+    return { title, description, thumbnail };
+  } catch {
+    return { title: null, description: null, thumbnail: null };
+  }
 }
 
 export const previewExternalVideo = createServerFn({ method: "POST" })
