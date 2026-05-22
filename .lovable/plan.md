@@ -1,37 +1,81 @@
-## What’s actually wrong
 
-- The Instagram/Facebook rows exist in the database and are marked live, but they are imported as `link_card` records, not hosted Travidz videos. They have no `mux_playback_id`, so there is no playable Travidz-hosted video file.
-- The For You feed ranking heavily favors older seeded/demo rows with high engagement, so the new imported rows can be pushed out of the first 20 results even though they are live.
-- Search can render imported rows as generic/blank-looking tiles when there is no real thumbnail, which makes them look missing or broken.
-- Instagram/Facebook links cannot reliably be downloaded server-side just because the creator owns them. Meta often blocks automated access, login-gates content, restricts private/close-friends posts, and does not expose a simple public download API for reels/posts. Ownership confirmation helps with permission, but it does not give Travidz technical access to the video bytes.
+# Upload-first creator flow with social cross-links
 
-## Plan to fix it properly
+Yes — this will work, and it actually simplifies what's there today. The native upload path already plays in feed/search via Mux, already overlays deals (`matchedDeal` + `attachedDeals`), and already feeds analytics. We just need to make Upload the primary path, treat social URLs as metadata on the same video row, and quietly retire the "link card" import as the main entry point.
 
-1. **Make imported videos visibly appear in feed**
-   - Adjust the For You feed ranking so brand-new creator imports are guaranteed to surface in the initial feed, even with zero likes/views.
-   - Keep hidden/draft/scheduled filters intact.
-   - Ensure imported `link_card` videos render as intentional external-video cards, not blank player slots.
+## How it works after the change
 
-2. **Make imported videos clearly visible in Search**
-   - Ensure Search selects and returns `source_platform`, `source_url`, and `embed_mode` everywhere video results are used.
-   - Improve no-thumbnail tiles so Instagram/Facebook imports show a branded platform tile with the title and “Open on Instagram/Facebook” treatment instead of fake photos or empty boxes.
-   - Fix the budget tag mismatch so imported rows using `budget/mid/luxury` are not excluded by filters expecting `$ / $$ / $$$`.
+```text
+Creator opens Create
+        ↓
+  [Upload from device]  ← primary, required
+        ↓
+  Video uploads to Travidz → Mux processes → status=ready
+        ↓
+  Optional: paste links to the same post on Instagram / TikTok /
+            Facebook / YouTube (stored as cross-links on the row)
+        ↓
+  Optional: attach deals (Smart Deals sheet)
+        ↓
+  Published → appears in For You feed + Search automatically
+              plays natively, deals overlay shown,
+              "Also on Instagram ↗" chips link out
+```
 
-3. **Fix misleading import copy**
-   - Change the import UI copy from “embed/play without leaving Travidz” to the accurate behavior: imported social videos are linked cards unless the creator uploads the actual file.
-   - Make the choice clear: **Link social post** for discovery, or **Upload video file** to host/play natively on Travidz.
+Businesses see the same video in search/feed and can apply the existing partnership flow (`deal_applications` → approved code → `video_deals`).
 
-4. **Add a safe path for real Travidz-hosted video**
-   - Keep “Upload” as the reliable way to host the creator’s own video on Travidz.
-   - Do not attempt automatic Instagram/Facebook scraping/downloading; it will keep failing for restricted posts and can violate platform rules.
+## What to restructure
 
-5. **Repair current imported rows**
-   - Keep the two Instagram imports live with no fake thumbnails.
-   - Verify they appear at the top/near top of Search and inside the first feed batch as external Instagram cards.
+### 1. Create page (`src/routes/create.tsx`)
+- Make **Upload** the default and only primary tab.
+- Demote the "Import from socials" tab to a small secondary action *inside* the upload flow titled "Add links to this video on other platforms" (optional, multi-input for IG / TikTok / FB / YT / X).
+- Remove the bulk URL importer from the main UI (keep the server fn for admin/migration use only).
 
-## Technical changes
+### 2. Videos table — store cross-links as metadata, not as the source
+The current row already has `source_platform`, `source_url`, `embed_mode`. Reuse them for a new "cross-link" concept on top of the native upload:
+- Add a `cross_links jsonb` column on `videos` shaped like `[{ platform, url }]` (up to ~5 entries, validated).
+- Keep `mux_playback_id` as the source of truth for playback. `embed_mode = "native"` for these rows; `link_card` rows become legacy.
+- Migration also: backfill the two existing Instagram `link_card` rows by either (a) asking the creator to re-upload, or (b) hiding them from feed/search until they do.
 
-- Update `src/lib/feed.functions.ts` ranking/search filters and budget mapping.
-- Update `src/components/feed/VideoCard.tsx` external-card rendering for `link_card` videos.
-- Update `src/routes/search.tsx` result tiles for imported videos without thumbnails.
-- Update `src/routes/create.tsx` import messaging so creators understand link-card vs hosted upload.
+### 3. Feed + search ranking (`src/lib/feed.functions.ts`)
+- Remove the `metaImportBoost` for `link_card` (no longer needed — native uploads rank normally on freshness + engagement).
+- Add a small "new creator upload" freshness boost so first-time native uploads surface in For You within the first 24h instead of being buried by seeded data.
+- Drop the link-card branches in `searchVideos` / search results.
+
+### 4. Video card (`src/components/feed/VideoCard.tsx`)
+- Always render the Mux player (no more link-card placeholder branch as the default).
+- Below the title, render a row of small platform chips from `cross_links`: "Watch on Instagram ↗", "On TikTok ↗", etc. Tapping opens the external post in a new tab; the Travidz card keeps playing.
+- Keep the existing deal overlay (`matchedDeal` + `attachedDeals`) — no change.
+
+### 5. Studio video editor (`src/routes/studio.videos.$id.tsx`)
+- Add a "Cross-links" panel to add/remove the per-platform URLs after publishing.
+- Keep the existing Smart Deals + Tag Business panels.
+
+### 6. Profile (`src/routes/u.$username.tsx`)
+- Keep `profile_socials` (handles) as the account-level social links — separate from per-video cross-links.
+- On a video tile, show the per-video platform chips when present.
+
+### 7. Business + contract flow — no schema change
+- `deal_applications` → approve → `video_deals` already works end-to-end.
+- The only addition: when a business browses creators, the creator card shows both their Travidz video count and their cross-linked socials, so businesses can evaluate reach before approving.
+
+## Trade-offs to be aware of
+
+- **Storage + Mux cost** rises because every video is hosted. This is the cost of having deals overlay during playback — it can only happen on video Travidz controls.
+- **Existing imported link-card rows** (the two Instagram videos) won't have a Mux asset. Options: (a) ask the creator to re-upload, (b) keep them visible only on the creator's profile as "external" cards, (c) hide them. Recommend (a) + (b) as fallback.
+- **No scraping** — Instagram/Facebook still cannot be auto-downloaded; the upload must come from the creator's device. This was already the constraint.
+
+## Files that change
+
+- `src/routes/create.tsx` — upload-first UI, cross-links sub-form.
+- `src/components/feed/VideoCard.tsx` — drop link-card branch, add cross-link chips.
+- `src/lib/feed.functions.ts` — remove meta-import boost, add new-upload freshness boost, select `cross_links`.
+- `src/routes/search.tsx` — render cross-link chips, drop link-card placeholder.
+- `src/routes/studio.videos.$id.tsx` — Cross-links panel.
+- `src/lib/social.functions.ts` — keep `previewExternalVideo` for the link-input previews; mark `importExternalVideo*` as legacy (still callable for migration).
+- New migration: add `videos.cross_links jsonb default '[]'` + check constraint on shape.
+- New server fn: `updateVideoCrossLinks(videoId, links[])` with creator auth + validation.
+
+## Out of scope
+
+- Auto-publishing the same video to the creator's actual Instagram / TikTok accounts. That requires per-platform OAuth + Graph API approvals; out of scope here. Cross-links are creator-supplied URLs to posts they uploaded themselves.
