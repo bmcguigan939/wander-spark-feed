@@ -437,7 +437,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           let kw = supabaseAdmin
             .from("videos")
             .select(
-              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
             )
             .eq("status", "ready")
             .eq("is_draft", false)
@@ -471,7 +471,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         let extra = supabaseAdmin
           .from("videos")
           .select(
-            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
           )
           .in("id", newIds)
           .eq("status", "ready")
@@ -510,7 +510,7 @@ export const searchVideos = createServerFn({ method: "GET" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
       )
       .eq("status", "ready")
       .eq("is_draft", false)
