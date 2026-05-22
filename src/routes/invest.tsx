@@ -717,7 +717,7 @@ function FooterCTA() {
           </Link>
         </div>
         <p className="mt-10 text-xs text-white/40">
-          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v9 market model
+          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v6 financial model · v10 market workbook
         </p>
       </div>
     </section>
