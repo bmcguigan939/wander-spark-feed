@@ -355,7 +355,7 @@ function HowItWorks() {
 
 function BusinessModel() {
   const [gbv, setGbv] = useState(100_000_000);
-  const net = gbv * 0.0465;
+  const net = gbv * 0.0468;
   return (
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
@@ -364,8 +364,8 @@ function BusinessModel() {
           Take rate underwritable, distribution creator-owned.
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-4">
-          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.65%" />
-          <Stat k="Creator share" v="30–50%" sub="of net commission" />
+          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.68%" />
+          <Stat k="Creator share" v="30–50%" sub="of net pool (post-Stripe)" />
           <Stat k="Contribution margin" v="~55%" sub="at scale" />
           <Stat k="Paid acquisition" v="£0" sub="Y1–Y2, creator-led" />
         </div>
@@ -378,7 +378,7 @@ function BusinessModel() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.65%</div>
+              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.68%</div>
               <div className="mt-1 text-2xl font-bold tracking-tight text-[#ff8e72]">
                 {fmtGBP(net, { compact: true })}
               </div>
@@ -397,6 +397,10 @@ function BusinessModel() {
             <span>£10M</span>
             <span>£500M</span>
           </div>
+          <p className="mt-4 text-[11px] text-white/45">
+            Net = 11% gross commission − Stripe (2.9% + £0.20/txn, shared off the top) − tiered
+            creator share (50/50/50/40/30). v6 financial model.
+          </p>
         </Card>
       </div>
     </section>
