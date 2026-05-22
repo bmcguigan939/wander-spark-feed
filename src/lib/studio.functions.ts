@@ -19,6 +19,7 @@ export type StudioVideo = {
   status: string;
   thumbnail_url: string | null;
   mux_playback_id: string | null;
+  source_platform: string | null;
   is_draft: boolean;
   is_hidden: boolean;
   scheduled_at: string | null;
@@ -51,7 +52,7 @@ export const listMyVideos = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     let q = supabaseAdmin
       .from("videos")
-      .select("id,title,status,thumbnail_url,mux_playback_id,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count")
+      .select("id,title,status,thumbnail_url,mux_playback_id,source_platform,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count")
       .eq("creator_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -135,6 +136,7 @@ export type VideoInsights = {
     title: string;
     thumbnail_url: string | null;
     mux_playback_id: string | null;
+    source_platform: string | null;
     view_count: number;
     like_count: number;
     save_count: number;
@@ -163,7 +165,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     const { data: v, error } = await supabaseAdmin
       .from("videos")
-      .select("id,title,thumbnail_url,mux_playback_id,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
+      .select("id,title,thumbnail_url,mux_playback_id,source_platform,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
       .eq("id", data.videoId)
       .eq("creator_id", context.userId)
       .maybeSingle();
@@ -203,6 +205,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
         title: v.title,
         thumbnail_url: v.thumbnail_url,
         mux_playback_id: v.mux_playback_id,
+        source_platform: (v as any).source_platform ?? null,
         view_count: v.view_count ?? 0,
         like_count: v.like_count ?? 0,
         save_count: v.save_count ?? 0,

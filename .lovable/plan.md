@@ -1,29 +1,27 @@
-## Problem
+## Fix blank Instagram thumbnails in Studio (no auto-downloading)
 
-On `/create` → "Import From Socials", the YouTube / TikTok / Instagram / X tiles look tappable (rounded card, icon, label, "SUPPORTED" badge) but are inert `<div>`s. Nothing happens when they're tapped.
+We will **not** auto-download Instagram videos — it violates Instagram's ToS and gets the platform DMCA'd. Imports stay as link-cards; we just stop rendering a blank pink box.
 
-## Fix
+### Changes
 
-In `src/routes/create.tsx` (`ImportFlow`, lines ~363–378), convert each platform tile into a `<button type="button">` that:
+1. **`src/lib/studio.functions.ts`** — add `source_platform` to the `videos` SELECT in `listStudioVideos` and to the `StudioVideo` type. Same addition to the single-video SELECT around line 166 (used by the detail page).
 
-1. Sets a platform-specific placeholder on the paste-link input (e.g. `https://youtube.com/shorts/…`, `https://tiktok.com/@user/video/…`, `https://instagram.com/reel/…`, `https://x.com/user/status/…`).
-2. Focuses the URL `<input>` (via a `useRef<HTMLInputElement>`) and scrolls the "Paste a link" card into view so the next action is obvious on mobile.
-3. Visually marks the selected tile (ring + stronger background) so the user sees their choice was registered.
+2. **`src/routes/studio.videos.tsx`** (line 187-189) — replace the bare `bg-secondary` div with a small `<Thumb>` helper: when `thumbnail_url` exists, render `<img>`; otherwise render a div with `getPlatformStyle(v.source_platform).gradient` and the platform's Lucide icon centred (`Instagram`, `Youtube`, `Music2`, `Facebook`, `Twitter`, `Globe` fallback).
 
-Add minimal state: `const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey | null>(null)` and a `urlInputRef`. Replace the static `placeholder="https://youtube.com/shorts/…"` with one derived from `selectedPlatform` (fallback to current default).
+3. **`src/routes/studio.videos.$id.tsx`** (line 173) — same `<Thumb>` swap for the hero tile.
 
-Also include Facebook in the tile grid for parity with `PLATFORM_META` (currently only 4 of 5 shown), since the importer already supports it — optional, mention in the diff but only add if it fits the 2-col grid cleanly (a 5th tile would orphan; safer to keep the grid at 4 and leave Facebook out, matching today's layout).
+4. **`src/routes/create.tsx` `ImportFlow`** — after a successful preview, if `preview.thumbnail` is null AND `preview.platform` is `instagram`/`facebook`, show an inline hint above the form: "We couldn't fetch Instagram's preview. Paste an image URL, or use the Upload tab to host the video on Travidz instead." Add a small `<input>` bound to a `customThumb` state; pass `thumbnail: customThumb || preview.thumbnail` into the existing `importExternalVideo` call (server fn already accepts `thumbnail`).
 
-Use proper platform brand icons where available from lucide-react (`Youtube`, `Instagram`, `Twitter` for X) instead of the generic `Link2`, keeping `Link2` only as TikTok's fallback.
+5. **Repair existing Devon row** — call the existing `repairBlankImportedThumbnails` admin action (already wired on `admin.seed.tsx`). No code change; just mention in the closing summary so the user runs it.
 
-## Out of scope
+### Out of scope
 
-- No backend / server-function changes.
-- No change to the preview/import flow once a link is pasted.
-- No new route or OAuth "Connect YouTube account" — tiles remain link-paste helpers, not account connectors.
+- Auto-downloading or re-hosting Instagram/Facebook media (ToS + IP-ban risk).
+- Changing the link-card embed model.
+- New OAuth / Meta Graph integration.
 
-## Verification
+### Verification
 
-- Tap each tile → URL input gains focus, placeholder updates to that platform's URL shape, tile shows selected ring.
-- Paste a real URL → existing Preview → Import flow still works unchanged.
-- Keyboard: tile is reachable via Tab and activates on Enter/Space (native `<button>` behaviour).
+- Studio list and detail tiles for Devon + "instagram post" show an Instagram gradient + IG icon instead of a blank pink box.
+- New Instagram import with no auto-thumb prompts for a manual image URL and the import still succeeds with that thumb.
+- YouTube / TikTok imports (which already return thumbs) render unchanged.

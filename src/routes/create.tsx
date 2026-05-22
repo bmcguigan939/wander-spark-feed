@@ -315,6 +315,7 @@ function ImportFlow() {
 
   const [url, setUrl] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [customThumb, setCustomThumb] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState<keyof typeof PLATFORM_META | null>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const pasteCardRef = useRef<HTMLDivElement>(null);
@@ -342,7 +343,7 @@ function ImportFlow() {
       url: preview!.sourceUrl,
       title,
       description: description || undefined,
-      thumbnail: preview!.thumbnail ?? undefined,
+      thumbnail: (customThumb.trim() || preview!.thumbnail) ?? undefined,
       destination: destination || undefined,
       country: country || undefined,
       city: city || undefined,
@@ -441,6 +442,20 @@ function ImportFlow() {
               </button>
             </div>
           </div>
+
+          {!preview.thumbnail && (preview.platform === "instagram" || preview.platform === "facebook") && (
+            <div className="rounded-2xl border border-border bg-card p-3">
+              <p className="text-xs text-muted-foreground">
+                We couldn't fetch {preview.platform === "instagram" ? "Instagram" : "Facebook"}'s preview image — they block automated requests. Paste an image URL below, or use the <b>Upload</b> tab to host the video on Travidz instead.
+              </p>
+              <input
+                value={customThumb}
+                onChange={(e) => setCustomThumb(e.target.value)}
+                placeholder="https://…/cover.jpg"
+                className={`${inputCls} mt-2`}
+              />
+            </div>
+          )}
 
           <Field label="Title">
             <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} />
