@@ -82,6 +82,7 @@ function UploadFlowBody() {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -105,7 +106,7 @@ function UploadFlowBody() {
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   async function startUpload(f: File) {
-    setFile(f); setUploading(true); setProgress(0);
+    setFile(f); setUploading(true); setProgress(0); setUploadError(null);
     try {
       const res = await createUploadFn({ data: { title: f.name.replace(/\.[^.]+$/, "") } });
       setVideoId(res.videoId);
@@ -121,7 +122,10 @@ function UploadFlowBody() {
       setTitle(f.name.replace(/\.[^.]+$/, ""));
       toast("Upload complete — add details");
     } catch (e: any) {
-      toast(e.message ?? "Upload failed"); setFile(null); setVideoId(null);
+      const msg = e?.message ?? "Upload failed";
+      setUploadError(msg);
+      toast(msg);
+      setFile(null); setVideoId(null);
     } finally { setUploading(false); }
   }
 
