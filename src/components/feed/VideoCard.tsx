@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook, Twitter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
@@ -147,6 +147,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     : video.source_platform === "instagram" ? Instagram
     : video.source_platform === "facebook" ? Facebook
     : ExternalLink;
+  const crossLinks = (video.cross_links ?? []).filter((l) => l?.url);
 
   return (
     <section className="feed-snap relative h-dvh w-full overflow-hidden bg-black">
@@ -251,6 +252,32 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         <h2 className="mt-3 font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
           {video.title}
         </h2>
+
+        {crossLinks.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {crossLinks.map((l) => {
+              const Icon = l.platform === "youtube" ? Youtube
+                : l.platform === "instagram" ? Instagram
+                : l.platform === "facebook" ? Facebook
+                : l.platform === "x" ? Twitter
+                : ExternalLink;
+              const label = l.platform === "x" ? "X" : l.platform.charAt(0).toUpperCase() + l.platform.slice(1);
+              return (
+                <a
+                  key={l.platform}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
+                >
+                  <Icon className="h-3 w-3" />
+                  Watch on {label}
+                </a>
+              );
+            })}
+          </div>
+        )}
 
         {video.matchedDeal && (
           <Link

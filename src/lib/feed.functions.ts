@@ -24,6 +24,7 @@ export type FeedVideo = {
   source_platform?: string | null;
   source_url?: string | null;
   embed_mode?: string | null;
+  cross_links?: Array<{ platform: string; url: string }>;
   creator: {
     id: string;
     username: string;
@@ -52,7 +53,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -145,9 +146,11 @@ function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
   return values ? (q as any).in("budget_tag", values) : q;
 }
 
-function isRecentMetaImport(v: Pick<FeedVideo, "source_platform" | "embed_mode" | "created_at">) {
-  const p = (v.source_platform ?? "").toLowerCase();
-  return v.embed_mode === "link_card" && (p === "instagram" || p === "facebook") && hoursSince(v.created_at) <= 24 * 14;
+function isFreshNativeUpload(v: Pick<FeedVideo, "mux_playback_id" | "created_at">) {
+  // Native (Travidz-hosted) videos uploaded in the last 7 days get a small
+  // surfacing boost so brand-new creator content isn't buried by older
+  // engagement-heavy seeded rows.
+  return !!v.mux_playback_id && hoursSince(v.created_at) <= 24 * 7;
 }
 
 function scoreVideo(
@@ -180,10 +183,10 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
-  const metaImportBoost = isRecentMetaImport(v) ? 80 : 0;
+  const newUploadBoost = isFreshNativeUpload(v) ? 12 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + metaImportBoost + jitter
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
   );
 }
 
@@ -253,7 +256,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
@@ -339,7 +342,7 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
         .eq("is_draft", false)
@@ -434,7 +437,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           let kw = supabaseAdmin
             .from("videos")
             .select(
-              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
             )
             .eq("status", "ready")
             .eq("is_draft", false)
@@ -468,7 +471,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         let extra = supabaseAdmin
           .from("videos")
           .select(
-            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
           )
           .in("id", newIds)
           .eq("status", "ready")
@@ -507,7 +510,7 @@ export const searchVideos = createServerFn({ method: "GET" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
       )
       .eq("status", "ready")
       .eq("is_draft", false)

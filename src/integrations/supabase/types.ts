@@ -2465,6 +2465,7 @@ export type Database = {
           country: string | null
           created_at: string
           creator_id: string
+          cross_links: Json
           description: string | null
           destination: string | null
           duration_sec: number | null
@@ -2509,6 +2510,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           creator_id: string
+          cross_links?: Json
           description?: string | null
           destination?: string | null
           duration_sec?: number | null
@@ -2553,6 +2555,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           creator_id?: string
+          cross_links?: Json
           description?: string | null
           destination?: string | null
           duration_sec?: number | null

@@ -168,6 +168,7 @@ function SearchPage() {
               {videos.map((v) => {
                 const style = getPlatformStyle((v as any).source_platform);
                 const isExternal = !(v as any).mux_playback_id && (v as any).source_url;
+                const xLinks = ((v as any).cross_links ?? []) as Array<{ platform: string; url: string }>;
                 const content = (
                   <>
                     {v.thumbnail_url ? (
@@ -176,6 +177,15 @@ function SearchPage() {
                       <div className={`flex h-full w-full flex-col items-center justify-center gap-2 px-2 text-center ${style.gradient}`}>
                         <Play className="h-6 w-6 text-white/90 drop-shadow" />
                         <span className="line-clamp-3 text-[10px] font-semibold leading-tight text-white">{v.title}</span>
+                      </div>
+                    )}
+                    {xLinks.length > 0 && (
+                      <div className="absolute right-1 top-1 flex gap-0.5">
+                        {xLinks.slice(0, 3).map((l) => (
+                          <span key={l.platform} className="rounded-full bg-black/55 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white backdrop-blur">
+                            {l.platform === "x" ? "X" : l.platform.charAt(0).toUpperCase()}
+                          </span>
+                        ))}
                       </div>
                     )}
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">

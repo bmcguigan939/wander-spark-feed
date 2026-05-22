@@ -7,11 +7,12 @@ import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
 import { previewExternalVideo, importExternalVideo, type PreviewResult } from "@/lib/social.functions";
 import { toast } from "sonner";
-import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Globe, Instagram, Twitter } from "lucide-react";
+import { Upload, Video, Loader2, Sparkles, MapPin, Music, X, Link2, Youtube, Globe, Instagram, Twitter, Facebook } from "lucide-react";
 import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
 import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
+import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/lib/cross-links.functions";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -54,7 +55,7 @@ function CreateTabs() {
     <MobileShell>
       <div className="px-5 pb-32 pt-6">
         <h1 className="text-2xl font-bold">Create</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Upload a video file to host it on Travidz, or link a social post for discovery.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Upload your video to Travidz so it plays in feed and search — then add links to the same post on your other platforms.</p>
         <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1">
           {(["upload", "import"] as const).map((t) => (
             <button
@@ -62,7 +63,7 @@ function CreateTabs() {
               onClick={() => setTab(t)}
               className={`rounded-xl py-2 text-sm font-semibold capitalize transition ${tab === t ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground"}`}
             >
-              {t === "upload" ? "Upload" : "Import from socials"}
+              {t === "upload" ? "Upload video" : "Link a post"}
             </button>
           ))}
         </div>
@@ -97,6 +98,9 @@ function UploadFlowBody() {
   const [musicOpen, setMusicOpen] = useState(false);
   const [smartDealsOpen, setSmartDealsOpen] = useState(false);
   const [smartDealsVideoId, setSmartDealsVideoId] = useState<string | null>(null);
+  const [crossLinks, setCrossLinks] = useState<Record<CrossLinkPlatform, string>>({
+    instagram: "", tiktok: "", facebook: "", youtube: "", x: "",
+  });
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
@@ -133,6 +137,14 @@ function UploadFlowBody() {
       publish_mode: publishMode,
       scheduled_at: publishMode === "schedule" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
       music_track_id: track?.id ?? null,
+      cross_links: CROSS_LINK_PLATFORMS
+        .map((p): CrossLink | null => {
+          const raw = crossLinks[p]?.trim();
+          if (!raw) return null;
+          try { new URL(raw); } catch { return null; }
+          return { platform: p, url: raw };
+        })
+        .filter((x): x is CrossLink => x !== null),
     } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feed"] });
@@ -264,6 +276,34 @@ function UploadFlowBody() {
                   className={`mt-2 ${inputCls}`}
                 />
               )}
+            </Field>
+            <Field label="Links to this video on other platforms (optional)">
+              <div className="space-y-2">
+                {CROSS_LINK_PLATFORMS.map((p) => {
+                  const Icon = p === "instagram" ? Instagram
+                    : p === "tiktok" ? Link2
+                    : p === "facebook" ? Facebook
+                    : p === "youtube" ? Youtube
+                    : Twitter;
+                  const label = p === "x" ? "X (Twitter)" : p.charAt(0).toUpperCase() + p.slice(1);
+                  return (
+                    <div key={p} className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <input
+                        value={crossLinks[p]}
+                        onChange={(e) => setCrossLinks((cl) => ({ ...cl, [p]: e.target.value }))}
+                        placeholder={`Paste ${label} URL`}
+                        className={inputCls}
+                      />
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-muted-foreground">
+                  Viewers see a small chip and can open the same video on your social profile. Travidz still plays the upload natively.
+                </p>
+              </div>
             </Field>
             <button
               disabled={finalizeM.isPending || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
