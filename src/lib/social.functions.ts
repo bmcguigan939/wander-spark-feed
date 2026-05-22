@@ -344,6 +344,7 @@ export const importExternalVideo = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
+    void autoTrustCreator(userId);
     return { videoId: inserted!.id };
   });
 
