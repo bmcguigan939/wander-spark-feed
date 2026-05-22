@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { V6_DEFAULTS } from "@/lib/investor-model/assumptions";
-import { computeMarket, computeRevenue, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
+import { computeMarket, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
 import {
   Download,
   Link as LinkIcon,
