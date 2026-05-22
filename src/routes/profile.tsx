@@ -299,46 +299,143 @@ function ProfilePage() {
         </SheetContent>
       </Sheet>
       <Sheet open={socialsOpen} onOpenChange={setSocialsOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
+        <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-3xl">
           <SheetHeader>
-            <SheetTitle>Link your other platforms</SheetTitle>
+            <SheetTitle>Socials & imports</SheetTitle>
           </SheetHeader>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Show your YouTube, TikTok, Instagram and more on your Travidz profile.
-          </p>
-          <form
-            onSubmit={(e) => { e.preventDefault(); saveSocialsM.mutate(); }}
-            className="mt-4 space-y-3"
-          >
-            {[
-              { key: "youtube_handle", label: "YouTube", icon: Youtube, placeholder: "@yourchannel" },
-              { key: "tiktok_handle", label: "TikTok", icon: Video, placeholder: "@yourhandle" },
-              { key: "instagram_handle", label: "Instagram", icon: Instagram, placeholder: "@yourhandle" },
-              { key: "x_handle", label: "X / Twitter", icon: Link2, placeholder: "@yourhandle" },
-              { key: "website_url", label: "Website", icon: Globe, placeholder: "https://…" },
-            ].map((f) => (
-              <label key={f.key} className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-                <f.icon className="h-4 w-4 text-muted-foreground" />
-                <span className="w-24 shrink-0 text-xs font-semibold text-muted-foreground">{f.label}</span>
-                <input
-                  value={(socials as any)[f.key]}
-                  onChange={(e) => setSocials((s) => ({ ...s, [f.key]: e.target.value }))}
-                  placeholder={f.placeholder}
-                  maxLength={f.key === "website_url" ? 300 : 80}
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-                />
-              </label>
-            ))}
-            <button
-              disabled={saveSocialsM.isPending}
-              className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-            >
-              {saveSocialsM.isPending ? "Saving…" : "Save links"}
-            </button>
-            <p className="text-center text-[11px] text-muted-foreground">
-              Tip: tap <b>+ Import</b> on Create to pull a specific post over to Travidz.
+
+          {/* Section a — Your handles */}
+          <section className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your handles</h3>
+            <form onSubmit={(e) => { e.preventDefault(); saveSocialsM.mutate(); }} className="mt-2 space-y-2">
+              {([
+                { key: "instagram_handle", label: "Instagram", icon: Instagram, placeholder: "yourhandle", prefix: "instagram.com/" },
+                { key: "facebook_handle", label: "Facebook", icon: Facebook, placeholder: "yourpage", prefix: "facebook.com/" },
+                { key: "tiktok_handle", label: "TikTok", icon: Music2, placeholder: "yourhandle", prefix: "tiktok.com/@" },
+                { key: "youtube_handle", label: "YouTube", icon: Youtube, placeholder: "yourchannel", prefix: "youtube.com/@" },
+                { key: "x_handle", label: "X", icon: Link2, placeholder: "yourhandle", prefix: "x.com/" },
+                { key: "website_url", label: "Website", icon: Globe, placeholder: "https://…", prefix: "" },
+              ] as const).map((f) => {
+                const val = (socials as any)[f.key] as string;
+                return (
+                  <label key={f.key} className="block rounded-xl border border-border bg-card px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <f.icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="w-20 shrink-0 text-xs font-semibold text-muted-foreground">{f.label}</span>
+                      <input
+                        value={val}
+                        onChange={(e) => setSocials((s) => ({ ...s, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        maxLength={f.key === "website_url" ? 300 : 80}
+                        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                      />
+                    </div>
+                    {f.prefix && val && (
+                      <p className="ml-6 mt-0.5 truncate pl-20 text-[10px] text-muted-foreground">
+                        {f.prefix}{val.replace(/^@/, "")}
+                      </p>
+                    )}
+                  </label>
+                );
+              })}
+              <button
+                disabled={saveSocialsM.isPending}
+                className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {saveSocialsM.isPending ? "Saving…" : "Save handles"}
+              </button>
+            </form>
+          </section>
+
+          {/* Section b — Auto-sync */}
+          <section className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auto-sync videos</h3>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+                <Youtube className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 text-sm">
+                  <div className="font-semibold">YouTube</div>
+                  <div className="text-[11px] text-muted-foreground">Pulls your latest uploads automatically.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => syncYtM.mutate()}
+                  disabled={syncYtM.isPending || !socials.youtube_handle}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${syncYtM.isPending ? "animate-spin" : ""}`} />
+                  {syncYtM.isPending ? "Syncing…" : "Sync now"}
+                </button>
+              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+                  <Music2 className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 text-sm">
+                    <div className="font-semibold">TikTok (official)</div>
+                    <div className="text-[11px] text-muted-foreground">Admin-only — syncs Travidz's official TikTok.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => syncTikTokM.mutate()}
+                    disabled={syncTikTokM.isPending}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${syncTikTokM.isPending ? "animate-spin" : ""}`} />
+                    {syncTikTokM.isPending ? "Syncing…" : "Sync now"}
+                  </button>
+                </div>
+              )}
+              <div className="flex items-start gap-2 rounded-xl border border-dashed border-border bg-muted/40 px-3 py-2.5" title="Instagram and Facebook auto-sync need a Meta Business account and Meta app review. Use Import below in the meantime.">
+                <Instagram className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 text-[11px] text-muted-foreground">
+                  Instagram & Facebook auto-sync require Meta Business approval. Use <b>Import videos</b> below in the meantime.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section c — Import videos */}
+          <section className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Import videos (no link needed)</h3>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Paste up to 25 URLs (one per line) from YouTube, TikTok, Instagram, Facebook or X.
             </p>
-          </form>
+            <textarea
+              value={bulkUrls}
+              onChange={(e) => setBulkUrls(e.target.value)}
+              rows={5}
+              placeholder={"https://www.instagram.com/reel/...\nhttps://www.tiktok.com/@user/video/..."}
+              className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-xs outline-none focus:border-primary"
+            />
+            <button
+              type="button"
+              onClick={() => bulkImportM.mutate()}
+              disabled={bulkImportM.isPending}
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {bulkImportM.isPending ? "Importing…" : "Import"}
+            </button>
+            {bulkResult && (
+              <div className="mt-3 space-y-1 text-[11px]">
+                <div className="font-semibold">Imported: {bulkResult.imported}</div>
+                {bulkResult.skipped.length > 0 && (
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    {bulkResult.skipped.map((s) => (
+                      <li key={s.url} className="truncate">⏭ {s.reason} — {s.url}</li>
+                    ))}
+                  </ul>
+                )}
+                {bulkResult.failed.length > 0 && (
+                  <ul className="space-y-0.5 text-destructive">
+                    {bulkResult.failed.map((f) => (
+                      <li key={f.url} className="truncate">✗ {f.error} — {f.url}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
         </SheetContent>
       </Sheet>
     </MobileShell>
