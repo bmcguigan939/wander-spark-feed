@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 import { CommentsSheet } from "@/components/feed/CommentsSheet";
+import { getPlatformStyle } from "@/lib/platform-style";
 
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
   const [muted, setMuted] = useState(true);
@@ -163,13 +164,11 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           href={video.source_url ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-card to-background"
+          className={`absolute inset-0 flex items-center justify-center ${getPlatformStyle(video.source_platform).gradient}`}
         >
           {video.thumbnail_url ? (
             <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover opacity-80" />
-          ) : (
-            <Play className="h-16 w-16 text-muted-foreground" />
-          )}
+          ) : null}
           <span className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30">
             <Play className="h-9 w-9 fill-white text-white" />
           </span>
