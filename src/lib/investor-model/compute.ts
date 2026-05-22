@@ -77,9 +77,11 @@ export type RevenueYear = {
   gbv: number;
   gbvByTier: Record<CreatorTier, number>;
   grossCommission: number;
+  stripeFee: number;
+  netPool: number; // grossCommission − stripeFee (shared off the top)
   creatorPayout: number;
   travidzNet: number;
-  blendedCreatorSharePct: number; // of the 8%
+  blendedCreatorSharePct: number; // of the net pool (post-Stripe)
   blendedTakeRatePct: number; // travidzNet / gbv
 };
 
@@ -97,18 +99,25 @@ export function computeRevenue(a: Assumptions): RevenueYear[] {
     ) as Record<CreatorTier, number>;
 
     const grossCommission = gbv * a.grossCommissionPct;
+    const txnCount = a.avgBookingValue > 0 ? gbv / a.avgBookingValue : 0;
+    const stripeFee = gbv * a.stripeVariablePct + txnCount * a.stripeFixedPerTxn;
+    const netPool = Math.max(0, grossCommission - stripeFee);
+    // Tier split applies to the NET pool (after shared Stripe), weighted by tier-GBV share.
     let creatorPayout = 0;
     for (const t of TIER_ORDER) {
-      creatorPayout += gbvByTier[t] * a.grossCommissionPct * a.creatorSharePctByTier[t];
+      const tierShareOfGbv = gbv > 0 ? gbvByTier[t] / gbv : 0;
+      creatorPayout += netPool * tierShareOfGbv * a.creatorSharePctByTier[t];
     }
-    const travidzNet = grossCommission - creatorPayout;
-    const blendedCreatorSharePct = grossCommission > 0 ? creatorPayout / grossCommission : 0;
+    const travidzNet = netPool - creatorPayout;
+    const blendedCreatorSharePct = netPool > 0 ? creatorPayout / netPool : 0;
     const blendedTakeRatePct = gbv > 0 ? travidzNet / gbv : 0;
     return {
       year,
       gbv,
       gbvByTier,
       grossCommission,
+      stripeFee,
+      netPool,
       creatorPayout,
       travidzNet,
       blendedCreatorSharePct,
