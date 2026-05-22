@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { V6_DEFAULTS } from "@/lib/investor-model/assumptions";
-import { computeMarket, computeRevenue, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
+import { computeMarket, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
 import {
   Download,
   Link as LinkIcon,
@@ -26,13 +26,13 @@ export const Route = createFileRoute("/invest")({
       {
         name: "description",
         content:
-          "Travidz is a shoppable travel feed. £2.5M SAFE. Creators send the intent; we keep the booking. Experience the product and the pitch.",
+          "Travidz is a shoppable travel feed. £2.0M SAFE. Creators send the intent; we keep the booking. Experience the product and the pitch.",
       },
       { name: "robots", content: "noindex,nofollow" },
       { property: "og:title", content: "Travidz — Investor Pitch" },
       {
         property: "og:description",
-        content: "Discover · Book · Earn. The shoppable travel feed. £2.5M SAFE round open.",
+        content: "Discover · Book · Earn. The shoppable travel feed. £2.0M SAFE round open.",
       },
       { property: "og:url", content: SHARE_URL },
       { property: "og:type", content: "website" },
@@ -43,8 +43,6 @@ export const Route = createFileRoute("/invest")({
 
 function InvestPage() {
   const market = useMemo(() => computeMarket(V6_DEFAULTS), []);
-  const revenue = useMemo(() => computeRevenue(V6_DEFAULTS), []);
-  const y5 = revenue[4];
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-white">
@@ -105,16 +103,16 @@ function StickyBar() {
             <Download className="h-3.5 w-3.5" /> PPTX
           </a>
           <a
-            href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+            href="/decks/Travidz_Financial_Model_Global_v6.xlsx"
             className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
           >
-            <Download className="h-3.5 w-3.5" /> Model v2
+            <Download className="h-3.5 w-3.5" /> Model v6
           </a>
           <a
-            href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+            href="/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx"
             className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
           >
-            <Download className="h-3.5 w-3.5" /> Market v9
+            <Download className="h-3.5 w-3.5" /> Market v10
           </a>
         </div>
       </div>
@@ -131,7 +129,7 @@ function Hero() {
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-white/70">
-            <Sparkles className="h-3.5 w-3.5 text-[#ffb38a]" /> Seed · £2.5M SAFE · Open
+            <Sparkles className="h-3.5 w-3.5 text-[#ffb38a]" /> Seed · £2.0M SAFE · Open
           </div>
           <h1 className="text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl">
             Travel discovery has moved to creators.
@@ -163,7 +161,7 @@ function Hero() {
             {[
               { k: "Global TAM", v: "£675B" },
               { k: "Y5 GBV", v: "£350M → £1.32B" },
-              { k: "Take", v: "4.65%" },
+              { k: "Take", v: "4.68%" },
             ].map((s) => (
               <div key={s.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <dt className="text-[10px] uppercase tracking-wider text-white/50">{s.k}</dt>
@@ -355,7 +353,7 @@ function HowItWorks() {
 
 function BusinessModel() {
   const [gbv, setGbv] = useState(100_000_000);
-  const net = gbv * 0.0465;
+  const net = gbv * 0.0468;
   return (
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
@@ -364,8 +362,8 @@ function BusinessModel() {
           Take rate underwritable, distribution creator-owned.
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-4">
-          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.65%" />
-          <Stat k="Creator share" v="30–50%" sub="of net commission" />
+          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.68%" />
+          <Stat k="Creator share" v="30–50%" sub="of net pool (post-Stripe)" />
           <Stat k="Contribution margin" v="~55%" sub="at scale" />
           <Stat k="Paid acquisition" v="£0" sub="Y1–Y2, creator-led" />
         </div>
@@ -378,7 +376,7 @@ function BusinessModel() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.65%</div>
+              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.68%</div>
               <div className="mt-1 text-2xl font-bold tracking-tight text-[#ff8e72]">
                 {fmtGBP(net, { compact: true })}
               </div>
@@ -397,6 +395,10 @@ function BusinessModel() {
             <span>£10M</span>
             <span>£500M</span>
           </div>
+          <p className="mt-4 text-[11px] text-white/45">
+            Net = 11% gross commission − Stripe (2.9% + £0.20/txn, shared off the top) − tiered
+            creator share (50/50/50/40/30). v6 financial model.
+          </p>
         </Card>
       </div>
     </section>
@@ -481,8 +483,8 @@ function GlobalExpansion() {
   const compare = [
     { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
     { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
-    { label: "Travidz net revenue (Y5)", uk: "£16.2M", gv: "£61.6M", mult: "3.8x" },
-    { label: "Blended take-rate", uk: "4.6%", gv: "4.7%", mult: "—" },
+    { label: "Travidz net revenue (Y5)", uk: "£16.3M", gv: "£61.9M", mult: "3.8x" },
+    { label: "Blended take-rate", uk: "4.68%", gv: "4.69%", mult: "—" },
   ];
   return (
     <section className="border-b border-white/5 bg-gradient-to-b from-[#0a0612] via-[#120824] to-[#0a0612] py-20">
@@ -541,23 +543,23 @@ function GlobalExpansion() {
             </table>
           </div>
           <p className="mt-4 text-xs text-white/50">
-            Illustrative scenario layered on the v2 global model, reconciled to the v9 TAM/SOM
+            Illustrative scenario layered on the v6 global model, reconciled to the v10 TAM/SOM
             workbook. Assumes one breakout region per year and a TikTok-style creator loop.
-            UK Base remains our funded plan and what the £2.5M SAFE underwrites. Still &lt; 0.4%
+            UK Base remains our funded plan and what the £2.0M SAFE underwrites. Still &lt; 0.4%
             of the global SAM at Y5.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <a
-              href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+              href="/decks/Travidz_Financial_Model_Global_v6.xlsx"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
-              <Download className="h-3.5 w-3.5" /> Financial model v2 (Global)
+              <Download className="h-3.5 w-3.5" /> Financial model v6 (Global)
             </a>
             <a
-              href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+              href="/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
-              <Download className="h-3.5 w-3.5" /> Market research v9 (Global)
+              <Download className="h-3.5 w-3.5" /> Market research v10 (Global)
             </a>
           </div>
         </Card>
@@ -662,10 +664,10 @@ function TheAsk() {
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
         <SectionLabel icon={<TrendingUp className="h-3.5 w-3.5" />}>The Ask</SectionLabel>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">£2.5M SAFE · 18-month runway.</h2>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">£2.0M SAFE · 18-month runway.</h2>
         <p className="mt-3 max-w-2xl text-white/70">
-          Next: Series A at £18M GBV run-rate. Target KPIs at next round: 8k active creators, £40M
-          annualised GBV, 4% blended take.
+          Next: Series A £8M at £2M ARR (M22). Target KPIs at next round: 8k active creators,
+          £40M annualised GBV, 4% blended take.
         </p>
         <Card className="mt-8">
           <div className="mb-3 text-xs uppercase tracking-wider text-white/50">Use of funds</div>
@@ -713,7 +715,7 @@ function FooterCTA() {
           </Link>
         </div>
         <p className="mt-10 text-xs text-white/40">
-          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v9 market model
+          {fmtNum(V6_DEFAULTS.creatorsActiveByYear[4])} creators · {fmtPct(V6_DEFAULTS.grossCommissionPct, 0)} gross commission · v6 financial model · v10 market workbook
         </p>
       </div>
     </section>

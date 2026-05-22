@@ -23,8 +23,11 @@ export type Assumptions = {
   tierMixByYear: TierMix[];
 
   // Commission
-  grossCommissionPct: number; // 8%
-  // Creator share of the 8% by tier
+  grossCommissionPct: number; // 11% (v6)
+  // Stripe shared off the top before tier split
+  stripeVariablePct: number; // 2.9%
+  stripeFixedPerTxn: number; // £0.20
+  // Creator share of the NET pool (post-Stripe) by tier
   creatorSharePctByTier: Record<CreatorTier, number>; // 0.5, 0.5, 0.5, 0.4, 0.3
 };
 
@@ -55,14 +58,16 @@ export const GLOBAL_MARKET = {
   samPct: 0.26, // creator-influenced × bookable, global blend
   // Y5 SOM anchors (from workbook)
   somGBVBaseY5: 350_000_000, // UK Base Y5 GBV
-  somNetBaseY5: 16_200_000, // UK Base Y5 Travidz net
+  somNetBaseY5: 16_290_000, // UK Base Y5 Travidz net (v6: 11% − Stripe shared − tiered split)
   somGBVGlobalY5: 1_322_400_000, // Global Viral Y5 GBV
-  somNetGlobalY5: 61_570_944, // Global Viral Y5 Travidz net
+  somNetGlobalY5: 61_900_000, // Global Viral Y5 Travidz net (v6)
 } as const;
 
-// v7 defaults — UK-first, derived from Travidz_Market_Research_TAM_SOM_v7.xlsx
+// v6 financial-model / v10 market-workbook defaults — UK-first.
 // UK TAM: 60.7M outbound × £870 + 118M domestic × £295 = £87.6B
-// SAM = 36% creator-influenced × 80% bookable = 28.8% of TAM
+// SAM = 36% creator-influenced × 80% bookable = 28.8% of TAM.
+// Commission: 11% gross; Stripe 2.9% + £0.20/txn shared off the top;
+// remaining net pool split per tier (50/50/50/40/30).
 export const V6_DEFAULTS: Assumptions = {
   tamTravellers: 178_700_000, // 60.7M outbound + 118M domestic UK leisure trips
   avgBookingValue: 490, // blended £/trip → ≈ £87.6B UK TAM
@@ -85,7 +90,9 @@ export const V6_DEFAULTS: Assumptions = {
     { founding: 0.08, power: 0.34, mature: 0.32, maturing: 0.18, new: 0.08 },
   ],
 
-  grossCommissionPct: 0.08,
+  grossCommissionPct: 0.11,
+  stripeVariablePct: 0.029,
+  stripeFixedPerTxn: 0.20,
   creatorSharePctByTier: {
     founding: 0.5,
     power: 0.5,
