@@ -53,7 +53,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -254,7 +254,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
@@ -340,7 +340,7 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
         .eq("is_draft", false)
