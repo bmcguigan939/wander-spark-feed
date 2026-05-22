@@ -56,6 +56,7 @@ async function fetchFeedRows(
     )
     .eq("status", "ready")
     .eq("is_draft", false)
+    .eq("is_hidden", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()");
   if (creatorIds) {
     if (creatorIds.length === 0) return [];
@@ -130,6 +131,25 @@ function hoursSince(iso: string) {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
 }
 
+type SearchBudget = "$" | "$$" | "$$$";
+
+function budgetValues(budget?: SearchBudget) {
+  if (!budget) return null;
+  if (budget === "$") return ["$", "budget"];
+  if (budget === "$$") return ["$$", "mid", "mid-range"];
+  return ["$$$", "luxury"];
+}
+
+function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
+  const values = budgetValues(budget);
+  return values ? (q as any).in("budget_tag", values) : q;
+}
+
+function isRecentMetaImport(v: Pick<FeedVideo, "source_platform" | "embed_mode" | "created_at">) {
+  const p = (v.source_platform ?? "").toLowerCase();
+  return v.embed_mode === "link_card" && (p === "instagram" || p === "facebook") && hoursSince(v.created_at) <= 24 * 14;
+}
+
 function scoreVideo(
   v: RankRow,
   ctx: {
@@ -160,9 +180,10 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
+  const metaImportBoost = isRecentMetaImport(v) ? 18 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + jitter
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + metaImportBoost + jitter
   );
 }
 
