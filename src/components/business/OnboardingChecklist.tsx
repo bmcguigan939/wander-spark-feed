@@ -55,13 +55,6 @@ export function OnboardingChecklist() {
       to: "/legal/business-agreement",
     },
     {
-      id: "verified",
-      title: "Get verified",
-      desc: "Verified businesses get a badge and creator trust.",
-      done: !!agreement?.is_verified,
-      to: "/business/apply",
-    },
-    {
       id: "first-deal",
       title: "Publish your first deal",
       desc: "Add an offer so creators can promote it.",
