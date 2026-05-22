@@ -5,7 +5,7 @@ import { useState } from "react";
 import { listAdminUsers, grantRole, revokeRole } from "@/lib/admin.functions";
 import { setProfileVerified } from "@/lib/verification.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, X, BadgeCheck, Crown, Lock } from "lucide-react";
+import { Plus, X, BadgeCheck, Crown, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/users")({
@@ -22,11 +22,15 @@ function AdminUsers() {
   const revokeFn = useServerFn(revokeRole);
   const verifyFn = useServerFn(setProfileVerified);
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<"all" | "trusted" | "untrusted">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users", q],
     queryFn: () => listFn({ data: { q: q || undefined } }),
   });
+  const visibleUsers = (data?.users ?? []).filter((u: any) =>
+    filter === "all" ? true : filter === "trusted" ? !!u.is_verified : !u.is_verified,
+  );
 
   const grant = useMutation({
     mutationFn: (v: { userId: string; role: (typeof ROLES)[number] }) => grantFn({ data: v }),
@@ -48,9 +52,20 @@ function AdminUsers() {
     <div className="px-4 py-4 pb-28 space-y-3">
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search username or name…"
         className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+      <div className="flex gap-1.5">
+        {(["all", "trusted", "untrusted"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`flex-1 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize ${filter === f ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"}`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
       <ul className="space-y-2">
-        {data?.users.map((u: any) => (
+        {visibleUsers.map((u: any) => (
           <li key={u.id} className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -80,9 +95,11 @@ function AdminUsers() {
               </div>
               <button
                 onClick={() => verify.mutate({ userId: u.id, verified: !u.is_verified })}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${u.is_verified ? "bg-primary text-primary-foreground" : "border border-dashed border-border text-muted-foreground"}`}
+                title={u.is_verified ? "Mark as untrusted" : "Mark as trusted"}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${u.is_verified ? "bg-primary text-primary-foreground" : "border border-dashed border-border text-muted-foreground"}`}
               >
-                {u.is_verified ? "Verified" : "Verify"}
+                <ShieldCheck className="h-3 w-3" />
+                {u.is_verified ? "Trusted" : "Untrust"}
               </button>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">

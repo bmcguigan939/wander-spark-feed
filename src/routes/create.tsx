@@ -302,7 +302,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const PLATFORM_META: Record<string, { label: string; hint: string; Icon: typeof Link2 }> = {
   youtube: { label: "YouTube", hint: "youtube.com/watch?v=…  or  /shorts/…", Icon: Youtube },
   tiktok: { label: "TikTok", hint: "tiktok.com/@user/video/…", Icon: Link2 },
-  instagram: { label: "Instagram", hint: "instagram.com/reel/…", Icon: Link2 },
+  instagram: { label: "Instagram", hint: "instagram.com/reel/…  or  /p/…", Icon: Link2 },
+  facebook: { label: "Facebook", hint: "facebook.com/…/videos/…  or  fb.watch/…", Icon: Link2 },
   x: { label: "X (Twitter)", hint: "x.com/user/status/…", Icon: Link2 },
 };
 
