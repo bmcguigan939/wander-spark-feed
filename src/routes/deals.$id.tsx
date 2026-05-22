@@ -11,7 +11,7 @@ import {
   withdrawApplication,
 } from "@/lib/deal-applications.functions";
 import { useAuth } from "@/lib/auth";
-import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck } from "lucide-react";
+import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck, CreditCard } from "lucide-react";
 import { claimRedemption } from "@/lib/redemptions.functions";
 import {
   Dialog,
@@ -82,6 +82,15 @@ function DealDetail() {
             >
               <ExternalLink className="h-4 w-4" /> View deal
             </button>
+            {deal.bookable && deal.price_cents > 0 && (
+              <Link
+                to="/book/$dealId"
+                params={{ dealId: id }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary"
+              >
+                <CreditCard className="h-4 w-4" /> Book now
+              </Link>
+            )}
             {user && <ClaimRedemptionBlock />}
             {user && isCreator && deal.business_id !== user.id && (
               <CreatorApplyBlock dealId={id} />

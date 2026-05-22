@@ -22,6 +22,9 @@ function NewDealPage() {
   const payoutFn = useServerFn(getMyPayoutMethod);
   const [busy, setBusy] = useState(false);
   const [bookable, setBookable] = useState(false);
+  const [policy, setPolicy] = useState<
+    "travidz_standard" | "free_cancel_until_start" | "non_refundable" | "custom_24h" | "custom_7d"
+  >("travidz_standard");
 
   const { data: payout } = useQuery({
     queryKey: ["payout-method"],
@@ -75,6 +78,25 @@ function NewDealPage() {
               </div>
             </div>
           )}
+          {bookable && (
+            <div className="mt-3">
+              <label htmlFor="policy" className="text-xs font-medium text-muted-foreground">
+                Cancellation policy
+              </label>
+              <select
+                id="policy"
+                value={policy}
+                onChange={(e) => setPolicy(e.target.value as any)}
+                className="mt-1 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-sm"
+              >
+                <option value="travidz_standard">Travidz standard (recommended)</option>
+                <option value="free_cancel_until_start">Free cancellation until travel date</option>
+                <option value="custom_24h">Free cancellation up to 24h before</option>
+                <option value="custom_7d">Free cancellation up to 7 days before</option>
+                <option value="non_refundable">Non-refundable</option>
+              </select>
+            </div>
+          )}
         </div>
         <DealForm
           submitLabel="Create deal"
@@ -90,6 +112,7 @@ function NewDealPage() {
                 Object.entries(values).filter(([, v]) => v !== "" && v !== undefined)
               ) as any;
               cleaned.bookable = bookable;
+              if (bookable) cleaned.cancellation_policy_code = policy;
               const { id } = await createFn({ data: cleaned });
               toast.success("Deal created");
               navigate({ to: "/business/deals/$id/edit", params: { id } });

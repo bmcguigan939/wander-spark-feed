@@ -68,6 +68,9 @@ const upsertSchema = z.object({
   parity_exempt_reason: z.string().max(500).optional().nullable(),
   category: z.enum(["stay", "eat", "do", "tour", "transport", "other"]).optional(),
   bookable: z.boolean().optional(),
+  cancellation_policy_code: z
+    .enum(["travidz_standard", "free_cancel_until_start", "non_refundable", "custom_24h", "custom_7d"]) 
+    .optional(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })
