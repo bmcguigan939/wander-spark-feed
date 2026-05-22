@@ -376,6 +376,7 @@ async function loadFacets(): Promise<SearchFacets> {
     .select("country,activity_tags")
     .eq("status", "ready")
     .eq("is_draft", false)
+    .eq("is_hidden", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()")
     .limit(2000);
   const countryMap = new Map<string, number>();
@@ -414,7 +415,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         country: z.string().max(80).optional(),
         tags: z.array(z.string().max(40)).max(8).optional(),
         budget: z.enum(["$", "$$", "$$$"]).optional(),
-          sort: z.enum(["new", "popular"]).default("new"),
+        sort: z.enum(["new", "popular"]).default("new"),
       })
       .parse(input),
   )
@@ -437,6 +438,7 @@ export const searchVideos = createServerFn({ method: "GET" })
             )
             .eq("status", "ready")
             .eq("is_draft", false)
+            .eq("is_hidden", false)
             .or("scheduled_at.is.null,scheduled_at.lte.now()");
           if (data.country) kw = kw.eq("country", data.country);
           kw = applyBudgetFilter(kw, data.budget);
@@ -471,6 +473,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           .in("id", newIds)
           .eq("status", "ready")
           .eq("is_draft", false)
+          .eq("is_hidden", false)
           .or("scheduled_at.is.null,scheduled_at.lte.now()");
         if (data.country) extra = extra.eq("country", data.country);
         extra = applyBudgetFilter(extra, data.budget);
@@ -507,8 +510,9 @@ export const searchVideos = createServerFn({ method: "GET" })
         "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
       )
       .eq("status", "ready")
-    .eq("is_draft", false)
-    .or("scheduled_at.is.null,scheduled_at.lte.now()");
+      .eq("is_draft", false)
+      .eq("is_hidden", false)
+      .or("scheduled_at.is.null,scheduled_at.lte.now()");
 
     if (data.country) q = q.eq("country", data.country);
     q = applyBudgetFilter(q, data.budget);
