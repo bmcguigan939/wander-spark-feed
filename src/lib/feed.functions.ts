@@ -180,7 +180,7 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
-  const metaImportBoost = isRecentMetaImport(v) ? 18 : 0;
+  const metaImportBoost = isRecentMetaImport(v) ? 80 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
     freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + metaImportBoost + jitter
