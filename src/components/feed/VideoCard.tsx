@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
@@ -142,6 +142,11 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     width: "100%", height: "100%",
     "--controls": "none", "--media-object-fit": "cover",
   };
+  const platformStyle = getPlatformStyle(video.source_platform);
+  const PlatformIcon = video.source_platform === "youtube" ? Youtube
+    : video.source_platform === "instagram" ? Instagram
+    : video.source_platform === "facebook" ? Facebook
+    : ExternalLink;
 
   return (
     <section className="feed-snap relative h-dvh w-full overflow-hidden bg-black">
@@ -164,14 +169,25 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           href={video.source_url ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className={`absolute inset-0 flex items-center justify-center ${getPlatformStyle(video.source_platform).gradient}`}
+          className={`absolute inset-0 flex items-center justify-center ${platformStyle.gradient}`}
         >
           {video.thumbnail_url ? (
             <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover opacity-80" />
-          ) : null}
-          <span className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30">
-            <Play className="h-9 w-9 fill-white text-white" />
-          </span>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center text-white">
+              <PlatformIcon className="mb-5 h-12 w-12 drop-shadow" />
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">Linked {platformStyle.label} video</div>
+              <div className="mt-3 max-w-[18rem] font-display text-2xl font-semibold leading-tight drop-shadow">{video.title}</div>
+              <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur-xl ring-1 ring-white/25">
+                <Play className="h-4 w-4 fill-white" /> Open original
+              </div>
+            </div>
+          )}
+          {video.thumbnail_url && (
+            <span className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30">
+              <Play className="h-9 w-9 fill-white text-white" />
+            </span>
+          )}
         </a>
       )}
 
@@ -185,8 +201,8 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           rel="noopener noreferrer"
           className="absolute left-3 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-xl ring-1 ring-white/20"
         >
-          {video.source_platform === "youtube" ? <Youtube className="h-3.5 w-3.5" /> : <ExternalLink className="h-3 w-3" />}
-          {video.source_platform}
+          <PlatformIcon className="h-3.5 w-3.5" />
+          {platformStyle.label}
         </a>
       )}
 

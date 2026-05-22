@@ -56,6 +56,7 @@ async function fetchFeedRows(
     )
     .eq("status", "ready")
     .eq("is_draft", false)
+    .eq("is_hidden", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()");
   if (creatorIds) {
     if (creatorIds.length === 0) return [];
@@ -130,6 +131,25 @@ function hoursSince(iso: string) {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
 }
 
+type SearchBudget = "$" | "$$" | "$$$";
+
+function budgetValues(budget?: SearchBudget) {
+  if (!budget) return null;
+  if (budget === "$") return ["$", "budget"];
+  if (budget === "$$") return ["$$", "mid", "mid-range"];
+  return ["$$$", "luxury"];
+}
+
+function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
+  const values = budgetValues(budget);
+  return values ? (q as any).in("budget_tag", values) : q;
+}
+
+function isRecentMetaImport(v: Pick<FeedVideo, "source_platform" | "embed_mode" | "created_at">) {
+  const p = (v.source_platform ?? "").toLowerCase();
+  return v.embed_mode === "link_card" && (p === "instagram" || p === "facebook") && hoursSince(v.created_at) <= 24 * 14;
+}
+
 function scoreVideo(
   v: RankRow,
   ctx: {
@@ -160,9 +180,10 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
+  const metaImportBoost = isRecentMetaImport(v) ? 80 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + jitter
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + metaImportBoost + jitter
   );
 }
 
@@ -318,11 +339,12 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
-    .eq("is_draft", false)
-    .or("scheduled_at.is.null,scheduled_at.lte.now()")
+        .eq("is_draft", false)
+        .eq("is_hidden", false)
+        .or("scheduled_at.is.null,scheduled_at.lte.now()")
         .textSearch("search_tsv", tsQuery, { config: "simple" })
         .limit(30),
       supabaseAdmin
@@ -334,7 +356,7 @@ export const searchAll = createServerFn({ method: "GET" })
 
     return {
       videos: (videosRes.data ?? []) as unknown as Array<
-        Pick<FeedVideo, "id" | "title" | "mux_playback_id" | "thumbnail_url" | "destination" | "country" | "activity_tags" | "like_count" | "creator">
+        Pick<FeedVideo, "id" | "title" | "mux_playback_id" | "thumbnail_url" | "destination" | "country" | "activity_tags" | "like_count" | "creator" | "source_platform" | "source_url" | "embed_mode">
       >,
       creators: creatorsRes.data ?? [],
     };
@@ -354,6 +376,7 @@ async function loadFacets(): Promise<SearchFacets> {
     .select("country,activity_tags")
     .eq("status", "ready")
     .eq("is_draft", false)
+    .eq("is_hidden", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()")
     .limit(2000);
   const countryMap = new Map<string, number>();
@@ -415,9 +438,10 @@ export const searchVideos = createServerFn({ method: "GET" })
             )
             .eq("status", "ready")
             .eq("is_draft", false)
+            .eq("is_hidden", false)
             .or("scheduled_at.is.null,scheduled_at.lte.now()");
           if (data.country) kw = kw.eq("country", data.country);
-          if (data.budget) kw = kw.eq("budget_tag", data.budget);
+          kw = applyBudgetFilter(kw, data.budget);
           if (data.tags && data.tags.length) kw = kw.contains("activity_tags", data.tags);
           if (tsQuery) kw = kw.textSearch("search_tsv", tsQuery, { config: "simple" });
           return await kw.limit(60);
@@ -449,9 +473,10 @@ export const searchVideos = createServerFn({ method: "GET" })
           .in("id", newIds)
           .eq("status", "ready")
           .eq("is_draft", false)
+          .eq("is_hidden", false)
           .or("scheduled_at.is.null,scheduled_at.lte.now()");
         if (data.country) extra = extra.eq("country", data.country);
-        if (data.budget) extra = extra.eq("budget_tag", data.budget);
+        extra = applyBudgetFilter(extra, data.budget);
         if (data.tags && data.tags.length) extra = extra.contains("activity_tags", data.tags);
         const { data: extraData } = await extra;
         extraRows = (extraData ?? []) as any[];
@@ -485,11 +510,12 @@ export const searchVideos = createServerFn({ method: "GET" })
         "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,destination,country,city,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
       )
       .eq("status", "ready")
-    .eq("is_draft", false)
-    .or("scheduled_at.is.null,scheduled_at.lte.now()");
+      .eq("is_draft", false)
+      .eq("is_hidden", false)
+      .or("scheduled_at.is.null,scheduled_at.lte.now()");
 
     if (data.country) q = q.eq("country", data.country);
-    if (data.budget) q = q.eq("budget_tag", data.budget);
+    q = applyBudgetFilter(q, data.budget);
     if (data.tags && data.tags.length) q = q.contains("activity_tags", data.tags);
 
     q =

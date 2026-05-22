@@ -54,7 +54,7 @@ function CreateTabs() {
     <MobileShell>
       <div className="px-5 pb-32 pt-6">
         <h1 className="text-2xl font-bold">Create</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Upload a new clip or import one you already shared elsewhere.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Upload a video file to host it on Travidz, or link a social post for discovery.</p>
         <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1">
           {(["upload", "import"] as const).map((t) => (
             <button
@@ -365,7 +365,7 @@ function ImportFlow() {
       {!preview && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {(["youtube", "tiktok", "instagram", "x"] as const).map((p) => {
+            {(["youtube", "tiktok", "instagram", "facebook", "x"] as const).map((p) => {
               const M = PLATFORM_META[p];
               const isSelected = selectedPlatform === p;
               return (
@@ -417,7 +417,7 @@ function ImportFlow() {
               </button>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              We'll fetch the title, description and thumbnail and embed the original video. Your followers can play it without leaving Travidz.
+              We'll fetch the title, description and thumbnail when the platform allows it. Instagram and Facebook imports appear as linked cards; upload the video file to host and play it natively on Travidz.
             </p>
           </div>
         </>
@@ -446,7 +446,7 @@ function ImportFlow() {
           {!preview.thumbnail && (preview.platform === "instagram" || preview.platform === "facebook") && (
             <div className="rounded-2xl border border-border bg-card p-3">
               <p className="text-xs text-muted-foreground">
-                We couldn't fetch {preview.platform === "instagram" ? "Instagram" : "Facebook"}'s preview image — they block automated requests. Paste an image URL below, or use the <b>Upload</b> tab to host the video on Travidz instead.
+                We couldn't fetch {preview.platform === "instagram" ? "Instagram" : "Facebook"}'s preview image — they often block automated access. Paste a cover image URL below, or use the <b>Upload</b> tab to host the video on Travidz instead.
               </p>
               <input
                 value={customThumb}
@@ -489,7 +489,7 @@ function ImportFlow() {
             disabled={importM.isPending || !title.trim() || !ownership}
             className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
-            {importM.isPending ? "Publishing…" : "Publish to Travidz"}
+            {importM.isPending ? "Publishing…" : "Publish linked post"}
           </button>
         </form>
       )}

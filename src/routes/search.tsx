@@ -6,7 +6,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { searchAll, searchVideos, getSearchFacets } from "@/lib/feed.functions";
-import { Search, X, Play, MapPin, Sparkles, DollarSign, ArrowDownUp, Check } from "lucide-react";
+import { Search, X, Play, MapPin, Sparkles, DollarSign, ArrowDownUp, Check, ExternalLink } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getPlatformStyle } from "@/lib/platform-style";
 
@@ -165,20 +165,39 @@ function SearchPage() {
             <p className="mt-10 text-center text-sm text-muted-foreground">No videos match your filters.</p>
           ) : (
             <div className="mt-4 grid grid-cols-3 gap-1.5">
-              {videos.map((v) => (
-                <Link key={v.id} to="/" search={{ v: v.id } as any} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
-                  {v.thumbnail_url ? (
-                    <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className={`flex h-full w-full items-center justify-center ${getPlatformStyle((v as any).source_platform).gradient}`}>
-                      <Play className="h-6 w-6 text-white/90 drop-shadow" />
+              {videos.map((v) => {
+                const style = getPlatformStyle((v as any).source_platform);
+                const isExternal = !(v as any).mux_playback_id && (v as any).source_url;
+                const content = (
+                  <>
+                    {v.thumbnail_url ? (
+                      <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className={`flex h-full w-full flex-col items-center justify-center gap-2 px-2 text-center ${style.gradient}`}>
+                        <Play className="h-6 w-6 text-white/90 drop-shadow" />
+                        <span className="line-clamp-3 text-[10px] font-semibold leading-tight text-white">{v.title}</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                      <p className="line-clamp-2 text-[10px] font-medium text-white">{v.title}</p>
+                      {isExternal && (
+                        <p className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-white/80">
+                          <ExternalLink className="h-2.5 w-2.5" /> Open on {style.label}
+                        </p>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                    <p className="line-clamp-2 text-[10px] font-medium text-white">{v.title}</p>
-                  </div>
-                </Link>
-              ))}
+                  </>
+                );
+                return isExternal ? (
+                  <a key={v.id} href={(v as any).source_url} target="_blank" rel="noopener noreferrer" className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
+                    {content}
+                  </a>
+                ) : (
+                  <Link key={v.id} to="/" search={{ v: v.id } as any} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
+                    {content}
+                  </Link>
+                );
+              })}
             </div>
           )
         )}
