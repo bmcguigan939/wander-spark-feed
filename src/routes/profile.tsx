@@ -10,7 +10,7 @@ import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, S
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
-import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk } from "@/lib/social.functions";
+import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -33,6 +33,7 @@ function ProfilePage() {
   const syncYtFn = useServerFn(syncYouTubeForCreator);
   const syncTikTokFn = useServerFn(syncTikTokOfficial);
   const bulkImportFn = useServerFn(importExternalVideosBulk);
+  const setThumbFn = useServerFn(setImportedThumbnail);
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
@@ -69,7 +70,20 @@ function ProfilePage() {
     imported: number;
     skipped: { url: string; reason: string }[];
     failed: { url: string; error: string }[];
+    items?: { url: string; videoId: string; hasThumbnail: boolean }[];
   } | null>(null);
+  const [thumbDrafts, setThumbDrafts] = useState<Record<string, string>>({});
+  const [thumbSaved, setThumbSaved] = useState<Record<string, boolean>>({});
+  const setThumbM = useMutation({
+    mutationFn: (args: { videoId: string; thumbnailUrl: string }) =>
+      setThumbFn({ data: args }),
+    onSuccess: (_r, vars) => {
+      setThumbSaved((s) => ({ ...s, [vars.videoId]: true }));
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast("Thumbnail saved");
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't save thumbnail"),
+  });
 
   const socialsQ = useQuery({
     queryKey: ["my-socials"],
