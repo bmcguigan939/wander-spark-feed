@@ -730,3 +730,90 @@ export const syncTikTokOfficial = createServerFn({ method: "POST" })
     if (!adminRow) throw new Error("Admin only");
     return syncTikTokOfficialAdmin();
   });
+
+// ---------- Imported-video thumbnail repair ----------
+
+export const setImportedThumbnail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        videoId: z.string().uuid(),
+        thumbnailUrl: z.string().url().max(500),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: row } = await supabaseAdmin
+      .from("videos")
+      .select("id, creator_id")
+      .eq("id", data.videoId)
+      .maybeSingle();
+    if (!row) throw new Error("Video not found");
+    if ((row as any).creator_id !== userId) throw new Error("Not your video");
+    const { error } = await (supabaseAdmin.from("videos") as any)
+      .update({ thumbnail_url: data.thumbnailUrl })
+      .eq("id", data.videoId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Admin-only: re-run preview against the stored source_url for every
+ * link-card video whose thumbnail is still empty, and persist any new
+ * thumbnail/title we can recover. Idempotent.
+ */
+export const repairBlankImportedThumbnails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: adminRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!adminRow) throw new Error("Admin only");
+
+    const { data: rows } = await supabaseAdmin
+      .from("videos")
+      .select("id, source_url, source_platform, source_video_id, title")
+      .eq("embed_mode", "link_card")
+      .is("thumbnail_url", null)
+      .limit(50);
+
+    let repaired = 0;
+    let attempted = 0;
+    for (const r of (rows ?? []) as any[]) {
+      if (!r.source_url) continue;
+      attempted++;
+      try {
+        const det = detectPlatform(r.source_url);
+        if (!det) continue;
+        let preview: PreviewResult;
+        if (det.platform === "youtube") {
+          preview = await previewYouTube(det.sourceId, r.source_url);
+        } else if (det.platform === "tiktok") {
+          preview = await previewTikTok(r.source_url, det.sourceId);
+        } else {
+          preview = await previewByOgTags(r.source_url, det.platform, det.sourceId);
+        }
+        const patch: Record<string, any> = {};
+        if (preview.thumbnail) patch.thumbnail_url = preview.thumbnail;
+        // Only overwrite an obviously placeholder title (e.g. "instagram post").
+        if (
+          preview.title &&
+          (r.title === `${det.platform} post` || !r.title?.trim())
+        ) {
+          patch.title = preview.title.slice(0, 160);
+        }
+        if (Object.keys(patch).length) {
+          await (supabaseAdmin.from("videos") as any).update(patch).eq("id", r.id);
+          if (patch.thumbnail_url) repaired++;
+        }
+      } catch (e) {
+        console.error("repair thumbnail failed", r.id, e);
+      }
+    }
+    return { repaired, attempted, scanned: rows?.length ?? 0 };
+  });
