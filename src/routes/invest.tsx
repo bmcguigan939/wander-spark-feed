@@ -485,8 +485,8 @@ function GlobalExpansion() {
   const compare = [
     { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
     { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
-    { label: "Travidz net revenue (Y5)", uk: "£16.2M", gv: "£61.6M", mult: "3.8x" },
-    { label: "Blended take-rate", uk: "4.6%", gv: "4.7%", mult: "—" },
+    { label: "Travidz net revenue (Y5)", uk: "£16.3M", gv: "£61.9M", mult: "3.8x" },
+    { label: "Blended take-rate", uk: "4.68%", gv: "4.69%", mult: "—" },
   ];
   return (
     <section className="border-b border-white/5 bg-gradient-to-b from-[#0a0612] via-[#120824] to-[#0a0612] py-20">
@@ -545,23 +545,23 @@ function GlobalExpansion() {
             </table>
           </div>
           <p className="mt-4 text-xs text-white/50">
-            Illustrative scenario layered on the v2 global model, reconciled to the v9 TAM/SOM
+            Illustrative scenario layered on the v6 global model, reconciled to the v10 TAM/SOM
             workbook. Assumes one breakout region per year and a TikTok-style creator loop.
-            UK Base remains our funded plan and what the £2.5M SAFE underwrites. Still &lt; 0.4%
+            UK Base remains our funded plan and what the £2.0M SAFE underwrites. Still &lt; 0.4%
             of the global SAM at Y5.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <a
-              href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+              href="/decks/Travidz_Financial_Model_Global_v6.xlsx"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
-              <Download className="h-3.5 w-3.5" /> Financial model v2 (Global)
+              <Download className="h-3.5 w-3.5" /> Financial model v6 (Global)
             </a>
             <a
-              href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+              href="/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
-              <Download className="h-3.5 w-3.5" /> Market research v9 (Global)
+              <Download className="h-3.5 w-3.5" /> Market research v10 (Global)
             </a>
           </div>
         </Card>
