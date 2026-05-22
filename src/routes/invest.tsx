@@ -105,16 +105,16 @@ function StickyBar() {
             <Download className="h-3.5 w-3.5" /> PPTX
           </a>
           <a
-            href="/decks/Travidz_Financial_Model_v2_Global.xlsx"
+            href="/decks/Travidz_Financial_Model_Global_v6.xlsx"
             className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
           >
-            <Download className="h-3.5 w-3.5" /> Model v2
+            <Download className="h-3.5 w-3.5" /> Model v6
           </a>
           <a
-            href="/decks/Travidz_Market_Research_TAM_SOM_v9_Global.xlsx"
+            href="/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx"
             className="hidden items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25 md:inline-flex"
           >
-            <Download className="h-3.5 w-3.5" /> Market v9
+            <Download className="h-3.5 w-3.5" /> Market v10
           </a>
         </div>
       </div>
