@@ -11,6 +11,7 @@ import {
 import { RedemptionConfirmedCreatorEmail } from "./email-templates/redemption-confirmed-creator";
 import { RedemptionConfirmedTravellerEmail } from "./email-templates/redemption-confirmed-traveller";
 import { stampRedemptionSplit } from "@/lib/commission.server";
+import { autoTrustOnActivity } from "@/lib/verification.functions";
 
 // Traveller-initiated "I used this code" claim. Inserts a pending redemption.
 // Idempotent: if the same user has already claimed the same code in the last
@@ -195,6 +196,22 @@ export const confirmRedemption = createServerFn({ method: "POST" })
     void sendRedemptionConfirmedEmails(data.id).catch((e) =>
       console.error("redemption emails failed", e),
     );
+
+    // Auto-trust the business owner the first time they confirm a booking.
+    void (async () => {
+      try {
+        const { data: r } = await supabaseAdmin
+          .from("deal_redemptions")
+          .select("deal_id,deals(business_id)")
+          .eq("id", data.id)
+          .maybeSingle();
+        const businessId = (r as any)?.deals?.business_id as string | undefined;
+        if (businessId) await autoTrustOnActivity(businessId);
+      } catch (e) {
+        console.error("redemption auto-trust failed", e);
+      }
+    })();
+
     return { ok: true as const, row };
   });
 
