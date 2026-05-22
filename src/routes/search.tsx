@@ -8,6 +8,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { searchAll, searchVideos, getSearchFacets } from "@/lib/feed.functions";
 import { Search, X, Play, MapPin, Sparkles, DollarSign, ArrowDownUp, Check } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { getPlatformStyle } from "@/lib/platform-style";
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -169,7 +170,9 @@ function SearchPage() {
                   {v.thumbnail_url ? (
                     <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" loading="lazy" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center"><Play className="h-6 w-6 text-muted-foreground" /></div>
+                    <div className={`flex h-full w-full items-center justify-center ${getPlatformStyle((v as any).source_platform).gradient}`}>
+                      <Play className="h-6 w-6 text-white/90 drop-shadow" />
+                    </div>
                   )}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
                     <p className="line-clamp-2 text-[10px] font-medium text-white">{v.title}</p>
