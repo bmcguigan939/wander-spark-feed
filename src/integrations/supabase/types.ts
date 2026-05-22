@@ -215,6 +215,157 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_refunds: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          created_at: string
+          currency: string
+          id: string
+          initiated_by: string | null
+          initiated_role: string | null
+          reason: string | null
+          status: string
+          stripe_refund_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          initiated_by?: string | null
+          initiated_role?: string | null
+          reason?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          initiated_by?: string | null
+          initiated_role?: string | null
+          reason?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_refunds_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          business_id: string
+          business_payout_cents: number
+          cancelled_at: string | null
+          commission_cents: number
+          commission_pct: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          creator_id: string | null
+          currency: string
+          customer_email: string | null
+          customer_name: string | null
+          deal_id: string
+          guests: number
+          id: string
+          notes: string | null
+          paid_at: string | null
+          referrer_video_id: string | null
+          refunded_at: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_transfer_id: string | null
+          subtotal_cents: number
+          tax_cents: number
+          total_cents: number
+          travel_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          business_payout_cents?: number
+          cancelled_at?: string | null
+          commission_cents?: number
+          commission_pct?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          creator_id?: string | null
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          deal_id: string
+          guests?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          referrer_video_id?: string | null
+          refunded_at?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_transfer_id?: string | null
+          subtotal_cents: number
+          tax_cents?: number
+          total_cents: number
+          travel_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          business_payout_cents?: number
+          cancelled_at?: string | null
+          commission_cents?: number
+          commission_pct?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          creator_id?: string | null
+          currency?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          deal_id?: string
+          guests?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          referrer_video_id?: string | null
+          refunded_at?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_transfer_id?: string | null
+          subtotal_cents?: number
+          tax_cents?: number
+          total_cents?: number
+          travel_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_invites: {
         Row: {
           accepted_business_id: string | null
@@ -319,6 +470,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      business_payout_lines: {
+        Row: {
+          booking_id: string
+          business_id: string
+          commission_cents: number
+          created_at: string
+          currency: string
+          gross_cents: number
+          id: string
+          net_cents: number
+          payout_id: string
+        }
+        Insert: {
+          booking_id: string
+          business_id: string
+          commission_cents: number
+          created_at?: string
+          currency?: string
+          gross_cents: number
+          id?: string
+          net_cents: number
+          payout_id: string
+        }
+        Update: {
+          booking_id?: string
+          business_id?: string
+          commission_cents?: number
+          created_at?: string
+          currency?: string
+          gross_cents?: number
+          id?: string
+          net_cents?: number
+          payout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_payout_lines_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_payout_lines_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "business_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_payouts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          booking_count: number
+          business_id: string
+          commission_cents: number
+          created_at: string
+          currency: string
+          external_reference: string | null
+          gross_cents: number
+          id: string
+          net_cents: number
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payout_method: string | null
+          period_end: string
+          period_start: string
+          status: string
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_count?: number
+          business_id: string
+          commission_cents?: number
+          created_at?: string
+          currency?: string
+          external_reference?: string | null
+          gross_cents?: number
+          id?: string
+          net_cents?: number
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_method?: string | null
+          period_end: string
+          period_start: string
+          status?: string
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_count?: number
+          business_id?: string
+          commission_cents?: number
+          created_at?: string
+          currency?: string
+          external_reference?: string | null
+          gross_cents?: number
+          id?: string
+          net_cents?: number
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_method?: string | null
+          period_end?: string
+          period_start?: string
+          status?: string
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       client_error_logs: {
         Row: {
@@ -751,6 +1022,7 @@ export type Database = {
       }
       deal_redemptions: {
         Row: {
+          booking_id: string | null
           code: string
           commission_cents: number | null
           commission_rate: number | null
@@ -776,6 +1048,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          booking_id?: string | null
           code: string
           commission_cents?: number | null
           commission_rate?: number | null
@@ -801,6 +1074,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          booking_id?: string | null
           code?: string
           commission_cents?: number | null
           commission_rate?: number | null
@@ -826,6 +1100,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "deal_redemptions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deal_redemptions_confirmed_by_fkey"
             columns: ["confirmed_by"]
@@ -904,7 +1185,9 @@ export type Database = {
           affiliate_network: string | null
           ai_confidence: number | null
           ai_summary: string | null
+          bookable: boolean
           business_id: string | null
+          cancellation_policy_code: string
           category: Database["public"]["Enums"]["deal_category"]
           city: string | null
           click_count: number
@@ -920,6 +1203,8 @@ export type Database = {
           ends_at: string | null
           id: string
           image_url: string | null
+          inventory_mode: string
+          inventory_remaining: number | null
           is_active: boolean
           last_seen_at: string | null
           lat: number | null
@@ -941,7 +1226,9 @@ export type Database = {
           affiliate_network?: string | null
           ai_confidence?: number | null
           ai_summary?: string | null
+          bookable?: boolean
           business_id?: string | null
+          cancellation_policy_code?: string
           category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
@@ -957,6 +1244,8 @@ export type Database = {
           ends_at?: string | null
           id?: string
           image_url?: string | null
+          inventory_mode?: string
+          inventory_remaining?: number | null
           is_active?: boolean
           last_seen_at?: string | null
           lat?: number | null
@@ -978,7 +1267,9 @@ export type Database = {
           affiliate_network?: string | null
           ai_confidence?: number | null
           ai_summary?: string | null
+          bookable?: boolean
           business_id?: string | null
+          cancellation_policy_code?: string
           category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
@@ -994,6 +1285,8 @@ export type Database = {
           ends_at?: string | null
           id?: string
           image_url?: string | null
+          inventory_mode?: string
+          inventory_remaining?: number | null
           is_active?: boolean
           last_seen_at?: string | null
           lat?: number | null
@@ -1810,10 +2103,14 @@ export type Database = {
           is_verified: boolean
           lat: number | null
           lng: number | null
+          payout_bank_details_encrypted: string | null
+          payout_method: string
           place_name: string | null
           power_tier_locked_at: string | null
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
+          stripe_connect_account_id: string | null
+          stripe_connect_status: string
           thefork_url: string | null
           username: string
           verification_notes: string | null
@@ -1836,10 +2133,14 @@ export type Database = {
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
+          payout_bank_details_encrypted?: string | null
+          payout_method?: string
           place_name?: string | null
           power_tier_locked_at?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          stripe_connect_account_id?: string | null
+          stripe_connect_status?: string
           thefork_url?: string | null
           username: string
           verification_notes?: string | null
@@ -1862,10 +2163,14 @@ export type Database = {
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
+          payout_bank_details_encrypted?: string | null
+          payout_method?: string
           place_name?: string | null
           power_tier_locked_at?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          stripe_connect_account_id?: string | null
+          stripe_connect_status?: string
           thefork_url?: string | null
           username?: string
           verification_notes?: string | null
