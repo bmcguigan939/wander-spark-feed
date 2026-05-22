@@ -1,27 +1,25 @@
-## Fix blank Instagram thumbnails in Studio (no auto-downloading)
+## Plan
 
-We will **not** auto-download Instagram videos — it violates Instagram's ToS and gets the platform DMCA'd. Imports stay as link-cards; we just stop rendering a blank pink box.
+1. **Stop showing fake images in Search**
+   - Remove/clear the manually added Unsplash thumbnail URLs from the two Instagram-imported videos.
+   - Update the Search grid so imported videos without a real thumbnail render a branded platform tile instead of a photo-like placeholder.
 
-### Changes
+2. **Make imported videos show in the feed**
+   - Keep imported Instagram rows visible in the feed query (`ready`, not draft, not hidden).
+   - Update the feed card behavior for imported videos with no hosted playback: show a clear Instagram/external-video card with the video title and a play/open action that links to the original Instagram reel.
+   - This avoids blank cards while making it obvious the video is external until it is uploaded/hosted on Travidz.
 
-1. **`src/lib/studio.functions.ts`** — add `source_platform` to the `videos` SELECT in `listStudioVideos` and to the `StudioVideo` type. Same addition to the single-video SELECT around line 166 (used by the detail page).
+3. **Repair the two affected database rows**
+   - Clear the fake thumbnail URLs for:
+     - `a70e55df-35d2-4f3d-abd7-36ba4e0aa9a7`
+     - `655ee8ca-f508-4953-842f-0c61caf1b418`
+   - Leave their `status`, `source_url`, `source_platform`, and `embed_mode` intact so they remain live as imported link cards.
 
-2. **`src/routes/studio.videos.tsx`** (line 187-189) — replace the bare `bg-secondary` div with a small `<Thumb>` helper: when `thumbnail_url` exists, render `<img>`; otherwise render a div with `getPlatformStyle(v.source_platform).gradient` and the platform's Lucide icon centred (`Instagram`, `Youtube`, `Music2`, `Facebook`, `Twitter`, `Globe` fallback).
+4. **Technical notes**
+   - I won’t auto-download/rehost private or restricted Instagram reels because the app currently has no authenticated rights-based Instagram media pipeline; the safe immediate fix is to render them as external imported videos, not fake hosted videos.
+   - Search/feed will distinguish hosted Travidz videos (`mux_playback_id`) from imported external videos (`embed_mode='link_card'`, `source_url`).
 
-3. **`src/routes/studio.videos.$id.tsx`** (line 173) — same `<Thumb>` swap for the hero tile.
-
-4. **`src/routes/create.tsx` `ImportFlow`** — after a successful preview, if `preview.thumbnail` is null AND `preview.platform` is `instagram`/`facebook`, show an inline hint above the form: "We couldn't fetch Instagram's preview. Paste an image URL, or use the Upload tab to host the video on Travidz instead." Add a small `<input>` bound to a `customThumb` state; pass `thumbnail: customThumb || preview.thumbnail` into the existing `importExternalVideo` call (server fn already accepts `thumbnail`).
-
-5. **Repair existing Devon row** — call the existing `repairBlankImportedThumbnails` admin action (already wired on `admin.seed.tsx`). No code change; just mention in the closing summary so the user runs it.
-
-### Out of scope
-
-- Auto-downloading or re-hosting Instagram/Facebook media (ToS + IP-ban risk).
-- Changing the link-card embed model.
-- New OAuth / Meta Graph integration.
-
-### Verification
-
-- Studio list and detail tiles for Devon + "instagram post" show an Instagram gradient + IG icon instead of a blank pink box.
-- New Instagram import with no auto-thumb prompts for a manual image URL and the import still succeeds with that thumb.
-- YouTube / TikTok imports (which already return thumbs) render unchanged.
+5. **Verification**
+   - Confirm the feed returns visible rows including the two Instagram imports.
+   - Confirm Search no longer displays the Unsplash/fake thumbnails for those imports.
+   - Confirm the imported feed cards are not blank and open the original Instagram source.
