@@ -469,3 +469,19 @@ function DraftEmailButton({ inviteId, email }: { inviteId: string; email: string
     </button>
   );
 }
+function DetailThumb({ thumbnail, platform }: { thumbnail: string | null; platform: string | null }) {
+  if (thumbnail) return <img src={thumbnail} alt="" className="h-full w-full object-cover" />;
+  const style = getPlatformStyle(platform);
+  const p = (platform ?? "").toLowerCase();
+  const Icon = p === "instagram" ? Instagram
+    : p === "youtube" ? Youtube
+    : p === "facebook" ? Facebook
+    : p === "tiktok" ? Music2
+    : p === "x" || p === "twitter" ? Twitter
+    : VideoIcon;
+  return (
+    <div className={`flex h-full w-full items-center justify-center ${style.gradient}`}>
+      <Icon className="h-6 w-6 text-white/90" />
+    </div>
+  );
+}
