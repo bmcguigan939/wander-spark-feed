@@ -72,9 +72,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         business_payout_cents: businessPayout,
         currency: currency.toUpperCase(),
         status: "pending",
-        customer_email: customerEmail ?? null,
-        customer_name: customer?.display_name ?? customer?.username ?? null,
-        notes: data.notes ?? null,
+        customer_email: customerEmail ?? undefined,
+        customer_name: customer?.display_name ?? customer?.username ?? undefined,
+        notes: data.notes ?? undefined,
       })
       .select("id")
       .single();

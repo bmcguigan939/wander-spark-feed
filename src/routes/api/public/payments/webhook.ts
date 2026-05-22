@@ -1,17 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
-
-let _supabase: ReturnType<typeof createClient> | null = null;
-function getSupabase() {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-  }
-  return _supabase;
-}
 
 async function sendConfirmationEmail(opts: {
   to: string;
@@ -70,9 +59,7 @@ async function handleCheckoutCompleted(session: any) {
     console.error("[webhook] checkout.session.completed missing bookingId");
     return;
   }
-  const sb = getSupabase();
-
-  const { data: bookingRow, error: bErr } = await sb
+  const { data: bookingRow, error: bErr } = await supabaseAdmin
     .from("bookings")
     .update({
       status: "paid",
@@ -94,14 +81,14 @@ async function handleCheckoutCompleted(session: any) {
   }
 
   // Decrement inventory if fixed
-  const { data: deal } = await sb
+  const { data: deal } = await supabaseAdmin
     .from("deals")
     .select("title, inventory_mode, inventory_remaining")
     .eq("id", bookingRow.deal_id)
     .maybeSingle();
   if (deal?.inventory_mode === "fixed" && typeof deal.inventory_remaining === "number") {
     const remaining = Math.max(0, deal.inventory_remaining - (bookingRow.guests as number));
-    await sb
+    await supabaseAdmin
       .from("deals")
       .update({
         inventory_remaining: remaining,
@@ -133,7 +120,7 @@ async function handleWebhook(req: Request, env: StripeEnv) {
     case "checkout.session.expired": {
       const bookingId = (event.data.object as any).metadata?.bookingId;
       if (bookingId) {
-        await getSupabase()
+        await supabaseAdmin
           .from("bookings")
           .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
           .eq("id", bookingId)

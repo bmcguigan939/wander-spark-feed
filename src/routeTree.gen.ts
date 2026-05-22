@@ -58,6 +58,8 @@ import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
+import { Route as BookReturnRouteImport } from './routes/book.return'
+import { Route as BookDealIdRouteImport } from './routes/book.$dealId'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSeedRouteImport } from './routes/admin.seed'
@@ -84,6 +86,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$code.thanks'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
 import { Route as ApiPublicCronRefreshCreatorTiersRouteImport } from './routes/api/public/cron/refresh-creator-tiers'
@@ -338,6 +341,16 @@ const BusinessApplicationsRoute = BusinessApplicationsRouteImport.update({
   path: '/business/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BookReturnRoute = BookReturnRouteImport.update({
+  id: '/book/return',
+  path: '/book/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookDealIdRoute = BookDealIdRouteImport.update({
+  id: '/book/$dealId',
+  path: '/book/$dealId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVideosRoute = AdminVideosRouteImport.update({
   id: '/videos',
   path: '/videos',
@@ -471,6 +484,12 @@ const BookMatchCodeThanksRoute = BookMatchCodeThanksRouteImport.update({
   path: '/thanks',
   getParentRoute: () => BookMatchCodeRoute,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
   id: '/api/public/go/$id',
   path: '/api/public/go/$id',
@@ -545,6 +564,8 @@ export interface FileRoutesByFullPath {
   '/admin/seed': typeof AdminSeedRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
+  '/book/$dealId': typeof BookDealIdRoute
+  '/book/return': typeof BookReturnRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -595,6 +616,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -628,6 +650,8 @@ export interface FileRoutesByTo {
   '/admin/seed': typeof AdminSeedRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
+  '/book/$dealId': typeof BookDealIdRoute
+  '/book/return': typeof BookReturnRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -677,6 +701,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -713,6 +738,8 @@ export interface FileRoutesById {
   '/admin/seed': typeof AdminSeedRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/videos': typeof AdminVideosRoute
+  '/book/$dealId': typeof BookDealIdRoute
+  '/book/return': typeof BookReturnRoute
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
@@ -763,6 +790,7 @@ export interface FileRoutesById {
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -800,6 +828,8 @@ export interface FileRouteTypes {
     | '/admin/seed'
     | '/admin/users'
     | '/admin/videos'
+    | '/book/$dealId'
+    | '/book/return'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -850,6 +880,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -883,6 +914,8 @@ export interface FileRouteTypes {
     | '/admin/seed'
     | '/admin/users'
     | '/admin/videos'
+    | '/book/$dealId'
+    | '/book/return'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -932,6 +965,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -967,6 +1001,8 @@ export interface FileRouteTypes {
     | '/admin/seed'
     | '/admin/users'
     | '/admin/videos'
+    | '/book/$dealId'
+    | '/book/return'
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
@@ -1017,6 +1053,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/refresh-creator-tiers'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
@@ -1043,6 +1080,8 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRouteWithChildren
   SupportRoute: typeof SupportRoute
   WelcomeRoute: typeof WelcomeRoute
+  BookDealIdRoute: typeof BookDealIdRoute
+  BookReturnRoute: typeof BookReturnRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
@@ -1086,6 +1125,7 @@ export interface RootRouteChildren {
   ApiPublicCronRefreshCreatorTiersRoute: typeof ApiPublicCronRefreshCreatorTiersRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1436,6 +1476,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/book/return': {
+      id: '/book/return'
+      path: '/book/return'
+      fullPath: '/book/return'
+      preLoaderRoute: typeof BookReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$dealId': {
+      id: '/book/$dealId'
+      path: '/book/$dealId'
+      fullPath: '/book/$dealId'
+      preLoaderRoute: typeof BookDealIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/videos': {
       id: '/admin/videos'
       path: '/videos'
@@ -1618,6 +1672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookMatchCodeThanksRouteImport
       parentRoute: typeof BookMatchCodeRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/go/$id': {
       id: '/api/public/go/$id'
       path: '/api/public/go/$id'
@@ -1792,6 +1853,8 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRouteWithChildren,
   SupportRoute: SupportRoute,
   WelcomeRoute: WelcomeRoute,
+  BookDealIdRoute: BookDealIdRoute,
+  BookReturnRoute: BookReturnRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
@@ -1835,6 +1898,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronRefreshCreatorTiersRoute: ApiPublicCronRefreshCreatorTiersRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
@@ -1842,13 +1906,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
