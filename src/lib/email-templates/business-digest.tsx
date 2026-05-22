@@ -39,7 +39,7 @@ export const BusinessDigestEmail = ({
           • <strong>{checksRun}</strong> parity checks against OTAs<br />
           • <strong>{matchesIssued}</strong> price-match codes issued<br />
           • <strong>{redemptionsConfirmed}</strong> bookings you confirmed<br />
-          • <strong>{fmt(totalCommissionCents, currency)}</strong> commission accrued (8%)
+          • <strong>{fmt(totalCommissionCents, currency)}</strong> commission accrued (11%)
         </Text>
         <Button style={button} href={auditUrl}>View price-match audit</Button>
         <Text style={footer}>

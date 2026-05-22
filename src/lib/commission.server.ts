@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   COMMISSION,
+  netCommissionPoolCents,
   resolveSplit,
   splitCommissionCents,
   type CreatorSplit,
@@ -47,8 +48,9 @@ export async function loadCreatorSplit(
 
 /** Compute and persist the split snapshot on a redemption row.
  *  Idempotent — safe to call multiple times.
- *  Uses `order_value_cents` × `commission_rate` (or 8% fallback) for the total,
- *  then splits per the creator's current tier. */
+ *  Computes the gross commission (`order_value_cents` × `commission_rate`,
+ *  defaulting to the current 11%), subtracts the Stripe processing fee to
+ *  derive the net pool, then splits the net pool per the creator's tier. */
 export async function stampRedemptionSplit(redemptionId: string): Promise<void> {
   const { data: r } = await supabaseAdmin
     .from("deal_redemptions")
@@ -63,13 +65,11 @@ export async function stampRedemptionSplit(redemptionId: string): Promise<void> 
     new Date(r.confirmed_at ?? r.created_at ?? Date.now()),
   );
 
-  const totalCents =
-    r.commission_cents ??
-    Math.round(
-      (r.order_value_cents ?? 0) *
-        ((r.commission_rate ?? COMMISSION.totalPct) / 100),
-    );
-  const { creatorCents, platformCents } = splitCommissionCents(totalCents, split);
+  const gbvCents = r.order_value_cents ?? 0;
+  // Net pool = gross commission − Stripe fee. The tier split applies to
+  // the net pool, not to the headline 11% the business sees.
+  const netPoolCents = netCommissionPoolCents(gbvCents);
+  const { creatorCents, platformCents } = splitCommissionCents(netPoolCents, split);
 
   await supabaseAdmin
     .from("deal_redemptions")

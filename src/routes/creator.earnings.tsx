@@ -226,7 +226,7 @@ function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>>
             {tier.isFounding && tier.foundingNumber ? ` #${tier.foundingNumber}` : ""}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            You keep <span className="font-semibold text-foreground">{tier.creatorPct}%</span> of the 8% commission on every booking.
+            You keep <span className="font-semibold text-foreground">{tier.creatorPct}%</span> of the net commission pool (11% gross − Stripe fees) on every booking.
             {tier.tier === "founding" || tier.tier === "power" ? " Locked for life." : ""}
           </p>
         </div>

@@ -59,7 +59,7 @@ function NewDealPage() {
             <span>
               <span className="font-semibold">Book through Travidz</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                Customers pay Travidz at checkout. We take 8% and pay you weekly.
+                Customers pay Travidz at checkout. We take 11% and pay you weekly.
                 Leave off for traditional affiliate-link deals.
               </span>
             </span>

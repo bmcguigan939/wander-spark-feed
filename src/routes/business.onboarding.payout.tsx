@@ -131,7 +131,7 @@ function PayoutSetupPage() {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Travidz collects payment from customers and pays you weekly, minus an
-          8% platform commission. Add the bank account where you'd like to
+          11% platform commission. Add the bank account where you'd like to
           receive your earnings.
         </p>
 

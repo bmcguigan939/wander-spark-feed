@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { ArrowLeft, Calculator, Crown, Lock, Sparkles } from "lucide-react";
-import { COMMISSION } from "@/lib/commission";
+import { COMMISSION, netCommissionPoolCents, stripeFeeCents } from "@/lib/commission";
 
 export const Route = createFileRoute("/creator/calculator")({
   head: () => ({
@@ -34,7 +34,9 @@ function CreatorCalculatorPage() {
   const [bookingValue, setBookingValue] = useState(500); // £
   const [bookingsPerMonth, setBookingsPerMonth] = useState(20);
   const orderCents = Math.round(bookingValue * 100);
-  const totalCommission = Math.round(orderCents * (COMMISSION.totalPct / 100));
+  const grossCommission = Math.round(orderCents * (COMMISSION.totalPct / 100));
+  const stripeFee = stripeFeeCents(orderCents);
+  const netPool = netCommissionPoolCents(orderCents);
 
   return (
     <MobileShell>
@@ -77,8 +79,10 @@ function CreatorCalculatorPage() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Businesses always pay a flat <strong>8% commission</strong> on each booking
-            ({fmt(totalCommission)} on a {fmt(orderCents)} booking). Your share depends on your tier.
+            Businesses pay a flat <strong>{COMMISSION.totalPct}% commission</strong> on each booking
+            ({fmt(grossCommission)} on a {fmt(orderCents)} booking). Stripe processing fees
+            ({fmt(stripeFee)} on this booking — {COMMISSION.stripeVariablePct}% + £0.20) come off
+            the top, leaving a net pool of <strong>{fmt(netPool)}</strong>. Your share depends on your tier.
           </p>
         </section>
 
@@ -87,7 +91,7 @@ function CreatorCalculatorPage() {
             Your take-home by tier
           </h2>
           {TIERS.map((t) => {
-            const perBooking = Math.round(totalCommission * (t.pct / 100));
+            const perBooking = Math.round(netPool * (t.pct / 100));
             const monthly = perBooking * bookingsPerMonth;
             const yearly = monthly * 12;
             const Icon = t.icon;

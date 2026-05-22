@@ -1,8 +1,10 @@
 // Travidz commission — single source of truth (v6 model).
 //
-// Business-facing copy always shows the total commission only (8% of GBV).
-// Internally that 8% is split between the creator and Travidz on every
-// booking. The split depends on the creator's tier at booking time:
+// Business-facing copy always shows the total commission only (11% of GBV).
+// Stripe processing fees (2.9% + £0.20 per transaction) are deducted from
+// that 11% off the top, leaving a NET POOL that is split between the
+// creator and Travidz on every booking. The tier split applies to the
+// net pool, not to the gross 11%:
 //
 //   founding       50 / 50  (first 500 creators — locked for life)
 //   power          50 / 50  (rolling-12mo GBV ≥ £25k — locked once crossed)
@@ -13,10 +15,16 @@
 // resolveSplit() is a pure function — it stamps every redemption row so
 // historical earnings stay correct even when the rules change later.
 export const COMMISSION = {
-  totalPct: 8,
-  // legacy aliases retained for any UI that still references a flat split
-  creatorPct: 4,
-  platformPct: 4,
+  /** Gross commission charged to the business, as a percentage of GBV. */
+  totalPct: 11,
+  /** Stripe processing fee: 2.9% of GBV + £0.20 per transaction.
+   *  Deducted from the gross commission before the creator/platform split. */
+  stripeVariablePct: 2.9,
+  stripeFixedCents: 20, // £0.20 per transaction
+  // legacy aliases retained for any UI that still references a flat split.
+  // (Net-pool roughly ~5.5% of GBV at typical AOV; 50/50 → ~2.75% each.)
+  creatorPct: 5.5,
+  platformPct: 5.5,
   powerTierGbvThresholdCents: 2_500_000, // £25,000
   foundingCap: 500,
 } as const;
@@ -32,8 +40,8 @@ export type CreatorSplitInput = {
 
 export type CreatorSplit = {
   tier: CreatorTier;
-  creatorPct: number; // share of the 8% taken by the creator
-  platformPct: number; // share of the 8% taken by Travidz
+  creatorPct: number; // share of the net pool taken by the creator
+  platformPct: number; // share of the net pool taken by Travidz
 };
 
 function monthsBetween(a: Date, b: Date): number {
@@ -52,7 +60,21 @@ export function resolveSplit(input: CreatorSplitInput): CreatorSplit {
   return { tier: "mature", creatorPct: 30, platformPct: 70 };
 }
 
-/** Given the total commission in cents (e.g. 8% of order value), split it. */
+/** Compute the Stripe processing fee on a single transaction, in cents. */
+export function stripeFeeCents(gbvCents: number): number {
+  if (gbvCents <= 0) return 0;
+  return Math.round((gbvCents * COMMISSION.stripeVariablePct) / 100) + COMMISSION.stripeFixedCents;
+}
+
+/** Net commission pool after Stripe fees, used as the basis for the
+ *  creator/platform tier split. Floors at 0 so micro-transactions where
+ *  Stripe > 11% don't go negative. */
+export function netCommissionPoolCents(gbvCents: number): number {
+  const gross = Math.round((gbvCents * COMMISSION.totalPct) / 100);
+  return Math.max(0, gross - stripeFeeCents(gbvCents));
+}
+
+/** Given the net pool in cents, split between creator and platform per tier. */
 export function splitCommissionCents(
   totalCents: number,
   split: CreatorSplit,
