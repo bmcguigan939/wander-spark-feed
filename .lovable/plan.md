@@ -1,66 +1,69 @@
 ## Goal
 
-Refresh `Travidz_Market_Research_TAM_SOM_Global.xlsx` → save as **v10** so every assumption, formula, and headline reconciles to the v6 financial model:
-- Gross commission **8% → 11%**
-- Stripe **2.9% + £0.20/txn** deducted from gross commission *before* the split (shared)
-- Tiered creator share (50/50/50/40/30) applied to the **net pool**
-- Refunds/chargebacks/FX still absorbed by Travidz alone
+Bring the live investor page at `/invest` (and its underlying model assumptions) in line with the **v6 financial model** and the new **v10 TAM/SOM** workbook:
 
-## Sheets to update
+- Ask: **£2.0M SAFE** (was £2.5M)
+- Commission: **11% gross**, Stripe **2.9% + £0.20/txn** shared off the top, then tiered **50/50/50/40/30** split
+- Blended Y5 take rate: **~4.68%** (UK Base) / **~4.69%** (Global Viral)
+- Y5 Travidz net: **£16.3M** UK Base · **£61.9M** Global Viral
+- Download links: financial model **v6**, market research **v10**
 
-**1. Cover**
-- Title → "Market Research v10 (TAM / SAM / SOM · Global)"; reconciled to `Travidz_Financial_Model_Global_v6.xlsx`.
-- Revenue model line → "11% gross commission; Stripe 2.9% + £0.20/txn shared off the top; tapered 50/50/50/40/30 creator share by tier."
-- Commission Structure block:
-  - C20 `0.08` → `0.11`
-  - Add rows for Stripe % (`0.029`) and Stripe fixed (`0.20`) with [S-Stripe] source.
-  - Keep tier shares 0.5 / 0.5 / 0.5 / 0.4 / 0.3 (unchanged).
+## Files to update
 
-**2. Exec Summary**
-- Subtitle + headline stat: recompute Y5 SOM net using v6 take rates (UK Base **~4.67%**, Global Viral **~4.69%**).
-- Commission-pool columns (E, H) → multiply by `0.11` instead of `0.08`.
-- Top-5 stats: update "Travidz pays creators 30–50% of 11% commission (net of Stripe)" and Y5 SOM range to v6 numbers.
-- Global Viral block (rows 38–40): replace hardcoded `0.05/0.049/0.048/0.0472/0.0465` with links to `5. SOM` Global Viral take row (driven from Cohort Maturity at 11% net of Stripe).
+### 1. `src/lib/investor-model/assumptions.ts`
+- `grossCommissionPct: 0.08` → **0.11**
+- Add `stripeVariablePct: 0.029`, `stripeFixedPerTxn: 0.20`, `avgBookingValue` already exists (used as basket). Document that Stripe is shared off the top.
+- Update `GLOBAL_MARKET.somNetBaseY5` → `16_290_000` and `somNetGlobalY5` → `61_900_000` (recomputed against v6).
+- Rename comment block from "v7 defaults" → "v6 financial-model defaults / v10 market workbook".
 
-**3. TAM**
-- F30 blended take-rate `0.08` → `0.11`; comment: "Restaurants ~4%, hotels 4–6%, tours/experiences 10–25% → blended 11% target post-MoR repricing."
-- F31 commission pool auto-recomputes.
-- No traveller/spend inputs change.
+### 2. `src/lib/investor-model/compute.ts`
+- In `computeRevenue`, deduct shared Stripe before the tier split:
+  - `stripeFee = gbv * stripeVariablePct + (gbv / avgBookingValue) * stripeFixedPerTxn`
+  - `netPool = grossCommission - stripeFee`
+  - `creatorPayout = Σ gbvByTier[t] * (netPool/grossCommission) * creatorSharePctByTier[t]` (equivalent to applying tier share to `netPool` weighted by tier-GBV share)
+  - `travidzNet = netPool - creatorPayout`
+- Add `stripeFee` to `RevenueYear` for transparency.
+- `blendedTakeRatePct` continues to be `travidzNet / gbv`.
 
-**4. SAM** — no input changes; downstream commission-pool refs follow F30 (now 11%).
+### 3. `src/routes/invest.tsx` — copy + numbers
+- **Meta description / og:description**: "£2.0M SAFE" instead of £2.5M.
+- **Hero**:
+  - Sticky-bar pill: `Seed · £2.0M SAFE · Open`.
+  - Hero stat cards: keep TAM £675B; Y5 GBV unchanged (£350M → £1.32B); **Take "4.68%"** (was 4.65%).
+- **Sticky bar download buttons**:
+  - "Model v2" → **"Model v6"** → `/decks/Travidz_Financial_Model_Global_v6.xlsx`
+  - "Market v9" → **"Market v10"** → `/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx`
+- **BusinessModel section**:
+  - Stat cards: "Take rate 4–7% · Blended Y5: 4.68%"; "Creator share 30–50% of **net** commission (post-Stripe)".
+  - Slider math: replace hardcoded `gbv * 0.0465` with `gbv * 0.0468`, label updated.
+  - Add a one-liner under the slider explaining "Net = 11% gross − Stripe 2.9% + £0.20/txn − tiered creator share".
+- **HowItWorks** step 03 description: "30–50% of net commission" (already says net — keep).
+- **GlobalExpansion**:
+  - `compare` table values: Y5 Travidz net **£16.3M** (UK), **£61.9M** (GV); take rates **4.68% / 4.69%**.
+  - Footer caption: "v6 global model · reconciled to v10 TAM/SOM".
+  - Download buttons: same file path updates as sticky bar.
+- **TheAsk**:
+  - Headline: **"£2.0M SAFE · 18-month runway."**
+  - Sub: "Next: Series A £8M at £2M ARR (M22). Target KPIs at next round: 8k active creators, £40M annualised GBV, 4% blended take."
+- **FooterCTA** small caption: `… v6 financial model · v10 market workbook`.
+- All references to "v9 market model" / "v2 model" → v10 / v6.
 
-**5. SOM** (core change)
-- Row 24 "Gross commission (8% of GBV)" → 11% of GBV (formula `=Cx*0.11`).
-- Add row "Stripe processing (2.9% × GBV + £0.20 × txns)" — for now approximate as `=GBV * 0.029` (fixed-fee portion immaterial at scale; flag in note) OR pull txn count from a new assumption (avg basket £). Keep simple: use `GBV * 0.029` + `(GBV/avg_basket)*0.20`, with `avg_basket` cell on Cover sheet (default £350, sourced from Phocuswright avg booking value).
-- Row 22 "Blended Travidz take rate" → replace hardcoded values with link to `6. Cohort Maturity` G26 series (now driven off 11% net of Stripe).
-- Row 23 Travidz net revenue auto-recomputes.
-- Row 25 Creator payout → `= (Gross commission − Stripe) × creator share %` from Cohort Maturity.
-- Scenario block (rows 29–33): same restructure; Bear/Bull take rates recomputed off new blended formula.
+### 4. `public/decks/` — copy new artifacts
+- Copy `/mnt/documents/Travidz_Financial_Model_Global_v6.xlsx` → `public/decks/Travidz_Financial_Model_Global_v6.xlsx`
+- Copy `/mnt/documents/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx` → `public/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx`
+- Leave the older v2 / v9 files in place (no need to delete; broken links would otherwise show).
 
-**6. Cohort Maturity**
-- Replace constant `0.08` in B26/Travidz-take rows with `(0.11 − stripe%)` net pool, then `× Travidz share`.
-- Specifically: rows 24/25 unchanged (tier shares 50–30%); row 26 becomes `= (0.11 − 0.029 − fixed_per_£) × C25`. Add a clarifying note row explaining the shared-Stripe deduction.
+### 5. (Optional) `src/routes/admin.investor.tsx` and `src/routes/business.calculator.tsx` / `creator.calculator.tsx`
+- If they re-import `V6_DEFAULTS` or `computeRevenue`, they'll automatically pick up the new 11% / Stripe-net math — no edits needed.
+- If any of them hardcode `0.08` or `0.0465`, fix in-place. Verify after the assumptions edit.
 
-**7. Revenue Engine**
-- Row 8 "Gross commission (8%)" → 11%.
-- Insert new row "Less: Stripe processing (shared)" between gross commission and creator payout.
-- Row 9 Creator payout → `= (Gross − Stripe) × Cohort creator share`.
-- Row 10 Travidz net revenue → `= Gross − Stripe − Creator payout`.
-- Row 11 blended take auto-flows.
+## Verification
 
-**10. Sensitivity**
-- Replace hardcoded `0.0465` with link to `5. SOM` Y5 take cell.
-- Two-way table recomputes against new base.
-
-**13. Reconciliation** (if present) — re-point links from v2 financial model to v6, verify zero delta on Y5 GBV and Y5 Travidz net for both UK Base and Global Viral.
-
-## QA
-
-1. Recalculate via `recalculate_formulas.py`; ensure zero `#REF!/#DIV/0!`.
-2. Verify Y5 Base Travidz net ≈ £16.3M (UK) and Global Viral Y5 ≈ £61.9M, matching v6 financial model.
-3. Convert each sheet to PNG and inspect for layout, formatting, and stale "8%" labels.
-4. Save as `Travidz_Market_Research_TAM_SOM_v10_Global.xlsx` in `/mnt/documents/`.
+1. Type-check passes (handled by harness).
+2. Manual sanity in browser preview: hero shows £2.0M, take 4.68%, Global Viral table reads £61.9M.
+3. Click each download button → file resolves (200, not 404).
+4. Calculator math on `/creator/calculator` produces the same net Travidz % the financial model does.
 
 ## Out of scope
-- No new TAM regions, no traveller-count revisions.
-- Refunds/chargebacks/FX leakage stays out of the SOM (Travidz-only, financial-model side).
+- No new sections, no design overhaul. Copy + numbers + downloads only.
+- No PDF deck regen (still links to `Travidz_Elevator_Pitch_v5.pdf`) — flag in the response if you want me to refresh that too.
