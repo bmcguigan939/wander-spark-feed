@@ -172,6 +172,12 @@ function UploadFlowBody() {
 
   return (
     <div className="mt-6">
+        {uploadError && !uploading && (
+          <div className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="font-semibold">Upload failed</div>
+            <div className="mt-1 break-words text-xs opacity-90">{uploadError}</div>
+          </div>
+        )}
         {!file && (
           <label className="mt-6 flex h-64 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-card text-center">
             <Upload className="mb-3 h-8 w-8 text-primary" />
