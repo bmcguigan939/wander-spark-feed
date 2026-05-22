@@ -2047,6 +2047,7 @@ export type Database = {
       }
       profile_socials: {
         Row: {
+          facebook_handle: string | null
           instagram_handle: string | null
           tiktok_handle: string | null
           updated_at: string
@@ -2057,6 +2058,7 @@ export type Database = {
           youtube_handle: string | null
         }
         Insert: {
+          facebook_handle?: string | null
           instagram_handle?: string | null
           tiktok_handle?: string | null
           updated_at?: string
@@ -2067,6 +2069,7 @@ export type Database = {
           youtube_handle?: string | null
         }
         Update: {
+          facebook_handle?: string | null
           instagram_handle?: string | null
           tiktok_handle?: string | null
           updated_at?: string

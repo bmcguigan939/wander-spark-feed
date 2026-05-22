@@ -73,3 +73,27 @@ export const getMyAgreementStatus = createServerFn({ method: "GET" })
       is_verified: !!data?.is_verified,
     };
   });
+
+/**
+ * Idempotent helper: flips `profiles.is_verified = true` for a user the
+ * first time they perform a real action (publish a video, confirm a
+ * redemption). Safe to call on every event — no-ops if already trusted.
+ * Errors are swallowed so this never blocks the caller.
+ */
+export async function autoTrustOnActivity(userId: string) {
+  if (!userId) return;
+  try {
+    const { data } = await supabaseAdmin
+      .from("profiles")
+      .select("is_verified")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data && !data.is_verified) {
+      await (supabaseAdmin.from("profiles") as any)
+        .update({ is_verified: true, verified_at: new Date().toISOString() })
+        .eq("id", userId);
+    }
+  } catch (e) {
+    console.error("autoTrustOnActivity failed", userId, e);
+  }
+}
