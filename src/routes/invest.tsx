@@ -43,8 +43,6 @@ export const Route = createFileRoute("/invest")({
 
 function InvestPage() {
   const market = useMemo(() => computeMarket(V6_DEFAULTS), []);
-  const revenue = useMemo(() => computeRevenue(V6_DEFAULTS), []);
-  const y5 = revenue[4];
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-white">
