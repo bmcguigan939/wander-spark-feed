@@ -10,6 +10,7 @@ import { Sparkline } from "@/components/business/Sparkline";
 import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
+import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -52,6 +53,9 @@ function BusinessDashboard() {
       <div className="px-4 pt-6">
         {user && <BusinessLocationPrompt userId={user.id} />}
         <OnboardingChecklist />
+        <div className="mb-4">
+          <PayoutMethodCard />
+        </div>
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
