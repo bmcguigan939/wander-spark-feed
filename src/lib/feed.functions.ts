@@ -342,8 +342,9 @@ export const searchAll = createServerFn({ method: "GET" })
           "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
-    .eq("is_draft", false)
-    .or("scheduled_at.is.null,scheduled_at.lte.now()")
+        .eq("is_draft", false)
+        .eq("is_hidden", false)
+        .or("scheduled_at.is.null,scheduled_at.lte.now()")
         .textSearch("search_tsv", tsQuery, { config: "simple" })
         .limit(30),
       supabaseAdmin
@@ -355,7 +356,7 @@ export const searchAll = createServerFn({ method: "GET" })
 
     return {
       videos: (videosRes.data ?? []) as unknown as Array<
-        Pick<FeedVideo, "id" | "title" | "mux_playback_id" | "thumbnail_url" | "destination" | "country" | "activity_tags" | "like_count" | "creator">
+        Pick<FeedVideo, "id" | "title" | "mux_playback_id" | "thumbnail_url" | "destination" | "country" | "activity_tags" | "like_count" | "creator" | "source_platform" | "source_url" | "embed_mode">
       >,
       creators: creatorsRes.data ?? [],
     };
@@ -413,7 +414,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         country: z.string().max(80).optional(),
         tags: z.array(z.string().max(40)).max(8).optional(),
         budget: z.enum(["$", "$$", "$$$"]).optional(),
-        sort: z.enum(["new", "popular"]).default("new"),
+          sort: z.enum(["new", "popular"]).default("new"),
       })
       .parse(input),
   )
