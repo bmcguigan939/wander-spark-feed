@@ -486,7 +486,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
     const { userId } = context;
     await ensureCreatorRole(userId);
 
-    const imported: { url: string; videoId: string }[] = [];
+    const imported: { url: string; videoId: string; hasThumbnail: boolean }[] = [];
     const skipped: { url: string; reason: string }[] = [];
     const failed: { url: string; error: string }[] = [];
 
@@ -509,7 +509,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
         }
         const res = await insertExternalVideoRow({ creatorId: userId, preview });
         if (res.skipped) skipped.push({ url, reason: "Already imported" });
-        else imported.push({ url, videoId: res.videoId });
+        else imported.push({ url, videoId: res.videoId, hasThumbnail: !!preview.thumbnail });
       } catch (e: any) {
         failed.push({ url, error: e?.message ?? "Import failed" });
       }
@@ -522,6 +522,7 @@ export const importExternalVideosBulk = createServerFn({ method: "POST" })
       skipped,
       failed,
       ids: imported.map((i) => i.videoId),
+      items: imported,
     };
   });
 
