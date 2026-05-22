@@ -4,9 +4,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { getProfileByUsername } from "@/lib/feed.functions";
 import { toggleFollow } from "@/lib/interactions.functions";
+import { getPublicSocials } from "@/lib/social.functions";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { Instagram, Facebook, Youtube, Music2, Globe, Twitter } from "lucide-react";
 
 export const Route = createFileRoute("/u/$username")({
   head: ({ params }) => ({
@@ -28,6 +30,11 @@ function ProfilePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["profile", username, user?.id ?? null],
     queryFn: () => getProfileByUsername({ data: { username, viewerId: user?.id ?? null } }),
+  });
+  const socialsQ = useQuery({
+    queryKey: ["public-socials", data?.profile?.id],
+    queryFn: () => getPublicSocials({ data: { userId: data!.profile!.id } }),
+    enabled: !!data?.profile?.id,
   });
   const followM = useMutation({
     mutationFn: () => followFn({ data: { creatorId: data!.profile!.id } }),
@@ -63,6 +70,7 @@ function ProfilePage() {
               </div>
             </div>
             {data.profile.bio && <p className="mt-4 text-sm">{data.profile.bio}</p>}
+            <SocialLinks s={socialsQ.data ?? null} />
             <div className="mt-5 flex gap-6 text-sm">
               <span><b>{data.followerCount}</b> <span className="text-muted-foreground">followers</span></span>
               <span><b>{data.followingCount}</b> <span className="text-muted-foreground">following</span></span>
@@ -100,5 +108,34 @@ function ProfilePage() {
         )}
       </div>
     </MobileShell>
+  );
+}
+
+function SocialLinks({ s }: { s: any | null }) {
+  if (!s) return null;
+  const items: Array<{ label: string; href: string; icon: any }> = [];
+  if (s.instagram_handle) items.push({ label: "Instagram", href: `https://instagram.com/${s.instagram_handle}`, icon: Instagram });
+  if (s.facebook_handle) items.push({ label: "Facebook", href: `https://facebook.com/${s.facebook_handle}`, icon: Facebook });
+  if (s.tiktok_handle) items.push({ label: "TikTok", href: `https://tiktok.com/@${s.tiktok_handle}`, icon: Music2 });
+  if (s.youtube_channel_id) items.push({ label: "YouTube", href: `https://youtube.com/channel/${s.youtube_channel_id}`, icon: Youtube });
+  else if (s.youtube_handle) items.push({ label: "YouTube", href: `https://youtube.com/@${s.youtube_handle}`, icon: Youtube });
+  if (s.x_handle) items.push({ label: "X", href: `https://x.com/${s.x_handle}`, icon: Twitter });
+  if (s.website_url) items.push({ label: "Website", href: s.website_url, icon: Globe });
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {items.map((it) => (
+        <a
+          key={it.label}
+          href={it.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={it.label}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground/80 transition hover:border-primary hover:text-primary"
+        >
+          <it.icon className="h-4 w-4" />
+        </a>
+      ))}
+    </div>
   );
 }

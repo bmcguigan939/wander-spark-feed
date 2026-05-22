@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { seedDemoContent, resetDemoContent } from "@/lib/admin-seed.functions";
-import { Sparkles, Trash2 } from "lucide-react";
+import { syncTikTokOfficial } from "@/lib/social.functions";
+import { Sparkles, Trash2, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/admin/seed")({
   head: () => ({ meta: [{ title: "Seed demo content — Admin" }] }),
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/admin/seed")({
 function SeedPage() {
   const seedFn = useServerFn(seedDemoContent);
   const resetFn = useServerFn(resetDemoContent);
+  const syncTikTokFn = useServerFn(syncTikTokOfficial);
   const [result, setResult] = useState<any>(null);
 
   const seed = useMutation({
@@ -29,6 +31,11 @@ function SeedPage() {
     mutationFn: () => resetFn(),
     onSuccess: (r) => toast.success(`Removed ${r.dealsDeleted} deals, ${r.videosDeleted} videos`),
     onError: (e: any) => toast.error(e?.message ?? "Reset failed"),
+  });
+  const syncTikTok = useMutation({
+    mutationFn: () => syncTikTokFn({ data: undefined as any }),
+    onSuccess: (r: any) => toast.success(`Synced ${r?.synced ?? 0} of ${r?.scanned ?? 0} TikToks`),
+    onError: (e: any) => toast.error(e?.message ?? "TikTok sync failed"),
   });
 
   return (
@@ -46,6 +53,16 @@ function SeedPage() {
         <Button variant="destructive" onClick={() => reset.mutate()} disabled={reset.isPending}>
           <Trash2 className="h-4 w-4 mr-1" />
           {reset.isPending ? "Removing…" : "Reset demo"}
+        </Button>
+      </div>
+      <div className="rounded-xl border bg-card p-4">
+        <div className="text-sm font-semibold mb-1">Official TikTok sync</div>
+        <p className="text-xs text-muted-foreground mb-2">
+          Pulls the latest TikTok videos from the Travidz official account. Requires TRAVIDZ_OFFICIAL_CREATOR_ID, LOVABLE_API_KEY and TIKTOK_API_KEY.
+        </p>
+        <Button onClick={() => syncTikTok.mutate()} disabled={syncTikTok.isPending} variant="secondary">
+          <RefreshCw className={`h-4 w-4 mr-1 ${syncTikTok.isPending ? "animate-spin" : ""}`} />
+          {syncTikTok.isPending ? "Syncing…" : "Sync official TikTok now"}
         </Button>
       </div>
       {result?.users && (
