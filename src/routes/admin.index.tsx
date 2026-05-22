@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -34,16 +34,16 @@ function AdminOverview() {
       {data && (
         <>
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Users" value={data.users} />
-          <Stat label="Creators" value={data.creators} />
-          <Stat label="Businesses" value={data.businesses} />
-          <Stat label="Verified biz" value={(data as any).verifiedBusinesses ?? 0} />
-          <Stat label="Videos live" value={data.videosReady} />
-          <Stat label="Pending videos" value={data.videosPending} accent />
-          <Stat label="Hidden videos" value={data.videosHidden} />
-          <Stat label="Active deals" value={data.dealsActive} />
-          <Stat label="Pending apps" value={data.appsPending} accent />
-          <Stat label="Mod flags" value={(data as any).pendingModerationFlags ?? 0} accent />
+          <Stat label="Users" value={data.users} to="/admin/users" />
+          <Stat label="Creators" value={data.creators} to="/admin/users" />
+          <Stat label="Businesses" value={data.businesses} to="/admin/users" />
+          <Stat label="Verified biz" value={(data as any).verifiedBusinesses ?? 0} to="/admin/users" />
+          <Stat label="Videos live" value={data.videosReady} to="/admin/videos" />
+          <Stat label="Pending videos" value={data.videosPending} accent to="/admin/videos" />
+          <Stat label="Hidden videos" value={data.videosHidden} to="/admin/videos" />
+          <Stat label="Active deals" value={data.dealsActive} to="/admin/deals" />
+          <Stat label="Pending apps" value={data.appsPending} accent to="/admin/deals" />
+          <Stat label="Mod flags" value={(data as any).pendingModerationFlags ?? 0} accent to="/admin/moderation" />
         </div>
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Marketplace (last 30d)</p>
@@ -101,13 +101,16 @@ function AdminOverview() {
   );
 }
 
-function Stat({ label, value, accent, suffix }: { label: string; value: number; accent?: boolean; suffix?: string }) {
-  return (
-    <div className={`rounded-2xl border p-4 ${accent ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}>
+function Stat({ label, value, accent, suffix, to }: { label: string; value: number; accent?: boolean; suffix?: string; to?: "/admin/users" | "/admin/videos" | "/admin/deals" | "/admin/moderation" }) {
+  const base = `block rounded-2xl border p-4 ${accent ? "border-primary/40 bg-primary/5" : "border-border bg-card"} ${to ? "transition hover:border-primary/60 hover:shadow-sm active:scale-[0.99]" : ""}`;
+  const body = (
+    <>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`mt-1 text-2xl font-bold tabular-nums ${accent ? "text-primary" : ""}`}>{value}{suffix ?? ""}</div>
-    </div>
+    </>
   );
+  if (to) return <Link to={to} className={base}>{body}</Link>;
+  return <div className={base}>{body}</div>;
 }
 
 function Money({ label, cents, accent }: { label: string; cents: number; accent?: boolean }) {
