@@ -34,6 +34,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     if (!deal.bookable) throw new Error("This deal is not bookable through Travidz");
     if (!deal.is_active || deal.status !== "approved") throw new Error("Deal is not available");
     if (!deal.price_cents || deal.price_cents <= 0) throw new Error("Deal has no price set");
+    if (!deal.business_id) throw new Error("This deal has no business owner");
 
     if (deal.inventory_mode === "fixed") {
       if ((deal.inventory_remaining ?? 0) < data.guests) {
