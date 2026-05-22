@@ -82,6 +82,7 @@ function UploadFlowBody() {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -105,7 +106,7 @@ function UploadFlowBody() {
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   async function startUpload(f: File) {
-    setFile(f); setUploading(true); setProgress(0);
+    setFile(f); setUploading(true); setProgress(0); setUploadError(null);
     try {
       const res = await createUploadFn({ data: { title: f.name.replace(/\.[^.]+$/, "") } });
       setVideoId(res.videoId);
@@ -121,7 +122,10 @@ function UploadFlowBody() {
       setTitle(f.name.replace(/\.[^.]+$/, ""));
       toast("Upload complete — add details");
     } catch (e: any) {
-      toast(e.message ?? "Upload failed"); setFile(null); setVideoId(null);
+      const msg = e?.message ?? "Upload failed";
+      setUploadError(msg);
+      toast(msg);
+      setFile(null); setVideoId(null);
     } finally { setUploading(false); }
   }
 
@@ -168,6 +172,12 @@ function UploadFlowBody() {
 
   return (
     <div className="mt-6">
+        {uploadError && !uploading && (
+          <div className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="font-semibold">Upload failed</div>
+            <div className="mt-1 break-words text-xs opacity-90">{uploadError}</div>
+          </div>
+        )}
         {!file && (
           <label className="mt-6 flex h-64 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-card text-center">
             <Upload className="mb-3 h-8 w-8 text-primary" />

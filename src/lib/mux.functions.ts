@@ -38,21 +38,39 @@ export const createDirectUpload = createServerFn({ method: "POST" })
     if (!roleRow) throw new Error("You must be a creator to upload");
 
     const mux = await muxClient();
-    const upload = await mux.video.uploads.create({
-      cors_origin: "*",
-      new_asset_settings: {
-        playback_policies: ["public"],
-        video_quality: "basic",
-        // Auto-generate English subtitles for accessibility & richer AI tagging
-        input: [
-          {
-            generated_subtitles: [
-              { language_code: "en", name: "English (auto)" },
-            ],
-          },
-        ],
-      } as any,
-    });
+    let upload;
+    try {
+      upload = await mux.video.uploads.create({
+        cors_origin: "*",
+        new_asset_settings: {
+          playback_policies: ["public"],
+          video_quality: "basic",
+          // Auto-generate English subtitles for accessibility & richer AI tagging
+          input: [
+            {
+              generated_subtitles: [
+                { language_code: "en", name: "English (auto)" },
+              ],
+            },
+          ],
+        } as any,
+      });
+    } catch (err: any) {
+      const status = err?.status ?? err?.statusCode;
+      console.error("[mux.uploads.create] failed", {
+        status,
+        message: err?.message,
+        body: err?.error ?? err?.response?.data,
+      });
+      if (status === 401 || status === 403) {
+        throw new Error(
+          "Video service is not accepting uploads right now (auth failed). Please contact support — code MUX_AUTH.",
+        );
+      }
+      throw new Error(
+        "Couldn't start upload. Please try again in a moment. If this keeps happening, contact support.",
+      );
+    }
 
     const { data: video, error } = await supabase
       .from("videos")

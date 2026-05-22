@@ -1,81 +1,50 @@
+# Fix: 401 "Unauthorized request" when uploading a video
 
-# Upload-first creator flow with social cross-links
+## What's actually happening
 
-Yes — this will work, and it actually simplifies what's there today. The native upload path already plays in feed/search via Mux, already overlays deals (`matchedDeal` + `attachedDeals`), and already feeds analytics. We just need to make Upload the primary path, treat social URLs as metadata on the same video row, and quietly retire the "link card" import as the main entry point.
+The 401 you're seeing is **from Mux, not from Travidz**. The response body shape `{"error":{"type":"unauthorized","messages":["Unauthorized request"]}}` is Mux's API error format.
 
-## How it works after the change
+Flow today:
+1. You tap "Choose a video" → browser calls our `createDirectUpload` server function.
+2. That server function calls `mux.video.uploads.create(...)` using `MUX_TOKEN_ID` + `MUX_TOKEN_SECRET`.
+3. Mux replies **401 Unauthorized**, the server fn throws, and we surface the raw Mux body to the toast — which is what's pinned at the bottom of your screenshot.
 
-```text
-Creator opens Create
-        ↓
-  [Upload from device]  ← primary, required
-        ↓
-  Video uploads to Travidz → Mux processes → status=ready
-        ↓
-  Optional: paste links to the same post on Instagram / TikTok /
-            Facebook / YouTube (stored as cross-links on the row)
-        ↓
-  Optional: attach deals (Smart Deals sheet)
-        ↓
-  Published → appears in For You feed + Search automatically
-              plays natively, deals overlay shown,
-              "Also on Instagram ↗" chips link out
-```
+So no upload URL is ever issued; the file never leaves the device. The Supabase auth wiring is fine — both `attachSupabaseAuth` (client) and `requireSupabaseAuth` (server) are registered correctly, and the secrets `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` do exist in Lovable Cloud. They're just being rejected by Mux.
 
-Businesses see the same video in search/feed and can apply the existing partnership flow (`deal_applications` → approved code → `video_deals`).
+## Likely causes (in order)
 
-## What to restructure
+1. **Token revoked or rotated in Mux** but the new values were never copied into Lovable Cloud.
+2. **Wrong environment** — the token belongs to one Mux Environment (e.g. "Development") and the project is being treated as another. Each Mux Environment has its own token pair.
+3. **Token typo / trailing whitespace** when the secret was originally pasted.
+4. **Mux account is suspended** (billing / verification) — the dashboard will show a banner.
 
-### 1. Create page (`src/routes/create.tsx`)
-- Make **Upload** the default and only primary tab.
-- Demote the "Import from socials" tab to a small secondary action *inside* the upload flow titled "Add links to this video on other platforms" (optional, multi-input for IG / TikTok / FB / YT / X).
-- Remove the bulk URL importer from the main UI (keep the server fn for admin/migration use only).
+## Plan
 
-### 2. Videos table — store cross-links as metadata, not as the source
-The current row already has `source_platform`, `source_url`, `embed_mode`. Reuse them for a new "cross-link" concept on top of the native upload:
-- Add a `cross_links jsonb` column on `videos` shaped like `[{ platform, url }]` (up to ~5 entries, validated).
-- Keep `mux_playback_id` as the source of truth for playback. `embed_mode = "native"` for these rows; `link_card` rows become legacy.
-- Migration also: backfill the two existing Instagram `link_card` rows by either (a) asking the creator to re-upload, or (b) hiding them from feed/search until they do.
+### 1. Rotate Mux credentials (you, in Mux dashboard)
+- Open Mux → Settings → Access Tokens.
+- Confirm which **Environment** is selected at the top (this is the #1 gotcha).
+- Either confirm the existing token is still active, or create a new **Access Token** with permissions: `Mux Video — Read & Write`.
+- Copy the new **Token ID** and **Token Secret**.
 
-### 3. Feed + search ranking (`src/lib/feed.functions.ts`)
-- Remove the `metaImportBoost` for `link_card` (no longer needed — native uploads rank normally on freshness + engagement).
-- Add a small "new creator upload" freshness boost so first-time native uploads surface in For You within the first 24h instead of being buried by seeded data.
-- Drop the link-card branches in `searchVideos` / search results.
+### 2. Update the secrets in Lovable Cloud (me, after you confirm)
+- Update `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` with the new values.
+- No code change needed for this step.
 
-### 4. Video card (`src/components/feed/VideoCard.tsx`)
-- Always render the Mux player (no more link-card placeholder branch as the default).
-- Below the title, render a row of small platform chips from `cross_links`: "Watch on Instagram ↗", "On TikTok ↗", etc. Tapping opens the external post in a new tab; the Travidz card keeps playing.
-- Keep the existing deal overlay (`matchedDeal` + `attachedDeals`) — no change.
+### 3. Improve the error surface so this is debuggable next time (me, code change)
+File: `src/routes/create.tsx` and `src/lib/mux.functions.ts`
+- In `createDirectUpload`'s `.handler()`, wrap the Mux SDK call in try/catch. On failure, log the full Mux response server-side and throw a clean, human-readable error like *"Video service rejected the upload — please contact support (MUX_AUTH)."* instead of leaking Mux's raw JSON to the toast.
+- In `UploadFlowBody.startUpload`, render the error in a proper inline alert (red banner inside the upload card) instead of just a toast that gets clipped at the bottom of the screen.
 
-### 5. Studio video editor (`src/routes/studio.videos.$id.tsx`)
-- Add a "Cross-links" panel to add/remove the per-platform URLs after publishing.
-- Keep the existing Smart Deals + Tag Business panels.
-
-### 6. Profile (`src/routes/u.$username.tsx`)
-- Keep `profile_socials` (handles) as the account-level social links — separate from per-video cross-links.
-- On a video tile, show the per-video platform chips when present.
-
-### 7. Business + contract flow — no schema change
-- `deal_applications` → approve → `video_deals` already works end-to-end.
-- The only addition: when a business browses creators, the creator card shows both their Travidz video count and their cross-linked socials, so businesses can evaluate reach before approving.
-
-## Trade-offs to be aware of
-
-- **Storage + Mux cost** rises because every video is hosted. This is the cost of having deals overlay during playback — it can only happen on video Travidz controls.
-- **Existing imported link-card rows** (the two Instagram videos) won't have a Mux asset. Options: (a) ask the creator to re-upload, (b) keep them visible only on the creator's profile as "external" cards, (c) hide them. Recommend (a) + (b) as fallback.
-- **No scraping** — Instagram/Facebook still cannot be auto-downloaded; the upload must come from the creator's device. This was already the constraint.
-
-## Files that change
-
-- `src/routes/create.tsx` — upload-first UI, cross-links sub-form.
-- `src/components/feed/VideoCard.tsx` — drop link-card branch, add cross-link chips.
-- `src/lib/feed.functions.ts` — remove meta-import boost, add new-upload freshness boost, select `cross_links`.
-- `src/routes/search.tsx` — render cross-link chips, drop link-card placeholder.
-- `src/routes/studio.videos.$id.tsx` — Cross-links panel.
-- `src/lib/social.functions.ts` — keep `previewExternalVideo` for the link-input previews; mark `importExternalVideo*` as legacy (still callable for migration).
-- New migration: add `videos.cross_links jsonb default '[]'` + check constraint on shape.
-- New server fn: `updateVideoCrossLinks(videoId, links[])` with creator auth + validation.
+### 4. Verify end-to-end
+- After secrets are updated, retry the upload from the same device.
+- Check server function logs to confirm `mux.video.uploads.create` succeeds and returns an `uploadUrl`.
+- Watch the upload progress bar reach 100%, then confirm the new video appears under `/studio/videos`.
 
 ## Out of scope
+- No changes to the database, RLS, or the cross-links / feed work from earlier turns.
+- Not switching providers away from Mux.
+- Not changing how creators authenticate.
 
-- Auto-publishing the same video to the creator's actual Instagram / TikTok accounts. That requires per-platform OAuth + Graph API approvals; out of scope here. Cross-links are creator-supplied URLs to posts they uploaded themselves.
+## What I need from you before I can implement
+1. Confirm you want me to rotate to a fresh Mux access token (recommended), **or** confirm you've already verified the existing token in the Mux dashboard and just want me to re-paste it.
+2. Once you've copied the new Token ID + Token Secret from Mux, paste them in chat (or use the secrets prompt I'll send) and I'll update them and ship the error-handling improvements in the same turn.
