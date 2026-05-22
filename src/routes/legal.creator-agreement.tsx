@@ -16,7 +16,7 @@ export const Route = createFileRoute("/legal/creator-agreement")({
 
 function CreatorAgreementPage() {
   return (
-    <LegalPage title="Creator Agreement" updated="May 2026">
+    <LegalPage title="Creator Agreement" updated="November 2026">
       <p>This agreement applies in addition to the <a href="/legal/terms">Terms of Service</a> when you publish travel content or participate in deals as a Creator on Travidz.</p>
       <h2>1. Original content and rights</h2>
       <p>You confirm that every video, photo, sound and itinerary you upload is yours, or that you have all the rights and releases needed to publish it (music sync, talent releases, location permits).</p>
@@ -35,7 +35,8 @@ function CreatorAgreementPage() {
         <li><strong>Maturing Creator</strong> (months 7–18): 40% of the 8%.</li>
         <li><strong>Mature Creator</strong> (month 19+): 30% of the 8%, unless your rolling 12-month volume keeps you in the Power tier.</li>
       </ul>
-      <p>The split applied to each booking is permanently stamped on that booking. Future rule changes do not retroactively reduce earnings already recorded. Travidz tracks attributed clicks, conversions and commissions; payouts will be issued once payments infrastructure is launched.</p>
+      <p>The split applied to each booking is permanently stamped on that booking. Future rule changes do not retroactively reduce earnings already recorded.</p>
+      <p>Payouts run weekly and are issued <strong>T+7 from the booked deal's start date</strong>, to the bank account you set in your dashboard. A minimum payout threshold of <strong>£25</strong> applies; balances below that roll over to the next run. Payouts are made in GBP only at launch. If a customer is refunded, the corresponding creator share is reversed from your next payout.</p>
       <p><em>Worked example:</em> a £500 booking generates £40 in commission (8%). A Power Creator receives £20; a Mature Creator receives £12.</p>
       <h2>6. Removal and demotion</h2>
       <p>We may demote or remove videos that breach the <a href="/legal/terms">Terms</a>, harm the platform's trust signals, or include misleading travel claims (e.g. unsafe activities marketed as safe).</p>
