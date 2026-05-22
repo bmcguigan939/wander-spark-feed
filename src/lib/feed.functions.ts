@@ -146,9 +146,11 @@ function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
   return values ? (q as any).in("budget_tag", values) : q;
 }
 
-function isRecentMetaImport(v: Pick<FeedVideo, "source_platform" | "embed_mode" | "created_at">) {
-  const p = (v.source_platform ?? "").toLowerCase();
-  return v.embed_mode === "link_card" && (p === "instagram" || p === "facebook") && hoursSince(v.created_at) <= 24 * 14;
+function isFreshNativeUpload(v: Pick<FeedVideo, "mux_playback_id" | "created_at">) {
+  // Native (Travidz-hosted) videos uploaded in the last 7 days get a small
+  // surfacing boost so brand-new creator content isn't buried by older
+  // engagement-heavy seeded rows.
+  return !!v.mux_playback_id && hoursSince(v.created_at) <= 24 * 7;
 }
 
 function scoreVideo(
@@ -181,10 +183,10 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
-  const metaImportBoost = isRecentMetaImport(v) ? 80 : 0;
+  const newUploadBoost = isFreshNativeUpload(v) ? 12 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + metaImportBoost + jitter
+    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
   );
 }
 
