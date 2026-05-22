@@ -137,6 +137,7 @@ export type VideoInsights = {
     thumbnail_url: string | null;
     mux_playback_id: string | null;
     source_platform: string | null;
+    cross_links: Array<{ platform: string; url: string }>;
     view_count: number;
     like_count: number;
     save_count: number;
@@ -165,7 +166,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     const { data: v, error } = await supabaseAdmin
       .from("videos")
-      .select("id,title,thumbnail_url,mux_playback_id,source_platform,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
+      .select("id,title,thumbnail_url,mux_playback_id,source_platform,cross_links,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
       .eq("id", data.videoId)
       .eq("creator_id", context.userId)
       .maybeSingle();
@@ -206,6 +207,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
         thumbnail_url: v.thumbnail_url,
         mux_playback_id: v.mux_playback_id,
         source_platform: (v as any).source_platform ?? null,
+        cross_links: ((v as any).cross_links ?? []) as Array<{ platform: string; url: string }>,
         view_count: v.view_count ?? 0,
         like_count: v.like_count ?? 0,
         save_count: v.save_count ?? 0,
