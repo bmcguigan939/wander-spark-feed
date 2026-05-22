@@ -1,61 +1,48 @@
+## What's actually wrong
 
-# Finish UI — Socials + Verification
+Linda's "Devon" Instagram import is in the database with `status='ready'`, `is_draft=false`, `is_hidden=false`, `embed_mode='link_card'`. It DOES appear in the feed and in search (it's the top-left tile in the screenshot) — but the card is blank because `thumbnail_url` is empty.
 
-Backend (migration, server functions, cron, webhooks, auto-trust) is already live. This plan covers only the remaining frontend/UI work to expose it.
+Root cause: Instagram serves a login wall to server-side fetches, so `previewByOgTags` couldn't extract `og:image`/`og:title`. The row was inserted with the title Linda typed and an empty thumbnail.
 
-## 1. Profile Socials sheet — `src/routes/profile.tsx`
+## Fix
 
-Restructure the existing Socials sheet into three clearly labelled sections:
+### 1. Better Instagram/Facebook preview fallback (`src/lib/social.functions.ts`)
 
-**a) Your handles**
-- Inputs for: Instagram, Facebook (new), TikTok, YouTube, X, Website.
-- Each input shows live helper text ("instagram.com/<handle>") and validates format.
-- Save button calls `upsertMySocials` (already supports `facebook_handle`).
+Add a two-step preview chain for Instagram and Facebook:
 
-**b) Auto-sync**
-- YouTube: "Sync now" button → calls `syncYouTubeForCreator`. Shows last-sync timestamp + count.
-- TikTok: visible only to admins → "Sync official TikTok" button calling `syncTikTokOfficialAdmin`.
-- Instagram / Facebook: disabled row with tooltip explaining Meta Graph API requirement.
+- **Step A – Instagram oEmbed via Facebook Graph** (only if `FACEBOOK_OEMBED_TOKEN` env is set). Returns `thumbnail_url`, `title`, `author_name`.
+- **Step B – Reader proxy fallback**: fetch `https://r.jina.ai/https://www.instagram.com/...` (free, no key). It returns markdown with the post text and the image URL — parse the first image and the first text line for title.
+- **Step C – Existing `previewByOgTags`** as last resort.
 
-**c) Import videos (no link required)**
-- Textarea accepting up to 25 URLs (one per line).
-- "Import" button calls `importExternalVideosBulk`.
-- Result list shows per-URL outcome (imported / duplicate / failed + reason).
+If all three fail to produce a thumbnail, set `thumbnail = null` and let the UI render a branded placeholder.
 
-## 2. Public profile — `src/routes/u.$username.tsx`
+Apply the same chain for Facebook links (oEmbed → reader → og tags).
 
-Render a row of outbound social icon links under the bio when handles exist:
-- Instagram → `instagram.com/<handle>`
-- Facebook → `facebook.com/<handle>`
-- TikTok → `tiktok.com/@<handle>`
-- YouTube → `youtube.com/channel/<youtube_channel_id>` (fallback to `/@<handle>`)
-- X → `x.com/<handle>`
-- Website → as-is
+### 2. Branded placeholder for blank cards
 
-Use `lucide-react` icons, `target="_blank" rel="noopener noreferrer"`, semantic tokens only.
+- `src/components/feed/VideoCard.tsx`: when `mux_playback_id` is null and `thumbnail_url` is null, replace the white `Play` icon background with a gradient tinted by `source_platform` (Instagram pink/orange, TikTok cyan/red, Facebook blue, YouTube red, default neutral) and overlay the platform icon + title text so the tile is recognisable.
+- `src/routes/search.tsx` and any grid/tile that shows imported videos: same fallback — use a small helper `getPlatformPlaceholder(source_platform)` that returns a Tailwind gradient class + Lucide icon. Search results currently render a blank white box; this gives them visual identity.
+- Add the helper as a tiny shared module `src/lib/platform-style.ts` so feed, search, grid, and `u.$username` all use it.
 
-## 3. Create flow — `src/routes/create.tsx`
+### 3. Let importers paste their own thumbnail URL
 
-Update the source URL placeholder/help text to mention Instagram and TikTok (already handled by `detectPlatform`).
+In the "Import videos (no link)" sheet on `src/routes/profile.tsx`, the bulk form already calls `importExternalVideosBulk` and gets back per-URL results. After import, if any returned row has no thumbnail, show those rows inline with a "Paste image URL" field that calls a new tiny server fn `setImportedThumbnail({ videoId, url })` (admin-checked: `creator_id = auth.uid()`). Stored straight into `videos.thumbnail_url`.
 
-## 4. Admin — `src/routes/admin.users.tsx`
+This also covers the single `importExternalVideo` form on `src/routes/create.tsx`: the existing `thumbnail` input is already wired, just surface a clearer "Optional — we couldn't fetch one automatically" hint when the preview returns null.
 
-- Relabel "Verify / Unverify" buttons to "Mark Trusted / Untrust".
-- Add a filter: All / Trusted / Untrusted.
-- Add a small "auto-trusted" badge for users flipped by `autoTrustOnActivity`.
+### 4. Backfill Devon
 
-## 5. Admin seed — `src/routes/admin.seed.tsx`
-
-Add a "Sync official TikTok now" button wired to `syncTikTokOfficialAdmin`, with toast feedback.
+Run a one-off update via migration or admin action to set `thumbnail_url` for the existing row to whatever the new reader-proxy fallback returns (or leave null so the new gradient placeholder shows). Easiest: re-run the preview against the stored `source_url` for any video where `embed_mode='link_card' AND thumbnail_url IS NULL`, inside a new admin server fn `repairBlankImportedThumbnails` callable from `src/routes/admin.seed.tsx`.
 
 ## Out of scope
-- Per-user TikTok/IG/FB OAuth.
-- Setting the `TRAVIDZ_OFFICIAL_CREATOR_ID` secret (user action).
-- Visual redesign of badges or onboarding beyond the relabels above.
 
-## Verification after build
-- `/profile` shows the three sections; saving Facebook handle persists.
-- Bulk import accepts a mix of YouTube/TikTok/IG URLs and reports per-URL status.
-- `/u/mrslindamcguigan` shows Instagram (and Facebook if set) as clickable icons.
-- Admin can trigger TikTok sync and see "Trusted" filter working.
-- New signups never see a "Verify" step; auto-trust still flips them on first publish/redeem.
+- Real Instagram/Facebook auto-sync (still requires Meta Graph API + Business account; documented earlier).
+- Server-side rendering of an actual video preview (Instagram blocks this).
+- Changing feed ranking — the row already qualifies, it just looks blank.
+
+## Verification
+
+- Import a fresh Instagram reel → preview returns a thumbnail (via reader proxy) or, if not, the import succeeds and the card shows a branded gradient tile, not a white blank.
+- Devon's existing card in feed + search shows either a real thumb or the new placeholder.
+- Admin "Repair blank thumbnails" button updates all `link_card` rows with missing thumbs.
+- No regression for YouTube/TikTok (they use their own oEmbed paths).
