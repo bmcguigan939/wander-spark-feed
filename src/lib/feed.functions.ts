@@ -339,7 +339,7 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
         )
         .eq("status", "ready")
         .eq("is_draft", false)
@@ -439,7 +439,7 @@ export const searchVideos = createServerFn({ method: "GET" })
             .eq("is_draft", false)
             .or("scheduled_at.is.null,scheduled_at.lte.now()");
           if (data.country) kw = kw.eq("country", data.country);
-          if (data.budget) kw = kw.eq("budget_tag", data.budget);
+          kw = applyBudgetFilter(kw, data.budget);
           if (data.tags && data.tags.length) kw = kw.contains("activity_tags", data.tags);
           if (tsQuery) kw = kw.textSearch("search_tsv", tsQuery, { config: "simple" });
           return await kw.limit(60);
@@ -473,7 +473,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           .eq("is_draft", false)
           .or("scheduled_at.is.null,scheduled_at.lte.now()");
         if (data.country) extra = extra.eq("country", data.country);
-        if (data.budget) extra = extra.eq("budget_tag", data.budget);
+        extra = applyBudgetFilter(extra, data.budget);
         if (data.tags && data.tags.length) extra = extra.contains("activity_tags", data.tags);
         const { data: extraData } = await extra;
         extraRows = (extraData ?? []) as any[];
@@ -511,7 +511,7 @@ export const searchVideos = createServerFn({ method: "GET" })
     .or("scheduled_at.is.null,scheduled_at.lte.now()");
 
     if (data.country) q = q.eq("country", data.country);
-    if (data.budget) q = q.eq("budget_tag", data.budget);
+    q = applyBudgetFilter(q, data.budget);
     if (data.tags && data.tags.length) q = q.contains("activity_tags", data.tags);
 
     q =
