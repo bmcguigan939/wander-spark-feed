@@ -6,11 +6,11 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
-import { getMySocials, upsertMySocials } from "@/lib/social.functions";
+import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -30,6 +30,9 @@ function ProfilePage() {
   const applyTitleFn = useServerFn(applyAiSuggestedTitle);
   const getSocialsFn = useServerFn(getMySocials);
   const upsertSocialsFn = useServerFn(upsertMySocials);
+  const syncYtFn = useServerFn(syncYouTubeForCreator);
+  const syncTikTokFn = useServerFn(syncTikTokOfficial);
+  const bulkImportFn = useServerFn(importExternalVideosBulk);
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
@@ -57,9 +60,16 @@ function ProfilePage() {
     youtube_handle: "",
     tiktok_handle: "",
     instagram_handle: "",
+    facebook_handle: "",
     x_handle: "",
     website_url: "",
   });
+  const [bulkUrls, setBulkUrls] = useState("");
+  const [bulkResult, setBulkResult] = useState<{
+    imported: number;
+    skipped: { url: string; reason: string }[];
+    failed: { url: string; error: string }[];
+  } | null>(null);
 
   const socialsQ = useQuery({
     queryKey: ["my-socials"],
@@ -72,6 +82,7 @@ function ProfilePage() {
         youtube_handle: socialsQ.data.youtube_handle ?? "",
         tiktok_handle: socialsQ.data.tiktok_handle ?? "",
         instagram_handle: socialsQ.data.instagram_handle ?? "",
+        facebook_handle: (socialsQ.data as any).facebook_handle ?? "",
         x_handle: socialsQ.data.x_handle ?? "",
         website_url: socialsQ.data.website_url ?? "",
       });
@@ -81,10 +92,41 @@ function ProfilePage() {
     mutationFn: () => upsertSocialsFn({ data: socials as any }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-socials"] });
-      setSocialsOpen(false);
       toast("Social links saved");
     },
     onError: (e: any) => toast(e?.message ?? "Couldn't save links"),
+  });
+  const syncYtM = useMutation({
+    mutationFn: () => syncYtFn({ data: undefined as any }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      if (r?.error) toast(r.error);
+      else toast(`Synced ${r?.synced ?? 0} new YouTube video${r?.synced === 1 ? "" : "s"}`);
+    },
+    onError: (e: any) => toast(e?.message ?? "YouTube sync failed"),
+  });
+  const syncTikTokM = useMutation({
+    mutationFn: () => syncTikTokFn({ data: undefined as any }),
+    onSuccess: (r: any) => toast(`Synced ${r?.synced ?? 0} of ${r?.scanned ?? 0} TikToks`),
+    onError: (e: any) => toast(e?.message ?? "TikTok sync failed"),
+  });
+  const bulkImportM = useMutation({
+    mutationFn: () => {
+      const urls = bulkUrls
+        .split(/\r?\n/)
+        .map((u) => u.trim())
+        .filter(Boolean);
+      if (urls.length === 0) throw new Error("Paste at least one URL");
+      if (urls.length > 25) throw new Error("Max 25 URLs at a time");
+      return bulkImportFn({ data: { urls } as any });
+    },
+    onSuccess: (r: any) => {
+      setBulkResult(r);
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast(`Imported ${r.imported}, skipped ${r.skipped.length}, failed ${r.failed.length}`);
+      if (r.imported > 0) setBulkUrls("");
+    },
+    onError: (e: any) => toast(e?.message ?? "Bulk import failed"),
   });
 
   const updateM = useMutation({
