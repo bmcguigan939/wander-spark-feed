@@ -136,6 +136,7 @@ export type VideoInsights = {
     title: string;
     thumbnail_url: string | null;
     mux_playback_id: string | null;
+    source_platform: string | null;
     view_count: number;
     like_count: number;
     save_count: number;
