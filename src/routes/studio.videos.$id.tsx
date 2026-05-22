@@ -472,6 +472,79 @@ function DraftEmailButton({ inviteId, email }: { inviteId: string; email: string
     </button>
   );
 }
+
+function CrossLinksPanel({ videoId, initial }: { videoId: string; initial: Array<{ platform: string; url: string }> }) {
+  const qc = useQueryClient();
+  const updateFn = useServerFn(updateVideoCrossLinks);
+  const seed: Record<CrossLinkPlatform, string> = {
+    instagram: "", tiktok: "", facebook: "", youtube: "", x: "",
+  };
+  for (const l of initial ?? []) {
+    if ((CROSS_LINK_PLATFORMS as readonly string[]).includes(l.platform)) {
+      seed[l.platform as CrossLinkPlatform] = l.url;
+    }
+  }
+  const [vals, setVals] = useState<Record<CrossLinkPlatform, string>>(seed);
+  const m = useMutation({
+    mutationFn: () => updateFn({ data: {
+      videoId,
+      links: (CROSS_LINK_PLATFORMS as readonly CrossLinkPlatform[])
+        .map((p) => ({ platform: p, url: vals[p].trim() }))
+        .filter((l) => {
+          if (!l.url) return false;
+          try { new URL(l.url); return true; } catch { return false; }
+        }),
+    } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["studio-insights", videoId] });
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      toast("Saved cross-links");
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't save"),
+  });
+  const icon = (p: CrossLinkPlatform) =>
+    p === "instagram" ? Instagram
+      : p === "youtube" ? Youtube
+      : p === "facebook" ? Facebook
+      : p === "tiktok" ? Music2
+      : Twitter;
+  return (
+    <div className="mt-8">
+      <h3 className="font-display text-base font-semibold">Also posted on</h3>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Paste the URLs to this same video on your other accounts. Viewers see chips on the Travidz card and can open the original on each platform.
+      </p>
+      <div className="mt-3 space-y-2 rounded-2xl border border-border/60 bg-card p-3">
+        {(CROSS_LINK_PLATFORMS as readonly CrossLinkPlatform[]).map((p) => {
+          const Icon = icon(p);
+          const label = p === "x" ? "X (Twitter)" : p.charAt(0).toUpperCase() + p.slice(1);
+          return (
+            <div key={p} className="flex items-center gap-2">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" />
+              </span>
+              <input
+                value={vals[p]}
+                onChange={(e) => setVals((s) => ({ ...s, [p]: e.target.value }))}
+                placeholder={`Paste ${label} URL`}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => m.mutate()}
+          disabled={m.isPending}
+          className="mt-1 w-full rounded-full bg-primary py-2 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
+        >
+          {m.isPending ? "Saving…" : "Save links"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DetailThumb({ thumbnail, platform }: { thumbnail: string | null; platform: string | null }) {
   if (thumbnail) return <img src={thumbnail} alt="" className="h-full w-full object-cover" />;
   const style = getPlatformStyle(platform);
