@@ -89,6 +89,7 @@ import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$co
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
+import { Route as ApiPublicCronSyncYoutubeRouteImport } from './routes/api/public/cron/sync-youtube'
 import { Route as ApiPublicCronRefreshCreatorTiersRouteImport } from './routes/api/public/cron/refresh-creator-tiers'
 import { Route as ApiPublicCronParitySweepRouteImport } from './routes/api/public/cron/parity-sweep'
 import { Route as ApiPublicCronFxRefreshRouteImport } from './routes/api/public/cron/fx-refresh'
@@ -500,6 +501,12 @@ const ApiPublicDIdRoute = ApiPublicDIdRouteImport.update({
   path: '/api/public/d/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSyncYoutubeRoute =
+  ApiPublicCronSyncYoutubeRouteImport.update({
+    id: '/api/public/cron/sync-youtube',
+    path: '/api/public/cron/sync-youtube',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronRefreshCreatorTiersRoute =
   ApiPublicCronRefreshCreatorTiersRouteImport.update({
     id: '/api/public/cron/refresh-creator-tiers',
@@ -614,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
+  '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -699,6 +707,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
+  '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -788,6 +797,7 @@ export interface FileRoutesById {
   '/api/public/cron/fx-refresh': typeof ApiPublicCronFxRefreshRoute
   '/api/public/cron/parity-sweep': typeof ApiPublicCronParitySweepRoute
   '/api/public/cron/refresh-creator-tiers': typeof ApiPublicCronRefreshCreatorTiersRoute
+  '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -878,6 +888,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/cron/refresh-creator-tiers'
+    | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/api/public/payments/webhook'
@@ -963,6 +974,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/cron/refresh-creator-tiers'
+    | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/api/public/payments/webhook'
@@ -1051,6 +1063,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/fx-refresh'
     | '/api/public/cron/parity-sweep'
     | '/api/public/cron/refresh-creator-tiers'
+    | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
     | '/api/public/payments/webhook'
@@ -1123,6 +1136,7 @@ export interface RootRouteChildren {
   ApiPublicCronFxRefreshRoute: typeof ApiPublicCronFxRefreshRoute
   ApiPublicCronParitySweepRoute: typeof ApiPublicCronParitySweepRoute
   ApiPublicCronRefreshCreatorTiersRoute: typeof ApiPublicCronRefreshCreatorTiersRoute
+  ApiPublicCronSyncYoutubeRoute: typeof ApiPublicCronSyncYoutubeRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1693,6 +1707,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sync-youtube': {
+      id: '/api/public/cron/sync-youtube'
+      path: '/api/public/cron/sync-youtube'
+      fullPath: '/api/public/cron/sync-youtube'
+      preLoaderRoute: typeof ApiPublicCronSyncYoutubeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/refresh-creator-tiers': {
       id: '/api/public/cron/refresh-creator-tiers'
       path: '/api/public/cron/refresh-creator-tiers'
@@ -1896,6 +1917,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronFxRefreshRoute: ApiPublicCronFxRefreshRoute,
   ApiPublicCronParitySweepRoute: ApiPublicCronParitySweepRoute,
   ApiPublicCronRefreshCreatorTiersRoute: ApiPublicCronRefreshCreatorTiersRoute,
+  ApiPublicCronSyncYoutubeRoute: ApiPublicCronSyncYoutubeRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
