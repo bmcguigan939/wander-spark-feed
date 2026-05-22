@@ -71,6 +71,7 @@ import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
+import { Route as BusinessOnboardingPayoutRouteImport } from './routes/business.onboarding.payout'
 import { Route as BusinessInviteTokenRouteImport } from './routes/business.invite.$token'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
@@ -403,6 +404,12 @@ const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
   path: '/destinations/$country/$city',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BusinessOnboardingPayoutRoute =
+  BusinessOnboardingPayoutRouteImport.update({
+    id: '/business/onboarding/payout',
+    path: '/business/onboarding/payout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BusinessInviteTokenRoute = BusinessInviteTokenRouteImport.update({
   id: '/business/invite/$token',
   path: '/business/invite/$token',
@@ -576,6 +583,7 @@ export interface FileRoutesByFullPath {
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
+  '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -657,6 +665,7 @@ export interface FileRoutesByTo {
   '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
+  '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
@@ -742,6 +751,7 @@ export interface FileRoutesById {
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
+  '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -828,6 +838,7 @@ export interface FileRouteTypes {
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/business/invite/$token'
+    | '/business/onboarding/payout'
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -909,6 +920,7 @@ export interface FileRouteTypes {
     | '/book/match/$code'
     | '/business/deals/new'
     | '/business/invite/$token'
+    | '/business/onboarding/payout'
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country'
@@ -993,6 +1005,7 @@ export interface FileRouteTypes {
     | '/business/deals/$id'
     | '/business/deals/new'
     | '/business/invite/$token'
+    | '/business/onboarding/payout'
     | '/destinations/$country/$city'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -1062,6 +1075,7 @@ export interface RootRouteChildren {
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
+  BusinessOnboardingPayoutRoute: typeof BusinessOnboardingPayoutRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
   ApiPublicCronBusinessDigestRoute: typeof ApiPublicCronBusinessDigestRoute
@@ -1513,6 +1527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DestinationsCountryCityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/business/onboarding/payout': {
+      id: '/business/onboarding/payout'
+      path: '/business/onboarding/payout'
+      fullPath: '/business/onboarding/payout'
+      preLoaderRoute: typeof BusinessOnboardingPayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/invite/$token': {
       id: '/business/invite/$token'
       path: '/business/invite/$token'
@@ -1803,6 +1824,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
+  BusinessOnboardingPayoutRoute: BusinessOnboardingPayoutRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
   ApiPublicCronBusinessDigestRoute: ApiPublicCronBusinessDigestRoute,

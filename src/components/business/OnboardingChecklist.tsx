@@ -6,6 +6,7 @@ import { useState } from "react";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
 import { listMyDeals } from "@/lib/deals.functions";
 import { listBusinessRedemptions } from "@/lib/redemptions.functions";
+import { getMyPayoutMethod } from "@/lib/payout.functions";
 
 type Step = {
   id: string;
@@ -20,6 +21,7 @@ export function OnboardingChecklist() {
   const agreementFn = useServerFn(getMyAgreementStatus);
   const dealsFn = useServerFn(listMyDeals);
   const redemptionsFn = useServerFn(listBusinessRedemptions);
+  const payoutFn = useServerFn(getMyPayoutMethod);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
@@ -35,6 +37,10 @@ export function OnboardingChecklist() {
       redemptionsFn({ data: { limit: 50, offset: 0 } as any }).catch(
         () => ({ redemptions: [] as any[] }) as any,
       ),
+  });
+  const { data: payout } = useQuery({
+    queryKey: ["payout-method"],
+    queryFn: () => payoutFn(),
   });
 
   const deals = (dealsRes?.deals ?? []) as any[];
@@ -61,6 +67,13 @@ export function OnboardingChecklist() {
       desc: "Add an offer so creators can promote it.",
       done: deals.some((d) => d.is_active),
       to: "/business/deals/new",
+    },
+    {
+      id: "payout",
+      title: "Set up payouts",
+      desc: "Add a bank account so Travidz can pay you for bookings.",
+      done: payout?.payout_method === "manual_bank",
+      to: "/business/onboarding/payout",
     },
     {
       id: "first-redemption",

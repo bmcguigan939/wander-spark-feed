@@ -67,6 +67,7 @@ const upsertSchema = z.object({
   parity_exempt: z.boolean().optional(),
   parity_exempt_reason: z.string().max(500).optional().nullable(),
   category: z.enum(["stay", "eat", "do", "tour", "transport", "other"]).optional(),
+  bookable: z.boolean().optional(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })
@@ -74,6 +75,20 @@ export const createDeal = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => upsertSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    // Gate: bookable deals require a payout method on the business profile.
+    if (data.bookable) {
+      const { data: profile, error: pErr } = await supabaseAdmin
+        .from("profiles")
+        .select("payout_method")
+        .eq("id", userId)
+        .maybeSingle();
+      if (pErr) throw new Error(pErr.message);
+      if (!profile || profile.payout_method !== "manual_bank") {
+        throw new Error(
+          "Add a payout method before listing a bookable deal. Visit /business/onboarding/payout",
+        );
+      }
+    }
     const { data: row, error } = await supabase
       .from("deals")
       .insert({ ...data, business_id: userId })
