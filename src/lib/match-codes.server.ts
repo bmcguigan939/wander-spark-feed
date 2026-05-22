@@ -12,7 +12,7 @@ function generateCode(): string {
 }
 
 /** Issue a price-match code. Matched price = competitor price (business
- * keeps competitor price - 8% commission). 24h expiry. */
+ * keeps competitor price - 11% commission). 24h expiry. */
 export async function issueMatchCode(args: {
   link_id: string;
   business_id: string | null;

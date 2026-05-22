@@ -174,7 +174,8 @@ export const confirmRedemption = createServerFn({ method: "POST" })
       .single();
     if (error) return { ok: false as const, error: error.message };
 
-    // Stamp the v6 tier-based split (creator vs Travidz share of the 8%).
+    // Stamp the v6 tier-based split (creator vs Travidz share of the
+    // net pool, i.e. 11% gross commission − Stripe fees).
     // The DB trigger has already computed commission_cents on the row.
     await stampRedemptionSplit(data.id).catch((e) =>
       console.error("stamp split failed", e),

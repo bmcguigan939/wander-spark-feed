@@ -48,7 +48,7 @@ export function PayoutMethodCard({ compact = false }: { compact?: boolean }) {
           <div className="flex-1">
             <h3 className="text-sm font-semibold">Add a payout method</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Travidz pays you weekly for bookings minus an 8% commission. We need
+              Travidz pays you weekly for bookings minus an 11% commission. We need
               your bank details before you can list bookable deals.
             </p>
             <Link
