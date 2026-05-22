@@ -3,7 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type Platform = "youtube" | "tiktok" | "instagram" | "x";
+export type Platform = "youtube" | "tiktok" | "instagram" | "facebook" | "x";
 
 export type ProfileSocials = {
   user_id: string;
@@ -11,6 +11,7 @@ export type ProfileSocials = {
   youtube_channel_id: string | null;
   tiktok_handle: string | null;
   instagram_handle: string | null;
+  facebook_handle: string | null;
   x_handle: string | null;
   website_url: string | null;
 };
@@ -30,6 +31,7 @@ const socialsInput = z.object({
   youtube_handle: handleSchema,
   tiktok_handle: handleSchema,
   instagram_handle: handleSchema,
+  facebook_handle: handleSchema,
   x_handle: handleSchema,
   website_url: z
     .string()
@@ -114,6 +116,18 @@ function detectPlatform(url: string): { platform: Platform; sourceId: string } |
     if (host.endsWith("instagram.com")) {
       const m = u.pathname.match(/\/(reel|reels|p|tv)\/([\w-]+)/);
       if (m) return { platform: "instagram", sourceId: m[2] };
+    }
+    if (host.endsWith("facebook.com")) {
+      const m =
+        u.pathname.match(/\/(reel|videos|watch)\/(\d+)/) ||
+        u.pathname.match(/\/([\w.-]+)\/videos\/(\d+)/);
+      if (m) return { platform: "facebook", sourceId: m[2] };
+      const v = u.searchParams.get("v");
+      if (v) return { platform: "facebook", sourceId: v };
+    }
+    if (host === "fb.watch") {
+      const id = u.pathname.replace(/^\//, "").split("/")[0];
+      if (id) return { platform: "facebook", sourceId: id };
     }
     if (host === "x.com" || host === "twitter.com") {
       const m = u.pathname.match(/\/status\/(\d+)/);
