@@ -49,6 +49,7 @@ import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.busin
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as FeedPlaylistRouteImport } from './routes/feed.playlist'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorEarningsRouteImport } from './routes/creator.earnings'
 import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculator'
@@ -302,6 +303,11 @@ const ItinerariesIdRoute = ItinerariesIdRouteImport.update({
 const FeedPlaylistRoute = FeedPlaylistRouteImport.update({
   id: '/feed/playlist',
   path: '/feed/playlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -627,6 +633,7 @@ export interface FileRoutesByFullPath {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -721,6 +728,7 @@ export interface FileRoutesByTo {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -817,6 +825,7 @@ export interface FileRoutesById {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -915,6 +924,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -1009,6 +1019,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -1104,6 +1115,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -1190,6 +1202,7 @@ export interface RootRouteChildren {
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
   CreatorEarningsRoute: typeof CreatorEarningsRoute
   DealsIdRoute: typeof DealsIdRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FeedPlaylistRoute: typeof FeedPlaylistRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
@@ -1513,6 +1526,13 @@ declare module '@tanstack/react-router' {
       path: '/feed/playlist'
       fullPath: '/feed/playlist'
       preLoaderRoute: typeof FeedPlaylistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -2050,6 +2070,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorCalculatorRoute: CreatorCalculatorRoute,
   CreatorEarningsRoute: CreatorEarningsRoute,
   DealsIdRoute: DealsIdRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FeedPlaylistRoute: FeedPlaylistRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
