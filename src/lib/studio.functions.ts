@@ -276,8 +276,8 @@ export const updateVideoMetadata = createServerFn({ method: "POST" })
     if (data.budget_tag !== undefined) {
       patch.budget_tag = data.budget_tag === "none" ? null : data.budget_tag;
     }
-    const { error } = await context.supabase
-      .from("videos")
+    const { error } = await (context.supabase
+      .from("videos") as any)
       .update(patch)
       .eq("id", data.videoId)
       .eq("creator_id", context.userId);
