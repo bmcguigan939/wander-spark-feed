@@ -80,7 +80,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!inv || inv.creator_id !== userId) throw new Error("Not allowed");
 
-    const [{ data: creator }, { data: video }] = await Promise.all([
+    const [{ data: creator }, { data: video }, { count: followerCount }, { data: recentVideos }] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("display_name,username")
@@ -88,9 +88,20 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabaseAdmin
         .from("videos")
-        .select("title,description,destination,view_count,like_count")
+        .select("title,description,destination,view_count,like_count,cross_links")
         .eq("id", inv.video_id)
         .maybeSingle(),
+      supabaseAdmin
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("creator_id", userId),
+      supabaseAdmin
+        .from("videos")
+        .select("view_count,like_count")
+        .eq("creator_id", userId)
+        .eq("status", "ready")
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
 
     const creatorName =
@@ -98,10 +109,27 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     const inviteUrl = `https://travidz.com/business/invite/${inv.token}`;
     const videoTitle = video?.title ?? "a recent video";
 
+    const totalViews = (recentVideos ?? []).reduce((s: number, v: any) => s + (v.view_count ?? 0), 0);
+    const totalLikes = (recentVideos ?? []).reduce((s: number, v: any) => s + (v.like_count ?? 0), 0);
+    const followers = followerCount ?? 0;
+    const crossLinks = Array.isArray((video as any)?.cross_links) ? (video as any).cross_links : [];
+    const crossHandles = crossLinks
+      .map((l: any) => l?.platform ? `${l.platform}: ${l.url}` : null)
+      .filter(Boolean)
+      .join(", ");
+
+    // Adaptive pitch: lean on audience size if there's traction; otherwise
+    // pitch craft + partnership upside.
+    const hasTraction = followers >= 500 || totalViews >= 5000;
+    const pitchAngle = hasTraction
+      ? "Lead with the creator's audience reach (followers across Travidz and linked platforms, recent views/likes) as proof they can drive bookings."
+      : "Lead with the quality of the creator's storytelling and a 'let's grow together' partnership angle — do NOT inflate numbers. Mention that joining costs the business nothing upfront and they only pay commission on sales Travidz sends.";
+
     const system =
       "You write warm, concise outreach emails from a travel creator to a local business they featured in a short video. " +
       "Tone: friendly, professional, never salesy or pushy. Mention specific details from the video when helpful. " +
       "Keep the body under 180 words. End with a clear single-line CTA containing the invite URL. " +
+      pitchAngle + " " +
       "Reply ONLY with JSON: { subject: string, body: string } where body is plain text with \\n line breaks.";
 
     const user = [
@@ -112,6 +140,9 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       video?.description ? `Video description: ${video.description.slice(0, 400)}` : "",
       video?.destination ? `Destination: ${video.destination}` : "",
       video ? `Performance: ${video.view_count ?? 0} views, ${video.like_count ?? 0} likes` : "",
+      `Creator following on Travidz: ${followers} followers`,
+      `Creator's last ${(recentVideos ?? []).length} videos: ${totalViews} total views, ${totalLikes} total likes`,
+      crossHandles ? `Also posts the same video on: ${crossHandles}` : "",
       `Offer: flat ${COMMISSION.totalPct}% commission on sales Travidz sends them, no setup or monthly fee.`,
       `Invite URL (include verbatim in the email body): ${inviteUrl}`,
       ``,

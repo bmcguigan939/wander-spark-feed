@@ -12,6 +12,7 @@ import { EmojiPicker, insertAtCursor } from "@/components/ui/emoji-picker";
 import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
 import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
+import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
 import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/lib/cross-links.functions";
 import { ShareToSocialsCard } from "@/components/create/ShareToSocialsCard";
 
@@ -102,6 +103,7 @@ function UploadFlowBody() {
   const [smartDealsVideoId, setSmartDealsVideoId] = useState<string | null>(null);
   const [publishedVideoId, setPublishedVideoId] = useState<string | null>(null);
   const [publishedTitle, setPublishedTitle] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [crossLinks, setCrossLinks] = useState<Record<CrossLinkPlatform, string>>({
     instagram: "", tiktok: "", facebook: "", youtube: "", x: "",
   });
@@ -185,6 +187,31 @@ function UploadFlowBody() {
               ? () => { setSmartDealsVideoId(publishedVideoId); setSmartDealsOpen(true); }
               : undefined}
             onDone={() => navigate({ to: "/studio/videos", search: { filter: "all" } })}
+          />
+        )}
+        {publishedVideoId && (
+          <button
+            type="button"
+            onClick={() => setInviteOpen(true)}
+            className="mt-3 flex w-full items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition hover:border-primary"
+          >
+            <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Did you feature a business?</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                Invite them to advertise their direct site on Travidz — we'll auto-draft the outreach email using your follower count and this video's stats.
+              </span>
+            </span>
+          </button>
+        )}
+        {publishedVideoId && (
+          <TagBusinessSheet
+            videoId={publishedVideoId}
+            open={inviteOpen}
+            onOpenChange={setInviteOpen}
+            initial={{ city: city || undefined }}
           />
         )}
         {uploadError && !uploading && (
