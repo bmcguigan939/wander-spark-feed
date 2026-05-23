@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook, Twitter } from "lucide-react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook, Twitter, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
@@ -28,6 +28,14 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   });
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const [overlayHeight, setOverlayHeight] = useState(0);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("travidz:feedCollapsed") === "1";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem("travidz:feedCollapsed", collapsed ? "1" : "0");
+  }, [collapsed]);
   useEffect(() => {
     const el = overlayRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
