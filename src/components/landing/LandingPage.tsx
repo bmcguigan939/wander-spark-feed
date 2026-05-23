@@ -103,8 +103,8 @@ function Hero({ spotsRemaining }: { spotsRemaining?: number }) {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-foreground/70 sm:text-xl">
-          Travidz turns your trip clips into income. Tag the spot, drop the link, earn{" "}
-          <span className="font-semibold text-foreground">11% commission</span> on every booking.
+          Travidz turns your trip clips into income. Tag the spot, drop the link, and{" "}
+          <span className="font-semibold text-foreground">earn commission</span> on every booking.
           No follower minimums. No gatekeepers.
         </p>
 
