@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { COMMISSION } from "@/lib/commission";
+import { enqueueTransactionalEmail, SITE_URL } from "@/lib/email-send.server";
+import { BusinessInviteEmail } from "@/lib/email-templates/business-invite";
 
 // ----------------------------------------------------------------------------
 // Phase D #9 — AI outreach / response drafts
@@ -291,4 +293,93 @@ export const draftApplicationReply = createServerFn({ method: "POST" })
       code,
       commission,
     });
+  });
+// ----------------------------------------------------------------------------
+// Send invite email via the Travidz transactional queue
+// ----------------------------------------------------------------------------
+
+export const sendInviteEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        inviteId: z.string().uuid(),
+        subject: z.string().min(1).max(200),
+        body: z.string().min(20).max(4000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: inv, error } = await supabaseAdmin
+      .from("business_invites")
+      .select("id, creator_id, business_name, contact_email, token")
+      .eq("id", data.inviteId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!inv || inv.creator_id !== userId) throw new Error("Not allowed");
+    if (!inv.contact_email) {
+      throw new Error("This invite has no contact email");
+    }
+
+    const { data: creator } = await supabaseAdmin
+      .from("profiles")
+      .select("display_name, username")
+      .eq("id", userId)
+      .maybeSingle();
+    const creatorName =
+      creator?.display_name ||
+      (creator?.username ? `@${creator.username}` : "A Travidz creator");
+
+    const inviteUrl = `${SITE_URL}/business/invite/${inv.token}`;
+
+    const result = await enqueueTransactionalEmail({
+      to: inv.contact_email,
+      subject: data.subject,
+      label: "business-invite",
+      idempotencyKey: `business-invite-${inv.id}`,
+      react: BusinessInviteEmail({
+        businessName: inv.business_name,
+        creatorName,
+        subject: data.subject,
+        bodyText: data.body,
+        inviteUrl,
+      }),
+    });
+
+    const status = "ok" in result && result.ok
+      ? ("skipped" in result && result.skipped ? `skipped:${result.skipped}` : "queued")
+      : "failed";
+
+    await supabaseAdmin
+      .from("business_invites")
+      .update({
+        last_sent_at: new Date().toISOString(),
+        last_send_status: status,
+        last_send_error:
+          "ok" in result && !result.ok ? String((result as any).error ?? "unknown") : null,
+      })
+      .eq("id", inv.id);
+
+    // Append a system message into the conversation thread.
+    const { data: thread } = await supabaseAdmin
+      .from("business_threads")
+      .select("id")
+      .eq("invite_id", inv.id)
+      .maybeSingle();
+    if (thread) {
+      await supabaseAdmin.from("business_thread_messages").insert({
+        thread_id: thread.id,
+        sender_kind: "system",
+        body: `Invite email sent to ${inv.contact_email} (${status}).\n\nSubject: ${data.subject}\n\n${data.body}`,
+        kind: "invite_sent",
+        metadata: { status, subject: data.subject },
+      });
+      await supabaseAdmin
+        .from("business_threads")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", thread.id);
+    }
+
+    return { ok: status !== "failed", status };
   });

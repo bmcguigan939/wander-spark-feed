@@ -87,6 +87,16 @@ export const createBusinessInvite = createServerFn({ method: "POST" })
       .select("id, token")
       .single();
     if (error) throw new Error(error.message);
+
+    // Open the conversation thread that documents this deal.
+    await supabaseAdmin.from("business_threads").insert({
+      invite_id: row.id,
+      creator_id: userId,
+      business_email: data.contactEmail.toLowerCase(),
+      business_name: data.businessName,
+      subject: `Travidz invite — ${data.businessName}`,
+    });
+
     return { id: row.id, token: row.token };
   });
 
@@ -217,6 +227,41 @@ export const declineInvite = createServerFn({ method: "POST" })
       .eq("token", data.token)
       .eq("status", "pending");
     if (error) throw new Error(error.message);
+
+    // Append system message to the thread + notify the creator.
+    const { data: invite } = await supabaseAdmin
+      .from("business_invites")
+      .select("id, creator_id")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (invite) {
+      const { data: thread } = await supabaseAdmin
+        .from("business_threads")
+        .select("id")
+        .eq("invite_id", invite.id)
+        .maybeSingle();
+      if (thread) {
+        await supabaseAdmin.from("business_thread_messages").insert({
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: data.reason
+            ? `Invite declined. Reason: ${data.reason}`
+            : "Invite declined.",
+          kind: "invite_declined",
+          metadata: { reason: data.reason ?? null },
+        });
+        await supabaseAdmin
+          .from("business_threads")
+          .update({ status: "declined", last_message_at: new Date().toISOString() })
+          .eq("id", thread.id);
+      }
+      await supabaseAdmin.from("notifications").insert({
+        user_id: invite.creator_id,
+        actor_id: invite.creator_id,
+        type: "business_invite_declined",
+      });
+    }
+
     return { ok: true };
   });
 
@@ -309,6 +354,45 @@ export const acceptInvite = createServerFn({ method: "POST" })
         accepted_deal_id: deal.id,
       })
       .eq("id", invite.id);
+
+    // Update the thread: link the business + deal, append system messages, notify creator.
+    const { data: thread } = await supabaseAdmin
+      .from("business_threads")
+      .select("id")
+      .eq("invite_id", invite.id)
+      .maybeSingle();
+    if (thread) {
+      await supabaseAdmin
+        .from("business_threads")
+        .update({
+          business_id: userId,
+          deal_id: deal.id,
+          status: "accepted",
+          last_message_at: new Date().toISOString(),
+        })
+        .eq("id", thread.id);
+      await supabaseAdmin.from("business_thread_messages").insert([
+        {
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: `${invite.business_name} accepted the invite and joined Travidz.`,
+          kind: "invite_accepted",
+        },
+        {
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: `Deal is live on the map and in search — ${invite.business_name}.`,
+          kind: "deal_attached",
+          metadata: { deal_id: deal.id },
+        },
+      ]);
+    }
+    await supabaseAdmin.from("notifications").insert({
+      user_id: invite.creator_id,
+      actor_id: userId,
+      type: "business_invite_accepted",
+      deal_id: deal.id,
+    });
 
     return { ok: true, dealId: deal.id };
   });
