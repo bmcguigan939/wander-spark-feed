@@ -315,13 +315,13 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
           </button>
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={() => { clearDraft(); onOpenChange(false); }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-2 text-xs font-semibold text-muted-foreground"
           >
             Done
           </button>
           <p className="text-[11px] leading-snug text-muted-foreground">
-            The email opens in your own inbox so the business replies directly to you.
+            Switch apps to copy info — this stays open until you tap Done. The email opens in your own inbox so the business replies directly to you.
           </p>
         </div>
         )}
