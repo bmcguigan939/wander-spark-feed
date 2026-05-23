@@ -8,16 +8,58 @@ import { getForYouFeed, getFollowingFeed, getFeed, getVideosByIds } from "@/lib/
 import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 const searchSchema = z.object({
   v: z.string().uuid().optional(),
 });
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Travidz — Discover travel through video" }] }),
+  head: () => ({
+    meta: [
+      { title: "Travidz — Post travel videos, get paid when people book" },
+      {
+        name: "description",
+        content:
+          "Travidz turns your travel videos into income. Tag the spot, drop the link, earn 11% on every booking. No follower minimums.",
+      },
+      { property: "og:title", content: "Travidz — Post travel videos, get paid when people book" },
+      {
+        property: "og:description",
+        content:
+          "Sign up and start earning on your travel posts. 11% commission on every booking through your video.",
+      },
+      { property: "og:url", content: "https://www.travidz.com/" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [{ rel: "canonical", href: "https://www.travidz.com/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Travidz",
+          url: "https://www.travidz.com/",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://www.travidz.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+    ],
+  }),
   validateSearch: (s) => searchSchema.parse(s),
-  component: FeedPage,
+  component: RootIndex,
 });
+
+function RootIndex() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <LandingPage />;
+  return <FeedPage />;
+}
 
 function FeedPage() {
   const { user } = useAuth();

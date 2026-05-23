@@ -191,3 +191,15 @@
 @media (prefers-reduced-motion: reduce) {
   .shimmer { animation: none; }
 }
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.08); }
+  66% { transform: translate(-25px, 25px) scale(0.95); }
+}
+.animate-blob {
+  animation: blob 14s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob { animation: none; }
+}

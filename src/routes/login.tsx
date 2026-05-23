@@ -9,6 +9,7 @@ import { toast } from "sonner";
 const searchSchema = z.object({
   invite: z.string().min(8).max(128).optional(),
   next: z.string().max(500).optional(),
+  mode: z.enum(["signin", "signup"]).optional(),
 });
 
 export const Route = createFileRoute("/login")({
@@ -19,14 +20,14 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { invite, next } = Route.useSearch();
+  const { invite, next, mode: initialMode } = Route.useSearch();
   const redirectTo =
     next && next.startsWith("/")
       ? next
       : invite
         ? `/business/invite/${invite}`
         : "/";
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
