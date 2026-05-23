@@ -278,7 +278,7 @@ function FAQ() {
     },
     {
       q: "How and when do I get paid?",
-      a: "You earn commission on every confirmed booking. Earnings show in your dashboard instantly and you can withdraw to your bank.",
+      a: "You earn commission on every confirmed booking. Earnings show in your dashboard instantly, and payouts are sent at the end of each month for the prior month's confirmed bookings (£20 minimum).",
     },
     {
       q: "What kind of videos work?",
