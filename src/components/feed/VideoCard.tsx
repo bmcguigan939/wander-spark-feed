@@ -259,7 +259,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       )}
 
       <div className="scrim-top pointer-events-none absolute inset-x-0 top-0 h-32" />
-      <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 h-64" />
+      <div className="scrim-bottom pointer-events-none absolute inset-x-0 bottom-0 h-80" />
 
       {video.source_platform && video.source_platform !== "travidz" && (
         <a
@@ -284,7 +284,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       )}
 
       {/* Right rail — frosted circles */}
-      <div className="absolute right-3 bottom-32 z-20 flex flex-col items-center gap-4 text-white">
+      <div className="absolute right-3 bottom-[calc(env(safe-area-inset-bottom)+196px)] z-20 flex flex-col items-center gap-4 text-white">
         <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
         <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
@@ -300,7 +300,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       <CommentsSheet open={commentsOpen} onOpenChange={setCommentsOpen} videoId={video.id} />
 
       {/* Bottom overlay */}
-      <div className="absolute inset-x-0 bottom-4 z-20 px-4 text-white">
+      <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-20 px-4 text-white">
         <div className="flex items-center gap-3">
           <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
             <img
