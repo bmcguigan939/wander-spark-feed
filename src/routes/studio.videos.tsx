@@ -16,6 +16,7 @@ import {
   Upload,
   BarChart3,
   RefreshCw,
+  Tag,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScheduleSheet } from "@/components/studio/ScheduleSheet";
+import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 import {
   listMyVideos,
   publishVideoNow,
@@ -104,6 +106,7 @@ function VideosPage() {
 
   const [scheduleTarget, setScheduleTarget] = useState<StudioVideo | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StudioVideo | null>(null);
+  const [dealsTarget, setDealsTarget] = useState<StudioVideo | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["studio-videos"] });
@@ -270,6 +273,9 @@ function VideosPage() {
                   <DropdownMenuItem onSelect={() => setScheduleTarget(v)}>
                     <CalendarClock className="mr-2 h-4 w-4" /> {v.scheduled_at ? "Reschedule…" : "Schedule…"}
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setDealsTarget(v)}>
+                    <Tag className="mr-2 h-4 w-4" /> Add deals…
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => setDeleteTarget(v)} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -287,6 +293,12 @@ function VideosPage() {
         currentScheduledAt={scheduleTarget?.scheduled_at ?? null}
         saving={scheduleM.isPending}
         onSave={(iso) => scheduleTarget && scheduleM.mutate({ videoId: scheduleTarget.id, scheduledAt: iso })}
+      />
+
+      <SmartDealsSheet
+        open={!!dealsTarget}
+        onClose={() => { setDealsTarget(null); invalidate(); }}
+        videoId={dealsTarget?.id ?? null}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
