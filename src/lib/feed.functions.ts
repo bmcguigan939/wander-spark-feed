@@ -80,7 +80,6 @@ async function fetchFeedRows(
   if (error) throw new Error(error.message);
   const videos = (data ?? []) as unknown as FeedVideo[];
   await attachMatchedDeals(videos);
-  await attachMatchedBusiness(videos);
   await applySocialVisibility(videos);
   return videos;
 }
