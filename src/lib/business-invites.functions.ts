@@ -355,5 +355,44 @@ export const acceptInvite = createServerFn({ method: "POST" })
       })
       .eq("id", invite.id);
 
+    // Update the thread: link the business + deal, append system messages, notify creator.
+    const { data: thread } = await supabaseAdmin
+      .from("business_threads")
+      .select("id")
+      .eq("invite_id", invite.id)
+      .maybeSingle();
+    if (thread) {
+      await supabaseAdmin
+        .from("business_threads")
+        .update({
+          business_id: userId,
+          deal_id: deal.id,
+          status: "accepted",
+          last_message_at: new Date().toISOString(),
+        })
+        .eq("id", thread.id);
+      await supabaseAdmin.from("business_thread_messages").insert([
+        {
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: `${invite.business_name} accepted the invite and joined Travidz.`,
+          kind: "invite_accepted",
+        },
+        {
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: `Deal is live on the map and in search — ${invite.business_name}.`,
+          kind: "deal_attached",
+          metadata: { deal_id: deal.id },
+        },
+      ]);
+    }
+    await supabaseAdmin.from("notifications").insert({
+      user_id: invite.creator_id,
+      actor_id: userId,
+      type: "business_invite_accepted",
+      deal_id: deal.id,
+    });
+
     return { ok: true, dealId: deal.id };
   });
