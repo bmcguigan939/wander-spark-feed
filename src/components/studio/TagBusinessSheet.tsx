@@ -113,7 +113,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
         data: {
           videoId,
           businessName: businessName.trim(),
-          websiteUrl: websiteUrl.trim(),
+          websiteUrl: websiteUrl.trim() || null,
           city: city.trim() || null,
           contactEmail: contactEmail.trim(),
           contactPhone: contactPhone.trim() || null,
@@ -135,7 +135,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
   });
 
   const canSubmit =
-    businessName.length > 0 && websiteUrl.length > 0 && contactEmail.length > 0;
+    businessName.trim().length > 0 && contactEmail.trim().length > 0;
 
   const inviteUrl = inviteToken
     ? `${typeof window !== "undefined" ? window.location.origin : "https://travidz.com"}/business/invite/${inviteToken}`
@@ -204,7 +204,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
             maxLength={120}
           />
           <Field
-            label="Direct website"
+            label="Direct website (optional)"
             value={websiteUrl}
             onChange={setWebsiteUrl}
             placeholder="https://…"
