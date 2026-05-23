@@ -396,6 +396,23 @@ function VideosPage() {
         onOpenChange={(o) => { if (!o) setInviteTarget(null); }}
       />
 
+      {editTarget && (
+        <EditVideoSheet
+          videoId={editTarget.id}
+          open={!!editTarget}
+          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+          initial={{
+            title: editTarget.title ?? "",
+            description: editTarget.description ?? null,
+            destination: editTarget.destination ?? null,
+            country: editTarget.country ?? null,
+            city: editTarget.city ?? null,
+            activity_tags: editTarget.activity_tags ?? [],
+            budget_tag: editTarget.budget_tag ?? null,
+          }}
+        />
+      )}
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
