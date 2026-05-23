@@ -94,6 +94,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$code.thanks'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksSyncExternalCalendarsRouteImport } from './routes/api/public/hooks/sync-external-calendars'
 import { Route as ApiPublicGoIdRouteImport } from './routes/api/public/go.$id'
 import { Route as ApiPublicDIdRouteImport } from './routes/api/public/d.$id'
 import { Route as ApiPublicCronSyncYoutubeRouteImport } from './routes/api/public/cron/sync-youtube'
@@ -104,6 +105,7 @@ import { Route as ApiPublicCronFxRefreshRouteImport } from './routes/api/public/
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
 import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 import { Route as ApiPublicCronBusinessDigestRouteImport } from './routes/api/public/cron/business-digest'
+import { Route as ApiPublicIcalDealDealIdTokenDoticsRouteImport } from './routes/api/public/ical/deal.$dealId.$token[.]ics'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -534,6 +536,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncExternalCalendarsRoute =
+  ApiPublicHooksSyncExternalCalendarsRouteImport.update({
+    id: '/api/public/hooks/sync-external-calendars',
+    path: '/api/public/hooks/sync-external-calendars',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicGoIdRoute = ApiPublicGoIdRouteImport.update({
   id: '/api/public/go/$id',
   path: '/api/public/go/$id',
@@ -588,6 +596,12 @@ const ApiPublicCronBusinessDigestRoute =
   ApiPublicCronBusinessDigestRouteImport.update({
     id: '/api/public/cron/business-digest',
     path: '/api/public/cron/business-digest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicIcalDealDealIdTokenDoticsRoute =
+  ApiPublicIcalDealDealIdTokenDoticsRouteImport.update({
+    id: '/api/public/ical/deal/$dealId/$token.ics',
+    path: '/api/public/ical/deal/$dealId/$token.ics',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -680,6 +694,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -687,6 +702,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id/': typeof BusinessDealsIdIndexRoute
+  '/api/public/ical/deal/$dealId/$token.ics': typeof ApiPublicIcalDealDealIdTokenDoticsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -774,6 +790,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -781,6 +798,7 @@ export interface FileRoutesByTo {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id': typeof BusinessDealsIdIndexRoute
+  '/api/public/ical/deal/$dealId/$token.ics': typeof ApiPublicIcalDealDealIdTokenDoticsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -872,6 +890,7 @@ export interface FileRoutesById {
   '/api/public/cron/sync-youtube': typeof ApiPublicCronSyncYoutubeRoute
   '/api/public/d/$id': typeof ApiPublicDIdRoute
   '/api/public/go/$id': typeof ApiPublicGoIdRoute
+  '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
   '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
@@ -879,6 +898,7 @@ export interface FileRoutesById {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/business/deals/$id/': typeof BusinessDealsIdIndexRoute
+  '/api/public/ical/deal/$dealId/$token.ics': typeof ApiPublicIcalDealDealIdTokenDoticsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -971,6 +991,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
@@ -978,6 +999,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
     | '/business/deals/$id/'
+    | '/api/public/ical/deal/$dealId/$token.ics'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1065,6 +1087,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
@@ -1072,6 +1095,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
     | '/business/deals/$id'
+    | '/api/public/ical/deal/$dealId/$token.ics'
   id:
     | '__root__'
     | '/'
@@ -1162,6 +1186,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/sync-youtube'
     | '/api/public/d/$id'
     | '/api/public/go/$id'
+    | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
     | '/business/deals/$id/edit'
@@ -1169,6 +1194,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
     | '/business/deals/$id/'
+    | '/api/public/ical/deal/$dealId/$token.ics'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1240,10 +1266,12 @@ export interface RootRouteChildren {
   ApiPublicCronSyncYoutubeRoute: typeof ApiPublicCronSyncYoutubeRoute
   ApiPublicDIdRoute: typeof ApiPublicDIdRoute
   ApiPublicGoIdRoute: typeof ApiPublicGoIdRoute
+  ApiPublicHooksSyncExternalCalendarsRoute: typeof ApiPublicHooksSyncExternalCalendarsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
+  ApiPublicIcalDealDealIdTokenDoticsRoute: typeof ApiPublicIcalDealDealIdTokenDoticsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1843,6 +1871,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-external-calendars': {
+      id: '/api/public/hooks/sync-external-calendars'
+      path: '/api/public/hooks/sync-external-calendars'
+      fullPath: '/api/public/hooks/sync-external-calendars'
+      preLoaderRoute: typeof ApiPublicHooksSyncExternalCalendarsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/go/$id': {
       id: '/api/public/go/$id'
       path: '/api/public/go/$id'
@@ -1911,6 +1946,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/business-digest'
       fullPath: '/api/public/cron/business-digest'
       preLoaderRoute: typeof ApiPublicCronBusinessDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ical/deal/$dealId/$token.ics': {
+      id: '/api/public/ical/deal/$dealId/$token.ics'
+      path: '/api/public/ical/deal/$dealId/$token.ics'
+      fullPath: '/api/public/ical/deal/$dealId/$token.ics'
+      preLoaderRoute: typeof ApiPublicIcalDealDealIdTokenDoticsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -2108,10 +2150,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronSyncYoutubeRoute: ApiPublicCronSyncYoutubeRoute,
   ApiPublicDIdRoute: ApiPublicDIdRoute,
   ApiPublicGoIdRoute: ApiPublicGoIdRoute,
+  ApiPublicHooksSyncExternalCalendarsRoute:
+    ApiPublicHooksSyncExternalCalendarsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
+  ApiPublicIcalDealDealIdTokenDoticsRoute:
+    ApiPublicIcalDealDealIdTokenDoticsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -97,6 +97,27 @@ async function handleCheckoutCompleted(session: any) {
       .eq("id", bookingRow.deal_id);
   }
 
+  // Mark the booked date as blocked so the public iCal feed (and the
+  // booking date picker) reflect the new booking on the next refresh.
+  const { data: bookingDates } = await supabaseAdmin
+    .from("bookings")
+    .select("travel_date")
+    .eq("id", bookingRow.id)
+    .maybeSingle();
+  if (bookingDates?.travel_date) {
+    await supabaseAdmin
+      .from("deal_blocked_dates")
+      .insert({
+        deal_id: bookingRow.deal_id,
+        date: bookingDates.travel_date,
+        source: "travidz_booking",
+        booking_id: bookingRow.id,
+        summary: "Travidz booking",
+      })
+      .select("id")
+      .maybeSingle();
+  }
+
   const email = (bookingRow.customer_email as string | null) ?? null;
   if (email) {
     await sendConfirmationEmail({
