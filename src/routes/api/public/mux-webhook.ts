@@ -21,12 +21,16 @@ export const Route = createFileRoute("/api/public/mux-webhook")({
         );
         const t = parts["t"];
         const v1 = parts["v1"];
-        if (!t || !v1) return new Response("Bad signature", { status: 401 });
+        if (!t || !v1) {
+          console.warn("[mux-webhook] missing/malformed signature header");
+          return new Response("Bad signature", { status: 401 });
+        }
 
         const expected = createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
         const a = Buffer.from(expected, "hex");
         const b = Buffer.from(v1, "hex");
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
+          console.warn("[mux-webhook] signature mismatch — MUX_WEBHOOK_SECRET likely doesn't match Mux dashboard");
           return new Response("Invalid signature", { status: 401 });
         }
 
