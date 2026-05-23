@@ -40,7 +40,7 @@ function LoginPage() {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (err) return setError(err.message);
-      navigate({ to: redirectTo });
+      navigate({ to: redirectTo as any });
     } else {
       const { data, error: err } = await supabase.auth.signUp({
         email, password,
@@ -50,7 +50,7 @@ function LoginPage() {
       if (err) return setError(err.message);
       if (data.session) {
         try { localStorage.removeItem("travidz:welcomed"); } catch {}
-        navigate({ to: invite ? redirectTo : "/welcome" });
+        navigate({ to: (invite ? redirectTo : "/welcome") as any });
       } else {
         setInfo("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
@@ -64,7 +64,7 @@ function LoginPage() {
       redirect_uri: window.location.origin + redirectTo,
     });
     if (r.error) setError(r.error.message ?? "Sign-in failed");
-    else if (!r.redirected) navigate({ to: redirectTo });
+    else if (!r.redirected) navigate({ to: redirectTo as any });
   }
 
   async function forgot() {
