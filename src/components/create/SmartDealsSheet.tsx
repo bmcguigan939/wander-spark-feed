@@ -11,7 +11,7 @@ import {
   type BusinessSuggestion,
 } from "@/lib/business-suggestions.functions";
 import { createBusinessInvite } from "@/lib/business-invites.functions";
-import { draftInviteEmail } from "@/lib/outreach.functions";
+import { draftInviteEmail, sendInviteEmail } from "@/lib/outreach.functions";
 import { COMMISSION } from "@/lib/commission";
 import { toast } from "sonner";
 
@@ -345,6 +345,7 @@ function InviteForm({
   const createFn = useServerFn(createBusinessInvite);
   const convertFn = useServerFn(markSuggestionConverted);
   const draftFn = useServerFn(draftInviteEmail);
+  const sendEmailFn = useServerFn(sendInviteEmail);
   const [name, setName] = useState(suggestion.name);
   const [website, setWebsite] = useState(suggestion.website_guess ?? "");
   const [email, setEmail] = useState("");
@@ -410,11 +411,12 @@ function InviteForm({
     mutationFn: async () => {
       if (!inviteId) throw new Error("No invite to send");
       await convertFn({ data: { id: suggestion.id, inviteId } });
-      const href = `mailto:${encodeURIComponent(email.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = href;
+      const res = await sendEmailFn({ data: { inviteId, subject, body } });
+      if (!res.ok) throw new Error("Send failed");
+      return res;
     },
     onSuccess: () => {
-      toast("Contract sent — they'll get a link to confirm the fee split.");
+      toast("Sent from Travidz — replies arrive in your Studio messages.");
       onSent();
     },
     onError: (e: any) => toast(e?.message ?? "Couldn't send"),
