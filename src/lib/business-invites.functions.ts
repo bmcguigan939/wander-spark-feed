@@ -227,6 +227,41 @@ export const declineInvite = createServerFn({ method: "POST" })
       .eq("token", data.token)
       .eq("status", "pending");
     if (error) throw new Error(error.message);
+
+    // Append system message to the thread + notify the creator.
+    const { data: invite } = await supabaseAdmin
+      .from("business_invites")
+      .select("id, creator_id")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (invite) {
+      const { data: thread } = await supabaseAdmin
+        .from("business_threads")
+        .select("id")
+        .eq("invite_id", invite.id)
+        .maybeSingle();
+      if (thread) {
+        await supabaseAdmin.from("business_thread_messages").insert({
+          thread_id: thread.id,
+          sender_kind: "system",
+          body: data.reason
+            ? `Invite declined. Reason: ${data.reason}`
+            : "Invite declined.",
+          kind: "invite_declined",
+          metadata: { reason: data.reason ?? null },
+        });
+        await supabaseAdmin
+          .from("business_threads")
+          .update({ status: "declined", last_message_at: new Date().toISOString() })
+          .eq("id", thread.id);
+      }
+      await supabaseAdmin.from("notifications").insert({
+        user_id: invite.creator_id,
+        actor_id: invite.creator_id,
+        type: "business_invite_declined",
+      });
+    }
+
     return { ok: true };
   });
 
