@@ -21,6 +21,7 @@ export type FeedVideo = {
   view_count: number;
   comment_count: number;
   created_at: string;
+  bumped_at?: string | null;
   source_platform?: string | null;
   source_url?: string | null;
   embed_mode?: string | null;
@@ -53,7 +54,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -64,6 +65,7 @@ async function fetchFeedRows(
     q = q.in("creator_id", creatorIds);
   }
   const { data, error } = await q
+    .order("bumped_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
