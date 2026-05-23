@@ -346,7 +346,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
@@ -355,6 +355,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     .eq("is_draft", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()")
       .eq("is_hidden", false)
+      .order("bumped_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(POOL);
     if (error) throw new Error(error.message);
