@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScheduleSheet } from "@/components/studio/ScheduleSheet";
 import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
+import { EditVideoSheet } from "@/components/studio/EditVideoSheet";
+import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 import {
   getVideoInsights,
   publishVideoNow,
@@ -84,6 +86,8 @@ function InsightsPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [dealsOpen, setDealsOpen] = useState(false);
   const [tagInitial, setTagInitial] = useState<{
     businessName?: string;
     websiteUrl?: string;
@@ -180,13 +184,29 @@ function InsightsPage() {
           <div className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">{v.derived_state}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">Posted {new Date(v.created_at).toLocaleDateString()}</div>
           {(v as any).status === "ready" && v.derived_state !== "processing" && (
-            <Link
-              to="/feed/playlist"
-              search={{ ids: [id], start: id }}
-              className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-soft"
-            >
-              Preview
-            </Link>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <Link
+                to="/feed/playlist"
+                search={{ ids: [id], start: id }}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-soft"
+              >
+                Preview
+              </Link>
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-semibold"
+              >
+                Edit details
+              </button>
+              <button
+                type="button"
+                onClick={() => setDealsOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-semibold"
+              >
+                Add deals
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -440,6 +460,30 @@ function InsightsPage() {
               .catch(() => {});
           }
         }}
+      />
+
+      <EditVideoSheet
+        videoId={id}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        initial={{
+          title: v.title ?? "",
+          description: (v as any).description ?? null,
+          destination: (v as any).destination ?? null,
+          country: (v as any).country ?? null,
+          city: (v as any).city ?? null,
+          activity_tags: ((v as any).activity_tags ?? []) as string[],
+          budget_tag: (v as any).budget_tag ?? null,
+        }}
+      />
+
+      <SmartDealsSheet
+        open={dealsOpen}
+        onClose={() => {
+          setDealsOpen(false);
+          invalidate();
+        }}
+        videoId={id}
       />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
