@@ -1019,6 +1019,61 @@ export type Database = {
           },
         ]
       }
+      deal_blocked_dates: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          date: string
+          deal_id: string
+          external_calendar_id: string | null
+          id: string
+          source: string
+          summary: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          date: string
+          deal_id: string
+          external_calendar_id?: string | null
+          id?: string
+          source: string
+          summary?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          date?: string
+          deal_id?: string
+          external_calendar_id?: string | null
+          id?: string
+          source?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_blocked_dates_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_blocked_dates_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_blocked_dates_external_calendar_id_fkey"
+            columns: ["external_calendar_id"]
+            isOneToOne: false
+            referencedRelation: "deal_external_calendars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_clicks: {
         Row: {
           clicked_at: string
@@ -1107,6 +1162,47 @@ export type Database = {
           started_at?: string
         }
         Relationships: []
+      }
+      deal_external_calendars: {
+        Row: {
+          created_at: string
+          deal_id: string
+          ics_url: string
+          id: string
+          last_error: string | null
+          last_status: string | null
+          last_synced_at: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          ics_url: string
+          id?: string
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          ics_url?: string
+          id?: string
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_external_calendars_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deal_impressions: {
         Row: {
@@ -1335,6 +1431,7 @@ export type Database = {
           embedded_at: string | null
           embedding: string | null
           ends_at: string | null
+          ical_token: string | null
           id: string
           image_url: string | null
           inventory_mode: string
@@ -1376,6 +1473,7 @@ export type Database = {
           embedded_at?: string | null
           embedding?: string | null
           ends_at?: string | null
+          ical_token?: string | null
           id?: string
           image_url?: string | null
           inventory_mode?: string
@@ -1417,6 +1515,7 @@ export type Database = {
           embedded_at?: string | null
           embedding?: string | null
           ends_at?: string | null
+          ical_token?: string | null
           id?: string
           image_url?: string | null
           inventory_mode?: string
