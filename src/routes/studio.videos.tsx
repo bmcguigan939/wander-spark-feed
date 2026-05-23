@@ -17,6 +17,7 @@ import {
   BarChart3,
   RefreshCw,
   Tag,
+  Building2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScheduleSheet } from "@/components/studio/ScheduleSheet";
 import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
+import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
 import {
   listMyVideos,
   publishVideoNow,
@@ -114,6 +116,7 @@ function VideosPage() {
   const [scheduleTarget, setScheduleTarget] = useState<StudioVideo | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StudioVideo | null>(null);
   const [dealsTarget, setDealsTarget] = useState<StudioVideo | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<StudioVideo | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["studio-videos"] });
@@ -283,6 +286,9 @@ function VideosPage() {
                   <DropdownMenuItem onSelect={() => setDealsTarget(v)}>
                     <Tag className="mr-2 h-4 w-4" /> Add deals…
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setInviteTarget(v)}>
+                    <Building2 className="mr-2 h-4 w-4" /> Invite business…
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => setDeleteTarget(v)} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -306,6 +312,12 @@ function VideosPage() {
         open={!!dealsTarget}
         onClose={() => { setDealsTarget(null); invalidate(); }}
         videoId={dealsTarget?.id ?? null}
+      />
+
+      <TagBusinessSheet
+        videoId={inviteTarget?.id ?? ""}
+        open={!!inviteTarget}
+        onOpenChange={(o) => { if (!o) setInviteTarget(null); }}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
