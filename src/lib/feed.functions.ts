@@ -272,24 +272,27 @@ function scoreVideo(
 
 async function buildAffinity(userId: string) {
   const [likesRes, savesRes, followsRes] = await Promise.all([
-    supabaseAdmin.from("likes").select("video_id").eq("user_id", userId).limit(200),
-    supabaseAdmin.from("saves").select("video_id").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("likes").select("video_id,created_at").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("saves").select("video_id,created_at").eq("user_id", userId).limit(200),
     supabaseAdmin.from("follows").select("creator_id").eq("follower_id", userId),
   ]);
-  const interactedIds = Array.from(
-    new Set([
-      ...((likesRes.data ?? []).map((r: any) => r.video_id as string)),
-      ...((savesRes.data ?? []).map((r: any) => r.video_id as string)),
-    ]),
-  );
+  // Track the latest interaction time per video so we can re-admit videos
+  // that have been bumped (edited / new deals) since the user last engaged.
+  const lastInteractionAt = new Map<string, number>();
+  for (const r of [...(likesRes.data ?? []), ...(savesRes.data ?? [])] as any[]) {
+    const t = r.created_at ? new Date(r.created_at).getTime() : 0;
+    const prev = lastInteractionAt.get(r.video_id) ?? 0;
+    if (t > prev) lastInteractionAt.set(r.video_id, t);
+  }
+  const interactedIds = Array.from(lastInteractionAt.keys());
   const tagAffinity = new Map<string, number>();
   const countryAffinity = new Map<string, number>();
-  const seenVideoIds = new Set<string>(interactedIds);
+  const seenVideoIds = new Set<string>();
   let tasteVector: number[] | null = null;
   if (interactedIds.length) {
     const { data: vids } = await supabaseAdmin
       .from("videos")
-      .select("activity_tags,country,embedding")
+      .select("id,activity_tags,country,embedding,created_at,bumped_at")
       .in("id", interactedIds.slice(0, 50));
     const vecs: number[][] = [];
     for (const v of vids ?? []) {
@@ -299,6 +302,13 @@ async function buildAffinity(userId: string) {
       }
       const c = (v as any).country?.trim().toLowerCase();
       if (c) countryAffinity.set(c, (countryAffinity.get(c) ?? 0) + 1);
+      // Only mark as "seen" (filter out of feed) if the user's last
+      // interaction was AFTER the video's latest bump. If a creator has
+      // edited the video or attached new deals since, let it resurface.
+      const vid = (v as any).id as string;
+      const eff = effectiveTime(v as any);
+      const interactedAt = lastInteractionAt.get(vid) ?? 0;
+      if (interactedAt >= new Date(eff).getTime()) seenVideoIds.add(vid);
       const emb = (v as any).embedding;
       if (emb) {
         // pgvector returns as string like "[0.1,0.2,...]" via PostgREST.
