@@ -2049,6 +2049,7 @@ export type Database = {
         Row: {
           facebook_handle: string | null
           instagram_handle: string | null
+          show_social_links: boolean
           tiktok_handle: string | null
           updated_at: string
           user_id: string
@@ -2060,6 +2061,7 @@ export type Database = {
         Insert: {
           facebook_handle?: string | null
           instagram_handle?: string | null
+          show_social_links?: boolean
           tiktok_handle?: string | null
           updated_at?: string
           user_id: string
@@ -2071,6 +2073,7 @@ export type Database = {
         Update: {
           facebook_handle?: string | null
           instagram_handle?: string | null
+          show_social_links?: boolean
           tiktok_handle?: string | null
           updated_at?: string
           user_id?: string
