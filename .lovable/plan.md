@@ -1,50 +1,50 @@
 ## Goal
 
-When a creator edits a published video (new title/description/tags/location/budget) or attaches/detaches a business deal on an old upload, that video should re-surface in the For-You feed — even for users who already liked or saved it — so they see the new deal CTA and updated info.
+Two related fixes:
 
-Today: ranking uses `created_at` only, and `buildAffinity()` excludes any video the user has liked or saved via `seenVideoIds`. An edited 3-month-old video therefore stays buried and never re-appears for past likers.
+1. **Following feed** must always show the newest videos from creators a user follows, on top — regardless of `bumped_at` from the recent edit-resurface change.
+2. **Saved videos** must actually live in the profile "Saved" tab as a grid of the user's saved videos (today the tab just links to `/collections` and shows nothing).
 
-## Approach
+## Current behaviour
 
-Introduce a single `bumped_at` timestamp on `videos` that ranking treats as the "effective freshness time", and bypass the seen-filter when a video was bumped after the user's interaction.
+- `fetchFeedRows` (used by both Latest and Following) now orders by `bumped_at desc nulls last, created_at desc`. Side effect: a brand-new upload from a followed creator can be ranked below an older bumped video. That contradicts the Following contract.
+- For-You pool is also ordered by `bumped_at desc nulls last, created_at desc` and capped at 150 — so bumped rows can crowd out the newest pure uploads.
+- Profile "Saved" tab renders `<Link to="/collections">Open collections →</Link>` instead of the user's saved videos. `getMyProfile` doesn't return saves.
 
-### 1. DB migration
+## Changes
 
-- Add `videos.bumped_at timestamptz` (nullable).
-- Index `(bumped_at desc nulls last)` to support ordering.
-- Backfill: leave NULL (means "never re-bumped" — falls back to `created_at`).
+### 1. Feed ordering (`src/lib/feed.functions.ts`)
 
-### 2. Server functions — set `bumped_at = now()`
+- `fetchFeedRows`: revert to a single `.order("created_at", { ascending: false })`. Latest = newest uploads. Following = newest uploads from followed creators. This restores the "always see their newest" guarantee.
+- `getForYouFeed` candidate pool: fetch two pools and merge before scoring, so bumped older videos still get re-considered:
+  - Pool A: top 120 by `created_at desc` (fresh uploads).
+  - Pool B: top 60 by `bumped_at desc` where `bumped_at is not null` (recently edited / new-deal videos).
+  - Dedupe by `id`, then run through `scoreVideo` as today. `scoreVideo` already uses `effectiveTime()` so bumped rows still get the freshness restart and the +18 fresh-upload boost.
+- Keep `bumped_at` in all selects and the `FeedVideo` type. Keep `seenVideoIds` re-admission logic (a liked video that was bumped after the like can resurface in For-You).
 
-In `src/lib/studio.functions.ts` and `src/lib/video-deals.functions.ts`, add `bumped_at: new Date().toISOString()` to the `videos` update payload (or a follow-up update keyed by `video_id`) in:
+### 2. Saved videos on profile (`src/lib/profile.functions.ts`, `src/routes/profile.tsx`)
 
-- `updateVideoMetadata` (already exists, just add the field)
-- `attachDealToVideo` → bump the affected video
-- `detachDealFromVideo` → bump (so a removed deal also refreshes the card)
+- In `getMyProfile`, add a parallel query that mirrors the existing `liked` shape:
+  - `supabase.from("saves").select("video_id, videos!inner(id,title,thumbnail_url,mux_playback_id,like_count,creator_id)").eq("user_id", userId).order("created_at", { ascending: false }).limit(60)`
+  - Return as `saved: [...]` on the response.
+- In `src/routes/profile.tsx`:
+  - Replace the `tab === "collections"` branch that links to `/collections` with `<Grid items={data.saved as any} emptyMsg="No saves yet — tap the bookmark on a video to save it." />`.
+  - Keep the "Saved" label and Bookmark icon; the tab key stays `"collections"` (no need to refactor the tuple).
+  - Optionally append a small secondary link under the grid: "Manage collections →" pointing to `/collections` so the existing collections feature stays reachable.
 
-Out of scope for bumping: thumbnail-only changes, view-count writes, scheduled publishes (those already use `published_at`).
+### 3. Cache invalidation
 
-### 3. Feed ranking changes (`src/lib/feed.functions.ts`)
-
-- `fetchFeedRows` and `getForYouFeed` candidate pool: `order by greatest(coalesce(bumped_at, created_at), created_at) desc`. Implement via a new view OR by ordering on `bumped_at desc nulls last, created_at desc` (good enough — bumped rows float to the top, untouched rows keep current order).
-- `scoreVideo`: replace `hoursSince(v.created_at)` with `hoursSince(max(bumped_at, created_at))` so freshness decay restarts on edit.
-- `isFreshUpload`: same — treat a recent bump as a fresh upload for the +18 boost.
-- `buildAffinity` / `seenVideoIds`: query `likes.created_at` and `saves.created_at`. A video is only "seen" (filtered out) if `interaction.created_at >= max(video.bumped_at, video.created_at)`. If the video was bumped after the user liked it, allow it back into the pool. Add `bumped_at` to the `videos` select used for affinity building.
-- Type: add `bumped_at: string | null` to `FeedVideo` and include in all `select(...)` strings.
-
-### 4. Cache invalidation
-
-`updateVideoMetadata` and `attachDealToVideo`/`detachDealFromVideo` already invalidate `["feed"]` from the client. No new wiring needed — the next feed fetch will pick up the bump.
+- `toggleSave` in `src/lib/interactions.functions.ts` already exists. Add `qc.invalidateQueries({ queryKey: ["my-profile"] })` in `VideoCard`'s `saveM.onSettled` so the Saved tab reflects new saves without a manual reload. (Single-line addition.)
 
 ## Out of scope
 
-- Notifications/badging past likers ("a creator you liked added a new deal") — separate feature.
-- Bumping on profile-level changes (avatar, bio).
-- Time-decay tuning beyond restarting from the bump timestamp.
+- Pagination / infinite scroll on the Saved tab (limit 60 matches Liked).
+- Collections feature redesign — keep `/collections` route as-is.
+- Following-tab pagination (already non-paginated like Latest).
 
 ## Files touched
 
-- new migration: add `bumped_at` + index
-- `src/lib/studio.functions.ts` — set `bumped_at` in `updateVideoMetadata`
-- `src/lib/video-deals.functions.ts` — set `bumped_at` in attach/detach
-- `src/lib/feed.functions.ts` — type, selects, ordering, scoring, seen-filter logic
+- `src/lib/feed.functions.ts` — restore plain `created_at` ordering in `fetchFeedRows`; add Pool A + Pool B merge in `getForYouFeed`.
+- `src/lib/profile.functions.ts` — return `saved` alongside `liked`.
+- `src/routes/profile.tsx` — render saved grid in the Saved tab.
+- `src/components/feed/VideoCard.tsx` — invalidate `["my-profile"]` after save toggle.
