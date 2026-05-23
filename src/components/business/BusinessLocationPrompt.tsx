@@ -3,8 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { MapPin, X, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { geocodePlace, saveBusinessLocation, type GeocodeResult } from "@/lib/map.functions";
+import { geocodePlace, saveBusinessLocation, getMyLocationStatus, type GeocodeResult } from "@/lib/map.functions";
 
 export function BusinessLocationPrompt({ userId }: { userId: string }) {
   const [needsLoc, setNeedsLoc] = useState<boolean | null>(null);
@@ -16,16 +15,17 @@ export function BusinessLocationPrompt({ userId }: { userId: string }) {
   const [searching, setSearching] = useState(false);
   const geocode = useServerFn(geocodePlace);
   const saveLoc = useServerFn(saveBusinessLocation);
+  const getLocStatus = useServerFn(getMyLocationStatus);
   const qc = useQueryClient();
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("lat,lng")
-        .eq("id", userId)
-        .maybeSingle();
-      setNeedsLoc(!(data?.lat && data?.lng));
+      try {
+        const r = await getLocStatus({ data: undefined as any });
+        setNeedsLoc(!r.hasLocation);
+      } catch {
+        setNeedsLoc(false);
+      }
     })();
     setDismissed(localStorage.getItem("travidz_biz_loc_dismissed") === "1");
   }, [userId]);

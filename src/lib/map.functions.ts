@@ -290,3 +290,14 @@ export const saveBusinessLocation = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getMyLocationStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await supabaseAdmin
+      .from("profiles")
+      .select("lat,lng")
+      .eq("id", context.userId)
+      .maybeSingle();
+    return { hasLocation: !!(data?.lat && data?.lng) };
+  });
