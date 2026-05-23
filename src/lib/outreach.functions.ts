@@ -146,12 +146,12 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     const socialLinksText = socialLinks.map((l) => `${l.label}: ${l.url}`).join("\n");
 
     const system =
-      "You write warm, concise outreach emails from a travel creator to a local business they featured in a short video. " +
-      "Tone: friendly, professional, never salesy or pushy. Mention specific details from the video when helpful. " +
-      "Keep the body under 180 words. Content-first pitch: invite the business to check out the creator's work via the social feed links provided, and propose working together on a commission basis through Travidz. Do NOT invent stats. " +
-      "If a follower count is provided, you may mention it in one short sentence — otherwise omit. " +
-      "Include the social feed links verbatim as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can click through. " +
-      "End with a clear single-line CTA containing the invite URL. " +
+      "You write warm, concise outreach emails from a travel creator who is introducing a local business to the Travidz platform after featuring them in a short video. " +
+      "The creator is the messenger, NOT the dealmaker — they are explaining what Travidz is and how it works, not negotiating a personal arrangement. " +
+      "Tone: friendly, professional, never salesy or pushy. Mention specific details from the video when helpful. Keep the body under 180 words. " +
+      "Structure: (1) short intro from the creator referencing the video, (2) one or two sentences explaining Travidz — a short-video travel platform where creators share places they love and send bookings directly to the business, (3) explain the commercial model clearly: Travidz charges a flat " + COMMISSION.totalPct + "% commission on any confirmed bookings sent to the business, with no setup fee and no monthly cost — the business only pays on actual sales, (4) optional one-line follower mention if a count is provided, (5) social feed links as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can review the creator's work, (6) a clear single-line CTA containing the invite URL. " +
+      "BANNED phrases — do NOT use any of these or close paraphrases: 'I'm proposing', 'I propose', 'I'd like to offer', 'I'd like to propose', 'performance-based partnership', 'partnership proposal', 'let's partner'. Frame the offer as Travidz's standard model, not the creator's personal proposal. " +
+      "Do NOT invent stats. " +
       "Reply ONLY with JSON: { subject: string, body: string } where body is plain text with \\n line breaks.";
 
     const user = [
@@ -164,7 +164,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       followers > 0 ? `Creator following on Travidz: ${followers} followers` : "",
       socialLinksText ? `Creator's social feeds (include verbatim as a labelled list):\n${socialLinksText}` : "",
       crossHandles ? `Also posts the same video on: ${crossHandles}` : "",
-      `Offer: flat ${COMMISSION.totalPct}% commission on sales Travidz sends them, no setup or monthly fee.`,
+      `Travidz commercial model (explain as the platform's standard terms, not a personal proposal): flat ${COMMISSION.totalPct}% commission on confirmed bookings Travidz sends them, no setup fee, no monthly cost, free to list.`,
       `Invite URL (include verbatim in the email body): ${inviteUrl}`,
       ``,
       `Write the email draft as JSON.`,
