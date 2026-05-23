@@ -65,7 +65,6 @@ async function fetchFeedRows(
     q = q.in("creator_id", creatorIds);
   }
   const { data, error } = await q
-    .order("bumped_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
@@ -348,18 +347,36 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     const baseSelect =
         "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
-    const { data: rows, error } = await supabaseAdmin
-      .from("videos")
-      .select(baseSelect)
-      .eq("status", "ready")
-    .eq("is_draft", false)
-    .or("scheduled_at.is.null,scheduled_at.lte.now()")
-      .eq("is_hidden", false)
-      .order("bumped_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(POOL);
-    if (error) throw new Error(error.message);
-    const pool = ((rows ?? []) as unknown) as RankRow[];
+    const [freshRes, bumpedRes] = await Promise.all([
+      supabaseAdmin
+        .from("videos")
+        .select(baseSelect)
+        .eq("status", "ready")
+        .eq("is_draft", false)
+        .or("scheduled_at.is.null,scheduled_at.lte.now()")
+        .eq("is_hidden", false)
+        .order("created_at", { ascending: false })
+        .limit(120),
+      supabaseAdmin
+        .from("videos")
+        .select(baseSelect)
+        .eq("status", "ready")
+        .eq("is_draft", false)
+        .or("scheduled_at.is.null,scheduled_at.lte.now()")
+        .eq("is_hidden", false)
+        .not("bumped_at", "is", null)
+        .order("bumped_at", { ascending: false })
+        .limit(60),
+    ]);
+    if (freshRes.error) throw new Error(freshRes.error.message);
+    if (bumpedRes.error) throw new Error(bumpedRes.error.message);
+    const seenPoolIds = new Set<string>();
+    const pool: RankRow[] = [];
+    for (const r of [...(freshRes.data ?? []), ...(bumpedRes.data ?? [])] as unknown as RankRow[]) {
+      if (seenPoolIds.has(r.id)) continue;
+      seenPoolIds.add(r.id);
+      pool.push(r);
+    }
 
     const affinity = userId
       ? await buildAffinity(userId)

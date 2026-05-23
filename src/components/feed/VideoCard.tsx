@@ -83,6 +83,9 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       ctx?.rollback?.();
       toast(err instanceof Error ? err.message : "Couldn't save — try again");
     },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+    },
   });
 
   function requireAuth(action: () => void) {
