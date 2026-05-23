@@ -150,6 +150,26 @@ function ProfilePage() {
     mutationFn: () => updateFn({ data: { display_name: displayName || undefined, bio: bio || undefined } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); setEditOpen(false); toast("Profile updated"); },
   });
+  const uploadAvatarM = useMutation({
+    mutationFn: async (file: File) => {
+      if (!user) throw new Error("Not signed in");
+      if (!file.type.startsWith("image/")) throw new Error("Please pick an image file");
+      if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: file.type,
+      });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      await updateFn({ data: { avatar_url: pub.publicUrl } });
+      return pub.publicUrl;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Profile photo updated"); },
+    onError: (e: any) => toast(e?.message ?? "Couldn't update photo"),
+  });
   const becomeM = useMutation({
     mutationFn: () => becomeFn({ data: undefined as any }),
     onSuccess: () => { refreshRoles(); toast("You're a creator now"); },
