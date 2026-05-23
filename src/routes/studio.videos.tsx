@@ -277,11 +277,30 @@ function VideosPage() {
         </div>
       ) : (
         <ul className="mt-5 space-y-3">
-          {videos.map((v) => (
+          {videos.map((v) => {
+            const playable = v.status === "ready" && v.derived_state !== "processing";
+            const playableIds = videos.filter((x) => x.status === "ready" && x.derived_state !== "processing").map((x) => x.id);
+            return (
             <li key={v.id} className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-3">
-              <Link to="/studio/videos/$id" params={{ id: v.id }} className="block h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
-                <Thumb thumbnail={v.thumbnail_url} platform={v.source_platform} />
-              </Link>
+              {playable ? (
+                <Link
+                  to="/feed/playlist"
+                  search={{ ids: playableIds, start: v.id }}
+                  className="block h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary"
+                  aria-label="Preview video"
+                >
+                  <Thumb thumbnail={v.thumbnail_url} platform={v.source_platform} />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toast("Still processing — check back soon")}
+                  className="block h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary"
+                  aria-label="Video still processing"
+                >
+                  <Thumb thumbnail={v.thumbnail_url} platform={v.source_platform} />
+                </button>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-2">
                   <Link to="/studio/videos/$id" params={{ id: v.id }} className="min-w-0 flex-1 truncate text-sm font-semibold">
@@ -346,7 +365,8 @@ function VideosPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
