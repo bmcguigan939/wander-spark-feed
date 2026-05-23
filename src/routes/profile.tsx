@@ -64,6 +64,7 @@ function ProfilePage() {
     facebook_handle: "",
     x_handle: "",
     website_url: "",
+    show_social_links: true,
   });
   const [bulkUrls, setBulkUrls] = useState("");
   const [bulkResult, setBulkResult] = useState<{
@@ -99,6 +100,7 @@ function ProfilePage() {
         facebook_handle: (socialsQ.data as any).facebook_handle ?? "",
         x_handle: socialsQ.data.x_handle ?? "",
         website_url: socialsQ.data.website_url ?? "",
+        show_social_links: (socialsQ.data as any).show_social_links ?? true,
       });
     }
   }, [socialsQ.data]);
