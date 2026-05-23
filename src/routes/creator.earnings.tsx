@@ -91,7 +91,7 @@ function EarningsPage() {
           </div>
           {(payouts?.runs?.length ?? 0) === 0 ? (
             <div className="rounded-2xl border border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
-              No payouts yet. We bundle confirmed bookings into weekly runs once you cross the £20 minimum.
+              No payouts yet. Payouts run at the end of each month — confirmed bookings of £20 or more are bundled and paid out on the 1st of the following month.
             </div>
           ) : (
             <ul className="space-y-2">
