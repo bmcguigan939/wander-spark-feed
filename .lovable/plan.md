@@ -1,26 +1,57 @@
-## Make the live feed show recent uploads
+# Fix right-rail action buttons
 
-### Why videos aren't showing
+## What's actually broken
 
-Your 4 newly-reconciled videos are all in the database as `status=ready`, `is_draft=false`, `is_hidden=false` — so the feed query **does** include them. But the home feed uses `getForYouFeed`, which scores each video by:
+A single Like insert is currently being counted **twice** because the database has two identical triggers on every counter table. Same issue affects Save (Bookmark) and Comment counts, plus notifications fire twice.
 
-- engagement (likes, saves, comments, views) — weighted heavily
-- freshness — modest weight
-- "fresh native upload" boost of **+12**, but it **only applies if `mux_playback_id` is set**
+Duplicate triggers found on the database:
 
-The 3 most-recent uploads from your account are TikTok/Instagram **link cards** (`source_platform=tiktok/instagram`, no `mux_playback_id`), so they get no upload boost. The seeded demo videos with hundreds of fake likes outrank them and push them off the first 20 results.
+| Table    | Trigger A           | Trigger B (duplicate)    | Function                    |
+|----------|---------------------|--------------------------|-----------------------------|
+| likes    | trg_likes_count     | trg_likes_bump           | bump_video_like_count       |
+| saves    | trg_saves_count     | trg_saves_bump           | bump_video_save_count       |
+| comments | comments_bump_count | trg_comments_bump        | bump_video_comment_count    |
+| likes    | trg_notify_like     | trg_notify_on_like       | notify_on_like              |
+| comments | trg_notify_comment  | trg_notify_on_comment    | notify_on_comment           |
+| comments | comments_touch_updated_at | trg_comments_touch_updated_at | touch_updated_at     |
 
-### Fix (scope: feed ranking only)
+That's why:
+- Heart: 0 → **+2** on click, click again → **−2** back to 0 (toggle logic is fine, count is double-counted).
+- Comment: posting 1 comment shows **2**.
+- Bookmark: same +2/−2 behavior (it does work, but the count makes it look wrong).
 
-1. **`src/lib/feed.functions.ts` → `isFreshNativeUpload`** — broaden to "fresh upload": any video uploaded in last 7 days whether it's a Mux native upload OR a creator-posted cross-platform link card (`mux_playback_id` present OR `source_platform` set). Demo seeds without either still don't get the boost.
-2. **`scoreVideo`** — bump the new-upload boost from `+12` to `+18` and dampen engagement weight from `1.2` to `0.7` so 7-day-fresh creator uploads consistently surface above older seeded high-engagement rows.
-3. **Add a `Latest` tab next to `For You` / `Following`** on `src/routes/index.tsx` that calls `getFeed` with a new pure-chronological order. Update `fetchFeedRows` in `feed.functions.ts` to sort by `created_at DESC` only (drop the `like_count` primary sort) — this becomes the deterministic "all recent videos from creators" view you described.
-4. Keep personalization (taste vector, follows, tag/country affinity) intact — `For You` still benefits, it just no longer buries brand-new content.
+The Share button itself does work, but in the Lovable preview iframe `navigator.share` is blocked and `navigator.clipboard.writeText` can silently reject without a toast, so it looks dead.
 
-### Out of scope
+## Fix
 
-- No schema or RLS changes (data is already visible; this is a ranking + UI tab issue).
-- No changes to upload, Mux reconcile, or Studio flows.
-- No new personalization signals — those stay as a follow-up once there's more user activity to learn from.
+### 1. Migration — drop the duplicate triggers (keep one of each)
 
-After this, all 4 recent videos appear at the top of the new **Latest** tab immediately, and within the top results of **For You** for users who haven't built strong taste signals yet.
+```sql
+DROP TRIGGER IF EXISTS trg_likes_bump ON public.likes;
+DROP TRIGGER IF EXISTS trg_saves_bump ON public.saves;
+DROP TRIGGER IF EXISTS trg_comments_bump ON public.comments;
+DROP TRIGGER IF EXISTS trg_notify_on_like ON public.likes;
+DROP TRIGGER IF EXISTS trg_notify_on_comment ON public.comments;
+DROP TRIGGER IF EXISTS trg_comments_touch_updated_at ON public.comments;
+```
+
+### 2. Migration — reconcile existing inflated counts
+
+Recompute `like_count`, `save_count`, `comment_count` on `videos` from the source tables so today's doubled numbers settle back to reality:
+
+```sql
+UPDATE public.videos v SET
+  like_count    = COALESCE((SELECT count(*) FROM public.likes    WHERE video_id = v.id), 0),
+  save_count    = COALESCE((SELECT count(*) FROM public.saves    WHERE video_id = v.id), 0),
+  comment_count = COALESCE((SELECT count(*) FROM public.comments WHERE video_id = v.id), 0);
+```
+
+### 3. `src/components/feed/VideoCard.tsx` — harden Share fallback
+
+Update `share()` so the clipboard path is wrapped in try/catch and falls back to a manual "copy this link" toast when both `navigator.share` and `navigator.clipboard` are unavailable/blocked (preview iframe case). Also show a success toast after a real Web Share completes.
+
+## Out of scope
+
+- No changes to the toggle/server-fn logic — it's correct.
+- No schema changes beyond dropping the duplicate triggers and the one-time count reconcile.
+- No UI redesign of the right rail.
