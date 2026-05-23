@@ -33,7 +33,12 @@ export const Route = createFileRoute("/api/public/ical/deal/$dealId/$token.ics")
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const { dealId, token } = params as { dealId: string; token: string };
+        const p = params as Record<string, string>;
+        const dealId = p.dealId;
+        // Depending on how the escaped-dot is parsed the token segment may
+        // arrive as "token" or as "token.ics" — accept both.
+        const rawToken = p.token ?? p["token.ics"] ?? "";
+        const token = rawToken.replace(/\.ics$/i, "");
 
         const { data: deal, error: dErr } = await supabaseAdmin
           .from("deals")
