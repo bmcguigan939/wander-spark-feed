@@ -106,6 +106,7 @@ import { Route as ApiPublicCronFxRefreshRouteImport } from './routes/api/public/
 import { Route as ApiPublicCronExpiringDealsRouteImport } from './routes/api/public/cron/expiring-deals'
 import { Route as ApiPublicCronDiscoverDealsRouteImport } from './routes/api/public/cron/discover-deals'
 import { Route as ApiPublicCronBusinessDigestRouteImport } from './routes/api/public/cron/business-digest'
+import { Route as ApiPublicBIdRouteImport } from './routes/api/public/b.$id'
 import { Route as ApiPublicIcalDealDealIdTokenDoticsRouteImport } from './routes/api/public/ical/deal.$dealId.$token[.]ics'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -604,6 +605,11 @@ const ApiPublicCronBusinessDigestRoute =
     path: '/api/public/cron/business-digest',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBIdRoute = ApiPublicBIdRouteImport.update({
+  id: '/api/public/b/$id',
+  path: '/api/public/b/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicIcalDealDealIdTokenDoticsRoute =
   ApiPublicIcalDealDealIdTokenDoticsRouteImport.update({
     id: '/api/public/ical/deal/$dealId/$token.ics',
@@ -691,6 +697,7 @@ export interface FileRoutesByFullPath {
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/b/$id': typeof ApiPublicBIdRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
@@ -788,6 +795,7 @@ export interface FileRoutesByTo {
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
+  '/api/public/b/$id': typeof ApiPublicBIdRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
@@ -889,6 +897,7 @@ export interface FileRoutesById {
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
+  '/api/public/b/$id': typeof ApiPublicBIdRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
   '/api/public/cron/discover-deals': typeof ApiPublicCronDiscoverDealsRoute
   '/api/public/cron/expiring-deals': typeof ApiPublicCronExpiringDealsRoute
@@ -991,6 +1000,7 @@ export interface FileRouteTypes {
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/b/$id'
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
@@ -1088,6 +1098,7 @@ export interface FileRouteTypes {
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country'
+    | '/api/public/b/$id'
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
@@ -1188,6 +1199,7 @@ export interface FileRouteTypes {
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
+    | '/api/public/b/$id'
     | '/api/public/cron/business-digest'
     | '/api/public/cron/discover-deals'
     | '/api/public/cron/expiring-deals'
@@ -1269,6 +1281,7 @@ export interface RootRouteChildren {
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   LovableEmailUnsubscribeRoute: typeof LovableEmailUnsubscribeRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
+  ApiPublicBIdRoute: typeof ApiPublicBIdRoute
   ApiPublicCronBusinessDigestRoute: typeof ApiPublicCronBusinessDigestRoute
   ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
   ApiPublicCronExpiringDealsRoute: typeof ApiPublicCronExpiringDealsRoute
@@ -1968,6 +1981,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronBusinessDigestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/b/$id': {
+      id: '/api/public/b/$id'
+      path: '/api/public/b/$id'
+      fullPath: '/api/public/b/$id'
+      preLoaderRoute: typeof ApiPublicBIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ical/deal/$dealId/$token.ics': {
       id: '/api/public/ical/deal/$dealId/$token.ics'
       path: '/api/public/ical/deal/$dealId/$token.ics'
@@ -2161,6 +2181,7 @@ const rootRouteChildren: RootRouteChildren = {
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   LovableEmailUnsubscribeRoute: LovableEmailUnsubscribeRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
+  ApiPublicBIdRoute: ApiPublicBIdRoute,
   ApiPublicCronBusinessDigestRoute: ApiPublicCronBusinessDigestRoute,
   ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
   ApiPublicCronExpiringDealsRoute: ApiPublicCronExpiringDealsRoute,
