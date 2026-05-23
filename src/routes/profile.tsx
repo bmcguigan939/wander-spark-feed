@@ -6,11 +6,12 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2 } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2, Camera, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
