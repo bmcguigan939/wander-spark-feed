@@ -127,7 +127,7 @@ export type InviteLanding = {
   invite: {
     id: string;
     business_name: string;
-    website_url: string;
+    website_url: string | null;
     city: string | null;
     status: InviteStatus;
     expires_at: string;
@@ -254,6 +254,11 @@ export const acceptInvite = createServerFn({ method: "POST" })
       );
 
     // Create a deal pointing at their direct website.
+    if (!invite.website_url) {
+      throw new Error(
+        "Please add your website on your business profile before accepting this invite.",
+      );
+    }
     const { data: deal, error: dErr } = await supabaseAdmin
       .from("deals")
       .insert({
