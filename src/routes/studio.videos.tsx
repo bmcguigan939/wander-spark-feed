@@ -88,6 +88,7 @@ function VideosPage() {
   const draftFn = useServerFn(setVideoDraft);
   const scheduleFn = useServerFn(scheduleVideo);
   const publishFn = useServerFn(publishVideoNow);
+  const reconcileFn = useServerFn(reconcileMyStuckUploads);
 
   const [qInput, setQInput] = useState(search.q ?? "");
   const [qDebounced, setQDebounced] = useState(search.q ?? "");
@@ -135,6 +136,17 @@ function VideosPage() {
     onSuccess: () => { invalidate(); setDeleteTarget(null); toast("Deleted"); },
     onError: (e: any) => toast(e.message ?? "Failed"),
   });
+  const reconcileM = useMutation({
+    mutationFn: () => reconcileFn(),
+    onSuccess: (r) => {
+      invalidate();
+      if (r.checked === 0) toast("Nothing to refresh");
+      else if (r.repaired > 0) toast(`Updated ${r.repaired} video${r.repaired === 1 ? "" : "s"}`);
+      else if (r.failed > 0) toast(`${r.failed} upload${r.failed === 1 ? "" : "s"} didn't make it — re-upload to retry`);
+      else toast("Still waiting on the video service");
+    },
+    onError: (e: any) => toast(e.message ?? "Couldn't refresh"),
+  });
 
   const counts = data?.counts ?? { all: 0, live: 0, scheduled: 0, draft: 0, processing: 0, hidden: 0 };
   const videos = data?.videos ?? [];
@@ -171,6 +183,22 @@ function VideosPage() {
           );
         })}
       </div>
+
+      {counts.processing > 0 && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2">
+          <p className="text-[11px] text-muted-foreground">
+            {counts.processing} video{counts.processing === 1 ? "" : "s"} still processing. Tap refresh if it's been a while.
+          </p>
+          <button
+            onClick={() => reconcileM.mutate()}
+            disabled={reconcileM.isPending}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${reconcileM.isPending ? "animate-spin" : ""}`} />
+            {reconcileM.isPending ? "Refreshing…" : "Refresh status"}
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="mt-6 text-sm text-muted-foreground">Loading…</div>
