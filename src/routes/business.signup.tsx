@@ -9,6 +9,8 @@ import {
   acceptInvite,
   checkInviteAccountState,
 } from "@/lib/business-invites.functions";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
+import { scorePassword } from "@/lib/password-strength";
 
 const searchSchema = z.object({
   invite: z.string().min(8).max(128).optional(),
@@ -59,6 +61,8 @@ function BusinessSignupPage() {
 
   const email = stateQ.data?.email ?? "";
   const accountExists = stateQ.data?.accountExists;
+  const strength = scorePassword(password, email);
+  const strongEnough = strength.score >= 2;
 
   if (accountExists) {
     return (
@@ -87,6 +91,8 @@ function BusinessSignupPage() {
     setError(null);
     if (password.length < 8) return setError("Password must be at least 8 characters.");
     if (password !== confirm) return setError("Passwords don't match.");
+    if (!strongEnough)
+      return setError("Please choose a stronger password (aim for at least 'Good').");
     if (!agreed) return setError("Please accept the Business Agreement to continue.");
     setLoading(true);
 
@@ -101,6 +107,10 @@ function BusinessSignupPage() {
       setLoading(false);
       if (/already (registered|exists)/i.test(err.message)) {
         setError("This email already has an account — please log in instead.");
+      } else if (/(pwned|breach|weak|leaked)/i.test(err.message)) {
+        setError(
+          "This password has appeared in a known data breach — please choose another.",
+        );
       } else {
         setError(err.message);
       }
@@ -157,6 +167,7 @@ function BusinessSignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
           />
+          <PasswordStrengthMeter password={password} email={email} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-muted-foreground">Confirm password</label>
@@ -195,7 +206,7 @@ function BusinessSignupPage() {
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         <button
-          disabled={loading}
+          disabled={loading || !strongEnough || !agreed || password !== confirm || password.length < 8}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
