@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { VideoCard } from "@/components/feed/VideoCard";
-import { getForYouFeed, getFollowingFeed } from "@/lib/feed.functions";
+import { getForYouFeed, getFollowingFeed, getFeed } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
@@ -15,12 +15,14 @@ export const Route = createFileRoute("/")({
 
 function FeedPage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"for-you" | "following">("for-you");
+  const [tab, setTab] = useState<"for-you" | "latest" | "following">("for-you");
   const { data, isLoading } = useQuery({
     queryKey: ["feed", tab, user?.id ?? null],
     queryFn: () =>
       tab === "following" && user
         ? getFollowingFeed({ data: { limit: 20, offset: 0 } })
+        : tab === "latest"
+        ? getFeed({ data: { limit: 20, offset: 0 } })
         : getForYouFeed({ data: { limit: 20 } }),
   });
   const videos = data?.videos ?? [];
@@ -50,6 +52,7 @@ function FeedPage() {
             setTab("following");
           }}>Following</TabBtn>
           <TabBtn active={tab === "for-you"} onClick={() => setTab("for-you")}>For you</TabBtn>
+          <TabBtn active={tab === "latest"} onClick={() => setTab("latest")}>Latest</TabBtn>
         </div>
       </div>
       <div className="pointer-events-none absolute right-3 top-3 z-20">
@@ -61,6 +64,12 @@ function FeedPage() {
           <FullEmptyState
             title="Your feed is empty"
             body="Travidz is just getting started. Sign up as a creator to upload the first travel video."
+          />
+        )}
+        {!isLoading && videos.length === 0 && tab === "latest" && (
+          <FullEmptyState
+            title="No videos yet"
+            body="Be the first creator to upload — your video appears here instantly."
           />
         )}
         {!isLoading && videos.length === 0 && tab === "following" && (
