@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, XCircle } from "lucide-react";
 import {
@@ -24,6 +24,9 @@ export const Route = createFileRoute("/business/invite/$token")({
 });
 
 function InvitePage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const { token } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
