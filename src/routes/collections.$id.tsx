@@ -74,8 +74,17 @@ function CollectionDetail() {
             <div className="mt-6 grid grid-cols-3 gap-1.5">
               {data.videos.map((v: any) => (
                 <div key={v.id} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
-                  {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>}
-                  <button onClick={() => removeM.mutate(v.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"><X className="h-3 w-3" /></button>
+                  <Link
+                    to="/feed/playlist"
+                    search={{ ids: data.videos.map((x: any) => x.id), start: v.id }}
+                    className="block h-full w-full"
+                  >
+                    {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>}
+                  </Link>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeM.mutate(v.id); }}
+                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                  ><X className="h-3 w-3" /></button>
                 </div>
               ))}
             </div>

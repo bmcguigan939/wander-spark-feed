@@ -95,13 +95,18 @@ function ProfilePage() {
 
             <div className="mt-8 grid grid-cols-3 gap-1">
               {data.videos.map((v) => (
-                <div key={v.id} className="aspect-[9/14] overflow-hidden rounded-md bg-card">
+                <Link
+                  key={v.id}
+                  to="/feed/playlist"
+                  search={{ ids: data.videos.map((x) => x.id), start: v.id }}
+                  className="aspect-[9/14] overflow-hidden rounded-md bg-card"
+                >
                   {v.thumbnail_url ? (
                     <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>
                   )}
-                </div>
+                </Link>
               ))}
             </div>
           </>
