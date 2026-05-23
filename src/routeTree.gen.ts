@@ -55,6 +55,7 @@ import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculat
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
@@ -331,6 +332,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const BusinessThreadsRoute = BusinessThreadsRouteImport.update({
+  id: '/business/threads',
+  path: '/business/threads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessRedemptionsRoute = BusinessRedemptionsRouteImport.update({
   id: '/business/redemptions',
   path: '/business/redemptions',
@@ -602,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/threads': typeof BusinessThreadsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -693,6 +700,7 @@ export interface FileRoutesByTo {
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/threads': typeof BusinessThreadsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -786,6 +794,7 @@ export interface FileRoutesById {
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/threads': typeof BusinessThreadsRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -881,6 +890,7 @@ export interface FileRouteTypes {
     | '/business/calculator'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/threads'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -972,6 +982,7 @@ export interface FileRouteTypes {
     | '/business/calculator'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/threads'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1064,6 +1075,7 @@ export interface FileRouteTypes {
     | '/business/calculator'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/threads'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1148,6 +1160,7 @@ export interface RootRouteChildren {
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
   BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
+  BusinessThreadsRoute: typeof BusinessThreadsRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
@@ -1518,6 +1531,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/collections/$id'
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
+    }
+    '/business/threads': {
+      id: '/business/threads'
+      path: '/business/threads'
+      fullPath: '/business/threads'
+      preLoaderRoute: typeof BusinessThreadsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/business/redemptions': {
       id: '/business/redemptions'
@@ -1973,6 +1993,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessCalculatorRoute: BusinessCalculatorRoute,
   BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
+  BusinessThreadsRoute: BusinessThreadsRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   CreatorCalculatorRoute: CreatorCalculatorRoute,
