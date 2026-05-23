@@ -40,6 +40,14 @@ export type FeedVideo = {
     discount_label: string | null;
     image_url: string | null;
   } | null;
+  matchedBusiness?: {
+    id: string;
+    name: string;
+    website_url: string | null;
+    logo_url: string | null;
+    city: string | null;
+    country: string | null;
+  } | null;
   music?: {
     id: string;
     title: string;
@@ -103,6 +111,78 @@ async function applySocialVisibility(videos: FeedVideo[]) {
 }
 
 async function attachMatchedDeals(videos: FeedVideo[]) {
+  await _attachMatchedDealsImpl(videos);
+  await attachMatchedBusiness(videos);
+}
+
+async function attachMatchedBusiness(videos: FeedVideo[]) {
+  // Auto-surface "Book with {business}" card on every video by a creator who
+  // has signed a business via invite. Does NOT replace matchedDeal — only
+  // fills the gap when there's no per-video deal match.
+  const creatorIds = Array.from(
+    new Set(videos.map((v: any) => v.creator_id).filter(Boolean) as string[]),
+  );
+  if (creatorIds.length === 0) return;
+
+  const { data: signings } = await supabaseAdmin
+    .from("creator_business_signings")
+    .select("creator_id,business_id")
+    .eq("status", "active")
+    .in("creator_id", creatorIds);
+  if (!signings?.length) return;
+
+  const businessIds = Array.from(
+    new Set((signings as any[]).map((s) => s.business_id).filter(Boolean) as string[]),
+  );
+  const { data: bizProfiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country")
+    .in("id", businessIds);
+  const bizById = new Map<string, any>(
+    (bizProfiles ?? []).map((b: any) => [b.id, b]),
+  );
+
+  // Index per creator: list of business profiles.
+  const perCreator = new Map<string, any[]>();
+  for (const row of signings as any[]) {
+    const b = bizById.get(row.business_id);
+    if (!b || !b.business_name) continue;
+    const list = perCreator.get(row.creator_id) ?? [];
+    list.push(b);
+    perCreator.set(row.creator_id, list);
+  }
+
+  for (const v of videos as any[]) {
+    if (v.matchedDeal) continue; // real deal wins
+    const list = perCreator.get(v.creator_id);
+    if (!list?.length) continue;
+    const vCity = (v.city ?? "").trim().toLowerCase();
+    const vCountry = (v.country ?? "").trim().toLowerCase();
+    // city-match > country-match > any
+    let pick =
+      list.find(
+        (b) =>
+          vCity &&
+          (b.business_city ?? "").trim().toLowerCase() === vCity,
+      ) ||
+      list.find(
+        (b) =>
+          vCountry &&
+          (b.business_country ?? "").trim().toLowerCase() === vCountry,
+      ) ||
+      list[0];
+    v.matchedBusiness = {
+      id: pick.id,
+      name: pick.business_name,
+      website_url: pick.business_website_url ?? null,
+      logo_url: pick.business_logo_url ?? null,
+      city: pick.business_city ?? null,
+      country: pick.business_country ?? null,
+    };
+  }
+}
+
+async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
   // CONTRACT GATING: a video may only surface deals where THAT video's creator
   // has an approved deal_applications row for the deal. If none exists, the
   // video shows no deal CTA (matches the "Hide deals entirely" product rule).

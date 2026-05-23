@@ -406,6 +406,35 @@ export const acceptInvite = createServerFn({ method: "POST" })
       agreement_version: data.agreementVersion ?? "v1",
     });
 
+    // Populate business-facing profile fields so the auto-surfaced card
+    // on creator feeds has a name, logo, website, and locale.
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        business_name: invite.business_name,
+        business_website_url: invite.website_url,
+        business_city: invite.city ?? null,
+      })
+      .eq("id", userId);
+
+    // Auto-create the creator <-> business signing so EVERY video by that
+    // creator (now and future) surfaces a "Book with {business}" card,
+    // even without a per-video deal row. 11% total, 5.5/5.5 split.
+    await supabaseAdmin
+      .from("creator_business_signings")
+      .upsert(
+        {
+          creator_id: invite.creator_id,
+          business_id: userId,
+          commission_pct: 11,
+          creator_share_pct: 5.5,
+          platform_share_pct: 5.5,
+          agreement_version: data.agreementVersion ?? "v1",
+          status: "active",
+        },
+        { onConflict: "creator_id,business_id", ignoreDuplicates: false },
+      );
+
     return { ok: true, dealId: deal.id };
   });
 
