@@ -126,16 +126,26 @@ async function attachMatchedBusiness(videos: FeedVideo[]) {
 
   const { data: signings } = await supabaseAdmin
     .from("creator_business_signings")
-    .select("creator_id,business_id,business:profiles!creator_business_signings_business_id_fkey(id,business_name,business_website_url,business_logo_url,business_city,business_country)")
+    .select("creator_id,business_id")
     .eq("status", "active")
     .in("creator_id", creatorIds);
   if (!signings?.length) return;
 
-  // Index per creator: list of business signings (most recent first as
-  // returned). For city/country matching against the video.
+  const businessIds = Array.from(
+    new Set((signings as any[]).map((s) => s.business_id).filter(Boolean) as string[]),
+  );
+  const { data: bizProfiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country")
+    .in("id", businessIds);
+  const bizById = new Map<string, any>(
+    (bizProfiles ?? []).map((b: any) => [b.id, b]),
+  );
+
+  // Index per creator: list of business profiles.
   const perCreator = new Map<string, any[]>();
   for (const row of signings as any[]) {
-    const b = row.business;
+    const b = bizById.get(row.business_id);
     if (!b || !b.business_name) continue;
     const list = perCreator.get(row.creator_id) ?? [];
     list.push(b);
