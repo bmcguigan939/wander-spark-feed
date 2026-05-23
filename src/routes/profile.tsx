@@ -64,6 +64,7 @@ function ProfilePage() {
     facebook_handle: "",
     x_handle: "",
     website_url: "",
+    show_social_links: true,
   });
   const [bulkUrls, setBulkUrls] = useState("");
   const [bulkResult, setBulkResult] = useState<{
@@ -99,6 +100,7 @@ function ProfilePage() {
         facebook_handle: (socialsQ.data as any).facebook_handle ?? "",
         x_handle: socialsQ.data.x_handle ?? "",
         website_url: socialsQ.data.website_url ?? "",
+        show_social_links: (socialsQ.data as any).show_social_links ?? true,
       });
     }
   }, [socialsQ.data]);
@@ -378,6 +380,31 @@ function ProfilePage() {
                 {saveSocialsM.isPending ? "Saving…" : "Save handles"}
               </button>
             </form>
+            <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Show platform icons on my videos</div>
+                <p className="text-[11px] text-muted-foreground">
+                  When off, viewers won't see the small social icons that link out to your other platforms.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-primary"
+                checked={socials.show_social_links}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  const updated = { ...socials, show_social_links: next };
+                  setSocials(updated);
+                  upsertSocialsFn({ data: updated as any })
+                    .then(() => {
+                      qc.invalidateQueries({ queryKey: ["my-socials"] });
+                      qc.invalidateQueries({ queryKey: ["feed"] });
+                      toast(next ? "Social icons visible" : "Social icons hidden");
+                    })
+                    .catch((err: any) => toast(err?.message ?? "Couldn't update"));
+                }}
+              />
+            </label>
           </section>
 
           {/* Section b — Auto-sync */}
