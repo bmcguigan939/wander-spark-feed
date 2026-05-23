@@ -433,6 +433,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
+          {video.lat != null && video.lng != null && (
+            <Link
+              to="/map"
+              search={{ lng: video.lng, lat: video.lat, zoom: 14, layer: "both", cat: "all" }}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] backdrop-blur hover:bg-white/25"
+            >
+              <MapPin className="h-3 w-3" />
+              Map
+            </Link>
+          )}
           {video.country ? (
             <Link
               to={video.city ? "/destinations/$country/$city" : "/destinations/$country"}
