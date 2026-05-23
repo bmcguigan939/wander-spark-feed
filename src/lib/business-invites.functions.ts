@@ -87,6 +87,16 @@ export const createBusinessInvite = createServerFn({ method: "POST" })
       .select("id, token")
       .single();
     if (error) throw new Error(error.message);
+
+    // Open the conversation thread that documents this deal.
+    await supabaseAdmin.from("business_threads").insert({
+      invite_id: row.id,
+      creator_id: userId,
+      business_email: data.contactEmail.toLowerCase(),
+      business_name: data.businessName,
+      subject: `Travidz invite — ${data.businessName}`,
+    });
+
     return { id: row.id, token: row.token };
   });
 
