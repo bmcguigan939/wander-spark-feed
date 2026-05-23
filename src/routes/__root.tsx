@@ -53,6 +53,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" },
       { name: "theme-color", content: "#1a1530" },
+      { name: "google-site-verification", content: "PUyJKnAxmakVpt4zblxaymPVkiftqE0d1rxudJI4IkU" },
       { title: "Travidz — Post travel videos, get paid when people book" },
       { name: "description", content: "Travidz turns your travel videos into income. Tag the spot, drop the link, earn 11% on every booking. No follower minimums." },
       { property: "og:site_name", content: "Travidz" },
