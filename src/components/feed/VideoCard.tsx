@@ -39,13 +39,50 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   });
   const attachedDeals = attachedDealsData?.deals ?? [];
 
+  // Optimistic patch of any cached feed list (["feed", ...] and ["shared-video", ...])
+  // so Like/Save updates the count instantly without refetching and reshuffling
+  // the For You feed (which would jump the user off the video they're watching).
+  function patchFeeds(field: "like_count" | "save_count", delta: number) {
+    const caches = qc.getQueryCache().findAll();
+    for (const c of caches) {
+      const key = c.queryKey as unknown[];
+      if (!Array.isArray(key)) continue;
+      const first = key[0];
+      if (first !== "feed" && first !== "shared-video") continue;
+      const prev = c.state.data as { videos?: FeedVideo[] } | undefined;
+      if (!prev?.videos) continue;
+      qc.setQueryData(key, {
+        ...prev,
+        videos: prev.videos.map((x) =>
+          x.id === video.id
+            ? { ...x, [field]: Math.max(0, (x[field] ?? 0) + delta) }
+            : x,
+        ),
+      });
+    }
+  }
+
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+    onMutate: () => {
+      patchFeeds("like_count", 1);
+      return { rollback: () => patchFeeds("like_count", -1) };
+    },
+    onError: (err, _v, ctx) => {
+      ctx?.rollback?.();
+      toast(err instanceof Error ? err.message : "Couldn't like — try again");
+    },
   });
   const saveM = useMutation({
     mutationFn: () => saveFn({ data: { videoId: video.id } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["feed"] }),
+    onMutate: () => {
+      patchFeeds("save_count", 1);
+      return { rollback: () => patchFeeds("save_count", -1) };
+    },
+    onError: (err, _v, ctx) => {
+      ctx?.rollback?.();
+      toast(err instanceof Error ? err.message : "Couldn't save — try again");
+    },
   });
 
   function requireAuth(action: () => void) {
