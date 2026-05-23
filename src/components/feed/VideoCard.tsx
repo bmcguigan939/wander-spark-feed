@@ -297,7 +297,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       {/* Right rail — frosted circles */}
       <div
         className="absolute right-3 z-20 flex flex-col items-center gap-4 text-white transition-[bottom] duration-200"
-        style={{ bottom: `calc(env(safe-area-inset-bottom) + ${overlayHeight + 16}px)` }}
+        style={{ bottom: `calc(env(safe-area-inset-bottom) + 84px + ${overlayHeight + 16}px)` }}
       >
         <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
