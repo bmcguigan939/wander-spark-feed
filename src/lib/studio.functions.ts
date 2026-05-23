@@ -267,6 +267,7 @@ export const updateVideoMetadata = createServerFn({ method: "POST" })
       destination: data.destination ?? null,
       country: data.country ?? null,
       city: data.city ?? null,
+      bumped_at: new Date().toISOString(),
     };
     if (data.activity_tags) {
       patch.activity_tags = Array.from(
