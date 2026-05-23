@@ -2923,6 +2923,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      email_has_account: { Args: { _email: string }; Returns: boolean }
       encrypt_bank_details: { Args: { p: Json }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
