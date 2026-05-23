@@ -202,6 +202,13 @@ function hoursSince(iso: string) {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
 }
 
+function effectiveTime(v: { created_at: string; bumped_at?: string | null }): string {
+  if (v.bumped_at && new Date(v.bumped_at).getTime() > new Date(v.created_at).getTime()) {
+    return v.bumped_at;
+  }
+  return v.created_at;
+}
+
 type SearchBudget = "$" | "$$" | "$$$";
 
 function budgetValues(budget?: SearchBudget) {
