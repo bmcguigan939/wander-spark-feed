@@ -178,7 +178,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
       )
       .in("id", data.ids)
       .eq("status", "ready")
