@@ -67,6 +67,41 @@ export async function enqueueTransactionalEmail(args: EnqueueArgs) {
     const text = await render(args.react, { plainText: true })
 
     const messageId = crypto.randomUUID()
+
+    // 4. Ensure an unsubscribe token exists for this recipient (one per email address).
+    let unsubscribeToken: string | null = null
+    {
+      const { data: existing } = await supabaseAdmin
+        .from('email_unsubscribe_tokens')
+        .select('token')
+        .eq('email', to)
+        .maybeSingle()
+      if (existing?.token) {
+        unsubscribeToken = existing.token
+      } else {
+        const newToken = crypto.randomUUID()
+        const { data: inserted, error: tokErr } = await supabaseAdmin
+          .from('email_unsubscribe_tokens')
+          .insert({ email: to, token: newToken })
+          .select('token')
+          .maybeSingle()
+        if (tokErr) {
+          // Race: another concurrent send inserted first. Re-read.
+          const { data: reread } = await supabaseAdmin
+            .from('email_unsubscribe_tokens')
+            .select('token')
+            .eq('email', to)
+            .maybeSingle()
+          unsubscribeToken = reread?.token ?? null
+        } else {
+          unsubscribeToken = inserted?.token ?? newToken
+        }
+      }
+    }
+    if (!unsubscribeToken) {
+      return { ok: false as const, error: 'failed to mint unsubscribe token' }
+    }
+
     await supabaseAdmin.from('email_send_log').insert({
       message_id: messageId,
       template_name: args.label,
@@ -87,6 +122,7 @@ export async function enqueueTransactionalEmail(args: EnqueueArgs) {
         purpose: 'transactional',
         label: args.label,
         idempotency_key: args.idempotencyKey,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })

@@ -49,6 +49,7 @@ import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.busin
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
 import { Route as FeedPlaylistRouteImport } from './routes/feed.playlist'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorEarningsRouteImport } from './routes/creator.earnings'
 import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculator'
@@ -76,6 +77,7 @@ import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
 import { Route as StudioThreadsIdRouteImport } from './routes/studio.threads.$id'
+import { Route as LovableEmailUnsubscribeRouteImport } from './routes/lovable/email/unsubscribe'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessThreadsIdRouteImport } from './routes/business.threads.$id'
 import { Route as BusinessOnboardingPayoutRouteImport } from './routes/business.onboarding.payout'
@@ -303,6 +305,11 @@ const FeedPlaylistRoute = FeedPlaylistRouteImport.update({
   path: '/feed/playlist',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DealsIdRoute = DealsIdRouteImport.update({
   id: '/deals/$id',
   path: '/deals/$id',
@@ -438,6 +445,11 @@ const StudioThreadsIdRoute = StudioThreadsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => StudioThreadsRoute,
+} as any)
+const LovableEmailUnsubscribeRoute = LovableEmailUnsubscribeRouteImport.update({
+  id: '/lovable/email/unsubscribe',
+  path: '/lovable/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
   id: '/destinations/$country/$city',
@@ -621,6 +633,7 @@ export interface FileRoutesByFullPath {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -653,6 +666,7 @@ export interface FileRoutesByFullPath {
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -714,6 +728,7 @@ export interface FileRoutesByTo {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -745,6 +760,7 @@ export interface FileRoutesByTo {
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
@@ -809,6 +825,7 @@ export interface FileRoutesById {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
@@ -841,6 +858,7 @@ export interface FileRoutesById {
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -906,6 +924,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -938,6 +957,7 @@ export interface FileRouteTypes {
     | '/business/onboarding/payout'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
+    | '/lovable/email/unsubscribe'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -999,6 +1019,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -1030,6 +1051,7 @@ export interface FileRouteTypes {
     | '/business/onboarding/payout'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
+    | '/lovable/email/unsubscribe'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country'
@@ -1093,6 +1115,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/email/unsubscribe'
     | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
@@ -1125,6 +1148,7 @@ export interface FileRouteTypes {
     | '/business/onboarding/payout'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
+    | '/lovable/email/unsubscribe'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -1178,6 +1202,7 @@ export interface RootRouteChildren {
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
   CreatorEarningsRoute: typeof CreatorEarningsRoute
   DealsIdRoute: typeof DealsIdRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FeedPlaylistRoute: typeof FeedPlaylistRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
@@ -1203,6 +1228,7 @@ export interface RootRouteChildren {
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
   BusinessOnboardingPayoutRoute: typeof BusinessOnboardingPayoutRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
+  LovableEmailUnsubscribeRoute: typeof LovableEmailUnsubscribeRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
   ApiPublicCronBusinessDigestRoute: typeof ApiPublicCronBusinessDigestRoute
   ApiPublicCronDiscoverDealsRoute: typeof ApiPublicCronDiscoverDealsRoute
@@ -1502,6 +1528,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedPlaylistRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/deals/$id': {
       id: '/deals/$id'
       path: '/deals/$id'
@@ -1690,6 +1723,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/studio/threads/$id'
       preLoaderRoute: typeof StudioThreadsIdRouteImport
       parentRoute: typeof StudioThreadsRoute
+    }
+    '/lovable/email/unsubscribe': {
+      id: '/lovable/email/unsubscribe'
+      path: '/lovable/email/unsubscribe'
+      fullPath: '/lovable/email/unsubscribe'
+      preLoaderRoute: typeof LovableEmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
@@ -2030,6 +2070,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorCalculatorRoute: CreatorCalculatorRoute,
   CreatorEarningsRoute: CreatorEarningsRoute,
   DealsIdRoute: DealsIdRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FeedPlaylistRoute: FeedPlaylistRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
@@ -2055,6 +2096,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
   BusinessOnboardingPayoutRoute: BusinessOnboardingPayoutRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
+  LovableEmailUnsubscribeRoute: LovableEmailUnsubscribeRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
   ApiPublicCronBusinessDigestRoute: ApiPublicCronBusinessDigestRoute,
   ApiPublicCronDiscoverDealsRoute: ApiPublicCronDiscoverDealsRoute,
