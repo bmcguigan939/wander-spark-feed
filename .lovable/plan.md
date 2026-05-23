@@ -1,45 +1,32 @@
-## Why this happens today
+## Two bugs to fix
 
-When a creator uploads, the row is inserted with `status = 'processing'`. Mux processes the file (usually 10–60s) and our webhook flips it to `status = 'ready'` the moment it's done. The DB is correct — but the Studio Videos screen only re-queries when the user navigates away and back, or taps "Refresh status". So the card just sits on "Processing" and looks broken.
+### 1. Tapping Like on a linked (non-Mux) feed video opens the source URL
 
-## Fix: Supabase Realtime on the creator's own videos
+**Cause** — in `src/components/feed/VideoCard.tsx`, when a video has no `mux_playback_id`, the entire card background is wrapped in `<a href={source_url} target="_blank">` covering `absolute inset-0`. The right-rail action buttons (Like / Comment / Save / Share / +Collection) and the bottom overlay sit as sibling absolutely-positioned elements without an explicit `z-index`. On iOS Safari taps frequently fall through to the underlying `<a>`, which opens YouTube in a new tab instead of liking the video.
 
-Subscribe to changes on the `videos` table scoped to `creator_id = me`. When the row flips to `ready` (or `errored`), invalidate the `studio-videos` and `studio-overview` query caches — the list updates instantly with no polling and no extra server load.
+**Fix** — keep the link behavior, but make the interactive overlays unambiguously on top and click-isolated:
+- Replace the full-area `<a>` with a regular `<div>` background. Move the "open original" affordance to (a) the centered round Play button (make it a real `<a>` / button), and (b) the existing platform pill at top-left (already a separate `<a>`). This removes the giant link layer covering the whole tile.
+- Add `z-10` to the right-rail action column and to the bottom overlay so they always sit above the media layer.
+- Add `e.stopPropagation()` to all `Action` button `onClick`s (Like / Comment / Save / Share) and the `+ Collection` button, so taps never bubble to background handlers.
 
-### 1. Enable Realtime on the `videos` table (migration)
+No change to Mux video cards (tap-to-mute behavior preserved).
 
-```sql
-ALTER TABLE public.videos REPLICA IDENTITY FULL;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.videos;
-```
+### 2. Bottom nav appears mid-screen on `/destinations/$country/$city`
 
-RLS already restricts what each creator can subscribe to, so they only get events for their own rows.
+**Cause** — `BottomNav` in `src/components/layout/BottomNav.tsx` is `position: fixed; bottom: 0`. On long scroll pages inside the Lovable preview iframe / iOS Safari, the destination page exceeds the viewport and the fixed nav can detach (visible in IMG_6156 — nav floats over the video grid mid-page). The feed page doesn't hit this because it uses an internal `h-dvh` scroll container.
 
-### 2. Subscribe in `src/routes/studio.videos.tsx`
+**Fix** — switch `MobileShell` to a flex column where the nav is `sticky bottom-0` inside the scroll context, not `fixed`:
+- `MobileShell`: keep `min-h-dvh flex flex-col`, drop `pb-20` from `<main>` (no longer needed), let the nav participate in normal flow.
+- `BottomNav`: change `fixed bottom-0 left-0 right-0` → `sticky bottom-0 w-full`. Keep the `pb-[env(safe-area-inset-bottom)]`, blur, and shadow.
 
-Inside `VideosPage`, add a `useEffect` that:
-- Gets the current `user.id` (already available via `useAuth`).
-- Opens a channel `studio-videos:{userId}` listening to `postgres_changes` on `public.videos` with `filter: creator_id=eq.{userId}` for `event: '*'` (covers INSERT for new uploads, UPDATE for status flips, DELETE for removals).
-- On any event: `qc.invalidateQueries({ queryKey: ['studio-videos'] })` and `qc.invalidateQueries({ queryKey: ['studio-overview'] })`. Optionally show a small toast when a row goes `processing → ready` ("'Title' is live").
-- Cleans up the channel on unmount.
+Sticky bottom keeps the nav visually pinned to the viewport bottom while scrolling, and naturally sits at the document end so it never floats mid-content. Verified the feed page still works since it manages its own `h-dvh` scroller inside `MobileShell`.
 
-### 3. Same subscription on the Studio overview (`src/routes/studio.index.tsx`)
+## Files changed
+- `src/components/feed/VideoCard.tsx` — restructure linked-video card, add z-index + stopPropagation on action buttons.
+- `src/components/layout/BottomNav.tsx` — switch `fixed` → `sticky`, remove `pb-20` spacer from `MobileShell`.
 
-So the dashboard cards (counts, latest video thumbnail) refresh in real time too. Same pattern — single channel, invalidate `studio-overview`.
-
-### 4. Soften the "Processing" UX
-
-- Replace the static badge with a subtle pulsing dot so it feels alive while waiting.
-- Keep the manual "Refresh status" button as a fallback (covers the rare case where the Mux webhook is delayed) but stop nagging the user — it's now a safety net, not the primary path.
-
-## Files touched
-
-- New migration: enable realtime on `videos`.
-- `src/routes/studio.videos.tsx` — add realtime subscription + cache invalidation.
-- `src/routes/studio.index.tsx` — add the same subscription.
-- Minor badge polish on the processing row.
-
-## Out of scope
-
-- No changes to the upload flow or Mux webhook itself (already correct).
-- No polling fallback — realtime is reliable enough and the manual refresh button stays as the escape hatch.
+## QA after build
+- Feed: tap Heart on the YouTube card → like count increments, no new tab.
+- Feed: tap centered Play / top-left YouTube pill → opens source URL in new tab.
+- Destinations city page: scroll to bottom; nav stays pinned at viewport bottom, never mid-page.
+- Feed page itself: nav still visible at bottom (inner `h-dvh` scroller unaffected).
