@@ -1,46 +1,38 @@
-## Goal
+## What's already in place
 
-In the "Smart deals for this video" → "Send collaboration contract" form:
-1. Make the **website optional** — creators can move forward without it (email stays required).
-2. Add a **review step** before the contract goes out, so the creator can read and edit the outreach email before sending.
+- Tapping the heart on a creator already writes to the `follows` table (`toggleFollow` in `interactions.functions.ts`).
+- The home feed already has a **Following** tab (`getFollowingFeed`) that shows the latest videos from every creator you follow. So the "always receive their latest videos on their feed" part already works — no change needed there.
 
-## Changes
+## What this plan changes
 
-### 1. DB migration — make website_url nullable
+The **Creators** tab on `/search` currently shows "Type to search creators." when empty, so users have no way to see or revisit who they follow. We'll turn it into a real **Following** list.
 
-`business_invites.website_url` is currently `NOT NULL`. Migration: `ALTER TABLE public.business_invites ALTER COLUMN website_url DROP NOT NULL;`
+### 1. New server function — `getMyFollowing`
+`src/lib/profile.functions.ts` (or new `src/lib/follows.functions.ts`):
+- Protected with `requireSupabaseAuth`.
+- Joins `follows` (where `follower_id = userId`) → `profiles`, returning `{ id, username, display_name, avatar_url, bio }[]` ordered by most recently followed.
 
-### 2. `src/lib/business-invites.functions.ts`
+### 2. Rename the tab and rewire the Creators view in `src/routes/search.tsx`
+- Rename the tab label from **Creators** to **Following**. Keep the URL param value `"creators"` so existing links/bookmarks don't break (internal key stays, display label changes).
+- Add a `useQuery(["my-following"], getMyFollowing)` enabled when the user is signed in and the tab is active.
+- Tab count badge:
+  - empty query → `Following (followingList.length)`
+  - non-empty query → `Following (matches.length)` (filtered client-side from `followingList` first, falling back to the existing global `searchAllFn` only if no local matches and the user explicitly wants to discover new creators — see step 3).
+- Render rules for the Following pane:
+  - Signed-out → prompt to log in.
+  - Signed-in + no follows yet → empty state: "You're not following anyone yet. Tap the heart on a video to follow that creator."
+  - Signed-in + has follows, empty query → render the full following list (reuse the existing creator row markup).
+  - Signed-in + has follows, non-empty query → filter the following list by `username` / `display_name` (case-insensitive contains).
 
-- `createInput`: change `websiteUrl: z.string().url().max(500)` to `websiteUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable()`.
-- Handler: store `null` when missing/empty; only normalize URL when present.
-- `acceptInvite` handler: when creating the `deal` row from an invite that has no website, fall back to a sensible value (e.g. skip `url` if the column is nullable, or use the creator's profile/video link). Plan to set `url` to `null` if `deals.url` is nullable; otherwise we'll leave the website required at accept time and only validate-then-edit on the business landing page. Confirm `deals.url` nullability inside the implementation step and adapt.
+### 3. Discover bar (small addition, keeps existing search reachable)
+When the query is non-empty and zero following matches:
+- Show "No one you follow matches '{q}'." plus a secondary "Search all creators" button that runs the existing `searchAllFn` and lists results below, so global creator search isn't lost.
 
-### 3. `src/components/create/SmartDealsSheet.tsx` — `InviteForm`
-
-Convert the inline form into a two-step panel:
-
-**Step 1 — Details**
-- Email becomes **required** (already required today — keep).
-- Website becomes **optional**: placeholder "Website (optional)", and the `valid` check drops the website requirement (`valid = name.trim() && /.+@.+\..+/.test(email)`).
-- Primary button: **"Review contract email"** (was "Send contract"). Disabled while invalid.
-
-**Step 2 — Review**
-- On clicking "Review contract email": call `createBusinessInvite` (which now accepts a null website), then call `draftInviteEmail` (already exists in `src/lib/outreach.functions.ts`) for that invite id, then switch to step 2.
-- Show editable `subject` and `body` textareas prefilled by the draft.
-- Buttons:
-  - **Back** — return to step 1 keeping entered data.
-  - **Regenerate** — re-runs `draftInviteEmail` for the same invite id.
-  - **Copy email** — copies `subject\n\nbody`.
-  - **Send contract** (primary) — opens `mailto:${email}?subject=…&body=…`, then calls `markSuggestionConverted` and `onSent()`. The contract is delivered via the creator's own inbox so replies land with them, matching the existing TagBusinessSheet pattern.
-- Helper text: "We drafted this with your audience stats and links. Edit anything before it goes out."
-
-### 4. Small copy tweak
-
-Update the footer line under the form to "Email is required. Website is optional — the business can add theirs when they accept."
+### 4. Cache invalidation
+- In the existing `toggleFollow` mutation success handler on video cards / profile page, also `queryClient.invalidateQueries({ queryKey: ["my-following"] })` so the Following list updates immediately after follow/unfollow.
 
 ## Out of scope
-
-- No changes to the AI extractor or suggestion schema.
-- No changes to `TagBusinessSheet` (separate entry point, already has a review step).
-- No changes to the business-side `/business/invite/:token` landing flow beyond the optional `website_url` handling in `acceptInvite`.
+- No DB migration (the `follows` table and RLS already exist).
+- No changes to the home Following video feed.
+- No changes to `toggleFollow` itself, only to the cache keys it invalidates.
+- No notification or email changes.

@@ -38,7 +38,10 @@ function ProfilePage() {
   });
   const followM = useMutation({
     mutationFn: () => followFn({ data: { creatorId: data!.profile!.id } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", username] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile", username] });
+      qc.invalidateQueries({ queryKey: ["my-following"] });
+    },
     onError: (e: any) => toast(e.message ?? "Couldn't update follow"),
   });
   const isSelf = user?.id === data?.profile?.id;

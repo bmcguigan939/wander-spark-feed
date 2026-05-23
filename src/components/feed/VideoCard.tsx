@@ -6,7 +6,8 @@ import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleLike, toggleSave } from "@/lib/interactions.functions";
+import { toggleLike, toggleSave, toggleFollow } from "@/lib/interactions.functions";
+import { getMyFollowing } from "@/lib/follows.functions";
 import { logDealClick, logDealImpression } from "@/lib/deals.functions";
 import { listVideoDeals } from "@/lib/video-deals.functions";
 import { useQuery } from "@tanstack/react-query";
@@ -29,9 +30,27 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const qc = useQueryClient();
   const likeFn = useServerFn(toggleLike);
   const saveFn = useServerFn(toggleSave);
+  const followFn = useServerFn(toggleFollow);
+  const getMyFollowingFn = useServerFn(getMyFollowing);
   const logDealClickFn = useServerFn(logDealClick);
   const logDealImpressionFn = useServerFn(logDealImpression);
   const listVideoDealsFn = useServerFn(listVideoDeals);
+  const followingQ = useQuery({
+    queryKey: ["my-following"],
+    queryFn: () => getMyFollowingFn(),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const isFollowing = !!followingQ.data?.ids.includes(video.creator.id);
+  const isSelf = user?.id === video.creator.id;
+  const followM = useMutation({
+    mutationFn: () => followFn({ data: { creatorId: video.creator.id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-following"] });
+      qc.invalidateQueries({ queryKey: ["profile", video.creator.username] });
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't update follow"),
+  });
   const { data: attachedDealsData } = useQuery({
     queryKey: ["video-deals", video.id],
     queryFn: () => listVideoDealsFn({ data: { videoId: video.id } }),
@@ -282,19 +301,37 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
       {/* Bottom overlay */}
       <div className="absolute inset-x-0 bottom-4 z-20 px-4 text-white">
-        <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
-          <img
-            src={video.creator.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(video.creator.username)}`}
-            alt={video.creator.username}
-            className="h-10 w-10 rounded-full border-2 border-white object-cover"
-          />
-          <div>
-            <div className="text-sm font-semibold">@{video.creator.username}</div>
-            {video.creator.display_name && (
-              <div className="text-xs text-white/70">{video.creator.display_name}</div>
-            )}
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
+            <img
+              src={video.creator.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(video.creator.username)}`}
+              alt={video.creator.username}
+              className="h-10 w-10 rounded-full border-2 border-white object-cover"
+            />
+            <div>
+              <div className="text-sm font-semibold">@{video.creator.username}</div>
+              {video.creator.display_name && (
+                <div className="text-xs text-white/70">{video.creator.display_name}</div>
+              )}
+            </div>
+          </Link>
+          {!isSelf && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                requireAuth(() => followM.mutate());
+              }}
+              disabled={followM.isPending}
+              className={`ml-1 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] backdrop-blur-md transition ${
+                isFollowing
+                  ? "border border-white/40 bg-white/10 text-white/90"
+                  : "bg-primary text-primary-foreground hover:opacity-90"
+              }`}
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </button>
+          )}
+        </div>
 
         <h2 className="mt-3 font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
           {video.title}
