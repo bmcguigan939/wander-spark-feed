@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2 } from "lucide-react";
+import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2, ArrowLeft, RefreshCw, Copy, Mail } from "lucide-react";
 import { suggestDealsForVideo, attachDealsBulk } from "@/lib/video-deals.functions";
 import {
   listSuggestionsForVideo,
@@ -11,6 +11,7 @@ import {
   type BusinessSuggestion,
 } from "@/lib/business-suggestions.functions";
 import { createBusinessInvite } from "@/lib/business-invites.functions";
+import { draftInviteEmail } from "@/lib/outreach.functions";
 import { COMMISSION } from "@/lib/commission";
 import { toast } from "sonner";
 
@@ -343,41 +344,160 @@ function InviteForm({
 }) {
   const createFn = useServerFn(createBusinessInvite);
   const convertFn = useServerFn(markSuggestionConverted);
+  const draftFn = useServerFn(draftInviteEmail);
   const [name, setName] = useState(suggestion.name);
   const [website, setWebsite] = useState(suggestion.website_guess ?? "");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<"details" | "review">("details");
+  const [inviteId, setInviteId] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
 
-  const sendM = useMutation({
+  const draftM = useMutation({
+    mutationFn: (id: string) => draftFn({ data: { inviteId: id } }),
+    onSuccess: (d) => {
+      setSubject(d.subject);
+      setBody(d.body);
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't draft email"),
+  });
+
+  const createM = useMutation({
     mutationFn: async () => {
-      const url = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+      const trimmed = website.trim();
+      const url = trimmed
+        ? /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+        : "";
       const inv = await createFn({
         data: {
           videoId,
           businessName: name.trim(),
-          websiteUrl: url.trim(),
+          websiteUrl: url || null,
           city: suggestion.city,
           contactEmail: email.trim(),
           contactPhone: phone.trim() || null,
         },
       });
-      await convertFn({ data: { id: suggestion.id, inviteId: inv.id } });
       return inv;
     },
-    onSuccess: () => {
-      toast("Invite sent — they'll get a contract to confirm the fee split.");
-      onSent();
+    onSuccess: (inv) => {
+      setInviteId(inv.id);
+      setInviteToken(inv.token ?? null);
+      setStep("review");
+      draftM.mutate(inv.id);
     },
-    onError: (e: any) => toast(e?.message ?? "Couldn't send invite"),
+    onError: (e: any) => toast(e?.message ?? "Couldn't create invite"),
   });
 
-  const valid = name.trim().length > 0 && website.trim().length > 0 && /.+@.+\..+/.test(email);
+  const valid = name.trim().length > 0 && /.+@.+\..+/.test(email);
+
+  const inviteUrl = inviteToken
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://travidz.com"}/business/invite/${inviteToken}`
+    : "";
+
+  async function copy(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`${label} copied`);
+    } catch {
+      toast(`Copy this ${label.toLowerCase()}`, { description: text, duration: 8000 });
+    }
+  }
+
+  const sendM = useMutation({
+    mutationFn: async () => {
+      if (!inviteId) throw new Error("No invite to send");
+      await convertFn({ data: { id: suggestion.id, inviteId } });
+      const href = `mailto:${encodeURIComponent(email.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = href;
+    },
+    onSuccess: () => {
+      toast("Contract sent — they'll get a link to confirm the fee split.");
+      onSent();
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't send"),
+  });
+
+  if (step === "review") {
+    return (
+      <div className="space-y-2 rounded-xl border border-primary/30 bg-background p-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStep("details")}
+            aria-label="Back"
+            className="-ml-1 rounded-full p-1 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <p className="text-xs font-semibold">Review the email before sending</p>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          We drafted this with your audience stats and links. Edit anything before it goes out.
+        </p>
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          disabled={draftM.isPending}
+          placeholder={draftM.isPending ? "Drafting subject…" : "Subject"}
+          className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm disabled:opacity-60"
+        />
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          disabled={draftM.isPending}
+          rows={10}
+          placeholder={draftM.isPending ? "Writing your pitch…" : "Email body"}
+          className="w-full resize-y rounded-lg border border-border bg-card px-2.5 py-2 text-sm leading-relaxed disabled:opacity-60"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => inviteId && draftM.mutate(inviteId)}
+            disabled={!inviteId || draftM.isPending}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${draftM.isPending ? "animate-spin" : ""}`} />
+            {draftM.isPending ? "Drafting…" : "Regenerate"}
+          </button>
+          <button
+            type="button"
+            onClick={() => copy(`${subject}\n\n${body}`, "Email")}
+            disabled={!subject && !body}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+          >
+            <Copy className="h-3 w-3" /> Copy email
+          </button>
+          {inviteUrl && (
+            <button
+              type="button"
+              onClick={() => copy(inviteUrl, "Invite link")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold"
+            >
+              <ExternalLink className="h-3 w-3" /> Copy link
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => sendM.mutate()}
+          disabled={!subject || !body || sendM.isPending}
+          className="mt-1 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+        >
+          <Mail className="h-3.5 w-3.5" />
+          {sendM.isPending ? "Sending…" : "Send contract"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) sendM.mutate();
+        if (valid) createM.mutate();
       }}
       className="space-y-2 rounded-xl border border-primary/30 bg-background p-3"
     >
@@ -390,19 +510,19 @@ function InviteForm({
         maxLength={120}
       />
       <input
-        value={website}
-        onChange={(e) => setWebsite(e.target.value)}
-        placeholder="Website (e.g. example.com)"
-        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
-        maxLength={500}
-      />
-      <input
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"
         placeholder="Contact email (required)"
         className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
         maxLength={200}
+      />
+      <input
+        value={website}
+        onChange={(e) => setWebsite(e.target.value)}
+        placeholder="Website (optional)"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+        maxLength={500}
       />
       <input
         value={phone}
@@ -412,7 +532,8 @@ function InviteForm({
         maxLength={40}
       />
       <p className="text-[10px] text-muted-foreground">
-        We'll email them a Travidz contract at the set {COMMISSION.totalPct}% commission ({COMMISSION.creatorPct}% to you).
+        Email is required. Website is optional — the business can add theirs when they accept.
+        We'll draft a Travidz contract at the set {COMMISSION.totalPct}% commission ({COMMISSION.creatorPct}% to you) for you to review.
       </p>
       <div className="flex gap-2 pt-1">
         <button
@@ -424,10 +545,10 @@ function InviteForm({
         </button>
         <button
           type="submit"
-          disabled={!valid || sendM.isPending}
+          disabled={!valid || createM.isPending}
           className="flex-1 rounded-full bg-primary py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
         >
-          {sendM.isPending ? "Sending…" : "Send contract"}
+          {createM.isPending ? "Preparing…" : "Review contract email"}
         </button>
       </div>
     </form>

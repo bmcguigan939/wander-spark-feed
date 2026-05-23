@@ -11,7 +11,7 @@ export type BusinessInvite = {
   video_id: string;
   creator_id: string;
   business_name: string;
-  website_url: string;
+  website_url: string | null;
   city: string | null;
   contact_email: string;
   contact_phone: string | null;
@@ -39,7 +39,10 @@ function genToken() {
 const createInput = z.object({
   videoId: z.string().uuid(),
   businessName: z.string().min(1).max(120),
-  websiteUrl: z.string().url().max(500),
+  websiteUrl: z
+    .union([z.string().url().max(500), z.literal("")])
+    .optional()
+    .nullable(),
   city: z.string().max(120).optional().nullable(),
   contactEmail: z.string().email().max(200),
   contactPhone: z.string().max(40).optional().nullable(),
@@ -64,13 +67,14 @@ export const createBusinessInvite = createServerFn({ method: "POST" })
     }
 
     const token = genToken();
+    const websiteUrl = data.websiteUrl ? data.websiteUrl : null;
     const { data: row, error } = await supabaseAdmin
       .from("business_invites")
       .insert({
         video_id: data.videoId,
         creator_id: userId,
         business_name: data.businessName,
-        website_url: data.websiteUrl,
+        website_url: websiteUrl,
         city: data.city ?? null,
         contact_email: data.contactEmail.toLowerCase(),
         contact_phone: data.contactPhone ?? null,
@@ -123,7 +127,7 @@ export type InviteLanding = {
   invite: {
     id: string;
     business_name: string;
-    website_url: string;
+    website_url: string | null;
     city: string | null;
     status: InviteStatus;
     expires_at: string;
@@ -250,6 +254,11 @@ export const acceptInvite = createServerFn({ method: "POST" })
       );
 
     // Create a deal pointing at their direct website.
+    if (!invite.website_url) {
+      throw new Error(
+        "Please add your website on your business profile before accepting this invite.",
+      );
+    }
     const { data: deal, error: dErr } = await supabaseAdmin
       .from("deals")
       .insert({
