@@ -9,8 +9,9 @@ import {
   Html,
   Preview,
   Text,
+  Link,
 } from '@react-email/components'
-import { main, container, brandMark, h1, text, button, footer } from './_brand'
+import { main, container, brandMark, h1, text, button, footer, link } from './_brand'
 
 export interface BusinessInviteEmailProps {
   businessName: string
@@ -18,6 +19,7 @@ export interface BusinessInviteEmailProps {
   subject: string
   bodyText: string
   inviteUrl: string
+  termsUrl?: string
   siteName?: string
 }
 
@@ -27,6 +29,7 @@ export const BusinessInviteEmail = ({
   subject,
   bodyText,
   inviteUrl,
+  termsUrl = 'https://travidz.com/legal/business-agreement',
   siteName = 'Travidz',
 }: BusinessInviteEmailProps) => (
   <Html lang="en" dir="ltr">
@@ -50,6 +53,20 @@ export const BusinessInviteEmail = ({
         <Button style={button} href={inviteUrl}>
           Claim your listing
         </Button>
+        <Text style={text}>
+          Before you accept, you can read the full terms here:{' '}
+          <Link href={termsUrl} style={link}>
+            Travidz Business Agreement
+          </Link>
+          . By clicking <strong>Accept</strong> on the invite page, you agree to
+          these terms.
+        </Text>
+        <Text style={text}>
+          After accepting, you'll be guided to set a password for your free
+          Travidz business account (your email is already on file), or simply
+          log in if you already have one — you'll see this new listing and
+          contract waiting for you.
+        </Text>
         <Hr style={{ borderColor: '#f0e4d6', margin: '24px 0' }} />
         <Text style={footer}>
           Replies to this email are managed inside {siteName}. To reply to{' '}
