@@ -1,50 +1,37 @@
 ## Goal
-Make creator → business outreach a first-class, one-tap step right after upload (and on any existing video), with an AI-drafted email that pitches Travidz using the creator's social proof.
 
-## Where it lives today
-- `TagBusinessSheet` already collects business name / website / city / contact email, calls `createBusinessInvite`, and generates an invite token.
-- `draftInviteEmail` (Lovable AI Gateway) already produces a `{subject, body}` and is currently only reachable from `studio.videos.$id` AFTER the invite has been created (small "AI draft" pill that opens `mailto:`).
-- The post-upload screen (`create.tsx`) shows `ShareToSocialsCard` and a "Smart deals" entry — but **no** "Invite the business" entry.
+In the AI-drafted business invite email, include **links to the creator's social feeds** (primary ask) so the business can review their content directly. Also keep the creator's **follower count** in the email when it's easily available. Confirm creators can edit subject + body before sending (already supported by the review step).
 
-The infra is there; the path to use it isn't.
+## Changes
 
-## Plan
+### 1. `src/lib/outreach.functions.ts` — `draftInviteEmail`
 
-### 1. Post-upload "Invite a business" CTA (`src/routes/create.tsx`)
-In the `ShareToSocialsCard` block shown after `publishedVideoId` is set, add a prominent secondary card / button: **"Did you feature a business? Invite them →"**. Tapping opens the existing `TagBusinessSheet` pre-filled with `city` / `destination` already entered in the upload form. Keeps the rest of the post-upload flow untouched.
+Replace the current "audience stats" data block with a social-links–first block. Keep follower count as a single optional line.
 
-### 2. Studio video card quick action (`src/routes/studio.videos.tsx`)
-Add a small "Invite business" action on each video row (alongside the existing actions menu) that opens `TagBusinessSheet` for that video. Surfaces it for videos that were already uploaded before this feature shipped.
+- Fetch in parallel:
+  - `profile_socials` for the creator (`youtube_handle`, `youtube_channel_id`, `tiktok_handle`, `instagram_handle`, `x_handle`, `facebook_handle`, `website_url`, `show_social_links`).
+  - `profiles.username` (for the Travidz profile URL `https://travidz.com/u/<username>`).
+  - `follows` count for the creator (kept — cheap query, useful signal).
+  - The video (`title`, `description`, `destination`, `cross_links`) — unchanged.
+- Build a clean list of social URLs from the handles (only when `show_social_links` is true and the handle exists), e.g.
+  - Instagram → `https://instagram.com/<handle>`
+  - TikTok → `https://tiktok.com/@<handle>`
+  - YouTube → channel URL if `youtube_channel_id` else `https://youtube.com/@<handle>`
+  - X → `https://x.com/<handle>`
+  - Facebook → `https://facebook.com/<handle>`
+  - Plus the creator's Travidz profile URL.
+- Drop the "last 10 videos views/likes" aggregate query and the per-video views/likes line — they were the noisy parts. Keep only follower count.
+- Replace the `hasTraction` two-branch prompt with one direction: warm, content-first, "here are my channels — take a look at my work; I'd love to work with you on a commission basis through Travidz." Instruct the model to render the social links inline as a short labelled list (`Instagram: <url>`, etc.) so the business can click them.
+- Fallback template: include the social-links block (when any are present) and the follower line (when > 0), alongside the existing offer + invite URL.
 
-### 3. Upgrade `TagBusinessSheet` to a 2-step flow
-- **Step 1 — Details** (unchanged form).
-- **Step 2 — Review email** (new): after `createBusinessInvite` succeeds, automatically call `draftInviteEmail`, show the AI subject + body in editable textareas, with:
-  - `Copy email` button
-  - `Open in mail app` (mailto: with edited subject/body, prefilled `to:`)
-  - `Copy invite link` (existing token URL)
-  - `Regenerate` (re-calls `draftInviteEmail`)
-This replaces the current "create invite then hunt for the AI draft pill on the insights page" flow.
+### 2. `src/components/studio/TagBusinessSheet.tsx`
 
-### 4. Strengthen the AI prompt with creator social proof (`src/lib/outreach.functions.ts`)
-`draftInviteEmail` currently passes creator display name + video stats. Extend it to also pull:
-- The creator's `follower_count` from `profiles` (if present)
-- Aggregate `views`/`likes` across their last ~10 published videos (one cheap query on `videos`)
-- Their `cross_links` on this video (Instagram / TikTok / YouTube handles) so the AI can mention reach across platforms
-- A branch in the system prompt: **if total reach ≥ a small threshold**, lead with audience-size pitch; **else**, lead with content-quality / authentic storytelling pitch and a "let's grow together" angle.
-No schema changes — all data already exists.
-
-### 5. Tiny polish
-- After invite creation, keep the existing "mark suggestion converted" wiring intact.
-- Toast "Invite ready — review the email" instead of the current "share the link with them".
-
-## Files touched
-- `src/routes/create.tsx` — add post-upload "Invite a business" entry
-- `src/routes/studio.videos.tsx` — add per-video "Invite business" action
-- `src/components/studio/TagBusinessSheet.tsx` — add Step 2 (review/edit/send AI email)
-- `src/lib/outreach.functions.ts` — enrich prompt with follower count / cross-platform reach / adaptive tone
+- Step-2 `SheetDescription`: swap "using your following and this video's stats" → "with your follower count and links to your social feeds so the business can check out your content."
+- Helper line under "Create invite & draft email": mention "Includes your follower count and links to your socials."
+- Keep the existing editable `subject` input + `body` textarea — that already satisfies the "creators should be able to edit prior to sending" requirement. No structural changes to the review step.
 
 ## Out of scope
-- Sending the email directly from Travidz servers (would need a verified domain + suppression handling). The mailto:/copy flow uses the creator's own inbox so the business replies to them directly — which is what you want for a first conversation.
-- Tracking email opens.
 
-If you want me to also wire **server-side sending via Lovable Emails** (so the creator can hit "Send" inside Travidz instead of opening their mail app), say the word and I'll add it as a follow-up — that needs an email domain set up first.
+- No DB migrations (`profile_socials` and `follows` already exist).
+- No changes to `draftApplicationReply`.
+- No server-side sending; the `mailto:` flow stays so the business replies to the creator's own inbox.

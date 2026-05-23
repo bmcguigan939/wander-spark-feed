@@ -80,7 +80,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!inv || inv.creator_id !== userId) throw new Error("Not allowed");
 
-    const [{ data: creator }, { data: video }, { count: followerCount }, { data: recentVideos }] = await Promise.all([
+    const [{ data: creator }, { data: video }, { count: followerCount }, { data: socials }] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("display_name,username")
@@ -88,7 +88,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabaseAdmin
         .from("videos")
-        .select("title,description,destination,view_count,like_count,cross_links")
+        .select("title,description,destination,cross_links")
         .eq("id", inv.video_id)
         .maybeSingle(),
       supabaseAdmin
@@ -96,12 +96,10 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
         .select("*", { count: "exact", head: true })
         .eq("creator_id", userId),
       supabaseAdmin
-        .from("videos")
-        .select("view_count,like_count")
-        .eq("creator_id", userId)
-        .eq("status", "ready")
-        .order("created_at", { ascending: false })
-        .limit(10),
+        .from("profile_socials")
+        .select("youtube_handle,youtube_channel_id,tiktok_handle,instagram_handle,x_handle,facebook_handle,website_url,show_social_links")
+        .eq("user_id", userId)
+        .maybeSingle(),
     ]);
 
     const creatorName =
@@ -109,8 +107,6 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     const inviteUrl = `https://travidz.com/business/invite/${inv.token}`;
     const videoTitle = video?.title ?? "a recent video";
 
-    const totalViews = (recentVideos ?? []).reduce((s: number, v: any) => s + (v.view_count ?? 0), 0);
-    const totalLikes = (recentVideos ?? []).reduce((s: number, v: any) => s + (v.like_count ?? 0), 0);
     const followers = followerCount ?? 0;
     const crossLinks = Array.isArray((video as any)?.cross_links) ? (video as any).cross_links : [];
     const crossHandles = crossLinks
@@ -118,18 +114,32 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join(", ");
 
-    // Adaptive pitch: lean on audience size if there's traction; otherwise
-    // pitch craft + partnership upside.
-    const hasTraction = followers >= 500 || totalViews >= 5000;
-    const pitchAngle = hasTraction
-      ? "Lead with the creator's audience reach (followers across Travidz and linked platforms, recent views/likes) as proof they can drive bookings."
-      : "Lead with the quality of the creator's storytelling and a 'let's grow together' partnership angle — do NOT inflate numbers. Mention that joining costs the business nothing upfront and they only pay commission on sales Travidz sends.";
+    // Build social feed links so the business can review the creator's
+    // content directly. Only include when the creator has chosen to show them.
+    const socialLinks: { label: string; url: string }[] = [];
+    const show = socials?.show_social_links !== false;
+    const strip = (h: string) => h.replace(/^@+/, "").trim();
+    if (show && socials) {
+      if (socials.instagram_handle) socialLinks.push({ label: "Instagram", url: `https://instagram.com/${strip(socials.instagram_handle)}` });
+      if (socials.tiktok_handle) socialLinks.push({ label: "TikTok", url: `https://tiktok.com/@${strip(socials.tiktok_handle)}` });
+      if (socials.youtube_channel_id) socialLinks.push({ label: "YouTube", url: `https://youtube.com/channel/${socials.youtube_channel_id}` });
+      else if (socials.youtube_handle) socialLinks.push({ label: "YouTube", url: `https://youtube.com/@${strip(socials.youtube_handle)}` });
+      if (socials.x_handle) socialLinks.push({ label: "X", url: `https://x.com/${strip(socials.x_handle)}` });
+      if (socials.facebook_handle) socialLinks.push({ label: "Facebook", url: `https://facebook.com/${strip(socials.facebook_handle)}` });
+      if (socials.website_url) socialLinks.push({ label: "Website", url: socials.website_url });
+    }
+    if (creator?.username) {
+      socialLinks.push({ label: "Travidz", url: `https://travidz.com/u/${creator.username}` });
+    }
+    const socialLinksText = socialLinks.map((l) => `${l.label}: ${l.url}`).join("\n");
 
     const system =
       "You write warm, concise outreach emails from a travel creator to a local business they featured in a short video. " +
       "Tone: friendly, professional, never salesy or pushy. Mention specific details from the video when helpful. " +
-      "Keep the body under 180 words. End with a clear single-line CTA containing the invite URL. " +
-      pitchAngle + " " +
+      "Keep the body under 180 words. Content-first pitch: invite the business to check out the creator's work via the social feed links provided, and propose working together on a commission basis through Travidz. Do NOT invent stats. " +
+      "If a follower count is provided, you may mention it in one short sentence — otherwise omit. " +
+      "Include the social feed links verbatim as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can click through. " +
+      "End with a clear single-line CTA containing the invite URL. " +
       "Reply ONLY with JSON: { subject: string, body: string } where body is plain text with \\n line breaks.";
 
     const user = [
@@ -139,9 +149,8 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       `Video title: ${videoTitle}`,
       video?.description ? `Video description: ${video.description.slice(0, 400)}` : "",
       video?.destination ? `Destination: ${video.destination}` : "",
-      video ? `Performance: ${video.view_count ?? 0} views, ${video.like_count ?? 0} likes` : "",
-      `Creator following on Travidz: ${followers} followers`,
-      `Creator's last ${(recentVideos ?? []).length} videos: ${totalViews} total views, ${totalLikes} total likes`,
+      followers > 0 ? `Creator following on Travidz: ${followers} followers` : "",
+      socialLinksText ? `Creator's social feeds (include verbatim as a labelled list):\n${socialLinksText}` : "",
       crossHandles ? `Also posts the same video on: ${crossHandles}` : "",
       `Offer: flat ${COMMISSION.totalPct}% commission on sales Travidz sends them, no setup or monthly fee.`,
       `Invite URL (include verbatim in the email body): ${inviteUrl}`,
@@ -158,6 +167,8 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       creatorName,
       videoTitle,
       inviteUrl,
+      followers,
+      socialLinksText,
     });
   });
 
