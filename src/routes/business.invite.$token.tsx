@@ -50,6 +50,15 @@ function InvitePage() {
   });
 
   const [agreed, setAgreed] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState<string>("");
+
+  // Prefill the website field when the invite loads (only if user hasn't typed).
+  useEffect(() => {
+    const prefill = data?.invite?.website_url;
+    if (prefill) {
+      setWebsiteUrl((cur) => (cur ? cur : prefill));
+    }
+  }, [data?.invite?.website_url]);
 
   const threadQ = useQuery({
     queryKey: ["invite-thread", token],
@@ -72,7 +81,8 @@ function InvitePage() {
   const [showDecline, setShowDecline] = useState(false);
 
   const acceptM = useMutation({
-    mutationFn: () => acceptFn({ data: { token } }),
+    mutationFn: () =>
+      acceptFn({ data: { token, websiteUrl: websiteUrl.trim() || undefined } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invite", token] });
       toast.success("Welcome to Travidz — your listing is live");
@@ -112,6 +122,16 @@ function InvitePage() {
 
   const { invite, creator, video } = data;
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
+
+  const trimmedWebsite = websiteUrl.trim();
+  let websiteValid = false;
+  try {
+    const u = new URL(trimmedWebsite);
+    websiteValid = u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    websiteValid = false;
+  }
+  const canAccept = agreed && websiteValid;
 
   const threadBlock = threadQ.data?.thread ? (
     <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -207,15 +227,27 @@ function InvitePage() {
           <li>✓ Your direct website stays the destination — no rebranding</li>
           <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
         </ul>
-        {invite.website_url && (
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ExternalLink className="h-3 w-3" />
-            <span className="truncate">{invite.website_url}</span>
-          </div>
-        )}
       </div>
 
       <div className="mt-6 space-y-2">
+        <div className="rounded-2xl border border-border bg-card p-3">
+          <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <ExternalLink className="h-3 w-3" /> Your website (where customers book)
+          </label>
+          <input
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://yourbusiness.com"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            This is the URL we'll send paying customers to. You can change it later.
+          </p>
+        </div>
+
         <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-[13px] leading-snug">
           <input
             type="checkbox"
@@ -240,7 +272,7 @@ function InvitePage() {
         {user ? (
           <button
             onClick={() => acceptM.mutate()}
-            disabled={acceptM.isPending || !agreed}
+            disabled={acceptM.isPending || !canAccept}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {acceptM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -251,7 +283,7 @@ function InvitePage() {
             <Link
               to="/login"
               search={{ invite: token, next: `/business/invite/${token}` } as any}
-              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!agreed ? "pointer-events-none opacity-50" : ""}`}
+              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!canAccept ? "pointer-events-none opacity-50" : ""}`}
             >
               Log in to accept
             </Link>
@@ -266,7 +298,7 @@ function InvitePage() {
             <Link
               to="/business/signup"
               search={{ invite: token } as any}
-              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!agreed ? "pointer-events-none opacity-50" : ""}`}
+              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!canAccept ? "pointer-events-none opacity-50" : ""}`}
             >
               Create your business account
             </Link>

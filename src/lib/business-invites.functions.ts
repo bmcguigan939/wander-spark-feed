@@ -275,6 +275,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .object({
         token: z.string().min(8).max(128),
         agreementVersion: z.string().max(20).optional(),
+        websiteUrl: z.string().url().max(2048).optional(),
       })
       .parse(input),
   )
@@ -303,11 +304,21 @@ export const acceptInvite = createServerFn({ method: "POST" })
         { onConflict: "user_id,role", ignoreDuplicates: true },
       );
 
-    // Create a deal pointing at their direct website.
-    if (!invite.website_url) {
-      throw new Error(
-        "Please add your website on your business profile before accepting this invite.",
-      );
+    // Resolve the website URL: prefer the business-provided value at accept
+    // time, otherwise fall back to whatever the creator entered on the invite.
+    const resolvedWebsiteUrl = data.websiteUrl ?? invite.website_url ?? null;
+    if (!resolvedWebsiteUrl) {
+      throw new Error("Please enter your website URL to continue.");
+    }
+
+    // If the business overrode the URL, persist it on the invite so the audit
+    // trail and any follow-up emails reflect the final destination.
+    if (data.websiteUrl && data.websiteUrl !== invite.website_url) {
+      await supabaseAdmin
+        .from("business_invites")
+        .update({ website_url: data.websiteUrl })
+        .eq("id", invite.id);
+      invite.website_url = data.websiteUrl;
     }
     const { data: deal, error: dErr } = await supabaseAdmin
       .from("deals")
@@ -315,7 +326,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
         business_id: userId,
         title: invite.business_name,
         description: `Direct website — featured by @${invite.creator_id.slice(0, 6)} on Travidz`,
-        url: invite.website_url,
+        url: resolvedWebsiteUrl,
         city: invite.city,
         source: "invite",
         status: "approved",
