@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, XCircle } from "lucide-react";
 import {
   acceptInvite,
+  checkInviteAccountState,
   declineInvite,
   getInviteByToken,
 } from "@/lib/business-invites.functions";
@@ -31,6 +32,7 @@ function InvitePage() {
   const getFn = useServerFn(getInviteByToken);
   const acceptFn = useServerFn(acceptInvite);
   const declineFn = useServerFn(declineInvite);
+  const checkFn = useServerFn(checkInviteAccountState);
   const getThreadFn = useServerFn(getThreadByInviteToken);
   const replyFn = useServerFn(postReplyByInviteToken);
 
@@ -38,6 +40,13 @@ function InvitePage() {
     queryKey: ["invite", token],
     queryFn: () => getFn({ data: { token } }),
   });
+
+  const accountQ = useQuery({
+    queryKey: ["invite-account-state", token],
+    queryFn: () => checkFn({ data: { token } }),
+  });
+
+  const [agreed, setAgreed] = useState(false);
 
   const threadQ = useQuery({
     queryKey: ["invite-thread", token],
