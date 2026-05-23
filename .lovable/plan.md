@@ -1,48 +1,45 @@
-# Smart Deals empty-state → AI business outreach
+# Diagnose & fix the blank-thumbnail Studio videos
 
-## What changes (and where)
+## What's actually happening
 
-Only `src/components/create/SmartDealsSheet.tsx`. No schema, no backend changes — wires up server functions that already exist.
+Looked at the 3 stuck videos in the database. All three "Processing" rows:
+- `status = 'uploading'` (the initial state, never advanced)
+- `mux_upload_id` is set (Mux gave us an upload URL)
+- `mux_asset_id` is NULL, `mux_playback_id` is NULL, `thumbnail_url` is NULL
 
-When the AI finds no matching pre-existing deals, replace the current "we'll keep looking in the background" copy with a panel that:
+The only "Live" video with a working thumbnail is the seeded demo (`Sunset surf session in Canggu`). The TikTok-imported ones use TikTok's CDN thumbnail. Everything you uploaded from your phone never finished the Mux pipeline.
 
-1. Tells the creator: "AI is finding this location's website, email and phone so you can invite them to collaborate."
-2. Pulls AI-detected businesses for the video using the existing `listSuggestionsForVideo` server fn (table `video_business_suggestions` — already populated by `runBusinessExtraction`).
-3. For each suggestion (name, city/country, website guess, confidence), shows a **Send collaboration contract** button.
-4. Quotes the set fee from `COMMISSION` (`creator_share_pct` / `platform_share_pct`) so the creator knows the terms before sending.
+Two possible causes — both tie back to the MUX token you just rotated:
 
-## Send-contract flow
+1. **Mux webhook secret no longer matches.** When you rotated credentials, if `MUX_WEBHOOK_SECRET` wasn't updated, our `mux-webhook` route rejects every event with 401 and the row never flips to `ready`.
+2. **The upload PUT from the phone failed.** The upload URL was created but the browser didn't successfully upload the bytes — Mux therefore never produced an asset and no webhook fires.
 
-Clicking **Send collaboration contract** on a suggestion opens a compact inline form (inside the same sheet) prefilled with:
-- Business name (from suggestion)
-- Website (from `website_guess`, editable)
-- City (from suggestion)
-- Contact email (required — empty by default, creator pastes from the AI-surfaced details or their own research)
-- Contact phone (optional)
+## Plan
 
-Submit calls `createBusinessInvite({ videoId, businessName, websiteUrl, contactEmail, ... })`. On success:
-- Call `markSuggestionConverted({ id: suggestionId, inviteId })` to remove it from the list.
-- Toast: "Invite sent — they'll get a contract to confirm the fee split."
+### Step 1 — Verify what Mux thinks
 
-A secondary **Dismiss** action calls `dismissSuggestion`.
+Add a small admin/creator server fn `reconcileMyStuckUploads` that, for the signed-in creator's videos where `status='uploading'` and `mux_upload_id IS NOT NULL`:
+- Calls `mux.video.uploads.retrieve(uploadId)` to see its status (`waiting`, `asset_created`, `errored`, `cancelled`, `timed_out`).
+- If `asset_created` → fetch the asset, write `mux_asset_id`, `mux_playback_id`, `thumbnail_url`, `status='ready'`.
+- If `errored` / `cancelled` / `timed_out` → set `status='failed'` so the row stops showing as "Processing" forever.
+- Returns a per-video summary.
 
-If no suggestions yet (extraction still running), show a subtle loading line "AI is scanning the video for business details…" with a **Re-scan** link that calls `rerunBusinessExtraction`.
+Surface this as a **"Refresh status"** button on the Studio Videos page next to the Processing tab. One tap repairs any video that Mux has already finished — no waiting on the webhook.
 
-## Copy (final strings)
+### Step 2 — Make webhook auth issues visible
 
-- Header (unchanged): "Smart deals for this video"
-- New subhead when 0 deals: "No bookable deals yet — but Travidz AI is finding the business so you can invite them directly."
-- Per-suggestion footer line: "Travidz handles the contract. You earn {creatorShare}% on every booking they get from your video."
-- Submit button: "Send collaboration contract"
+Right now `mux-webhook` silently 401s on a bad signature. Add a one-line log of the failure (no secret leak) so we can see in server logs whether webhooks are actually arriving and being rejected vs. not arriving at all. This is the diagnostic that tells us if it's cause #1 or cause #2.
+
+### Step 3 — Tell you what to check in Mux
+
+The `MUX_WEBHOOK_SECRET` env var must match the signing secret shown next to your webhook endpoint in the Mux Dashboard → Settings → Webhooks. After rotating API tokens, the **webhook signing secret is separate** and may need to be re-copied. If it doesn't match, no upload will ever flip to ready.
+
+Webhook URL should point at: `https://project--144ee3b9-80e0-4ec8-883d-e0d5686cb4a1.lovable.app/api/public/mux-webhook` (stable production URL).
+
+If the secret is wrong, I'll prompt you to paste the correct one via the secrets tool.
 
 ## Out of scope
 
-- No edits to outreach email templates, schema, or the deals flow itself.
-- No new server functions — `listSuggestionsForVideo`, `rerunBusinessExtraction`, `createBusinessInvite`, `markSuggestionConverted`, `dismissSuggestion` already exist.
-- The existing "deals found" path stays exactly as it is today.
-
-## Technical notes
-
-- Use `useServerFn` + `useQuery` for `listSuggestionsForVideo` (key `["video-business-suggestions", videoId]`, enabled when sheet is open).
-- Use `useMutation` for create/convert/dismiss; on success invalidate the suggestions query.
-- Form lives in component state (no extra files); validates email client-side, server validates with existing Zod schema.
+- No changes to the upload UI itself.
+- No retry-upload flow — if Mux says the upload errored, you'll just re-upload from the phone.
+- No schema changes (`status='failed'` is already an allowed value in the videos table).
