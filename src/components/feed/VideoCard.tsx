@@ -301,19 +301,37 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
       {/* Bottom overlay */}
       <div className="absolute inset-x-0 bottom-4 z-20 px-4 text-white">
-        <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
-          <img
-            src={video.creator.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(video.creator.username)}`}
-            alt={video.creator.username}
-            className="h-10 w-10 rounded-full border-2 border-white object-cover"
-          />
-          <div>
-            <div className="text-sm font-semibold">@{video.creator.username}</div>
-            {video.creator.display_name && (
-              <div className="text-xs text-white/70">{video.creator.display_name}</div>
-            )}
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
+            <img
+              src={video.creator.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(video.creator.username)}`}
+              alt={video.creator.username}
+              className="h-10 w-10 rounded-full border-2 border-white object-cover"
+            />
+            <div>
+              <div className="text-sm font-semibold">@{video.creator.username}</div>
+              {video.creator.display_name && (
+                <div className="text-xs text-white/70">{video.creator.display_name}</div>
+              )}
+            </div>
+          </Link>
+          {!isSelf && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                requireAuth(() => followM.mutate());
+              }}
+              disabled={followM.isPending}
+              className={`ml-1 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] backdrop-blur-md transition ${
+                isFollowing
+                  ? "border border-white/40 bg-white/10 text-white/90"
+                  : "bg-primary text-primary-foreground hover:opacity-90"
+              }`}
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </button>
+          )}
+        </div>
 
         <h2 className="mt-3 font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
           {video.title}
