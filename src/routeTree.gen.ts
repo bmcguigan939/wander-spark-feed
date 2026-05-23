@@ -74,6 +74,7 @@ import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
+import { Route as StudioThreadsIdRouteImport } from './routes/studio.threads.$id'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessOnboardingPayoutRouteImport } from './routes/business.onboarding.payout'
 import { Route as BusinessInviteTokenRouteImport } from './routes/business.invite.$token'
@@ -426,6 +427,11 @@ const StudioVideosIdRoute = StudioVideosIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => StudioVideosRoute,
 } as any)
+const StudioThreadsIdRoute = StudioThreadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => StudioThreadsRoute,
+} as any)
 const DestinationsCountryCityRoute = DestinationsCountryCityRouteImport.update({
   id: '/destinations/$country/$city',
   path: '/destinations/$country/$city',
@@ -615,7 +621,7 @@ export interface FileRoutesByFullPath {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/threads': typeof StudioThreadsRoute
+  '/studio/threads': typeof StudioThreadsRouteWithChildren
   '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
@@ -633,6 +639,7 @@ export interface FileRoutesByFullPath {
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
@@ -705,7 +712,7 @@ export interface FileRoutesByTo {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/threads': typeof StudioThreadsRoute
+  '/studio/threads': typeof StudioThreadsRouteWithChildren
   '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin': typeof AdminIndexRoute
@@ -722,6 +729,7 @@ export interface FileRoutesByTo {
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
@@ -797,7 +805,7 @@ export interface FileRoutesById {
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
-  '/studio/threads': typeof StudioThreadsRoute
+  '/studio/threads': typeof StudioThreadsRouteWithChildren
   '/studio/videos': typeof StudioVideosRouteWithChildren
   '/u/$username': typeof UUsernameRoute
   '/admin/': typeof AdminIndexRoute
@@ -815,6 +823,7 @@ export interface FileRoutesById {
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
+  '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
   '/api/public/cron/business-digest': typeof ApiPublicCronBusinessDigestRoute
@@ -909,6 +918,7 @@ export interface FileRouteTypes {
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/destinations/$country/$city'
+    | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
     | '/api/public/cron/business-digest'
@@ -998,6 +1008,7 @@ export interface FileRouteTypes {
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/destinations/$country/$city'
+    | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country'
     | '/api/public/cron/business-digest'
@@ -1090,6 +1101,7 @@ export interface FileRouteTypes {
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/destinations/$country/$city'
+    | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
     | '/api/public/cron/business-digest'
@@ -1640,6 +1652,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioVideosIdRouteImport
       parentRoute: typeof StudioVideosRoute
     }
+    '/studio/threads/$id': {
+      id: '/studio/threads/$id'
+      path: '/$id'
+      fullPath: '/studio/threads/$id'
+      preLoaderRoute: typeof StudioThreadsIdRouteImport
+      parentRoute: typeof StudioThreadsRoute
+    }
     '/destinations/$country/$city': {
       id: '/destinations/$country/$city'
       path: '/destinations/$country/$city'
@@ -1860,6 +1879,18 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
 
+interface StudioThreadsRouteChildren {
+  StudioThreadsIdRoute: typeof StudioThreadsIdRoute
+}
+
+const StudioThreadsRouteChildren: StudioThreadsRouteChildren = {
+  StudioThreadsIdRoute: StudioThreadsIdRoute,
+}
+
+const StudioThreadsRouteWithChildren = StudioThreadsRoute._addFileChildren(
+  StudioThreadsRouteChildren,
+)
+
 interface StudioVideosRouteChildren {
   StudioVideosIdRoute: typeof StudioVideosIdRoute
 }
@@ -1875,7 +1906,7 @@ const StudioVideosRouteWithChildren = StudioVideosRoute._addFileChildren(
 interface StudioRouteChildren {
   StudioLinksRoute: typeof StudioLinksRoute
   StudioScheduleRoute: typeof StudioScheduleRoute
-  StudioThreadsRoute: typeof StudioThreadsRoute
+  StudioThreadsRoute: typeof StudioThreadsRouteWithChildren
   StudioVideosRoute: typeof StudioVideosRouteWithChildren
   StudioIndexRoute: typeof StudioIndexRoute
 }
@@ -1883,7 +1914,7 @@ interface StudioRouteChildren {
 const StudioRouteChildren: StudioRouteChildren = {
   StudioLinksRoute: StudioLinksRoute,
   StudioScheduleRoute: StudioScheduleRoute,
-  StudioThreadsRoute: StudioThreadsRoute,
+  StudioThreadsRoute: StudioThreadsRouteWithChildren,
   StudioVideosRoute: StudioVideosRouteWithChildren,
   StudioIndexRoute: StudioIndexRoute,
 }

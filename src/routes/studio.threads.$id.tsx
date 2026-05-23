@@ -67,7 +67,7 @@ function StudioThreadDetail() {
         viewerKind="creator"
         canReply
         isPosting={sendM.isPending}
-        onSend={(b) => sendM.mutateAsync(b)}
+        onSend={async (b) => { await sendM.mutateAsync(b); }}
       />
     </div>
   );
