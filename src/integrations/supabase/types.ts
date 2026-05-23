@@ -366,6 +366,44 @@ export type Database = {
           },
         ]
       }
+      business_agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          agreement_version: string
+          id: string
+          invite_id: string | null
+          ip: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_version?: string
+          id?: string
+          invite_id?: string | null
+          ip?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          agreement_version?: string
+          id?: string
+          invite_id?: string | null
+          ip?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_agreement_acceptances_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "business_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_invites: {
         Row: {
           accepted_business_id: string | null
