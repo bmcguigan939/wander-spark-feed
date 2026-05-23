@@ -13,11 +13,15 @@ import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/book/$dealId")({
   head: () => ({ meta: [{ title: "Book — Travidz" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    v: typeof s.v === "string" ? s.v : undefined,
+  }),
   component: BookPage,
 });
 
 function BookPage() {
   const { dealId } = Route.useParams();
+  const { v: referrerVideoId } = Route.useSearch();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const fetchDeal = useServerFn(getDeal);
@@ -59,6 +63,7 @@ function BookPage() {
           travelDate: travelDate || undefined,
           returnUrl: `${window.location.origin}/book/return?session_id={CHECKOUT_SESSION_ID}`,
           environment: getStripeEnvironment(),
+          referrerVideoId,
         },
       });
       setClientSecret(res.clientSecret);

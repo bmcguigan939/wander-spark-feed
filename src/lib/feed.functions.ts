@@ -53,7 +53,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -77,33 +77,53 @@ function locKey(country?: string | null, city?: string | null) {
 }
 
 async function attachMatchedDeals(videos: FeedVideo[]) {
-  const countries = Array.from(
-    new Set(videos.map((v) => v.country?.trim()).filter(Boolean) as string[])
+  // CONTRACT GATING: a video may only surface deals where THAT video's creator
+  // has an approved deal_applications row for the deal. If none exists, the
+  // video shows no deal CTA (matches the "Hide deals entirely" product rule).
+  const creatorIds = Array.from(
+    new Set(videos.map((v: any) => v.creator_id).filter(Boolean) as string[]),
   );
-  if (countries.length === 0) return;
-  const { data: deals } = await supabaseAdmin
-    .from("deals")
-    .select("id,title,discount_label,image_url,country,city,created_at")
-    .eq("is_active", true)
-    .in("country", countries)
-    .or("starts_at.is.null,starts_at.lte.now()")
-    .or("ends_at.is.null,ends_at.gte.now()")
-    .order("created_at", { ascending: false });
-  if (!deals?.length) return;
-  // index: prefer city+country match, fallback to country-only
-  const byCityCountry = new Map<string, (typeof deals)[number]>();
-  const byCountry = new Map<string, (typeof deals)[number]>();
-  for (const d of deals) {
-    const ck = locKey(d.country, d.city);
-    if (d.city && !byCityCountry.has(ck)) byCityCountry.set(ck, d);
+  if (creatorIds.length === 0) return;
+
+  const { data: apps } = await supabaseAdmin
+    .from("deal_applications")
+    .select("creator_id,deal:deals!inner(id,title,discount_label,image_url,country,city,is_active,starts_at,ends_at,status)")
+    .eq("status", "approved")
+    .in("creator_id", creatorIds);
+  if (!apps?.length) return;
+
+  // Index approved deals per creator, then per city/country.
+  const perCreator = new Map<
+    string,
+    { byCityCountry: Map<string, any>; byCountry: Map<string, any> }
+  >();
+  for (const row of apps as any[]) {
+    const d = row.deal;
+    if (!d) continue;
+    if (d.is_active !== true) continue;
+    if (d.status !== "approved") continue;
+    if (d.starts_at && new Date(d.starts_at).getTime() > Date.now()) continue;
+    if (d.ends_at && new Date(d.ends_at).getTime() < Date.now()) continue;
+
+    let bucket = perCreator.get(row.creator_id);
+    if (!bucket) {
+      bucket = { byCityCountry: new Map(), byCountry: new Map() };
+      perCreator.set(row.creator_id, bucket);
+    }
+    if (d.city) {
+      const ck = locKey(d.country, d.city);
+      if (!bucket.byCityCountry.has(ck)) bucket.byCityCountry.set(ck, d);
+    }
     const cck = locKey(d.country, null);
-    if (!byCountry.has(cck)) byCountry.set(cck, d);
+    if (!bucket.byCountry.has(cck)) bucket.byCountry.set(cck, d);
   }
-  for (const v of videos) {
-    if (!v.country) continue;
+
+  for (const v of videos as any[]) {
+    const bucket = perCreator.get(v.creator_id);
+    if (!bucket || !v.country) continue;
     const match =
-      (v.city && byCityCountry.get(locKey(v.country, v.city))) ||
-      byCountry.get(locKey(v.country, null));
+      (v.city && bucket.byCityCountry.get(locKey(v.country, v.city))) ||
+      bucket.byCountry.get(locKey(v.country, null));
     if (match) {
       v.matchedDeal = {
         id: match.id,

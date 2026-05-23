@@ -34,6 +34,24 @@ function scoreDeal(
   return (cityMatch * 2 + countryMatch + tagOverlap * 0.5) * conf * freshness;
 }
 
+async function assertCreatorContracts(creatorId: string, dealIds: string[]) {
+  if (!dealIds.length) return;
+  const { data: apps, error } = await supabaseAdmin
+    .from("deal_applications")
+    .select("deal_id")
+    .eq("creator_id", creatorId)
+    .eq("status", "approved")
+    .in("deal_id", dealIds);
+  if (error) throw new Error(error.message);
+  const approved = new Set((apps ?? []).map((a: any) => a.deal_id));
+  const missing = dealIds.filter((id) => !approved.has(id));
+  if (missing.length) {
+    throw new Error(
+      "You don't have an approved contract for one or more of these deals. Apply to the business first.",
+    );
+  }
+}
+
 export const suggestDealsForVideo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ videoId: z.string().uuid() }).parse(input))
@@ -159,6 +177,7 @@ export const attachDealToVideo = createServerFn({ method: "POST" })
       .eq("id", data.videoId)
       .maybeSingle();
     if (!v || v.creator_id !== context.userId) throw new Error("Forbidden");
+    await assertCreatorContracts(context.userId, [data.dealId]);
     const { error } = await supabaseAdmin
       .from("video_deals")
       .upsert(
@@ -193,15 +212,35 @@ export const detachDealFromVideo = createServerFn({ method: "POST" })
 export const listVideoDeals = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ videoId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
+    // Look up the video's creator so we can contract-gate visible deals.
+    const { data: video } = await supabaseAdmin
+      .from("videos")
+      .select("creator_id")
+      .eq("id", data.videoId)
+      .maybeSingle();
+    if (!video) return { deals: [] };
+
     const { data: rows, error } = await supabaseAdmin
       .from("video_deals")
       .select("deal_id,position,deal:deals(id,title,price_cents,currency,image_url,affiliate_network,city,country)")
       .eq("video_id", data.videoId)
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);
-    const deals = (rows ?? [])
+
+    const candidates = (rows ?? [])
       .map((r: any) => r.deal)
       .filter(Boolean);
+    if (!candidates.length) return { deals: [] };
+
+    // Only return deals where THIS video's creator has an approved contract.
+    const { data: apps } = await supabaseAdmin
+      .from("deal_applications")
+      .select("deal_id")
+      .eq("creator_id", video.creator_id)
+      .eq("status", "approved")
+      .in("deal_id", candidates.map((d: any) => d.id));
+    const approved = new Set((apps ?? []).map((a: any) => a.deal_id));
+    const deals = candidates.filter((d: any) => approved.has(d.id));
     return { deals };
   });
 
@@ -218,6 +257,7 @@ export const attachDealsBulk = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!v || v.creator_id !== context.userId) throw new Error("Forbidden");
     if (!data.dealIds.length) return { ok: true, count: 0 };
+    await assertCreatorContracts(context.userId, data.dealIds);
     const rows = data.dealIds.map((dealId, i) => ({
       video_id: data.videoId,
       deal_id: dealId,
