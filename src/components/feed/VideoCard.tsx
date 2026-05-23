@@ -55,8 +55,18 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
   async function share() {
     const url = `${window.location.origin}/?v=${video.id}`;
-    if (navigator.share) { try { await navigator.share({ title: video.title, url }); } catch {} }
-    else { await navigator.clipboard.writeText(url); toast("Link copied"); }
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ title: video.title, url }); toast("Shared"); return; } catch {}
+    }
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast("Link copied");
+        return;
+      }
+    } catch {}
+    // Fallback for sandboxed iframes / insecure contexts where clipboard is blocked.
+    toast("Copy this link", { description: url, duration: 8000 });
   }
 
   // Find the first subtitles/captions track on the underlying media element.
