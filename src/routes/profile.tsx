@@ -281,7 +281,14 @@ function ProfilePage() {
           />
         )}
         {tab === "liked" && <Grid items={data.liked as any} emptyMsg="No likes yet — explore the feed." />}
-        {tab === "collections" && <div className="mt-4"><Link to="/collections" className="text-sm font-semibold text-primary">Open collections →</Link></div>}
+        {tab === "collections" && (
+          <>
+            <Grid items={(data as any).saved ?? []} emptyMsg="No saves yet — tap the bookmark on a video to save it." />
+            <div className="mt-4 text-center">
+              <Link to="/collections" className="text-xs font-semibold text-primary">Manage collections →</Link>
+            </div>
+          </>
+        )}
       </div>
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl">
