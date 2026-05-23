@@ -293,6 +293,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           <Link
             to="/deals/$id"
             params={{ id: video.matchedDeal.id }}
+            search={{ v: video.id }}
             onClick={onDealClick}
             className="mt-3 flex items-center gap-2 rounded-2xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur-md transition hover:bg-black/55"
           >
