@@ -587,11 +587,38 @@ function Grid({
   applyTitlePendingId?: string;
 }) {
   if (!items.length) return <p className="mt-10 text-center text-sm text-muted-foreground">{emptyMsg}</p>;
+  const playableIds = items.filter((x) => (x.status ?? "ready") === "ready" && !!x.thumbnail_url).map((x) => x.id);
   return (
     <div className="mt-4 grid grid-cols-3 gap-1.5">
       {items.map((v) => (
         <div key={v.id} className="relative aspect-[9/14] overflow-hidden rounded-md bg-card">
-          {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">No preview</div>}
+          {((v.status ?? "ready") === "ready" && v.thumbnail_url) ? (
+            <Link
+              to="/feed/playlist"
+              search={{ ids: playableIds, start: v.id }}
+              className="absolute inset-0 block"
+              aria-label={`Play ${v.title || "video"}`}
+            >
+              <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" />
+            </Link>
+          ) : v.thumbnail_url ? (
+            <button
+              type="button"
+              onClick={() => toast("Still processing — check back soon")}
+              className="absolute inset-0 block"
+              aria-label="Video still processing"
+            >
+              <img src={v.thumbnail_url} alt={v.title} className="h-full w-full object-cover" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => toast("Still processing — check back soon")}
+              className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground"
+            >
+              No preview
+            </button>
+          )}
           {/* AI status pill */}
           {onRerun && v.status === "ready" && !v.ai_analyzed_at && (
             <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
@@ -605,20 +632,20 @@ function Grid({
           )}
           {onApplyTitle && v.ai_suggested_title && (
             <button
-              onClick={() => onApplyTitle(v.id)}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApplyTitle(v.id); }}
               disabled={applyTitlePendingId === v.id}
               title={`Suggested: ${v.ai_suggested_title}`}
-              className="absolute inset-x-1 bottom-1 truncate rounded-md bg-primary/85 px-1.5 py-1 text-[10px] font-semibold text-primary-foreground backdrop-blur-md"
+              className="absolute inset-x-1 bottom-1 z-10 truncate rounded-md bg-primary/85 px-1.5 py-1 text-[10px] font-semibold text-primary-foreground backdrop-blur-md"
             >
               ✨ {applyTitlePendingId === v.id ? "Saving…" : "Use AI title"}
             </button>
           )}
           {onRerun && (
             <button
-              onClick={() => onRerun(v.id)}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRerun(v.id); }}
               disabled={pendingId === v.id}
               aria-label="Re-run AI tagging"
-              className="absolute right-1 top-1 flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition hover:bg-black/75 disabled:opacity-60"
+              className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition hover:bg-black/75 disabled:opacity-60"
             >
               <Wand2 className="h-3 w-3" />
               {pendingId === v.id ? "…" : "AI"}
