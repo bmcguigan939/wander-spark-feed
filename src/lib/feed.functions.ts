@@ -21,6 +21,7 @@ export type FeedVideo = {
   view_count: number;
   comment_count: number;
   created_at: string;
+  bumped_at?: string | null;
   source_platform?: string | null;
   source_url?: string | null;
   embed_mode?: string | null;
@@ -53,7 +54,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -64,6 +65,7 @@ async function fetchFeedRows(
     q = q.in("creator_id", creatorIds);
   }
   const { data, error } = await q
+    .order("bumped_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
@@ -176,7 +178,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
       )
       .in("id", data.ids)
       .eq("status", "ready")
@@ -200,6 +202,13 @@ function hoursSince(iso: string) {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
 }
 
+function effectiveTime(v: { created_at: string; bumped_at?: string | null }): string {
+  if (v.bumped_at && new Date(v.bumped_at).getTime() > new Date(v.created_at).getTime()) {
+    return v.bumped_at;
+  }
+  return v.created_at;
+}
+
 type SearchBudget = "$" | "$$" | "$$$";
 
 function budgetValues(budget?: SearchBudget) {
@@ -215,13 +224,13 @@ function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
 }
 
 function isFreshUpload(
-  v: Pick<FeedVideo, "mux_playback_id" | "source_platform" | "created_at">,
+  v: Pick<FeedVideo, "mux_playback_id" | "source_platform" | "created_at" | "bumped_at">,
 ) {
   // Creator uploads (Mux native OR cross-posted link cards like
   // TikTok/Instagram) from the last 7 days get a surfacing boost so
   // brand-new content isn't buried by older seeded engagement-heavy rows.
   const isCreatorUpload = !!v.mux_playback_id || !!v.source_platform;
-  return isCreatorUpload && hoursSince(v.created_at) <= 24 * 7;
+  return isCreatorUpload && hoursSince(effectiveTime(v)) <= 24 * 7;
 }
 
 function scoreVideo(
@@ -235,7 +244,7 @@ function scoreVideo(
   },
 ) {
   if (ctx.seenVideoIds.has(v.id)) return -Infinity;
-  const age = hoursSince(v.created_at);
+  const age = hoursSince(effectiveTime(v));
   // freshness decays: 1.0 at 0h, ~0.5 at 48h, ~0.2 at 168h
   const freshness = 1 / (1 + age / 48);
   const engagement =
@@ -263,24 +272,27 @@ function scoreVideo(
 
 async function buildAffinity(userId: string) {
   const [likesRes, savesRes, followsRes] = await Promise.all([
-    supabaseAdmin.from("likes").select("video_id").eq("user_id", userId).limit(200),
-    supabaseAdmin.from("saves").select("video_id").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("likes").select("video_id,created_at").eq("user_id", userId).limit(200),
+    supabaseAdmin.from("saves").select("video_id,created_at").eq("user_id", userId).limit(200),
     supabaseAdmin.from("follows").select("creator_id").eq("follower_id", userId),
   ]);
-  const interactedIds = Array.from(
-    new Set([
-      ...((likesRes.data ?? []).map((r: any) => r.video_id as string)),
-      ...((savesRes.data ?? []).map((r: any) => r.video_id as string)),
-    ]),
-  );
+  // Track the latest interaction time per video so we can re-admit videos
+  // that have been bumped (edited / new deals) since the user last engaged.
+  const lastInteractionAt = new Map<string, number>();
+  for (const r of [...(likesRes.data ?? []), ...(savesRes.data ?? [])] as any[]) {
+    const t = r.created_at ? new Date(r.created_at).getTime() : 0;
+    const prev = lastInteractionAt.get(r.video_id) ?? 0;
+    if (t > prev) lastInteractionAt.set(r.video_id, t);
+  }
+  const interactedIds = Array.from(lastInteractionAt.keys());
   const tagAffinity = new Map<string, number>();
   const countryAffinity = new Map<string, number>();
-  const seenVideoIds = new Set<string>(interactedIds);
+  const seenVideoIds = new Set<string>();
   let tasteVector: number[] | null = null;
   if (interactedIds.length) {
     const { data: vids } = await supabaseAdmin
       .from("videos")
-      .select("activity_tags,country,embedding")
+      .select("id,activity_tags,country,embedding,created_at,bumped_at")
       .in("id", interactedIds.slice(0, 50));
     const vecs: number[][] = [];
     for (const v of vids ?? []) {
@@ -290,6 +302,13 @@ async function buildAffinity(userId: string) {
       }
       const c = (v as any).country?.trim().toLowerCase();
       if (c) countryAffinity.set(c, (countryAffinity.get(c) ?? 0) + 1);
+      // Only mark as "seen" (filter out of feed) if the user's last
+      // interaction was AFTER the video's latest bump. If a creator has
+      // edited the video or attached new deals since, let it resurface.
+      const vid = (v as any).id as string;
+      const eff = effectiveTime(v as any);
+      const interactedAt = lastInteractionAt.get(vid) ?? 0;
+      if (interactedAt >= new Date(eff).getTime()) seenVideoIds.add(vid);
       const emb = (v as any).embedding;
       if (emb) {
         // pgvector returns as string like "[0.1,0.2,...]" via PostgREST.
@@ -327,7 +346,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
@@ -336,6 +355,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     .eq("is_draft", false)
     .or("scheduled_at.is.null,scheduled_at.lte.now()")
       .eq("is_hidden", false)
+      .order("bumped_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(POOL);
     if (error) throw new Error(error.message);
