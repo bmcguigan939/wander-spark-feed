@@ -332,11 +332,14 @@ function ProfilePage() {
               ] as const).map((f) => {
                 const val = (socials as any)[f.key] as string;
                 const bare = (val || "").trim().replace(/^@/, "");
+                const looksLikeUrl = /^https?:\/\//i.test(bare) || /^[a-z0-9-]+\.[a-z]{2,}/i.test(bare);
                 const openHref = !bare
                   ? null
-                  : f.key === "website_url"
+                  : looksLikeUrl
                     ? (bare.startsWith("http") ? bare : `https://${bare}`)
-                    : `https://${f.prefix}${bare.replace(new RegExp(`^${f.prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`), "")}`;
+                    : f.prefix
+                      ? `https://${f.prefix}${bare}`
+                      : null;
                 return (
                   <label key={f.key} className="block rounded-xl border border-border bg-card px-3 py-2">
                     <div className="flex items-center gap-2">
