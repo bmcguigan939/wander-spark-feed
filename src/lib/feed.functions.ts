@@ -14,6 +14,8 @@ export type FeedVideo = {
   destination: string | null;
   country: string | null;
   city: string | null;
+  lat?: number | null;
+  lng?: number | null;
   activity_tags: string[];
   budget_tag: string | null;
   like_count: number;
