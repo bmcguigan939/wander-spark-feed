@@ -1,27 +1,23 @@
-# Map button returns to the video's location
+# "Map" chip on every feed video
 
-Today, the "Map" pill at the top of `/feed/playlist` calls `router.history.back()` (or falls back to `/map` at world view). When a user opens a video from a map pin and taps Map, they should land back on the map zoomed to that video's location, not at world zoom and not on whatever previous page was in history.
+Add a small Map button to `VideoCard` so users on the For-You/Following feed can jump straight to that video's spot on `/map` — same behaviour as the playlist's top-left Map button, but inline on each card.
 
-## Change
+## Changes
 
-**1. `src/lib/feed.functions.ts` — `getVideosByIds`**
+**1. `src/lib/feed.functions.ts`**
+- Add `lat?: number | null; lng?: number | null` to the `FeedVideo` type.
+- Add `lat,lng` to the column lists in every `.select(...)` that returns FeedVideo rows (lines 57, 348, 548, 582, 621). `getVideosByIds` already includes them.
 
-Add `lat,lng` to the `.select(...)` column list so the playlist page knows where each video is. No other behavior changes; `FeedVideo` already permits these as optional fields elsewhere in the codebase.
+**2. `src/components/feed/VideoCard.tsx`**
+- In the chip row at line ~435 (next to the destination/budget/tag chips), render an extra `<Link>` chip when `video.lat != null && video.lng != null`:
+  - `to: "/map"`, `search: { lng, lat, zoom: 14, layer: "both", cat: "all" }`
+  - Same pill styling as the destination chip (`rounded-full bg-white/15 px-2.5 py-1 text-[11px] backdrop-blur hover:bg-white/25`).
+  - Icon: existing `MapPin` (already imported), label "Map".
+- Place it as the first chip so it's easy to thumb.
 
-**2. `src/routes/feed/playlist.tsx`**
-
-Replace the `goBack` handler with a navigation that always goes to `/map` with search params derived from the currently active video:
-
-- `lng`, `lat` — from `videos[activeIdx]` (fallback to the first video that has coords, then to default `0,20`).
-- `zoom` — `14` when we have coords, otherwise `1.6` (matches map default).
-- Preserve `layer: "both"` so both the video pin and any deals at the same spot are visible.
-
-Use `useNavigate()` from `@tanstack/react-router` with `to: "/map"` and the search object — type-safe, no string interpolation. Keep the button label "Map" and the back-arrow icon.
-
-If no videos are loaded yet (still fetching), the button stays disabled-feeling but still routes to `/map` at default zoom rather than throwing.
+If a video has no coordinates, no chip renders (no broken link, no world-zoom fallback at the card level).
 
 ## Out of scope
-
-- The map page's own "open feed" interaction (already works via `ClusteredSheet`).
-- Adding a separate "Back" vs "Map" affordance — the existing single button is repurposed.
-- Animating the map fly-to on arrival; react-map-gl already eases to the new `lng/lat/zoom` from the URL.
+- The big top-left Map button on `/feed/playlist` (already done last turn).
+- Changing the destination chip's existing link to `/destinations/...` — it stays a separate affordance.
+- Map fly-to animation; `/map` already eases to the URL-driven `lng/lat/zoom`.
