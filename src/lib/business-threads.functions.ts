@@ -41,7 +41,7 @@ export type ThreadMessage = {
   sender_email: string | null;
   body: string;
   kind: MessageKind;
-  metadata: Record<string, unknown> | null;
+  metadata: any;
   created_at: string;
 };
 
@@ -320,7 +320,7 @@ export const postReplyByInviteToken = createServerFn({ method: "POST" })
       {
         _token: data.token,
         _body: data.body,
-        _sender_email: data.senderEmail ?? null,
+        _sender_email: data.senderEmail ?? undefined,
       },
     );
     if (error) throw new Error(error.message);
