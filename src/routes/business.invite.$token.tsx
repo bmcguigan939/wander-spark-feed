@@ -144,10 +144,12 @@ function InvitePage() {
           <li>✓ Your direct website stays the destination — no rebranding</li>
           <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
         </ul>
-        <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ExternalLink className="h-3 w-3" />
-          <span className="truncate">{invite.website_url}</span>
-        </div>
+        {invite.website_url && (
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ExternalLink className="h-3 w-3" />
+            <span className="truncate">{invite.website_url}</span>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-2">
