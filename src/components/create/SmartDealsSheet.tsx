@@ -69,10 +69,20 @@ export function SmartDealsSheet({
 
   if (!open) return null;
 
+  const hasDeals = (data?.deals?.length ?? 0) > 0;
+  const inOutreach = !isLoading && !!data && !hasDeals;
+
+  const handleClose = () => {
+    if (inOutreach) {
+      toast("You can attach deals later from Studio → Videos.");
+    }
+    onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+72px)] sm:items-center sm:pb-0"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -84,7 +94,7 @@ export function SmartDealsSheet({
               <Sparkles className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-bold">Smart deals for this video</h2>
             </div>
-            <button onClick={onClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted">
+            <button onClick={handleClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -106,8 +116,9 @@ export function SmartDealsSheet({
             <BusinessOutreachPanel videoId={videoId!} onDone={onClose} />
           )}
 
+          {hasDeals && (
           <ul className="mt-4 space-y-2">
-            {data?.deals.map((d) => {
+            {data!.deals.map((d) => {
             const checked = selected.has(d.id);
             return (
               <li key={d.id}>
@@ -149,27 +160,46 @@ export function SmartDealsSheet({
             );
           })}
           </ul>
+          )}
         </div>
 
         <div className="shrink-0 border-t border-border bg-card px-5 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-          <div className="flex gap-2">
+          {inOutreach ? (
             <button
-              onClick={onClose}
-              className="flex-1 rounded-full border border-border py-2.5 text-sm font-semibold text-muted-foreground"
+              onClick={handleClose}
+              className="w-full rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              Close
+            </button>
+          ) : hasDeals ? (
+            <>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 rounded-full border border-border py-2.5 text-sm font-semibold text-muted-foreground"
+                >
+                  Skip
+                </button>
+                <button
+                  disabled={selected.size === 0 || attachM.isPending}
+                  onClick={() => attachM.mutate()}
+                  className="flex-1 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  {attachM.isPending ? "Attaching…" : `Attach ${selected.size || ""}`.trim()}
+                </button>
+              </div>
+              <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                Travidz earns a commission when viewers book — you pay nothing extra.
+              </p>
+            </>
+          ) : (
+            <button
+              onClick={handleClose}
+              className="w-full rounded-full border border-border py-2.5 text-sm font-semibold text-muted-foreground"
             >
               Skip
             </button>
-            <button
-              disabled={selected.size === 0 || attachM.isPending}
-              onClick={() => attachM.mutate()}
-              className="flex-1 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-            >
-              {attachM.isPending ? "Attaching…" : `Attach ${selected.size || ""}`.trim()}
-            </button>
-          </div>
-          <p className="mt-2 text-center text-[10px] text-muted-foreground">
-            Travidz earns a commission when viewers book — you pay nothing extra.
-          </p>
+          )}
         </div>
       </div>
     </div>
@@ -225,7 +255,9 @@ function BusinessOutreachPanel({ videoId, onDone }: { videoId: string; onDone: (
       {!q.isLoading && suggestions.length === 0 && (
         <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-background/40 p-3">
           <p className="text-xs text-muted-foreground">
-            Still looking. This usually takes under a minute after upload.
+            {rescanM.isPending
+              ? "Re-scanning the video… this can take ~30s."
+              : "Still looking. This usually takes under a minute after upload."}
           </p>
           <button
             onClick={() => rescanM.mutate()}
