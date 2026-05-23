@@ -278,7 +278,7 @@ function FAQ() {
     },
     {
       q: "How and when do I get paid?",
-      a: "You earn 11% commission per confirmed booking. Earnings show in your dashboard instantly and you can withdraw to your bank.",
+      a: "You earn commission on every confirmed booking. Earnings show in your dashboard instantly and you can withdraw to your bank.",
     },
     {
       q: "What kind of videos work?",
