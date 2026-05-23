@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Tag,
   Building2,
+  Pencil,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import {
 import { ScheduleSheet } from "@/components/studio/ScheduleSheet";
 import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
+import { EditVideoSheet } from "@/components/studio/EditVideoSheet";
 import {
   listMyVideos,
   publishVideoNow,
@@ -117,6 +119,7 @@ function VideosPage() {
   const [deleteTarget, setDeleteTarget] = useState<StudioVideo | null>(null);
   const [dealsTarget, setDealsTarget] = useState<StudioVideo | null>(null);
   const [inviteTarget, setInviteTarget] = useState<StudioVideo | null>(null);
+  const [editTarget, setEditTarget] = useState<StudioVideo | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["studio-videos"] });
@@ -335,6 +338,9 @@ function VideosPage() {
                       <BarChart3 className="h-4 w-4" /> View insights
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setEditTarget(v)}>
+                    <Pencil className="mr-2 h-4 w-4" /> Edit details
+                  </DropdownMenuItem>
                   {v.derived_state !== "live" && v.status === "ready" && (
                     <DropdownMenuItem onSelect={() => publishM.mutate(v.id)}>
                       <Send className="mr-2 h-4 w-4" /> Publish now
@@ -389,6 +395,23 @@ function VideosPage() {
         open={!!inviteTarget}
         onOpenChange={(o) => { if (!o) setInviteTarget(null); }}
       />
+
+      {editTarget && (
+        <EditVideoSheet
+          videoId={editTarget.id}
+          open={!!editTarget}
+          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+          initial={{
+            title: editTarget.title ?? "",
+            description: editTarget.description ?? null,
+            destination: editTarget.destination ?? null,
+            country: editTarget.country ?? null,
+            city: editTarget.city ?? null,
+            activity_tags: editTarget.activity_tags ?? [],
+            budget_tag: editTarget.budget_tag ?? null,
+          }}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>

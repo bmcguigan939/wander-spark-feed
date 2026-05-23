@@ -29,6 +29,12 @@ export type StudioVideo = {
   like_count: number;
   save_count: number;
   comment_count: number;
+  description: string | null;
+  destination: string | null;
+  country: string | null;
+  city: string | null;
+  activity_tags: string[];
+  budget_tag: string | null;
   derived_state: "live" | "scheduled" | "draft" | "processing" | "hidden";
 };
 
@@ -52,7 +58,7 @@ export const listMyVideos = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     let q = supabaseAdmin
       .from("videos")
-      .select("id,title,status,thumbnail_url,mux_playback_id,source_platform,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count")
+      .select("id,title,status,thumbnail_url,mux_playback_id,source_platform,is_draft,is_hidden,scheduled_at,published_at,created_at,view_count,like_count,save_count,comment_count,description,destination,country,city,activity_tags,budget_tag")
       .eq("creator_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(200);
