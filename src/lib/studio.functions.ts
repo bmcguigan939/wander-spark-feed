@@ -144,6 +144,13 @@ export type VideoInsights = {
     comment_count: number;
     created_at: string;
     derived_state: StudioVideo["derived_state"];
+    description: string | null;
+    destination: string | null;
+    country: string | null;
+    city: string | null;
+    activity_tags: string[];
+    budget_tag: string | null;
+    status: string;
   };
   totals: {
     views: number;
@@ -166,7 +173,7 @@ export const getVideoInsights = createServerFn({ method: "GET" })
     await assertCreator(context.supabase, context.userId);
     const { data: v, error } = await supabaseAdmin
       .from("videos")
-      .select("id,title,thumbnail_url,mux_playback_id,source_platform,cross_links,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at")
+      .select("id,title,thumbnail_url,mux_playback_id,source_platform,cross_links,view_count,like_count,save_count,comment_count,created_at,status,is_draft,is_hidden,scheduled_at,description,destination,country,city,activity_tags,budget_tag")
       .eq("id", data.videoId)
       .eq("creator_id", context.userId)
       .maybeSingle();
@@ -214,6 +221,13 @@ export const getVideoInsights = createServerFn({ method: "GET" })
         comment_count: v.comment_count ?? 0,
         created_at: v.created_at,
         derived_state: deriveState(v),
+        description: (v as any).description ?? null,
+        destination: (v as any).destination ?? null,
+        country: (v as any).country ?? null,
+        city: (v as any).city ?? null,
+        activity_tags: ((v as any).activity_tags ?? []) as string[],
+        budget_tag: (v as any).budget_tag ?? null,
+        status: (v as any).status ?? "ready",
       },
       totals: {
         views: views.length,
@@ -229,6 +243,46 @@ export const getVideoInsights = createServerFn({ method: "GET" })
         user: c.user ?? null,
       })),
     };
+  });
+
+export const updateVideoMetadata = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      videoId: z.string().uuid(),
+      title: z.string().trim().min(1).max(160),
+      description: z.string().trim().max(2000).optional().nullable(),
+      destination: z.string().trim().max(160).optional().nullable(),
+      country: z.string().trim().max(80).optional().nullable(),
+      city: z.string().trim().max(120).optional().nullable(),
+      activity_tags: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+      budget_tag: z.enum(["budget", "mid", "luxury", "none"]).optional().nullable(),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertCreator(context.supabase, context.userId);
+    const patch: Record<string, unknown> = {
+      title: data.title,
+      description: data.description ?? null,
+      destination: data.destination ?? null,
+      country: data.country ?? null,
+      city: data.city ?? null,
+    };
+    if (data.activity_tags) {
+      patch.activity_tags = Array.from(
+        new Set(data.activity_tags.map((t) => t.toLowerCase()).filter(Boolean))
+      );
+    }
+    if (data.budget_tag !== undefined) {
+      patch.budget_tag = data.budget_tag === "none" ? null : data.budget_tag;
+    }
+    const { error } = await context.supabase
+      .from("videos")
+      .update(patch)
+      .eq("id", data.videoId)
+      .eq("creator_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const getStudioOverview = createServerFn({ method: "GET" })
