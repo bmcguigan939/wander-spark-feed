@@ -1,20 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { VideoCard } from "@/components/feed/VideoCard";
-import { getForYouFeed, getFollowingFeed, getFeed } from "@/lib/feed.functions";
+import { getForYouFeed, getFollowingFeed, getFeed, getVideosByIds } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { Compass } from "lucide-react";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
 
+const searchSchema = z.object({
+  v: z.string().uuid().optional(),
+});
+
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Travidz — Discover travel through video" }] }),
+  validateSearch: (s) => searchSchema.parse(s),
   component: FeedPage,
 });
 
 function FeedPage() {
   const { user } = useAuth();
+  const { v: sharedVideoId } = Route.useSearch();
   const [tab, setTab] = useState<"for-you" | "latest" | "following">("for-you");
   const { data, isLoading } = useQuery({
     queryKey: ["feed", tab, user?.id ?? null],
@@ -25,9 +32,35 @@ function FeedPage() {
         ? getFeed({ data: { limit: 20, offset: 0 } })
         : getForYouFeed({ data: { limit: 20 } }),
   });
-  const videos = data?.videos ?? [];
+  // Fetch shared video separately so it always appears first regardless of ranking.
+  const { data: sharedData } = useQuery({
+    queryKey: ["shared-video", sharedVideoId],
+    queryFn: () => getVideosByIds({ data: { ids: [sharedVideoId!] } }),
+    enabled: !!sharedVideoId,
+    staleTime: 60_000,
+  });
+  const feedVideos = data?.videos ?? [];
+  const sharedVideo = sharedData?.videos?.[0] ?? null;
+  const videos = sharedVideo
+    ? [sharedVideo, ...feedVideos.filter((x) => x.id !== sharedVideo.id)]
+    : feedVideos;
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const scrolledRef = useRef(false);
+
+  // When a shared video id is in the URL, ensure it's the active card on load.
+  useEffect(() => {
+    if (!sharedVideoId || scrolledRef.current) return;
+    if (!videos.length) return;
+    const idx = videos.findIndex((x) => x.id === sharedVideoId);
+    if (idx < 0) return;
+    const el = containerRef.current?.querySelector<HTMLElement>(`[data-idx="${idx}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "auto" });
+      setActiveIdx(idx);
+      scrolledRef.current = true;
+    }
+  }, [sharedVideoId, videos]);
 
   useEffect(() => {
     const el = containerRef.current;
