@@ -282,6 +282,19 @@ export const acceptInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
+    // Tiny helper: every supabase await in this handler benefits from a
+    // labelled error so silent generic Postgres failures stop hiding the
+    // root cause from the invite-accept UI.
+    const step = async <T,>(label: string, fn: () => Promise<T>): Promise<T> => {
+      try {
+        return await fn();
+      } catch (e: any) {
+        const msg = e?.message ?? String(e);
+        console.error(`[acceptInvite] step "${label}" failed:`, msg, e);
+        throw new Error(`accept: ${label} failed: ${msg}`);
+      }
+    };
+
     const { data: invite, error } = await supabaseAdmin
       .from("business_invites")
       .select("*")
@@ -297,12 +310,15 @@ export const acceptInvite = createServerFn({ method: "POST" })
     }
 
     // Ensure the user has the `business` role.
-    await supabaseAdmin
-      .from("user_roles")
-      .upsert(
-        { user_id: userId, role: "business" },
-        { onConflict: "user_id,role", ignoreDuplicates: true },
-      );
+    await step("assign business role", async () => {
+      const { error } = await supabaseAdmin
+        .from("user_roles")
+        .upsert(
+          { user_id: userId, role: "business" },
+          { onConflict: "user_id,role", ignoreDuplicates: true },
+        );
+      if (error) throw error;
+    });
 
     // Resolve the website URL: prefer the business-provided value at accept
     // time, otherwise fall back to whatever the creator entered on the invite.
@@ -314,62 +330,88 @@ export const acceptInvite = createServerFn({ method: "POST" })
     // If the business overrode the URL, persist it on the invite so the audit
     // trail and any follow-up emails reflect the final destination.
     if (data.websiteUrl && data.websiteUrl !== invite.website_url) {
-      await supabaseAdmin
-        .from("business_invites")
-        .update({ website_url: data.websiteUrl })
-        .eq("id", invite.id);
+      await step("update invite website_url", async () => {
+        const { error } = await supabaseAdmin
+          .from("business_invites")
+          .update({ website_url: data.websiteUrl })
+          .eq("id", invite.id);
+        if (error) throw error;
+      });
       invite.website_url = data.websiteUrl;
     }
-    const { data: deal, error: dErr } = await supabaseAdmin
-      .from("deals")
-      .insert({
-        business_id: userId,
-        title: invite.business_name,
-        description: `Direct website — featured by @${invite.creator_id.slice(0, 6)} on Travidz`,
-        url: resolvedWebsiteUrl,
-        city: invite.city,
-        source: "invite",
-        status: "approved",
-        is_active: true,
-      })
-      .select("id")
-      .single();
-    if (dErr) throw new Error(dErr.message);
-
-    // Auto-approve a deal_application so the creator earns commission on this deal.
-    await supabaseAdmin.from("deal_applications").insert({
-      deal_id: deal.id,
-      creator_id: invite.creator_id,
-      business_id: userId,
-      status: "approved",
-      commission_pct: invite.commission_pct,
-      decided_by: userId,
-      decided_at: new Date().toISOString(),
-      pitch: `Auto-approved via business invite (${invite.business_name})`,
+    const deal = await step("insert deal", async () => {
+      const { data: row, error: dErr } = await supabaseAdmin
+        .from("deals")
+        .insert({
+          business_id: userId,
+          title: invite.business_name,
+          description: `Direct website — featured by @${invite.creator_id.slice(0, 6)} on Travidz`,
+          url: resolvedWebsiteUrl,
+          city: invite.city,
+          source: "invite",
+          status: "approved",
+          is_active: true,
+        })
+        .select("id")
+        .single();
+      if (dErr) throw dErr;
+      return row;
     });
 
-    // Attach the deal to the video.
-    await supabaseAdmin
-      .from("video_deals")
-      .upsert(
-        {
-          video_id: invite.video_id,
-          deal_id: deal.id,
-          attached_by: invite.creator_id,
-          position: 0,
-        },
-        { onConflict: "video_id,deal_id", ignoreDuplicates: true },
-      );
+    // Auto-approve a deal_application so the creator earns commission on this deal.
+    await step("insert deal_application", async () => {
+      const { error } = await supabaseAdmin.from("deal_applications").insert({
+        deal_id: deal.id,
+        creator_id: invite.creator_id,
+        business_id: userId,
+        status: "approved",
+        commission_pct: invite.commission_pct,
+        decided_by: userId,
+        decided_at: new Date().toISOString(),
+        pitch: `Auto-approved via business invite (${invite.business_name})`,
+      });
+      if (error) throw error;
+    });
+
+    // Attach the deal to the originating video AND every other video by the
+    // same creator in the same city, so the auto-surfaced "Book with …" card
+    // doesn't depend on the feed's city/country fallback finding a match.
+    await step("attach deal to videos", async () => {
+      const { data: creatorVideos } = await supabaseAdmin
+        .from("videos")
+        .select("id, city")
+        .eq("creator_id", invite.creator_id);
+      const targetVideoIds = new Set<string>([invite.video_id]);
+      const inviteCity = (invite.city ?? "").trim().toLowerCase();
+      for (const v of (creatorVideos ?? []) as Array<{ id: string; city: string | null }>) {
+        if (inviteCity && (v.city ?? "").trim().toLowerCase() === inviteCity) {
+          targetVideoIds.add(v.id);
+        }
+      }
+      const rows = Array.from(targetVideoIds).map((vid) => ({
+        video_id: vid,
+        deal_id: deal.id,
+        attached_by: invite.creator_id,
+        position: 0,
+      }));
+      const { error } = await supabaseAdmin
+        .from("video_deals")
+        .upsert(rows, { onConflict: "video_id,deal_id", ignoreDuplicates: true });
+      if (error) throw error;
+    });
 
     // Mark invite accepted.
-    await supabaseAdmin
-      .from("business_invites")
-      .update({
-        status: "accepted",
-        accepted_business_id: userId,
-        accepted_deal_id: deal.id,
-      })
-      .eq("id", invite.id);
+    await step("mark invite accepted", async () => {
+      const { error } = await supabaseAdmin
+        .from("business_invites")
+        .update({
+          status: "accepted",
+          accepted_business_id: userId,
+          accepted_deal_id: deal.id,
+        })
+        .eq("id", invite.id);
+      if (error) throw error;
+    });
 
     // Update the thread: link the business + deal, append system messages, notify creator.
     const { data: thread } = await supabaseAdmin
@@ -419,32 +461,38 @@ export const acceptInvite = createServerFn({ method: "POST" })
 
     // Populate business-facing profile fields so the auto-surfaced card
     // on creator feeds has a name, logo, website, and locale.
-    await supabaseAdmin
-      .from("profiles")
-      .update({
-        business_name: invite.business_name,
-        business_website_url: invite.website_url,
-        business_city: invite.city ?? null,
-      })
-      .eq("id", userId);
+    await step("populate business profile", async () => {
+      const { error } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          business_name: invite.business_name,
+          business_website_url: invite.website_url,
+          business_city: invite.city ?? null,
+        })
+        .eq("id", userId);
+      if (error) throw error;
+    });
 
     // Auto-create the creator <-> business signing so EVERY video by that
     // creator (now and future) surfaces a "Book with {business}" card,
     // even without a per-video deal row. 11% total, 5.5/5.5 split.
-    await supabaseAdmin
-      .from("creator_business_signings")
-      .upsert(
-        {
-          creator_id: invite.creator_id,
-          business_id: userId,
-          commission_pct: 11,
-          creator_share_pct: 5.5,
-          platform_share_pct: 5.5,
-          agreement_version: data.agreementVersion ?? "v1",
-          status: "active",
-        },
-        { onConflict: "creator_id,business_id", ignoreDuplicates: false },
-      );
+    await step("upsert creator_business_signing", async () => {
+      const { error } = await supabaseAdmin
+        .from("creator_business_signings")
+        .upsert(
+          {
+            creator_id: invite.creator_id,
+            business_id: userId,
+            commission_pct: 11,
+            creator_share_pct: 5.5,
+            platform_share_pct: 5.5,
+            agreement_version: data.agreementVersion ?? "v1",
+            status: "active",
+          },
+          { onConflict: "creator_id,business_id", ignoreDuplicates: false },
+        );
+      if (error) throw error;
+    });
 
     return { ok: true, dealId: deal.id };
   });
