@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Sign up and start earning on your travel posts. 11% commission on every booking through your video.",
+          "Sign up and start earning on your travel posts. Earn commission on every booking through your video.",
       },
       { property: "og:url", content: "https://www.travidz.com/" },
       { property: "og:type", content: "website" },
