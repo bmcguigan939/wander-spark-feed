@@ -7,7 +7,7 @@ import { DealForm } from "@/components/business/DealForm";
 import { getDeal, updateDeal, deleteDeal } from "@/lib/deals.functions";
 import { DealCalendarSync } from "@/components/business/DealCalendarSync";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -81,6 +81,19 @@ function EditDealPage() {
               }}
             />
             <DealCalendarSync dealId={id} />
+            <button
+              type="button"
+              onClick={() => {
+                toast.success("Deal set up complete");
+                navigate({ to: "/business" });
+              }}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-aurora px-4 py-3 text-sm font-semibold text-white shadow-soft"
+            >
+              <Check className="h-4 w-4" /> Done — back to dashboard
+            </button>
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              You can edit this deal any time from your dashboard.
+            </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button
