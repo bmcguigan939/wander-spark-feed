@@ -50,6 +50,8 @@ function InvitePage() {
   });
 
   const [agreed, setAgreed] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState<string>("");
+  const [websiteInited, setWebsiteInited] = useState(false);
 
   const threadQ = useQuery({
     queryKey: ["invite-thread", token],
@@ -72,7 +74,8 @@ function InvitePage() {
   const [showDecline, setShowDecline] = useState(false);
 
   const acceptM = useMutation({
-    mutationFn: () => acceptFn({ data: { token } }),
+    mutationFn: () =>
+      acceptFn({ data: { token, websiteUrl: websiteUrl.trim() || undefined } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invite", token] });
       toast.success("Welcome to Travidz — your listing is live");
