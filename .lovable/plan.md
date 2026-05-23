@@ -1,29 +1,51 @@
-# Let the business set the website at accept time
+# Why the page doesn't close & the deal card never appears
 
-## Problem
-`acceptInvite` requires `invite.website_url`, but creators often send invites without one. The business has no way to provide it, so accept fails with a misleading "update your profile" toast.
+## What the data shows
+- Every recent invite in `business_invites` is still `status = 'pending'` — including the Test 02 invite from your screenshot. That means **`acceptInvite` never reaches its final UPDATE**.
+- Worker logs for the last hour show only GET server-fn calls (status reads, invite landings). There are **zero POST calls to `acceptInvite`**.
+- Net effect: the button click either never fires the mutation, or it errors so early/silently that nothing reaches the server. With no DB write, there is no deal → no `matchedBusiness` → no card on the creator's video; and with no `onSuccess`, no toast and no `navigate({ to: "/business" })`.
+
+So both symptoms have the same upstream cause. We need to (a) actually find out *why* the click is a no-op, and (b) make the success path land on the invite page itself instead of bouncing the user off to `/business`.
 
 ## Change
 
-### 1. Invite page (`src/routes/business.invite.$token.tsx`)
-- Add a **Website URL** input inside "The offer" card.
-- Prefill with `invite.website_url` if present; otherwise empty with placeholder `https://yourbusiness.com`.
-- Always editable — the business may want to override the URL the creator entered (different domain, booking page, etc.).
-- Light client validation: must start with `http(s)://` and parse as a URL.
-- Disable **Accept & claim your listing** until both the agreement is checked AND a valid URL is present.
-- Pass the URL through to `acceptInvite({ data: { token, websiteUrl } })`.
+### 1. Make the failure observable (`src/routes/business.invite.$token.tsx`)
+- Wrap the accept button in an `onClick` that logs `{ canAccept, agreed, websiteValid, websiteUrl, hasUser: !!user }` to the console *before* calling `acceptM.mutate()`. If `canAccept` is false, surface a `toast.error` saying which field is blocking (so the user stops getting a dead button with no feedback).
+- In `acceptM.onError`, also `console.error("acceptInvite failed", e)` and `POST` the error to the existing `client_error_logs` insert path so it shows up in the dashboard. Today silent failures vanish.
+- Add a tiny `onMutate` log so we can confirm in the network panel that a POST was actually issued.
 
-### 2. Server function (`src/lib/business-invites.functions.ts`)
-- Extend `acceptInvite` input validator with optional `websiteUrl: z.string().url().max(2048)`.
-- Resolution order: `data.websiteUrl ?? invite.website_url`.
-- If still missing, return a clearer error: *"Please enter your website URL to continue."* (rather than blaming the profile).
-- If `data.websiteUrl` is provided and differs from `invite.website_url`, update the `business_invites` row so the audit trail / emails reflect the final URL.
-- Use the resolved URL when inserting the `deals` row (line 318).
+### 2. Replace the redirect with an in-page success view
+The current `onSuccess` calls `navigate({ to: "/business" })`, which (i) closes the invite context the business was just reading, (ii) sends them to a dashboard that's empty for a brand-new account, and (iii) gives no confirmation of *what* just happened.
 
-### 3. Business signup flow (`src/routes/business.signup.tsx`)
-- No change needed — after signup it redirects back to `/business/invite/:token`, where the new URL field will be shown.
+Instead:
+- On success, set local `accepted = true` (and also let the invite query refetch — it will return `status: "accepted"`).
+- Render a new success card in place of the form: green check, "You're live on Travidz", the business name, and three actions:
+  - **Open your dashboard** → `/business`
+  - **See it on @{creator}'s video** → deep link to the video the invite came from (we already have `video.id` in `data`)
+  - **Reply to {creator}** → scrolls to the existing thread block below
+- Keep the existing `invite.status === "accepted"` early-return branch as the fallback for users returning to the link later.
+- Remove the automatic `navigate(...)`. No redirect.
+
+### 3. Make the deal card actually appear (`src/lib/business-invites.functions.ts` + feed cache)
+Server-side, after the successful accept, also:
+- Insert a `video_deals` row for *every* existing video by that creator in the same city as the invite (today we only attach to `invite.video_id`). That guarantees the auto-surfaced card isn't gated on the feed's city/country fallback finding a match.
+- After the upsert into `creator_business_signings`, double-check `profiles.business_name` was actually written (handle the case where the profile row was created with NULL country and the matcher in `attachMatchedBusiness` falls through to the `list[0]` branch — it already does, so this is a sanity log only).
+
+Client-side, on `onSuccess` also call:
+```ts
+qc.invalidateQueries({ queryKey: ["feed"] });
+qc.invalidateQueries({ queryKey: ["video", data.video?.id] });
+```
+so if the business (or the creator viewing in another tab) opens the video, the card paints on next mount instead of after a stale-time window.
+
+### 4. Add server-side guardrail logs in `acceptInvite`
+Inside the `.handler`, wrap each external write in a `try/catch` that re-throws with a labelled message (`"accept: insert deals failed: ..."`, `"accept: upsert signing failed: ..."`). Right now any one of ~8 awaits can throw with a generic Postgres error and the client just shows `e.message`. Labelled errors will make the next failure self-diagnosing.
 
 ## Out of scope
-- No schema change (`business_invites.website_url` stays nullable).
-- No change to creator invite-creation form (still optional there).
-- No change to commission, payouts, or deal-application logic.
+- No schema changes.
+- No change to who is allowed to accept (still requires auth + agreement + valid URL).
+- No change to commission, payouts, or thread behaviour.
+
+## Expected outcome
+- Tapping Accept either succeeds (and you stay on the invite page with a green success card + link to the video) or shows a precise error toast + a logged entry — no more silent dead button.
+- The "Book with {business}" card surfaces on the creator's video the moment the feed query refetches.

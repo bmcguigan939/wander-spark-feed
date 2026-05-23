@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, PlayCircle, XCircle } from "lucide-react";
 import {
   acceptInvite,
   checkInviteAccountState,
@@ -28,7 +28,6 @@ function InvitePage() {
     window.scrollTo(0, 0);
   }, []);
   const { token } = Route.useParams();
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const { user, loading } = useAuth();
 
@@ -83,12 +82,26 @@ function InvitePage() {
   const acceptM = useMutation({
     mutationFn: () =>
       acceptFn({ data: { token, websiteUrl: websiteUrl.trim() || undefined } }),
+    onMutate: () => {
+      // eslint-disable-next-line no-console
+      console.info("[acceptInvite] POST starting", {
+        token,
+        websiteUrl: websiteUrl.trim(),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invite", token] });
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      if (data?.video?.id) {
+        qc.invalidateQueries({ queryKey: ["video", data.video.id] });
+      }
       toast.success("Welcome to Travidz — your listing is live");
-      navigate({ to: "/business" });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Couldn't accept invite"),
+    onError: (e: any) => {
+      // eslint-disable-next-line no-console
+      console.error("[acceptInvite] failed", e);
+      toast.error(e?.message ?? "Couldn't accept invite");
+    },
   });
 
   const declineM = useMutation({
@@ -133,6 +146,26 @@ function InvitePage() {
   }
   const canAccept = agreed && websiteValid;
 
+  const handleAcceptClick = () => {
+    // eslint-disable-next-line no-console
+    console.info("[acceptInvite] click", {
+      canAccept,
+      agreed,
+      websiteValid,
+      websiteUrl: trimmedWebsite,
+      hasUser: !!user,
+    });
+    if (!agreed) {
+      toast.error("Please tick the agreement box to continue.");
+      return;
+    }
+    if (!websiteValid) {
+      toast.error("Please enter a valid website URL (starting with https://).");
+      return;
+    }
+    acceptM.mutate();
+  };
+
   const threadBlock = threadQ.data?.thread ? (
     <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -154,14 +187,36 @@ function InvitePage() {
     </div>
   ) : null;
 
-  if (invite.status === "accepted") {
+  if (invite.status === "accepted" || acceptM.isSuccess) {
     return (
       <div className="mx-auto max-w-md px-5 pb-16 pt-8">
-        <Status
-          icon={<CheckCircle2 className="h-10 w-10 text-emerald-500" />}
-          title="Listing already claimed"
-          body={`${invite.business_name} is already live on Travidz.`}
-        />
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
+          <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
+          <h1 className="mt-3 font-display text-xl font-semibold">
+            You're live on Travidz
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {invite.business_name} is now featured. Customers booking through{" "}
+            {creatorName}'s videos will be sent to your direct website.
+          </p>
+        </div>
+        <div className="mt-5 space-y-2">
+          <Link
+            to="/business"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft"
+          >
+            Open your dashboard
+          </Link>
+          {video?.id ? (
+            <Link
+              to="/feed/playlist"
+              search={{ video: video.id } as any}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold"
+            >
+              <PlayCircle className="h-4 w-4" /> See it on {creatorName}'s video
+            </Link>
+          ) : null}
+        </div>
         {threadBlock}
       </div>
     );
@@ -271,8 +326,8 @@ function InvitePage() {
 
         {user ? (
           <button
-            onClick={() => acceptM.mutate()}
-            disabled={acceptM.isPending || !canAccept}
+            onClick={handleAcceptClick}
+            disabled={acceptM.isPending}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {acceptM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
