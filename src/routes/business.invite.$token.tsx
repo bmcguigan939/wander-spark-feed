@@ -51,7 +51,14 @@ function InvitePage() {
 
   const [agreed, setAgreed] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState<string>("");
-  const [websiteInited, setWebsiteInited] = useState(false);
+
+  // Prefill the website field when the invite loads (only if user hasn't typed).
+  useEffect(() => {
+    const prefill = data?.invite?.website_url;
+    if (prefill) {
+      setWebsiteUrl((cur) => (cur ? cur : prefill));
+    }
+  }, [data?.invite?.website_url]);
 
   const threadQ = useQuery({
     queryKey: ["invite-thread", token],
