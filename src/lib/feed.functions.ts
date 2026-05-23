@@ -166,6 +166,32 @@ export const getFeed = createServerFn({ method: "GET" })
     return { videos: await fetchFeedRows(data.limit, data.offset) };
   });
 
+const idsInput = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(50),
+});
+
+export const getVideosByIds = createServerFn({ method: "POST" })
+  .inputValidator((i: unknown) => idsInput.parse(i))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await supabaseAdmin
+      .from("videos")
+      .select(
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      )
+      .in("id", data.ids)
+      .eq("status", "ready")
+      .eq("is_draft", false)
+      .eq("is_hidden", false);
+    if (error) throw new Error(error.message);
+    const byId = new Map<string, FeedVideo>(
+      ((rows ?? []) as unknown as FeedVideo[]).map((v) => [v.id, v]),
+    );
+    const videos = data.ids.map((id) => byId.get(id)).filter(Boolean) as FeedVideo[];
+    await attachMatchedDeals(videos);
+    await applySocialVisibility(videos);
+    return { videos };
+  });
+
 // ---------- For-You ranking ----------
 
 type RankRow = FeedVideo & { creator_id?: string };

@@ -1,54 +1,47 @@
+# Map: cluster videos + scroll playlist
+
+## What exists today
+- `/map` already renders pins from `getMapPins`: creator videos (with `lat/lng`), active deals, and business profiles (whose `lat/lng` is set on `profiles`).
+- Co-located pins are grouped by rounded lat/lng, shown as a single marker with a count badge when `count > 1`, and tapping opens a bottom sheet with Deals / Videos / About tabs.
+- Tapping a video thumbnail in the sheet currently navigates to `/?v=<id>` — but the home feed ignores `v` and just loads the For You feed, so the selected video does not open and the rest of the cluster is lost.
+
 ## Goal
-
-Enforce **per-video deal contracts**: a video can only surface deals where that video's creator has an `approved` row in `deal_applications` for the deal. If none exist, the video shows no booking CTA. All booking/commission attribution stays tied to the video the guest booked from.
-
-## Current behaviour (the bug)
-
-- `attachMatchedDeals` in `src/lib/feed.functions.ts` matches any active deal by country/city and pins it to every video in that area — no contract check.
-- `listVideoDeals` (`src/lib/video-deals.functions.ts`) returns whatever the creator manually attached via `video_deals`, again with no contract check, so a creator could attach a deal they never had approved.
-- `VideoCard` shows the `matchedDeal` ribbon + the `video-deals` list without filtering.
-
-Result: guests on Creator A's video see deals that pay Creator A even though A has no contract with that business — and could see deals belonging to Creator B's contracts.
+1. Make the cluster count badge clearer and always visible when there are multiples.
+2. When a user picks a video from a map cluster, drop them into a vertical-swipe feed scoped to **just that cluster's videos**, starting on the one they tapped, so they can scroll through them one by one.
+3. Keep showing businesses-with-deals as pins (already supported); make sure deal pins remain distinct and tappable from clusters that also contain videos.
 
 ## Changes
 
-### 1. Server: contract-gated deal resolution
+### 1. Cluster count badge (UI polish, `src/routes/map.tsx`)
+- Show the count badge for any `count >= 2` (today's threshold is fine, but enlarge it slightly and add `tabular-nums` so 2-digit counts don't clip).
+- Add an `aria-label` like `"5 videos and 2 deals here — tap to browse"`.
+- No data changes.
 
-**`src/lib/video-deals.functions.ts` — `listVideoDeals`**
-- Look up the video's `creator_id`.
-- Inner-join (or two-step filter) `video_deals → deals` against `deal_applications` where `creator_id = video.creator_id AND deal_id = video_deals.deal_id AND status = 'approved'`.
-- Return only deals that pass the contract check.
+### 2. Cluster sheet → launch a scrollable video queue (`src/components/map/ClusteredSheet.tsx`)
+- Keep the grid of thumbnails, but change each video tile's link from `/?v=<id>` to the new playlist route below, passing the full ordered list of video ids in the cluster and the tapped id as the start.
+- Show the count prominently in the Videos tab header (already does `Videos (N)`).
 
-**`src/lib/video-deals.functions.ts` — `attachDealToVideo` / `attachDealsBulk`**
-- Before upserting into `video_deals`, verify each `deal_id` has an `approved` row in `deal_applications` for `context.userId`. Reject with a clear error otherwise. Prevents creators attaching deals they don't have a contract for.
+### 3. New scrollable playlist route (`src/routes/feed.playlist.tsx`)
+- Path: `/feed/playlist`
+- `validateSearch`: `{ ids: string[] (min 1, max 50), start?: string }`
+- Loads those videos in the given order via a new tiny server fn `getVideosByIds` in `src/lib/feed.functions.ts` (admin client, filter `status = 'ready'`, preserve input order, re-use existing feed-row shape so `VideoCard` works unchanged).
+- Renders the same vertical-snap scroller used on `/` (lift the markup into a small `<FeedScroller videos={...} startId={...} />` shared component, or inline a near-copy — pick whichever is smaller). Scrolls to `start` on mount.
+- Shows a top-left "Back to map" button that returns to `/map` preserving its last search params (use `router.history.back()` with a fallback).
 
-**`src/lib/feed.functions.ts` — `attachMatchedDeals`**
-- Replace the geo-only match with a query that, for each video, picks the best deal among `deal_applications` rows where `creator_id = video.creator_id AND status = 'approved'`, preferring same-city → same-country.
-- If a video's creator has no approved contracts in that area, leave `matchedDeal` undefined (no CTA shown — matches the "Hide deals entirely" rule the user chose).
+### 4. Server fn (`src/lib/feed.functions.ts`)
+- Add `getVideosByIds({ ids })`: validates, queries `videos` joined with `profiles` (creator), filters ready + not blocked, runs through the existing `attachMatchedDeals` and `applySocialVisibility` helpers so the playlist videos behave exactly like feed videos (matched deals + social icons respect creator settings).
 
-### 2. Client: stop showing un-contracted CTAs
-
-**`src/components/feed/VideoCard.tsx`**
-- No structural changes — once the server returns no `matchedDeal` and an empty `attachedDeals`, the existing conditional rendering will already hide the deal pill / book CTA.
-- Confirm `logDealImpression` / `logDealClick` only fire when `matchedDeal` exists (already the case).
-
-### 3. Attribution stays video-scoped (already correct, just verify)
-
-- `bookings.creator_id` and `deal_redemptions.creator_id` are derived from `referrer_video_id → videos.creator_id` at checkout time. Confirm the checkout/redeem server fns set `creator_id` from the *video the click came from*, not from any session-level "first referrer". If they currently fall back to a session referrer, remove that fallback so Creator B always gets credit for a booking made from B's video — even if the guest entered via A's share link.
-
-### 4. No schema migration required
-
-`deal_applications` already has `(creator_id, deal_id, status)`. We're just enforcing it at read/write time.
+### 5. Business deal pins (verify only, no code change expected)
+- `getMapPins` already returns active, in-window deals filtered by `lat/lng`; the marker for clusters with deals already uses the `Tag` icon and accent color. Confirm this still works and that a cluster containing both a video and a deal still surfaces both tabs in the sheet. No migration needed.
 
 ## Out of scope
-
-- No cross-creator "Related in this area" rail (explicitly rejected).
-- No referrer-credit split between Creator A and Creator B.
-- No changes to how deals are discovered or to the deal_applications approval flow itself.
-- No fallback to generic Travidz deals on uncontracted videos.
+- Server-side spatial clustering (Mapbox GL supercluster). Current rounded-grid clustering is sufficient at this scale.
+- Changing how businesses without deals appear — they keep their current "About" pins, deduped against deal pins as today.
+- Any deal-visibility / contract logic — unchanged.
 
 ## Files touched
-
-- `src/lib/video-deals.functions.ts` — contract filter in `listVideoDeals`, contract guard in attach mutations.
-- `src/lib/feed.functions.ts` — rewrite `attachMatchedDeals` to filter through `deal_applications`.
-- Checkout/redeem server fn (likely `src/lib/bookings.functions.ts` or similar — I'll locate during build) — verify `creator_id` is always derived from `referrer_video_id`.
+- `src/routes/map.tsx` — badge polish + aria.
+- `src/components/map/ClusteredSheet.tsx` — video tile links to `/feed/playlist`.
+- `src/routes/feed.playlist.tsx` — new route.
+- `src/lib/feed.functions.ts` — new `getVideosByIds` server fn.
+- (optional) `src/components/feed/FeedScroller.tsx` — extracted shared scroller if it keeps things tidy.

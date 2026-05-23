@@ -241,12 +241,12 @@ function MapPage() {
                 <button
                   type="button"
                   className={`relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-background shadow-lg transition hover:scale-110 ${colorClass}`}
-                  aria-label={`${count} items here`}
+                  aria-label={`${c.videos.length} videos, ${c.deals.length} deals, ${c.businesses.length} businesses here — tap to browse`}
                 >
                   <Icon className="h-4 w-4" />
                   {count > 1 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full border border-background bg-background px-1 text-[9px] font-bold text-foreground">
-                      {count}
+                    <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-background bg-foreground px-1 text-[10px] font-bold tabular-nums leading-none text-background">
+                      {count > 99 ? "99+" : count}
                     </span>
                   )}
                 </button>

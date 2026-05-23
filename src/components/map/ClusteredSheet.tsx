@@ -110,8 +110,11 @@ export function ClusteredSheet({
               {data.videos.map((v: any) => (
                 <Link
                   key={v.id}
-                  to="/"
-                  search={{ v: v.id } as any}
+                  to="/feed/playlist"
+                  search={{
+                    ids: data.videos.map((x: any) => x.id),
+                    start: v.id,
+                  } as any}
                   onClick={onClose}
                   className="group relative aspect-[9/14] overflow-hidden rounded-lg bg-muted"
                 >

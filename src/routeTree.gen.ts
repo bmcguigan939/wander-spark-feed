@@ -47,6 +47,7 @@ import { Route as LegalCookiesRouteImport } from './routes/legal.cookies'
 import { Route as LegalBusinessAgreementRouteImport } from './routes/legal.business-agreement'
 import { Route as ItinerariesNewRouteImport } from './routes/itineraries.new'
 import { Route as ItinerariesIdRouteImport } from './routes/itineraries.$id'
+import { Route as FeedPlaylistRouteImport } from './routes/feed.playlist'
 import { Route as DealsIdRouteImport } from './routes/deals.$id'
 import { Route as CreatorEarningsRouteImport } from './routes/creator.earnings'
 import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculator'
@@ -286,6 +287,11 @@ const ItinerariesNewRoute = ItinerariesNewRouteImport.update({
 const ItinerariesIdRoute = ItinerariesIdRouteImport.update({
   id: '/itineraries/$id',
   path: '/itineraries/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedPlaylistRoute = FeedPlaylistRouteImport.update({
+  id: '/feed/playlist',
+  path: '/feed/playlist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DealsIdRoute = DealsIdRouteImport.update({
@@ -590,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/legal/business-agreement': typeof LegalBusinessAgreementRoute
@@ -678,6 +685,7 @@ export interface FileRoutesByTo {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/legal/business-agreement': typeof LegalBusinessAgreementRoute
@@ -768,6 +776,7 @@ export interface FileRoutesById {
   '/creator/calculator': typeof CreatorCalculatorRoute
   '/creator/earnings': typeof CreatorEarningsRoute
   '/deals/$id': typeof DealsIdRoute
+  '/feed/playlist': typeof FeedPlaylistRoute
   '/itineraries/$id': typeof ItinerariesIdRoute
   '/itineraries/new': typeof ItinerariesNewRoute
   '/legal/business-agreement': typeof LegalBusinessAgreementRoute
@@ -860,6 +869,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/legal/business-agreement'
@@ -948,6 +958,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/legal/business-agreement'
@@ -1037,6 +1048,7 @@ export interface FileRouteTypes {
     | '/creator/calculator'
     | '/creator/earnings'
     | '/deals/$id'
+    | '/feed/playlist'
     | '/itineraries/$id'
     | '/itineraries/new'
     | '/legal/business-agreement'
@@ -1117,6 +1129,7 @@ export interface RootRouteChildren {
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
   CreatorEarningsRoute: typeof CreatorEarningsRoute
   DealsIdRoute: typeof DealsIdRoute
+  FeedPlaylistRoute: typeof FeedPlaylistRoute
   ItinerariesIdRoute: typeof ItinerariesIdRoute
   ItinerariesNewRoute: typeof ItinerariesNewRoute
   LegalBusinessAgreementRoute: typeof LegalBusinessAgreementRoute
@@ -1424,6 +1437,13 @@ declare module '@tanstack/react-router' {
       path: '/itineraries/$id'
       fullPath: '/itineraries/$id'
       preLoaderRoute: typeof ItinerariesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed/playlist': {
+      id: '/feed/playlist'
+      path: '/feed/playlist'
+      fullPath: '/feed/playlist'
+      preLoaderRoute: typeof FeedPlaylistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deals/$id': {
@@ -1906,6 +1926,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorCalculatorRoute: CreatorCalculatorRoute,
   CreatorEarningsRoute: CreatorEarningsRoute,
   DealsIdRoute: DealsIdRoute,
+  FeedPlaylistRoute: FeedPlaylistRoute,
   ItinerariesIdRoute: ItinerariesIdRoute,
   ItinerariesNewRoute: ItinerariesNewRoute,
   LegalBusinessAgreementRoute: LegalBusinessAgreementRoute,
