@@ -1,8 +1,17 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Sparkles, X, Tag, Loader2, ExternalLink } from "lucide-react";
+import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2 } from "lucide-react";
 import { suggestDealsForVideo, attachDealsBulk } from "@/lib/video-deals.functions";
+import {
+  listSuggestionsForVideo,
+  dismissSuggestion,
+  markSuggestionConverted,
+  rerunBusinessExtraction,
+  type BusinessSuggestion,
+} from "@/lib/business-suggestions.functions";
+import { createBusinessInvite } from "@/lib/business-invites.functions";
+import { COMMISSION } from "@/lib/commission";
 import { toast } from "sonner";
 
 function formatPrice(cents: number | null, currency: string | null): string {
@@ -80,7 +89,7 @@ export function SmartDealsSheet({
           <p className="mt-6 text-sm text-destructive">Couldn't load suggestions. You can skip and add deals later from your studio.</p>
         )}
         {data?.deals && data.deals.length === 0 && (
-          <p className="mt-6 text-sm text-muted-foreground">No matching deals found yet. Skip and we'll keep looking in the background.</p>
+          <BusinessOutreachPanel videoId={videoId!} onDone={onClose} />
         )}
 
         <ul className="mt-4 space-y-2">
@@ -148,5 +157,231 @@ export function SmartDealsSheet({
         </p>
       </div>
     </div>
+  );
+}
+
+function BusinessOutreachPanel({ videoId, onDone }: { videoId: string; onDone: () => void }) {
+  const listFn = useServerFn(listSuggestionsForVideo);
+  const rescanFn = useServerFn(rerunBusinessExtraction);
+  const dismissFn = useServerFn(dismissSuggestion);
+  const [openFor, setOpenFor] = useState<string | null>(null);
+
+  const q = useQuery({
+    queryKey: ["video-business-suggestions", videoId],
+    queryFn: () => listFn({ data: { videoId } }),
+    refetchInterval: (query) => ((query.state.data?.length ?? 0) === 0 ? 5000 : false),
+  });
+
+  const rescanM = useMutation({
+    mutationFn: () => rescanFn({ data: { videoId } }),
+    onSuccess: () => {
+      toast("Re-scanning the video…");
+      q.refetch();
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't re-scan"),
+  });
+
+  const dismissM = useMutation({
+    mutationFn: (id: string) => dismissFn({ data: { id } }),
+    onSuccess: () => q.refetch(),
+  });
+
+  const suggestions = q.data ?? [];
+
+  return (
+    <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div className="flex items-start gap-2">
+        <Search className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">No bookable deals yet</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Travidz AI is finding this location's website, email and phone so you can invite them directly to collaborate.
+          </p>
+        </div>
+      </div>
+
+      {q.isLoading && (
+        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Scanning video for business details…
+        </div>
+      )}
+
+      {!q.isLoading && suggestions.length === 0 && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-background/40 p-3">
+          <p className="text-xs text-muted-foreground">
+            Still looking. This usually takes under a minute after upload.
+          </p>
+          <button
+            onClick={() => rescanM.mutate()}
+            disabled={rescanM.isPending}
+            className="rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+          >
+            {rescanM.isPending ? "Re-scanning…" : "Re-scan"}
+          </button>
+        </div>
+      )}
+
+      <ul className="mt-3 space-y-2">
+        {suggestions.map((s) => (
+          <li key={s.id}>
+            {openFor === s.id ? (
+              <InviteForm
+                suggestion={s}
+                videoId={videoId}
+                onCancel={() => setOpenFor(null)}
+                onSent={() => {
+                  setOpenFor(null);
+                  q.refetch();
+                }}
+              />
+            ) : (
+              <div className="flex gap-3 rounded-xl border border-border bg-background p-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Building2 className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{s.name}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {[s.category, [s.city, s.country].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || "Location detected"}
+                  </p>
+                  {s.website_guess && (
+                    <a
+                      href={s.website_guess}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="mt-0.5 inline-flex items-center gap-1 truncate text-[11px] text-primary"
+                    >
+                      <ExternalLink className="h-3 w-3" /> {s.website_guess.replace(/^https?:\/\//, "")}
+                    </a>
+                  )}
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => setOpenFor(s.id)}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground"
+                    >
+                      <Send className="h-3 w-3" /> Send collaboration contract
+                    </button>
+                    <button
+                      onClick={() => dismissM.mutate(s.id)}
+                      className="rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 text-[10px] text-muted-foreground">
+        Travidz handles the contract. You earn {COMMISSION.creatorPct}% on every booking they get from your video — they pay nothing extra.
+      </p>
+    </div>
+  );
+}
+
+function InviteForm({
+  suggestion,
+  videoId,
+  onCancel,
+  onSent,
+}: {
+  suggestion: BusinessSuggestion;
+  videoId: string;
+  onCancel: () => void;
+  onSent: () => void;
+}) {
+  const createFn = useServerFn(createBusinessInvite);
+  const convertFn = useServerFn(markSuggestionConverted);
+  const [name, setName] = useState(suggestion.name);
+  const [website, setWebsite] = useState(suggestion.website_guess ?? "");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const sendM = useMutation({
+    mutationFn: async () => {
+      const url = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+      const inv = await createFn({
+        data: {
+          videoId,
+          businessName: name.trim(),
+          websiteUrl: url.trim(),
+          city: suggestion.city,
+          contactEmail: email.trim(),
+          contactPhone: phone.trim() || null,
+        },
+      });
+      await convertFn({ data: { id: suggestion.id, inviteId: inv.id } });
+      return inv;
+    },
+    onSuccess: () => {
+      toast("Invite sent — they'll get a contract to confirm the fee split.");
+      onSent();
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't send invite"),
+  });
+
+  const valid = name.trim().length > 0 && website.trim().length > 0 && /.+@.+\..+/.test(email);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) sendM.mutate();
+      }}
+      className="space-y-2 rounded-xl border border-primary/30 bg-background p-3"
+    >
+      <p className="text-xs font-semibold">Send collaboration contract</p>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Business name"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+        maxLength={120}
+      />
+      <input
+        value={website}
+        onChange={(e) => setWebsite(e.target.value)}
+        placeholder="Website (e.g. example.com)"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+        maxLength={500}
+      />
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        type="email"
+        placeholder="Contact email (required)"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+        maxLength={200}
+      />
+      <input
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="Contact phone (optional)"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+        maxLength={40}
+      />
+      <p className="text-[10px] text-muted-foreground">
+        We'll email them a Travidz contract at the set {COMMISSION.totalPct}% commission ({COMMISSION.creatorPct}% to you).
+      </p>
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-full border border-border bg-card py-2 text-xs font-semibold text-muted-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!valid || sendM.isPending}
+          className="flex-1 rounded-full bg-primary py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+        >
+          {sendM.isPending ? "Sending…" : "Send contract"}
+        </button>
+      </div>
+    </form>
   );
 }
