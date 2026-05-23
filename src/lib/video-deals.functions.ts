@@ -185,6 +185,9 @@ export const attachDealToVideo = createServerFn({ method: "POST" })
         { onConflict: "video_id,deal_id" },
       );
     if (error) throw new Error(error.message);
+    await (supabaseAdmin.from("videos") as any)
+      .update({ bumped_at: new Date().toISOString() })
+      .eq("id", data.videoId);
     return { ok: true };
   });
 
@@ -206,6 +209,9 @@ export const detachDealFromVideo = createServerFn({ method: "POST" })
       .eq("video_id", data.videoId)
       .eq("deal_id", data.dealId);
     if (error) throw new Error(error.message);
+    await (supabaseAdmin.from("videos") as any)
+      .update({ bumped_at: new Date().toISOString() })
+      .eq("id", data.videoId);
     return { ok: true };
   });
 
@@ -268,5 +274,8 @@ export const attachDealsBulk = createServerFn({ method: "POST" })
       .from("video_deals")
       .upsert(rows, { onConflict: "video_id,deal_id" });
     if (error) throw new Error(error.message);
+    await (supabaseAdmin.from("videos") as any)
+      .update({ bumped_at: new Date().toISOString() })
+      .eq("id", data.videoId);
     return { ok: true, count: rows.length };
   });
