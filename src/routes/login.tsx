@@ -1,17 +1,31 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Compass } from "lucide-react";
 import { toast } from "sonner";
 
+const searchSchema = z.object({
+  invite: z.string().min(8).max(128).optional(),
+  next: z.string().max(500).optional(),
+});
+
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Travidz" }] }),
+  validateSearch: (s) => searchSchema.parse(s),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { invite, next } = Route.useSearch();
+  const redirectTo =
+    next && next.startsWith("/")
+      ? next
+      : invite
+        ? `/business/invite/${invite}`
+        : "/";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,17 +40,17 @@ function LoginPage() {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (err) return setError(err.message);
-      navigate({ to: "/" });
+      navigate({ to: redirectTo });
     } else {
       const { data, error: err } = await supabase.auth.signUp({
         email, password,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: window.location.origin + redirectTo },
       });
       setLoading(false);
       if (err) return setError(err.message);
       if (data.session) {
         try { localStorage.removeItem("travidz:welcomed"); } catch {}
-        navigate({ to: "/welcome" });
+        navigate({ to: invite ? redirectTo : "/welcome" });
       } else {
         setInfo("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
@@ -46,9 +60,11 @@ function LoginPage() {
 
   async function google() {
     setError(null);
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const r = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + redirectTo,
+    });
     if (r.error) setError(r.error.message ?? "Sign-in failed");
-    else if (!r.redirected) navigate({ to: "/" });
+    else if (!r.redirected) navigate({ to: redirectTo });
   }
 
   async function forgot() {
