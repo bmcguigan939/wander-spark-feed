@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normaliseHandle } from "./social-share";
 
 export type Platform = "youtube" | "tiktok" | "instagram" | "facebook" | "x";
 
@@ -16,23 +17,22 @@ export type ProfileSocials = {
   website_url: string | null;
 };
 
-const handleSchema = z
-  .string()
-  .trim()
-  .max(80)
-  .optional()
-  .nullable()
-  .transform((v) => {
-    if (!v) return null;
-    return v.replace(/^@/, "").trim() || null;
-  });
+function makeHandleSchema(platform: "youtube" | "tiktok" | "instagram" | "facebook" | "x") {
+  return z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .nullable()
+    .transform((v) => normaliseHandle(platform, v ?? null));
+}
 
 const socialsInput = z.object({
-  youtube_handle: handleSchema,
-  tiktok_handle: handleSchema,
-  instagram_handle: handleSchema,
-  facebook_handle: handleSchema,
-  x_handle: handleSchema,
+  youtube_handle: makeHandleSchema("youtube"),
+  tiktok_handle: makeHandleSchema("tiktok"),
+  instagram_handle: makeHandleSchema("instagram"),
+  facebook_handle: makeHandleSchema("facebook"),
+  x_handle: makeHandleSchema("x"),
   website_url: z
     .string()
     .trim()
