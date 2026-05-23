@@ -143,3 +143,72 @@ export const finalizeVideoMetadata = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const reconcileMyStuckUploads = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    const { data: rows, error: fetchErr } = await supabase
+      .from("videos")
+      .select("id, mux_upload_id")
+      .eq("creator_id", userId)
+      .eq("status", "uploading")
+      .not("mux_upload_id", "is", null)
+      .limit(20);
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!rows || rows.length === 0) return { checked: 0, repaired: 0, failed: 0, details: [] as any[] };
+
+    let mux;
+    try {
+      mux = await muxClient();
+    } catch (e: any) {
+      throw new Error("Video service is not reachable right now. Try again in a moment.");
+    }
+
+    let repaired = 0;
+    let failed = 0;
+    const details: { videoId: string; result: string }[] = [];
+
+    for (const row of rows) {
+      const uploadId = row.mux_upload_id as string;
+      try {
+        const upload: any = await mux.video.uploads.retrieve(uploadId);
+        const uStatus = upload?.status as string | undefined;
+        const assetId = upload?.asset_id as string | undefined;
+
+        if (uStatus === "asset_created" && assetId) {
+          const asset: any = await mux.video.assets.retrieve(assetId);
+          const playback = asset?.playback_ids?.[0]?.id as string | undefined;
+          const thumbnail = playback
+            ? `https://image.mux.com/${playback}/thumbnail.jpg?width=540&fit_mode=preserve`
+            : null;
+          const aStatus = asset?.status as string | undefined; // preparing | ready | errored
+          await supabase
+            .from("videos")
+            .update({
+              mux_asset_id: assetId,
+              mux_playback_id: playback ?? null,
+              thumbnail_url: thumbnail,
+              duration_sec: asset?.duration ?? null,
+              status: aStatus === "ready" ? "ready" : aStatus === "errored" ? "failed" : "processing",
+            })
+            .eq("id", row.id)
+            .eq("creator_id", userId);
+          if (aStatus === "ready") repaired++;
+          details.push({ videoId: row.id, result: aStatus ?? "asset_created" });
+        } else if (uStatus === "errored" || uStatus === "cancelled" || uStatus === "timed_out") {
+          await supabase.from("videos").update({ status: "failed" }).eq("id", row.id).eq("creator_id", userId);
+          failed++;
+          details.push({ videoId: row.id, result: uStatus });
+        } else {
+          details.push({ videoId: row.id, result: uStatus ?? "waiting" });
+        }
+      } catch (e: any) {
+        console.error("[reconcileMyStuckUploads] retrieve failed", { uploadId, msg: e?.message, status: e?.status });
+        details.push({ videoId: row.id, result: "retrieve_failed" });
+      }
+    }
+
+    return { checked: rows.length, repaired, failed, details };
+  });
