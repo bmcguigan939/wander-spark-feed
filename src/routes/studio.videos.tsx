@@ -15,6 +15,7 @@ import {
   Send,
   Upload,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,6 +42,7 @@ import {
   setVideoDraft,
   type StudioVideo,
 } from "@/lib/studio.functions";
+import { reconcileMyStuckUploads } from "@/lib/mux.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlatformStyle } from "@/lib/platform-style";
 import { Instagram, Youtube, Facebook, Twitter, Music2, Video as VideoIcon } from "lucide-react";
