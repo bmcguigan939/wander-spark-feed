@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2 } from "lucide-react";
+import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2, ArrowLeft, RefreshCw, Copy, Mail } from "lucide-react";
 import { suggestDealsForVideo, attachDealsBulk } from "@/lib/video-deals.functions";
 import {
   listSuggestionsForVideo,
@@ -11,6 +11,7 @@ import {
   type BusinessSuggestion,
 } from "@/lib/business-suggestions.functions";
 import { createBusinessInvite } from "@/lib/business-invites.functions";
+import { draftInviteEmail } from "@/lib/outreach.functions";
 import { COMMISSION } from "@/lib/commission";
 import { toast } from "sonner";
 
