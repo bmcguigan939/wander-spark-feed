@@ -1,43 +1,44 @@
-## Add a live password strength meter to business signup
+## Reword the business invite email
 
-Add a real-time strength indicator under the **Password** field on `src/routes/business.signup.tsx`, and block submission until the score is "Good" or better. This catches weak passwords before Supabase's HIBP check rejects them, which is what the user just hit on the screenshot.
+Shift the tone away from a personal "I'm proposing…" pitch to a clearer explanation of **what Travidz is** and **how the flat 11% commission works**. The creator is introducing the platform, not negotiating their own deal.
 
-### Behaviour
+### Changes
 
-- As the user types, score the password and show a 4-segment bar (Weak → Fair → Good → Strong) plus a one-line label and the most useful next tip ("add a number", "make it longer", "avoid common words").
-- The **Create account & accept** button stays disabled until the score is at least **Good** (in addition to the existing length / match / T&C checks).
-- Keep Supabase's HIBP rejection as a backstop — if a password somehow passes the meter but is in the breach list, we still surface the existing error inline, just with friendlier wording ("This password has appeared in a known data breach — please choose another").
+**`src/lib/outreach.functions.ts`**
 
-### Scoring
+1. **Rewrite the AI system prompt** (`draftInviteEmail`) so the gateway produces copy that:
+   - Introduces Travidz in one short sentence ("Travidz is a short-video travel platform where creators feature places they love and send bookings directly to the business").
+   - Explains the commercial model as a **platform offer**, not a personal proposal: "Travidz charges a flat 11% commission on any bookings sent your way — no setup fee, no monthly cost, you only pay on confirmed sales."
+   - Bans phrases like "I'm proposing", "I propose", "I'd like to offer", "performance-based partnership". Frames the creator as the messenger, not the dealmaker.
+   - Keeps the warm, concise tone, the social-feed links block, and the single-line invite CTA.
 
-Use a small dependency-free scorer (no `zxcvbn` — it's ~400KB and overkill for one screen). Roughly:
+2. **Rewrite `fallbackInviteDraft`** with the same structure so the non-AI path matches:
+   ```
+   Hi {businessName} team,
 
-- +1 length ≥ 10, +1 length ≥ 14
-- +1 mixed case, +1 has digit, +1 has symbol
-- −2 if it matches a tiny built-in common-passwords list (`password`, `123456`, `qwerty`, `letmein`, etc.) or contains the user's email local-part
-- Map total → `weak | fair | good | strong`
+   I'm {creatorName} — I recently featured you in my Travidz video
+   "{videoTitle}" and travellers have been asking how to book with you directly.
 
-Lives in a new helper `src/lib/password-strength.ts` so we can reuse it on `/login` signup and `/reset-password` later if needed (out of scope to wire those up now).
+   Travidz is a short-video travel platform where creators share places
+   they love and send bookings straight to the business. It costs nothing
+   to list — Travidz simply takes a flat 11% commission on any confirmed
+   bookings we send your way. No setup fee, no monthly cost.
 
-### UI
+   {optional: follower line}
+   {optional: social links block}
 
-Small component inline in the signup file (or co-located `PasswordStrengthMeter.tsx` under `src/components/`):
+   You can claim your free listing here:
+   {inviteUrl}
 
-```text
-[████░░░░░░░░]  Fair
-Try adding a number or symbol.
-```
+   Happy to answer any questions.
 
-Colours pulled from existing tokens — `bg-destructive` (weak), `bg-amber-500` via a token, `bg-primary` (good), `bg-emerald-500` (strong). Matches the existing dark/minimal style already on the page.
+   Thanks,
+   {creatorName}
+   ```
 
-### Files
-
-- **new** `src/lib/password-strength.ts` — pure scoring function + tip generator.
-- **new** `src/components/auth/PasswordStrengthMeter.tsx` — bar + label + tip, takes `{ password, email }` props.
-- **edit** `src/routes/business.signup.tsx` — render the meter under the Password input, gate the submit button on `score >= 2` ("Good"), and soften the HIBP error message.
+3. Keep the `COMMISSION.totalPct` reference so the percentage stays in sync with the rest of the app (currently 11%).
 
 ### Out of scope
 
-- Wiring the meter into `/login` signup or `/reset-password` (can be a follow-up).
-- Server-side strength enforcement — Supabase's HIBP check already covers the breach case.
-- Replacing the current Supabase HIBP setting.
+- The invite landing page (`/business/invite/:token`) and the email template chrome (`business-invite.tsx`) — wording there already references Travidz and the agreement, no change needed.
+- The application-reply drafts (`draftApplicationReply`) — different flow, unaffected.
