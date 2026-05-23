@@ -1,19 +1,26 @@
-## Update Mux webhook secret and verify
+## Make the live feed show recent uploads
 
-You've shared a Mux signing-key **ID** (`77ebdac4-6fcc-4187-9a9d-16d980d68b92`) and **secret** (`TuGhApot8…hYxOo45nzVZ`). I'll rotate the stored webhook secret so Mux events start flipping uploads to `ready`.
+### Why videos aren't showing
 
-### Steps
+Your 4 newly-reconciled videos are all in the database as `status=ready`, `is_draft=false`, `is_hidden=false` — so the feed query **does** include them. But the home feed uses `getForYouFeed`, which scores each video by:
 
-1. **Update `MUX_WEBHOOK_SECRET`** via the secure secret form (only the secret value is needed — the ID is informational and lives in the Mux dashboard).
-2. **Confirm webhook URL in Mux dashboard** is set to:
-   `https://project--144ee3b9-80e0-4ec8-883d-e0d5686cb4a1.lovable.app/api/public/mux-webhook`
-3. **Trigger a test webhook** from Mux's dashboard (Settings → Webhooks → "Send test"), then check server logs to confirm the signature now verifies (no more `Invalid signature` warnings).
-4. **Run "Refresh status"** on `/studio/videos` to reconcile the 3 stuck `uploading` videos via `mux.video.uploads.retrieve()` regardless of webhook state.
+- engagement (likes, saves, comments, views) — weighted heavily
+- freshness — modest weight
+- "fresh native upload" boost of **+12**, but it **only applies if `mux_playback_id` is set**
 
-### Notes
+The 3 most-recent uploads from your account are TikTok/Instagram **link cards** (`source_platform=tiktok/instagram`, no `mux_playback_id`), so they get no upload boost. The seeded demo videos with hundreds of fake likes outrank them and push them off the first 20 results.
 
-- I will **not** paste the secret into code or commit it anywhere — it goes through the secret form so it's stored as an environment variable only.
-- No code changes are needed; the webhook handler and reconcile button are already wired from the previous turn.
-- If after step 3 the test webhook still fails verification, the secret in Mux's dashboard doesn't match what you sent — we'd re-copy from Mux and update again.
+### Fix (scope: feed ranking only)
 
-Approve and I'll trigger the secret update form.
+1. **`src/lib/feed.functions.ts` → `isFreshNativeUpload`** — broaden to "fresh upload": any video uploaded in last 7 days whether it's a Mux native upload OR a creator-posted cross-platform link card (`mux_playback_id` present OR `source_platform` set). Demo seeds without either still don't get the boost.
+2. **`scoreVideo`** — bump the new-upload boost from `+12` to `+18` and dampen engagement weight from `1.2` to `0.7` so 7-day-fresh creator uploads consistently surface above older seeded high-engagement rows.
+3. **Add a `Latest` tab next to `For You` / `Following`** on `src/routes/index.tsx` that calls `getFeed` with a new pure-chronological order. Update `fetchFeedRows` in `feed.functions.ts` to sort by `created_at DESC` only (drop the `like_count` primary sort) — this becomes the deterministic "all recent videos from creators" view you described.
+4. Keep personalization (taste vector, follows, tag/country affinity) intact — `For You` still benefits, it just no longer buries brand-new content.
+
+### Out of scope
+
+- No schema or RLS changes (data is already visible; this is a ranking + UI tab issue).
+- No changes to upload, Mux reconcile, or Studio flows.
+- No new personalization signals — those stay as a follow-up once there's more user activity to learn from.
+
+After this, all 4 recent videos appear at the top of the new **Latest** tab immediately, and within the top results of **For You** for users who haven't built strong taste signals yet.
