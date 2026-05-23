@@ -6,7 +6,8 @@ import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleLike, toggleSave } from "@/lib/interactions.functions";
+import { toggleLike, toggleSave, toggleFollow } from "@/lib/interactions.functions";
+import { getMyFollowing } from "@/lib/follows.functions";
 import { logDealClick, logDealImpression } from "@/lib/deals.functions";
 import { listVideoDeals } from "@/lib/video-deals.functions";
 import { useQuery } from "@tanstack/react-query";
@@ -29,9 +30,27 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const qc = useQueryClient();
   const likeFn = useServerFn(toggleLike);
   const saveFn = useServerFn(toggleSave);
+  const followFn = useServerFn(toggleFollow);
+  const getMyFollowingFn = useServerFn(getMyFollowing);
   const logDealClickFn = useServerFn(logDealClick);
   const logDealImpressionFn = useServerFn(logDealImpression);
   const listVideoDealsFn = useServerFn(listVideoDeals);
+  const followingQ = useQuery({
+    queryKey: ["my-following"],
+    queryFn: () => getMyFollowingFn(),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const isFollowing = !!followingQ.data?.ids.includes(video.creator.id);
+  const isSelf = user?.id === video.creator.id;
+  const followM = useMutation({
+    mutationFn: () => followFn({ data: { creatorId: video.creator.id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-following"] });
+      qc.invalidateQueries({ queryKey: ["profile", video.creator.username] });
+    },
+    onError: (e: any) => toast(e?.message ?? "Couldn't update follow"),
+  });
   const { data: attachedDealsData } = useQuery({
     queryKey: ["video-deals", video.id],
     queryFn: () => listVideoDealsFn({ data: { videoId: video.id } }),
