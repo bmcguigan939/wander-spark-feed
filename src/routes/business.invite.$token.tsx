@@ -210,7 +210,7 @@ function InvitePage() {
           {video?.id ? (
             <Link
               to="/feed/playlist"
-              search={{ video: video.id } as any}
+              search={{ ids: [video.id], start: video.id } as any}
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-3 text-sm font-semibold"
             >
               <PlayCircle className="h-4 w-4" /> See it on {creatorName}'s video
