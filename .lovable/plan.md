@@ -1,19 +1,13 @@
-## Current state
-Editing already works end-to-end: `/business/deals/$id/edit` loads the deal into `DealForm`, saves via `updateDeal` server fn, supports calendar sync and delete. The dashboard ("BBM Best Stays" card in the screenshot) already shows a tiny pencil icon at the right that links to it — but it's a 14px icon with no label, so businesses don't notice it.
-
 ## Problem
-The edit affordance isn't discoverable. The user couldn't tell their live deal is editable.
+Right-rail buttons (like/comment/save/share/+collection) use a fixed bottom offset (`196px`). When the bottom overlay grows — extra deal card, longer caption, tags row — the rail gets covered (the "Save" 1 in the screenshot overlaps the "Book this trip" card).
 
-## Fix — `src/routes/business.index.tsx` deal card only
+## Fix — `src/components/feed/VideoCard.tsx` only
 
-1. **Make the whole card tappable**: wrap the card body in a `Link` to `/business/deals/$id/edit` so tapping anywhere on "BBM Best Stays" opens the edit screen.
-2. **Replace the pencil icon with a labelled button**: `Edit` pill (icon + text) using `bg-secondary text-secondary-foreground rounded-full px-3 py-1.5 text-xs font-medium`, top-right of the card. Keeps the existing route but makes it obvious.
-3. **Add a small helper line** under the location: `Tap to edit price, photo, description…` in `text-[11px] text-muted-foreground` so first-time users understand.
-4. Stop event propagation on the Edit button so it doesn't double-fire with the card link.
+1. Add a `ref` on the bottom overlay `<div>` and measure its rendered height with a `ResizeObserver` (state: `overlayHeight`, default 0).
+2. Drive the right rail's `bottom` from that measurement:
+   `style={{ bottom: 'calc(env(safe-area-inset-bottom) + ' + (overlayHeight + 16) + 'px)' }}`
+   so the rail always sits 16px above the overlay, regardless of how tall it grows.
+3. Add `transition-[bottom] duration-200` on the rail so it slides up smoothly when deals/tags hydrate.
+4. SSR-safe: skip the observer when `typeof ResizeObserver === 'undefined'`.
 
-## Out of scope
-- No changes to the edit page itself (already complete: form, calendar sync, delete).
-- No changes to `DealForm`, server fns, or DB.
-- No new routes.
-
-One file touched: `src/routes/business.index.tsx`.
+No changes to BottomNav, overlay markup, or any data. One file touched.
