@@ -244,7 +244,7 @@ function scoreVideo(
   },
 ) {
   if (ctx.seenVideoIds.has(v.id)) return -Infinity;
-  const age = hoursSince(v.created_at);
+  const age = hoursSince(effectiveTime(v));
   // freshness decays: 1.0 at 0h, ~0.5 at 48h, ~0.2 at 168h
   const freshness = 1 / (1 + age / 48);
   const engagement =
