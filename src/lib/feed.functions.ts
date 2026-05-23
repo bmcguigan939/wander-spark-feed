@@ -64,7 +64,6 @@ async function fetchFeedRows(
     q = q.in("creator_id", creatorIds);
   }
   const { data, error } = await q
-    .order("like_count", { ascending: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
