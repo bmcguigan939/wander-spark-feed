@@ -393,8 +393,15 @@ function ProfilePage() {
                 checked={socials.show_social_links}
                 onChange={(e) => {
                   const next = e.target.checked;
-                  setSocials((s) => ({ ...s, show_social_links: next }));
-                  saveSocialsM.mutate();
+                  const updated = { ...socials, show_social_links: next };
+                  setSocials(updated);
+                  upsertSocialsFn({ data: updated as any })
+                    .then(() => {
+                      qc.invalidateQueries({ queryKey: ["my-socials"] });
+                      qc.invalidateQueries({ queryKey: ["feed"] });
+                      toast(next ? "Social icons visible" : "Social icons hidden");
+                    })
+                    .catch((err: any) => toast(err?.message ?? "Couldn't update"));
                 }}
               />
             </label>
