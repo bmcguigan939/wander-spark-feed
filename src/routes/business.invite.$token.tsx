@@ -3,14 +3,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Building2, CheckCircle2, ExternalLink, Loader2, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, XCircle } from "lucide-react";
 import {
   acceptInvite,
   declineInvite,
   getInviteByToken,
 } from "@/lib/business-invites.functions";
+import {
+  getThreadByInviteToken,
+  postReplyByInviteToken,
+} from "@/lib/business-threads.functions";
 import { useAuth } from "@/lib/auth";
 import { COMMISSION } from "@/lib/commission";
+import { ThreadConversation } from "@/components/threads/ThreadConversation";
 
 export const Route = createFileRoute("/business/invite/$token")({
   head: () => ({ meta: [{ title: "You're invited to Travidz" }] }),
@@ -26,10 +31,29 @@ function InvitePage() {
   const getFn = useServerFn(getInviteByToken);
   const acceptFn = useServerFn(acceptInvite);
   const declineFn = useServerFn(declineInvite);
+  const getThreadFn = useServerFn(getThreadByInviteToken);
+  const replyFn = useServerFn(postReplyByInviteToken);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["invite", token],
     queryFn: () => getFn({ data: { token } }),
+  });
+
+  const threadQ = useQuery({
+    queryKey: ["invite-thread", token],
+    queryFn: () => getThreadFn({ data: { token } }),
+    refetchInterval: 20_000,
+  });
+
+  const [replyEmail, setReplyEmail] = useState("");
+  const replyM = useMutation({
+    mutationFn: (body: string) =>
+      replyFn({ data: { token, body, senderEmail: replyEmail || undefined } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invite-thread", token] });
+      toast.success("Reply sent to the creator");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Couldn't send"),
   });
 
   const [declineReason, setDeclineReason] = useState("");
@@ -77,22 +101,49 @@ function InvitePage() {
   const { invite, creator, video } = data;
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
+  const threadBlock = threadQ.data?.thread ? (
+    <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <MessageSquare className="mr-1 inline h-3 w-3" /> Conversation with {creatorName}
+      </div>
+      <ThreadConversation
+        thread={threadQ.data.thread as any}
+        messages={threadQ.data.messages}
+        creator={threadQ.data.creator}
+        business={{ display_name: invite.business_name }}
+        viewerKind="business"
+        canReply={invite.status !== "expired"}
+        isPosting={replyM.isPending}
+        onSend={async (b) => { await replyM.mutateAsync(b); }}
+        emailFieldVisible
+        emailValue={replyEmail}
+        onEmailChange={setReplyEmail}
+      />
+    </div>
+  ) : null;
+
   if (invite.status === "accepted") {
     return (
-      <Status
-        icon={<CheckCircle2 className="h-10 w-10 text-emerald-500" />}
-        title="Listing already claimed"
-        body={`${invite.business_name} is already live on Travidz.`}
-      />
+      <div className="mx-auto max-w-md px-5 pb-16 pt-8">
+        <Status
+          icon={<CheckCircle2 className="h-10 w-10 text-emerald-500" />}
+          title="Listing already claimed"
+          body={`${invite.business_name} is already live on Travidz.`}
+        />
+        {threadBlock}
+      </div>
     );
   }
   if (invite.status === "declined") {
     return (
-      <Status
-        icon={<XCircle className="h-10 w-10 text-muted-foreground" />}
-        title="Invite declined"
-        body="No further action needed."
-      />
+      <div className="mx-auto max-w-md px-5 pb-16 pt-8">
+        <Status
+          icon={<XCircle className="h-10 w-10 text-muted-foreground" />}
+          title="Invite declined"
+          body="No further action needed — you can still message the creator below."
+        />
+        {threadBlock}
+      </div>
     );
   }
   if (invite.status === "expired") {
@@ -208,6 +259,7 @@ function InvitePage() {
       </div>
 
       {loading ? null : null}
+      {threadBlock}
     </div>
   );
 }
