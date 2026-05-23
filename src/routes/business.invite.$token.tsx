@@ -116,6 +116,21 @@ function InvitePage() {
   const { invite, creator, video } = data;
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
+  if (!websiteInited) {
+    setWebsiteInited(true);
+    setWebsiteUrl(invite.website_url ?? "");
+  }
+
+  const trimmedWebsite = websiteUrl.trim();
+  let websiteValid = false;
+  try {
+    const u = new URL(trimmedWebsite);
+    websiteValid = u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    websiteValid = false;
+  }
+  const canAccept = agreed && websiteValid;
+
   const threadBlock = threadQ.data?.thread ? (
     <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
