@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createBusinessInvite } from "@/lib/business-invites.functions";
-import { draftInviteEmail } from "@/lib/outreach.functions";
+import { draftInviteEmail, sendInviteEmail } from "@/lib/outreach.functions";
 import { COMMISSION } from "@/lib/commission";
 
 type Props = {
@@ -31,6 +31,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
   const qc = useQueryClient();
   const createFn = useServerFn(createBusinessInvite);
   const draftFn = useServerFn(draftInviteEmail);
+  const sendEmailFn = useServerFn(sendInviteEmail);
 
   const [businessName, setBusinessName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -150,10 +151,21 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
     }
   }
 
-  function openMail() {
-    const href = `mailto:${encodeURIComponent(contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = href;
-  }
+  const sendM = useMutation({
+    mutationFn: async () => {
+      if (!inviteId) throw new Error("No invite to send");
+      const res = await sendEmailFn({ data: { inviteId, subject, body } });
+      if (!res?.ok) throw new Error("Send failed");
+      return res;
+    },
+    onSuccess: () => {
+      toast.success(`Invite sent to ${contactEmail}`);
+      qc.invalidateQueries({ queryKey: ["business-invites", videoId] });
+      clearDraft();
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Couldn't send"),
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -307,11 +319,12 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
 
           <button
             type="button"
-            onClick={openMail}
-            disabled={!subject || !body || !contactEmail}
+            onClick={() => sendM.mutate()}
+            disabled={!subject || !body || !contactEmail || sendM.isPending}
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
-            <Mail className="h-4 w-4" /> Open in mail app
+            {sendM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {sendM.isPending ? "Sending…" : "Send from Travidz"}
           </button>
           <button
             type="button"
@@ -321,7 +334,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
             Done
           </button>
           <p className="text-[11px] leading-snug text-muted-foreground">
-            Switch apps to copy info — this stays open until you tap Done. The email opens in your own inbox so the business replies directly to you.
+            We'll send this from noreply@travidz.com. Replies come back to your Travidz Messages so the deal stays documented.
           </p>
         </div>
         )}
