@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Eye, Heart, Bookmark, UserPlus, CalendarClock, FileText, Upload, ChevronRight } from "lucide-react";
 import { getStudioOverview } from "@/lib/studio.functions";
 import { AgreementBanner } from "@/components/AgreementBanner";
+import { useRealtimeMyVideos } from "@/hooks/use-realtime-my-videos";
 
 export const Route = createFileRoute("/studio/")({
   head: () => ({ meta: [{ title: "Overview — Travidz Studio" }] }),
@@ -17,6 +18,7 @@ function fmt(n: number) {
 
 function OverviewPage() {
   const fn = useServerFn(getStudioOverview);
+  useRealtimeMyVideos();
   const { data, isLoading } = useQuery({
     queryKey: ["studio-overview"],
     queryFn: () => fn({ data: undefined as any }),
