@@ -176,12 +176,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           />
         </div>
       ) : (
-        <a
-          href={video.source_url ?? "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`absolute inset-0 flex items-center justify-center ${platformStyle.gradient}`}
-        >
+        <div className={`absolute inset-0 flex items-center justify-center ${platformStyle.gradient}`}>
           {video.thumbnail_url ? (
             <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover opacity-80" />
           ) : (
@@ -189,17 +184,19 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
               <PlatformIcon className="mb-5 h-12 w-12 drop-shadow" />
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">Linked {platformStyle.label} video</div>
               <div className="mt-3 max-w-[18rem] font-display text-2xl font-semibold leading-tight drop-shadow">{video.title}</div>
-              <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur-xl ring-1 ring-white/25">
-                <Play className="h-4 w-4 fill-white" /> Open original
-              </div>
             </div>
           )}
-          {video.thumbnail_url && (
-            <span className="absolute flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30">
-              <Play className="h-9 w-9 fill-white text-white" />
-            </span>
-          )}
-        </a>
+          <a
+            href={video.source_url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Open on ${platformStyle.label}`}
+            className="absolute z-10 flex h-20 w-20 items-center justify-center rounded-full bg-white/15 backdrop-blur-xl ring-1 ring-white/30 transition hover:bg-white/25"
+          >
+            <Play className="h-9 w-9 fill-white text-white" />
+          </a>
+        </div>
       )}
 
       <div className="scrim-top pointer-events-none absolute inset-x-0 top-0 h-32" />
@@ -228,13 +225,13 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       )}
 
       {/* Right rail — frosted circles */}
-      <div className="absolute right-3 bottom-32 flex flex-col items-center gap-4 text-white">
+      <div className="absolute right-3 bottom-32 z-20 flex flex-col items-center gap-4 text-white">
         <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
         <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
         <Action icon={Share2} label="Share" onClick={share} />
         <button
-          onClick={() => requireAuth(() => setCollectionOpen(true))}
+          onClick={(e) => { e.stopPropagation(); requireAuth(() => setCollectionOpen(true)); }}
           className="mt-1 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 backdrop-blur-md transition hover:bg-white/20"
         >
           + Collection
@@ -244,7 +241,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       <CommentsSheet open={commentsOpen} onOpenChange={setCommentsOpen} videoId={video.id} />
 
       {/* Bottom overlay */}
-      <div className="absolute inset-x-0 bottom-4 px-4 text-white">
+      <div className="absolute inset-x-0 bottom-4 z-20 px-4 text-white">
         <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
           <img
             src={video.creator.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(video.creator.username)}`}
@@ -412,7 +409,7 @@ function Action({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
       aria-label={label}
       className="group flex flex-col items-center gap-1 text-white"
     >

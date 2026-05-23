@@ -20,7 +20,7 @@ export function BottomNav() {
       : t,
   );
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]">
+    <nav className="sticky bottom-0 left-0 right-0 z-50 w-full bg-background/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]">
       <ul className="mx-auto flex max-w-md items-stretch justify-between px-2 py-2">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
@@ -57,7 +57,7 @@ export function BottomNav() {
 export function MobileShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto flex min-h-dvh max-w-md flex-col bg-background">
-      <main className="flex-1 pb-20">{children}</main>
+      <main className="flex-1">{children}</main>
       <BottomNav />
     </div>
   );
