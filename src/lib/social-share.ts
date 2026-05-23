@@ -1,4 +1,4 @@
-import type { Platform } from "./social.functions";
+export type Platform = "youtube" | "tiktok" | "instagram" | "facebook" | "x";
 
 export type SocialHandles = {
   youtube_handle?: string | null;
