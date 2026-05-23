@@ -409,7 +409,7 @@ function Action({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
       aria-label={label}
       className="group flex flex-col items-center gap-1 text-white"
     >
