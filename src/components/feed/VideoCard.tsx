@@ -340,7 +340,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
               )}
             </div>
           </Link>
-          {!isSelf && (
+          {!isSelf && !collapsed && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -356,8 +356,18 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
               {isFollowing ? "Following" : "Follow"}
             </button>
           )}
+          <button
+            onClick={(e) => { e.stopPropagation(); setCollapsed((c) => !c); }}
+            aria-label={collapsed ? "Show deals and details" : "Hide deals and details"}
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 backdrop-blur-md transition hover:bg-white/20"
+          >
+            {collapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {collapsed ? "Show deals" : "Hide"}
+          </button>
         </div>
 
+        {!collapsed && (
+          <>
         <h2 className="mt-3 font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
           {video.title}
         </h2>
@@ -502,6 +512,8 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
             <Music className="h-3 w-3 flex-shrink-0 animate-pulse" />
             <span className="truncate">{video.music.title} — {video.music.artist}</span>
           </Link>
+        )}
+          </>
         )}
       </div>
     </section>
