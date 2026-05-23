@@ -13,14 +13,22 @@ export const getMyFollowing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const { data: follows, error } = await supabase
       .from("follows")
-      .select("creator_id, created_at, profiles:creator_id (id, username, display_name, avatar_url, bio)")
+      .select("creator_id, created_at")
       .eq("follower_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const rows = (data ?? []) as Array<{ creator_id: string; profiles: FollowingCreator | null }>;
-    const creators = rows.map((r) => r.profiles).filter(Boolean) as FollowingCreator[];
-    const ids = rows.map((r) => r.creator_id);
+    const ids = (follows ?? []).map((r) => r.creator_id as string);
+    if (ids.length === 0) return { creators: [] as FollowingCreator[], ids };
+    const { data: profiles, error: pErr } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url, bio")
+      .in("id", ids);
+    if (pErr) throw new Error(pErr.message);
+    const byId = new Map<string, FollowingCreator>(
+      (profiles ?? []).map((p) => [p.id as string, p as FollowingCreator]),
+    );
+    const creators = ids.map((i) => byId.get(i)).filter(Boolean) as FollowingCreator[];
     return { creators, ids };
   });
