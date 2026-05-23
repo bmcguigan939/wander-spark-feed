@@ -47,6 +47,7 @@ import {
 import { reconcileMyStuckUploads } from "@/lib/mux.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlatformStyle } from "@/lib/platform-style";
+import { useRealtimeMyVideos } from "@/hooks/use-realtime-my-videos";
 import { Instagram, Youtube, Facebook, Twitter, Music2, Video as VideoIcon } from "lucide-react";
 
 type Filter = "all" | "live" | "scheduled" | "draft" | "processing";
@@ -86,6 +87,7 @@ function VideosPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  useRealtimeMyVideos();
   const listFn = useServerFn(listMyVideos);
   const draftFn = useServerFn(setVideoDraft);
   const scheduleFn = useServerFn(scheduleVideo);
