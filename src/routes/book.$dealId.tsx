@@ -8,6 +8,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { getDeal } from "@/lib/deals.functions";
 import { createBookingCheckout } from "@/lib/booking.functions";
+import { getBlockedDates } from "@/lib/calendar.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
 
@@ -26,6 +27,7 @@ function BookPage() {
   const { user, loading } = useAuth();
   const fetchDeal = useServerFn(getDeal);
   const checkoutFn = useServerFn(createBookingCheckout);
+  const fetchBlocked = useServerFn(getBlockedDates);
 
   const [guests, setGuests] = useState(1);
   const [travelDate, setTravelDate] = useState("");
@@ -44,6 +46,18 @@ function BookPage() {
     queryFn: () => fetchDeal({ data: { id: dealId } }),
   });
   const deal = (data?.deal as any) ?? null;
+
+  const { data: blocked } = useQuery({
+    queryKey: ["blocked-dates", dealId],
+    queryFn: () => fetchBlocked({ data: { dealId } }),
+    enabled: !!deal?.bookable,
+    staleTime: 60_000,
+  });
+  const blockedSet = useMemo(
+    () => new Set<string>(blocked?.dates ?? []),
+    [blocked],
+  );
+  const dateBlocked = !!(travelDate && blockedSet.has(travelDate));
 
   const total = useMemo(() => (deal?.price_cents ?? 0) * guests, [deal, guests]);
   const fmt = (cents: number) =>
@@ -144,6 +158,16 @@ function BookPage() {
                 onChange={(e) => setTravelDate(e.target.value)}
                 className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               />
+              {dateBlocked && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  This date is already booked — please pick another.
+                </p>
+              )}
+              {blockedSet.size > 0 && !dateBlocked && (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  {blockedSet.size} dates in the next 12 months are unavailable.
+                </p>
+              )}
             </div>
 
             <div className="rounded-xl border border-border bg-card/40 p-4 text-sm">
@@ -164,7 +188,7 @@ function BookPage() {
 
             <button
               onClick={startCheckout}
-              disabled={opening || !deal.bookable || !deal.price_cents}
+              disabled={opening || !deal.bookable || !deal.price_cents || dateBlocked}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 disabled:opacity-60"
             >
               {opening && <Loader2 className="h-4 w-4 animate-spin" />}
