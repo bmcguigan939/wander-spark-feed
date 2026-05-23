@@ -224,13 +224,13 @@ function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
 }
 
 function isFreshUpload(
-  v: Pick<FeedVideo, "mux_playback_id" | "source_platform" | "created_at">,
+  v: Pick<FeedVideo, "mux_playback_id" | "source_platform" | "created_at" | "bumped_at">,
 ) {
   // Creator uploads (Mux native OR cross-posted link cards like
   // TikTok/Instagram) from the last 7 days get a surfacing boost so
   // brand-new content isn't buried by older seeded engagement-heavy rows.
   const isCreatorUpload = !!v.mux_playback_id || !!v.source_platform;
-  return isCreatorUpload && hoursSince(v.created_at) <= 24 * 7;
+  return isCreatorUpload && hoursSince(effectiveTime(v)) <= 24 * 7;
 }
 
 function scoreVideo(
