@@ -382,6 +382,9 @@ export type Database = {
           existing_business_id: string | null
           expires_at: string
           id: string
+          last_send_error: string | null
+          last_send_status: string | null
+          last_sent_at: string | null
           platform_share_pct: number
           status: string
           token: string
@@ -404,6 +407,9 @@ export type Database = {
           existing_business_id?: string | null
           expires_at?: string
           id?: string
+          last_send_error?: string | null
+          last_send_status?: string | null
+          last_sent_at?: string | null
           platform_share_pct?: number
           status?: string
           token: string
@@ -426,6 +432,9 @@ export type Database = {
           existing_business_id?: string | null
           expires_at?: string
           id?: string
+          last_send_error?: string | null
+          last_send_status?: string | null
+          last_sent_at?: string | null
           platform_share_pct?: number
           status?: string
           token?: string
@@ -590,6 +599,131 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      business_thread_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          metadata: Json | null
+          sender_email: string | null
+          sender_kind: string
+          sender_user_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json | null
+          sender_email?: string | null
+          sender_kind: string
+          sender_user_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json | null
+          sender_email?: string | null
+          sender_kind?: string
+          sender_user_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_thread_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_thread_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "business_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_threads: {
+        Row: {
+          business_email: string
+          business_id: string | null
+          business_name: string
+          created_at: string
+          creator_id: string
+          deal_id: string | null
+          id: string
+          invite_id: string | null
+          last_message_at: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_email: string
+          business_id?: string | null
+          business_name: string
+          created_at?: string
+          creator_id: string
+          deal_id?: string | null
+          id?: string
+          invite_id?: string | null
+          last_message_at?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_email?: string
+          business_id?: string | null
+          business_name?: string
+          created_at?: string
+          creator_id?: string
+          deal_id?: string | null
+          id?: string
+          invite_id?: string | null
+          last_message_at?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_threads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_threads_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_threads_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_threads_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "business_invites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_error_logs: {
         Row: {
@@ -2670,6 +2804,7 @@ export type Database = {
           total_cents: number
         }[]
       }
+      get_thread_for_invite: { Args: { _token: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2710,6 +2845,10 @@ export type Database = {
         Returns: number
       }
       notify_expiring_deals: { Args: never; Returns: number }
+      post_thread_reply_with_token: {
+        Args: { _body: string; _sender_email?: string; _token: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -2742,6 +2881,9 @@ export type Database = {
         | "redemption_confirmed"
         | "redemption_rejected"
         | "deal_expiring_soon"
+        | "business_thread_message"
+        | "business_invite_accepted"
+        | "business_invite_declined"
       price_match_status:
         | "issued"
         | "redeemed"
@@ -2902,6 +3044,9 @@ export const Constants = {
         "redemption_confirmed",
         "redemption_rejected",
         "deal_expiring_soon",
+        "business_thread_message",
+        "business_invite_accepted",
+        "business_invite_declined",
       ],
       price_match_status: [
         "issued",
