@@ -113,6 +113,7 @@ async function applySocialVisibility(videos: FeedVideo[]) {
 
 async function attachMatchedDeals(videos: FeedVideo[]) {
   await _attachMatchedDealsImpl(videos);
+  await attachMatchedBusiness(videos);
 }
 
 async function attachMatchedBusiness(videos: FeedVideo[]) {
