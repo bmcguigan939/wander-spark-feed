@@ -11,6 +11,10 @@ const inputSchema = z.object({
   notes: z.string().max(500).optional(),
   returnUrl: z.string().url(),
   environment: z.enum(["sandbox", "live"]),
+  // Video the booking click came from. Used to attribute commission
+  // to that video's creator, but ONLY if the creator has an approved
+  // deal_applications contract for this deal.
+  referrerVideoId: z.string().uuid().optional(),
 });
 
 const COMMISSION_PCT = 8;
@@ -57,6 +61,30 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const businessPayout = subtotal - commission;
     const currency = (deal.currency || "GBP").toLowerCase();
 
+    // Resolve referring creator, gated by contract.
+    let referrerVideoId: string | null = null;
+    let creatorId: string | null = null;
+    if (data.referrerVideoId) {
+      const { data: refVideo } = await supabaseAdmin
+        .from("videos")
+        .select("id,creator_id")
+        .eq("id", data.referrerVideoId)
+        .maybeSingle();
+      if (refVideo?.creator_id) {
+        const { data: app } = await supabaseAdmin
+          .from("deal_applications")
+          .select("id")
+          .eq("creator_id", refVideo.creator_id)
+          .eq("deal_id", deal.id)
+          .eq("status", "approved")
+          .maybeSingle();
+        if (app) {
+          referrerVideoId = refVideo.id;
+          creatorId = refVideo.creator_id;
+        }
+      }
+    }
+
     // Insert a pending booking up front so the webhook can match by session id.
     const { data: booking, error: bErr } = await supabaseAdmin
       .from("bookings")
@@ -64,6 +92,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         deal_id: deal.id,
         business_id: deal.business_id,
         user_id: userId,
+        creator_id: creatorId,
+        referrer_video_id: referrerVideoId,
         guests: data.guests,
         travel_date: data.travelDate ?? null,
         subtotal_cents: subtotal,
