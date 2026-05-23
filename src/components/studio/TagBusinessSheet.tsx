@@ -138,7 +138,7 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
           <SheetDescription>
             {step === "details"
               ? `Invite a business you featured to advertise their direct website on Travidz for a flat ${COMMISSION.totalPct}% commission on sales we send them.`
-              : "We drafted an outreach email using your following and this video's stats. Tweak anything, then send it from your own inbox."}
+              : "We drafted an outreach email with your follower count and links to your social feeds so the business can check out your content. Edit anything before sending."}
           </SheetDescription>
         </SheetHeader>
 
@@ -198,7 +198,8 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
           </button>
           <p className="text-[11px] leading-snug text-muted-foreground">
             We'll generate a shareable link AND an AI-written outreach email
-            you can review and send straight from your mail app.
+            (including your follower count and links to your social feeds)
+            you can edit and send straight from your mail app.
           </p>
         </form>
         ) : (
