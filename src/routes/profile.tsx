@@ -6,11 +6,12 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
-import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2 } from "lucide-react";
+import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2, Camera, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -149,6 +150,26 @@ function ProfilePage() {
     mutationFn: () => updateFn({ data: { display_name: displayName || undefined, bio: bio || undefined } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); setEditOpen(false); toast("Profile updated"); },
   });
+  const uploadAvatarM = useMutation({
+    mutationFn: async (file: File) => {
+      if (!user) throw new Error("Not signed in");
+      if (!file.type.startsWith("image/")) throw new Error("Please pick an image file");
+      if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: file.type,
+      });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      await updateFn({ data: { avatar_url: pub.publicUrl } });
+      return pub.publicUrl;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Profile photo updated"); },
+    onError: (e: any) => toast(e?.message ?? "Couldn't update photo"),
+  });
   const becomeM = useMutation({
     mutationFn: () => becomeFn({ data: undefined as any }),
     onSuccess: () => { refreshRoles(); toast("You're a creator now"); },
@@ -186,11 +207,30 @@ function ProfilePage() {
       </header>
       <div className="px-5 pt-5">
         <div className="flex items-center gap-4">
-          <img
-            src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
-            alt={p.username}
-            className="h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
-          />
+          <label className="relative h-20 w-20 shrink-0 cursor-pointer">
+            <img
+              src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
+              alt={p.username}
+              className="h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
+            />
+            <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md">
+              {uploadAvatarM.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            </span>
+            {uploadAvatarM.isPending && (
+              <span className="absolute inset-0 rounded-full bg-black/30" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={uploadAvatarM.isPending}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadAvatarM.mutate(f);
+              }}
+            />
+          </label>
           <div className="min-w-0 flex-1 pb-1">
             <h1 className="truncate font-display text-2xl font-semibold leading-tight">@{p.username}</h1>
             {p.display_name && (

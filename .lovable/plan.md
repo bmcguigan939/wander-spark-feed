@@ -1,19 +1,20 @@
 ## Goal
-Add an "Edit details" option to the `⋯` dropdown on each video card in `/studio/videos` so creators can update title, description, location, tags, and budget on previously uploaded videos.
+Let users set their own profile picture by tapping their avatar circle on the profile screen, picking an image, and having it upload and replace the avatar.
 
 ## Approach
-The edit sheet already exists at `src/components/EditVideoSheet.tsx` (uses `updateVideoMetadata` server fn). It's currently only wired into the per-video insights page. We'll reuse it directly from the videos list.
+The `avatars` storage bucket and RLS policies (path `<userId>/...`) already exist. The `updateMyProfile` server fn already accepts `avatar_url`. So this is a frontend-only change: add a tap-to-upload control overlaying the avatar in `src/routes/profile.tsx`.
 
 ## Changes
 
-### 1. `src/lib/studio.functions.ts`
-Extend `StudioVideo` type and the `listMyVideos` select to include the fields the edit sheet needs:
-- `description`, `destination`, `country`, `city`, `activity_tags`, `budget_tag`
+### `src/routes/profile.tsx`
+- Wrap the avatar `<img>` (line 189) in a `<label>` with a hidden `<input type="file" accept="image/*">`, with a small camera-icon badge in the bottom-right corner of the circle indicating it's tappable.
+- Add an `uploadAvatarM` mutation that:
+  1. Validates type (image/*) and size (≤ 5 MB) — toast on failure.
+  2. Uploads to `avatars` bucket at `${user.id}/${Date.now()}.${ext}` via `supabase.storage.from("avatars").upload(...)` with `upsert: true` and `cacheControl: "3600"`.
+  3. Gets `publicUrl` via `getPublicUrl`.
+  4. Calls `updateFn({ data: { avatar_url: publicUrl } })`.
+  5. On success: invalidate `["my-profile"]`, toast "Profile photo updated".
+- Show a small loading spinner over the avatar while uploading.
+- Use existing `supabase` client (`@/integrations/supabase/client`) and existing `updateFn`/`Camera` icon (lucide-react).
 
-### 2. `src/routes/studio.videos.tsx`
-- Import `EditVideoSheet` and a `Pencil` icon from lucide-react.
-- Add `const [editTarget, setEditTarget] = useState<StudioVideo | null>(null);`
-- Add a new `<DropdownMenuItem onSelect={() => setEditTarget(v)}>` labeled "Edit details" at the top of the dropdown (just under "View insights").
-- Render `<EditVideoSheet>` at the bottom of the page, controlled by `editTarget`, passing `initial` mapped from the selected video's metadata fields.
-
-No backend / RLS / route changes needed — `updateVideoMetadata` already enforces creator ownership.
+No backend, schema, or RLS changes needed.
