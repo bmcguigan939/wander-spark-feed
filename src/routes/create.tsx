@@ -340,7 +340,9 @@ function UploadFlowBody() {
           videoId={smartDealsVideoId}
           onClose={() => {
             setSmartDealsOpen(false);
-            navigate({ to: "/studio/videos", search: { filter: "all" } });
+            if (!publishedVideoId) {
+              navigate({ to: "/studio/videos", search: { filter: "all" } });
+            }
           }}
         />
     </div>
