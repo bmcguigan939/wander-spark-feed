@@ -26,6 +26,17 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("travidz:cc") === "1";
   });
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const [overlayHeight, setOverlayHeight] = useState(0);
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) setOverlayHeight(e.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const { user } = useAuth();
   const qc = useQueryClient();
   const likeFn = useServerFn(toggleLike);
@@ -284,7 +295,10 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       )}
 
       {/* Right rail — frosted circles */}
-      <div className="absolute right-3 bottom-[calc(env(safe-area-inset-bottom)+196px)] z-20 flex flex-col items-center gap-4 text-white">
+      <div
+        className="absolute right-3 z-20 flex flex-col items-center gap-4 text-white transition-[bottom] duration-200"
+        style={{ bottom: `calc(env(safe-area-inset-bottom) + ${overlayHeight + 16}px)` }}
+      >
         <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
         <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
@@ -300,7 +314,10 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       <CommentsSheet open={commentsOpen} onOpenChange={setCommentsOpen} videoId={video.id} />
 
       {/* Bottom overlay */}
-      <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-20 px-4 text-white">
+      <div
+        ref={overlayRef}
+        className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-20 px-4 text-white"
+      >
         <div className="flex items-center gap-3">
           <Link to="/u/$username" params={{ username: video.creator.username }} className="flex items-center gap-3">
             <img
