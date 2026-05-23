@@ -1,80 +1,49 @@
-# Two-way iCal calendar sync for deals
+# Business invite: review T&Cs, then signup-or-login
 
-Add iCal-based availability sync so businesses (and Travidz) never double-book a deal. Industry-standard approach used by Airbnb, Booking.com, Vrbo, etc.
+Right now the business invite email sends them to `/business/invite/$token` where the only signed-out option is a generic "Sign in to accept" button. There's no link to the full Business Agreement, no signup path with their email pre-filled, and no detection that they may already have a Travidz account.
 
-## What businesses will see
+This plan adds those three pieces.
 
-In each deal's settings, a new **"Calendar sync"** section with:
+## 1. Invite email — link to full T&Cs
 
-1. **Your Travidz calendar URL** — a read-only `.ics` link they copy into their own website / Airbnb / Booking.com to import Travidz bookings.
-2. **External calendars** — a list where they paste iCal URLs from their other booking sources (their own site, Airbnb, Booking.com, etc.). Each row shows: name, URL, last synced, # blocked dates, status (OK / error), Remove button.
-3. **Status panel** — "Last poll: 8 min ago · Next: in 7 min · 14 dates blocked from external sources".
+Update `src/lib/email-templates/business-invite.tsx`:
+- Add a secondary link/button under the primary "Claim your listing" CTA: **"Read the full Business Agreement"** → `https://travidz.com/legal/business-agreement`.
+- Add one short line of body copy: *"You can review the full terms before accepting. By clicking Accept on the invite page, you agree to the Travidz Business Agreement."*
+- Pass a new `termsUrl` prop (default `https://travidz.com/legal/business-agreement`) from the send call site in `business-invites.functions.ts` so it's easy to swap envs later.
 
-On the booking page, dates blocked by any external feed are greyed out and unselectable. Booking attempts on a blocked date return a clear error.
+(Hedgehog Corner is just the test recipient — no template branching needed; the same email serves all real businesses.)
 
-## Data model
+## 2. Invite page — detect account state before accept
 
-New table `deal_external_calendars`:
-- `deal_id` (FK → deals)
-- `name` (e.g. "Airbnb", "My website")
-- `ics_url`
-- `last_synced_at`, `last_status` ("ok" | "error"), `last_error`
-- `created_at`
+Update `src/routes/business.invite.$token.tsx` and add a server fn `checkInviteAccountState` in `src/lib/business-invites.functions.ts`:
 
-New table `deal_blocked_dates`:
-- `deal_id`
-- `date` (DATE)
-- `source` ("external_ical" | "travidz_booking" | "manual")
-- `external_calendar_id` (nullable FK)
-- `summary` (the iCal event title, for the audit log)
-- Unique on (deal_id, date, source, external_calendar_id)
+- New server fn (public, no auth): given an invite token, returns `{ email, accountExists: boolean }`. It looks up the invite, reads its `recipient_email`, and checks `auth.users` via `supabaseAdmin.auth.admin.listUsers` (filtered by email) — returns only the boolean, never user data.
+- The invite page calls this on load and renders three states when signed out:
+  1. **No account yet** → primary CTA "Create your business account" → `/business/signup?invite=<token>`.
+  2. **Account exists** → primary CTA "Log in to accept" → `/login?invite=<token>&next=/business/invite/<token>`, with helper text *"You already have a Travidz account for this email — log in to see your new creator listing and contract."*
+  3. **Already signed in** → existing "Accept & claim your listing" button (unchanged).
+- Above the CTAs, add an inline T&C acknowledgement: a checkbox **"I have read and agree to the [Business Agreement](/legal/business-agreement)"** that must be ticked before Accept/Create/Login buttons enable. The link opens the agreement in a new tab.
+- Persist this acceptance: when `acceptInvite` runs, also insert a row into a small `business_agreement_acceptances` table (`user_id`, `invite_id`, `agreement_version`, `accepted_at`, `ip`) so we have an audit trail.
 
-RLS: business owners can read/write their own; public can read `deal_blocked_dates` only for active deals (needed by the booking UI).
+## 3. Business signup — email pre-filled from invite
 
-## Outbound feed (Travidz → others)
+New route `src/routes/business.signup.tsx`:
+- Reads `?invite=<token>` from search params.
+- Calls the same `checkInviteAccountState` fn to fetch the locked `email` from the invite.
+- Renders a minimal form: **email (read-only, pre-filled), password, confirm password**, plus the same T&C checkbox.
+- On submit: `supabase.auth.signUp({ email, password, options: { emailRedirectTo: <invite url> } })`, then on success calls `acceptInvite({ token })` and navigates to `/business`.
+- If signup returns "user already registered", flips the UI to *"You already have an account — log in instead"* with a link to `/login?invite=<token>`.
 
-Public TSS route: `GET /api/public/ical/deal/$dealId.ics`
-- No auth (iCal URLs are unguessable by convention; we use a per-deal random token in the path: `/api/public/ical/deal/$dealId/$token.ics`).
-- Returns a valid `VCALENDAR` with one `VEVENT` per confirmed booking (`status IN ('confirmed','redeemed')`), using `travel_date` + `nights` (or single-day for non-stay deals).
-- Cache headers: `Cache-Control: public, max-age=900` (15 min).
+Update `/login` (`src/routes/login.tsx`) to honor `?invite=<token>&next=...` — after a successful sign-in, redirect to `next` (defaulting to `/business/invite/<token>`) so they land back on the invite page where the Accept button is now active.
 
-`deals` gets a new column `ical_token` (random, generated on first feed access).
+## 4. Database
 
-## Inbound sync (others → Travidz)
+One small migration:
+- `business_agreement_acceptances` table with `id`, `user_id`, `invite_id` (nullable, FK to `business_invites`), `agreement_version` (text, default `'v1'`), `accepted_at`, `ip`, `user_agent`.
+- RLS: users can `SELECT` their own rows; only service role can `INSERT` (writes happen from `acceptInvite` server fn via `supabaseAdmin`).
 
-Server route: `POST /api/public/hooks/sync-external-calendars` (cron, every 15 min).
-- Reads all `deal_external_calendars` rows.
-- For each: fetch the `.ics`, parse with the `ical.js` npm package, extract date ranges for the next 18 months, upsert into `deal_blocked_dates` (and delete rows no longer in the feed for that source).
-- Records `last_synced_at`, `last_status`, `last_error`.
+## Out of scope
 
-Manual "Sync now" button on each external calendar row hits the same logic for one row via a `createServerFn`.
-
-## Booking flow integration
-
-In `createBookingCheckout` (and the date picker on `book.$dealId.tsx`):
-- Before allowing checkout, check `deal_blocked_dates` for the requested `travel_date` (and nights range). If any date is blocked, throw "These dates are no longer available".
-- Date picker queries blocked dates for the next 12 months and disables them.
-
-When a Travidz booking is confirmed (in the Stripe webhook), insert a `travidz_booking` row into `deal_blocked_dates` so the outbound feed picks it up on next refresh.
-
-## Cron
-
-One pg_cron job every 15 minutes calling `/api/public/hooks/sync-external-calendars` with the standard `apikey` header pattern.
-
-## Honest limitations to surface in the UI
-
-A short helper text under the calendar section:
-> "iCal sync is near-real-time — typically 5–30 min lag depending on each platform. For very high-volume properties or last-minute bookings, dates may briefly appear available on multiple platforms."
-
-## Technical notes
-
-- Use `ical.js` (pure JS, Worker-compatible) for parsing — confirmed safe for the Cloudflare Worker runtime.
-- All-day `VEVENT`s expand to inclusive start, **exclusive** end (iCal convention) — handle this carefully or off-by-one errors will block/unblock the wrong day.
-- Polling fetches use a 10s timeout and skip the row on failure (don't fail the whole job).
-- Audit log entry written on every block/unblock so businesses can see why a date became unavailable.
-
-## Out of scope (future)
-
-- Direct Google Calendar / Airbnb / Booking.com API (OAuth) integration — Plan C, only if hosts ask.
-- Per-night pricing imported from external calendars.
-- SMS/email alerts when sync fails for >24h (could add later).
+- Versioned T&C diffs / re-acceptance prompts on agreement updates (we just stamp `v1` for now).
+- Google sign-up on the business signup page (email/password only for v1 — keeps the email-locked-to-invite guarantee simple).
+- Changing the creator-side outreach flow or the email infrastructure itself.

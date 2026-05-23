@@ -271,7 +271,12 @@ export const declineInvite = createServerFn({ method: "POST" })
 export const acceptInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(8).max(128) }).parse(input),
+    z
+      .object({
+        token: z.string().min(8).max(128),
+        agreementVersion: z.string().max(20).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
@@ -394,5 +399,41 @@ export const acceptInvite = createServerFn({ method: "POST" })
       deal_id: deal.id,
     });
 
+    // Record T&C acceptance for audit trail.
+    await supabaseAdmin.from("business_agreement_acceptances").insert({
+      user_id: userId,
+      invite_id: invite.id,
+      agreement_version: data.agreementVersion ?? "v1",
+    });
+
     return { ok: true, dealId: deal.id };
+  });
+
+// Public — no auth. Given an invite token, returns the recipient email locked
+// to the invite and whether a Travidz auth account already exists for it.
+// Used by the invite landing page to route to signup vs login.
+export const checkInviteAccountState = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(8).max(128) }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ email: string; accountExists: boolean }> => {
+    const { data: invite, error } = await supabaseAdmin
+      .from("business_invites")
+      .select("contact_email")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!invite) throw new Error("Invite not found");
+
+    const email = invite.contact_email.toLowerCase();
+    let accountExists = false;
+    try {
+      const { data: exists } = await supabaseAdmin.rpc("email_has_account", {
+        _email: email,
+      });
+      accountExists = !!exists;
+    } catch {
+      accountExists = false;
+    }
+    return { email, accountExists };
   });

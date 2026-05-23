@@ -344,6 +344,7 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
         subject: data.subject,
         bodyText: data.body,
         inviteUrl,
+        termsUrl: `${SITE_URL}/legal/business-agreement`,
       }),
     });
 
