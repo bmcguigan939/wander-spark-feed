@@ -179,6 +179,15 @@ function InsightsPage() {
           <div className="truncate text-sm font-semibold">{v.title || "Untitled"}</div>
           <div className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">{v.derived_state}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">Posted {new Date(v.created_at).toLocaleDateString()}</div>
+          {(v as any).status === "ready" && v.derived_state !== "processing" && (
+            <Link
+              to="/feed/playlist"
+              search={{ ids: [id], start: id }}
+              className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-soft"
+            >
+              Preview
+            </Link>
+          )}
         </div>
       </div>
 
