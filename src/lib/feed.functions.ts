@@ -69,11 +69,34 @@ async function fetchFeedRows(
   if (error) throw new Error(error.message);
   const videos = (data ?? []) as unknown as FeedVideo[];
   await attachMatchedDeals(videos);
+  await applySocialVisibility(videos);
   return videos;
 }
 
 function locKey(country?: string | null, city?: string | null) {
   return `${(country ?? "").trim().toLowerCase()}|${(city ?? "").trim().toLowerCase()}`;
+}
+
+async function applySocialVisibility(videos: FeedVideo[]) {
+  // Creator-level toggle: when show_social_links=false, strip cross_links so
+  // the platform icons don't render on any of their videos.
+  const creatorIds = Array.from(
+    new Set(videos.map((v: any) => v.creator_id).filter(Boolean) as string[]),
+  );
+  if (creatorIds.length === 0) return;
+  const { data: rows } = await supabaseAdmin
+    .from("profile_socials")
+    .select("user_id,show_social_links")
+    .in("user_id", creatorIds);
+  const hidden = new Set(
+    (rows ?? [])
+      .filter((r: any) => r.show_social_links === false)
+      .map((r: any) => r.user_id),
+  );
+  if (!hidden.size) return;
+  for (const v of videos as any[]) {
+    if (hidden.has(v.creator_id)) v.cross_links = [];
+  }
 }
 
 async function attachMatchedDeals(videos: FeedVideo[]) {
