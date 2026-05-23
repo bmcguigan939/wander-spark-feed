@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, X, Tag, Loader2, ExternalLink, Send, Search, Building2 } from "lucide-react";
 import { suggestDealsForVideo, attachDealsBulk } from "@/lib/video-deals.functions";
 import {
@@ -43,11 +43,19 @@ export function SmartDealsSheet({
     staleTime: 60_000,
   });
 
+  // Reset selection when sheet opens for a different video.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [videoId, open]);
+
   // Default-select top 3 once loaded (opt-out boosts attach rate).
-  if (data?.deals && selected.size === 0 && data.deals.length > 0) {
-    const defaults = new Set(data.deals.slice(0, 3).map((d) => d.id));
-    if (defaults.size > 0) setSelected(defaults);
-  }
+  useEffect(() => {
+    if (!data?.deals || data.deals.length === 0) return;
+    setSelected((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set(data.deals.slice(0, 3).map((d) => d.id));
+    });
+  }, [data?.deals]);
 
   const attachM = useMutation({
     mutationFn: () =>
@@ -62,38 +70,44 @@ export function SmartDealsSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+72px)] sm:items-center sm:pb-0"
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-card p-5 shadow-2xl sm:rounded-3xl"
+        className="flex w-full max-w-md max-h-[90dvh] flex-col rounded-t-3xl bg-card shadow-2xl sm:rounded-3xl"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold">Smart deals for this video</h2>
+        <div className="shrink-0 px-5 pt-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-bold">Smart deals for this video</h2>
+            </div>
+            <button onClick={onClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button onClick={onClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted">
-            <X className="h-4 w-4" />
-          </button>
+          <p className="mt-1 text-xs text-muted-foreground">
+            AI found bookable activities matching your destination. Viewers can book in one tap — you earn commission on every booking.
+          </p>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          AI found bookable activities matching your destination. Viewers can book in one tap — you earn commission on every booking.
-        </p>
 
-        {isLoading && (
-          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Finding deals…
-          </div>
-        )}
-        {isError && (
-          <p className="mt-6 text-sm text-destructive">Couldn't load suggestions. You can skip and add deals later from your studio.</p>
-        )}
-        {data?.deals && data.deals.length === 0 && (
-          <BusinessOutreachPanel videoId={videoId!} onDone={onClose} />
-        )}
+        <div className="flex-1 overflow-y-auto px-5 pb-2">
+          {isLoading && (
+            <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Finding deals…
+            </div>
+          )}
+          {isError && (
+            <p className="mt-6 text-sm text-destructive">Couldn't load suggestions. You can skip and add deals later from your studio.</p>
+          )}
+          {data?.deals && data.deals.length === 0 && (
+            <BusinessOutreachPanel videoId={videoId!} onDone={onClose} />
+          )}
 
-        <ul className="mt-4 space-y-2">
-          {data?.deals.map((d) => {
+          <ul className="mt-4 space-y-2">
+            {data?.deals.map((d) => {
             const checked = selected.has(d.id);
             return (
               <li key={d.id}>
@@ -134,27 +148,29 @@ export function SmartDealsSheet({
               </li>
             );
           })}
-        </ul>
-
-        <div className="sticky bottom-0 mt-4 flex gap-2 bg-card pt-2">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-full border border-border py-2.5 text-sm font-semibold text-muted-foreground"
-          >
-            Skip
-          </button>
-          <button
-            disabled={selected.size === 0 || attachM.isPending}
-            onClick={() => attachM.mutate()}
-            className="flex-1 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            {attachM.isPending ? "Attaching…" : `Attach ${selected.size || ""}`.trim()}
-          </button>
+          </ul>
         </div>
 
-        <p className="mt-3 text-center text-[10px] text-muted-foreground">
-          Travidz earns a commission when viewers book — you pay nothing extra.
-        </p>
+        <div className="shrink-0 border-t border-border bg-card px-5 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-full border border-border py-2.5 text-sm font-semibold text-muted-foreground"
+            >
+              Skip
+            </button>
+            <button
+              disabled={selected.size === 0 || attachM.isPending}
+              onClick={() => attachM.mutate()}
+              className="flex-1 rounded-full bg-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {attachM.isPending ? "Attaching…" : `Attach ${selected.size || ""}`.trim()}
+            </button>
+          </div>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground">
+            Travidz earns a commission when viewers book — you pay nothing extra.
+          </p>
+        </div>
       </div>
     </div>
   );

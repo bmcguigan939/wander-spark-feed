@@ -1,35 +1,55 @@
-# Stop making users tap "Refresh status"
+# Fix the "Smart deals" sheet after upload
 
-## Problem
+## What this screen is
 
-Today, when a video is processing, two things are supposed to update the UI automatically:
+After a user uploads a video from `/create`, the app opens the **Smart Deals sheet** (`src/components/create/SmartDealsSheet.tsx`). It does three things in order:
 
-1. The Mux webhook (`/api/public/mux-webhook`) flips `videos.status` to `ready` when Mux finishes encoding.
-2. The realtime subscription (`useRealtimeMyVideos`) invalidates the studio query so the list re-renders instantly.
+1. Calls `suggestDealsForVideo` — Travidz AI looks for already-bookable activities matching the video's destination. If any are found, they're listed with checkboxes so the creator can attach them (the top 3 are pre-selected). Attaching means viewers can book in one tap and the creator earns commission.
+2. If no bookable deals exist, the **Business Outreach panel** (the state in your screenshot) takes over. It polls `listSuggestionsForVideo` every 5s while the AI extracts business details (name, website, email, phone) from the video. A **Re-scan** button retriggers extraction.
+3. When a suggestion appears, the creator can hit **Send collaboration contract**, which opens an inline form (`InviteForm`) that calls `createBusinessInvite` — Travidz then emails the business a contract at the standard commission split.
 
-In practice, users still sit on the Videos tab watching a "Processing" pill and have to tap **Refresh status** to nudge it. That can happen for legitimate reasons (webhook delay, transient failure, dropped realtime socket on mobile, app backgrounded during the webhook fire). The realtime/webhook path is the fast path — we just need a reliable fallback so the UI eventually catches up on its own.
+The sheet always has a **Skip / Attach** footer at the bottom.
+
+## Why it doesn't scroll
+
+Three problems combine on mobile:
+
+1. **The sticky footer + bottom nav overlap.** The sheet container has `max-h-[85dvh] overflow-y-auto`, and the `Skip / Attach` row uses `sticky bottom-0`. The app's `BottomNav` is also `sticky bottom-0 z-50` and sits in the same stacking context — on a 798px viewport with browser chrome it visually clips the lower ~80px of the sheet, which is exactly where the footer and "Travidz handles the contract…" text live. That's why in the screenshot the footer is missing and the panel looks cut off.
+2. **No scroll is actually triggered** because `overflow-y-auto` is on the *outer* white card. On this content height, the card hits 85dvh, but the area visible above the bottom nav is smaller than 85dvh, so the user sees a frozen panel with no scrollbar and no inertia.
+3. **Render-time `setState` in `SmartDealsSheet`** (lines 47–50) sets default-selected deals during render instead of inside `useEffect`. It currently only fires once because of the size check, but it's a React warning waiting to happen and unrelated to scroll.
 
 ## Fix
 
-Add automatic background polling on the Studio Videos page whenever there is at least one processing video. Keep the manual button as a safety net but rephrase the copy so it no longer reads like a required action.
+Frontend-only change to `src/components/create/SmartDealsSheet.tsx`.
 
-### Behaviour
+### Layout rework
 
-- While `counts.processing > 0`:
-  - Refetch the `studio-videos` list on an interval (10s, backing off to 30s after a minute, capped at 60s).
-  - Every other tick, also call `reconcileMyStuckUploads` silently (no toast) so Mux is actively queried for stuck uploads — this is what the button does today.
-  - Pause polling when the browser tab is hidden (`document.visibilityState === "hidden"`), resume on focus. This avoids burning battery / quota on backgrounded mobile tabs.
-  - Stop polling as soon as `counts.processing === 0`.
-- Realtime subscription stays as-is — it remains the instant path when the webhook fires normally.
-- The processing banner is reworded to: "Checking for updates automatically…" with a small spinner. The explicit "Refresh status" button is kept (collapsed into an icon-only button) for users who want to force a check; it still surfaces toasts as today.
+Switch the modal card to a 3-row flex column so the middle section is the only scroller, and the footer is always reachable:
 
-### Files touched
+```text
+[ header  — shrink-0 ]
+[ scroll  — flex-1 overflow-y-auto, includes outreach panel + deals list ]
+[ footer  — shrink-0, Skip / Attach, safe-area padding ]
+```
 
-- `src/routes/studio.videos.tsx` — add the auto-poll effect, rewire the banner copy, keep the manual button as a secondary action.
+Concretely:
+- Card: `flex max-h-[90dvh] flex-col` (drop `overflow-y-auto` from the card).
+- Header block (icon + title + close + intro paragraph): `shrink-0`.
+- Wrap everything between the header and the footer in a `<div className="flex-1 overflow-y-auto -mx-5 px-5">` so the deal list and `BusinessOutreachPanel` scroll inside it.
+- Footer: remove `sticky bottom-0`, make it `shrink-0 border-t border-border bg-card pt-3 pb-[max(env(safe-area-inset-bottom),0.5rem)]`. Move the small "Travidz earns a commission…" caption inside this footer block so it's always visible.
 
-No server, schema, or webhook changes. Frontend-only.
+### Clear the bottom nav
 
-## Out of scope
+The modal needs to render *above* the bottom nav and leave room for it:
+- Bump the backdrop's `z-50` to `z-[60]` so the sheet sits above `BottomNav`.
+- On mobile (`< sm`), give the backdrop `pb-[calc(env(safe-area-inset-bottom)+72px)]` so the bottom of the sheet card never hides behind the 64–72px nav.
 
-- Diagnosing why the Mux webhook occasionally lags (separate investigation; would require checking `MUX_WEBHOOK_SECRET` config and Mux dashboard delivery logs).
-- Push notification when a video goes live (already partially handled via the realtime toast in `useRealtimeMyVideos`).
+### Render-time state bug
+
+Replace the inline `if (data?.deals && selected.size === 0) setSelected(...)` with a `useEffect` keyed on `data?.deals` and `videoId` so default selection runs after render and resets when the sheet reopens for a different video.
+
+### Out of scope
+
+- Backend / AI extraction speed (separate from this screen — the polling in `BusinessOutreachPanel` already handles delays).
+- Redesigning the outreach copy or the invite form.
+- The studio auto-poll work shipped previously.
