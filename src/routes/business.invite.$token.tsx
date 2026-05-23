@@ -213,22 +213,73 @@ function InvitePage() {
       </div>
 
       <div className="mt-6 space-y-2">
+        <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-[13px] leading-snug">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-primary"
+          />
+          <span className="text-muted-foreground">
+            I have read and agree to the{" "}
+            <a
+              href="/legal/business-agreement"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              Travidz Business Agreement
+            </a>
+            .
+          </span>
+        </label>
+
         {user ? (
           <button
             onClick={() => acceptM.mutate()}
-            disabled={acceptM.isPending}
+            disabled={acceptM.isPending || !agreed}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {acceptM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Accept & claim your listing
           </button>
+        ) : accountQ.data?.accountExists ? (
+          <>
+            <Link
+              to="/login"
+              search={{ invite: token, next: `/business/invite/${token}` } as any}
+              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!agreed ? "pointer-events-none opacity-50" : ""}`}
+            >
+              Log in to accept
+            </Link>
+            <p className="px-1 text-[11px] text-muted-foreground">
+              You already have a Travidz account for{" "}
+              <span className="font-medium">{accountQ.data.email}</span>. Log in
+              to see your new creator listing and contract.
+            </p>
+          </>
+        ) : accountQ.data ? (
+          <>
+            <Link
+              to="/business/signup"
+              search={{ invite: token } as any}
+              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!agreed ? "pointer-events-none opacity-50" : ""}`}
+            >
+              Create your business account
+            </Link>
+            <p className="px-1 text-[11px] text-muted-foreground">
+              We'll create a free Travidz business account for{" "}
+              <span className="font-medium">{accountQ.data.email}</span> — just
+              set a password.
+            </p>
+          </>
         ) : (
-          <Link
-            to="/login"
-            className="inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft"
+          <button
+            disabled
+            className="inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground opacity-50"
           >
-            Sign in to accept
-          </Link>
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </button>
         )}
 
         {!showDecline ? (
