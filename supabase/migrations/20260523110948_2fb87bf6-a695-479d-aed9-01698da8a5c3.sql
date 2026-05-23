@@ -1,0 +1,1 @@
+ALTER TABLE public.business_invites ALTER COLUMN website_url DROP NOT NULL;

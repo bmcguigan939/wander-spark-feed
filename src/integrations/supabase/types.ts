@@ -387,7 +387,7 @@ export type Database = {
           token: string
           updated_at: string
           video_id: string
-          website_url: string
+          website_url: string | null
         }
         Insert: {
           accepted_business_id?: string | null
@@ -409,7 +409,7 @@ export type Database = {
           token: string
           updated_at?: string
           video_id: string
-          website_url: string
+          website_url?: string | null
         }
         Update: {
           accepted_business_id?: string | null
@@ -431,7 +431,7 @@ export type Database = {
           token?: string
           updated_at?: string
           video_id?: string
-          website_url?: string
+          website_url?: string | null
         }
         Relationships: [
           {
