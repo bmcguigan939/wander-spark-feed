@@ -207,11 +207,30 @@ function ProfilePage() {
       </header>
       <div className="px-5 pt-5">
         <div className="flex items-center gap-4">
-          <img
-            src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
-            alt={p.username}
-            className="h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
-          />
+          <label className="relative h-20 w-20 shrink-0 cursor-pointer">
+            <img
+              src={p.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(p.username)}`}
+              alt={p.username}
+              className="h-20 w-20 rounded-full border-4 border-background object-cover shadow-cinematic"
+            />
+            <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md">
+              {uploadAvatarM.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            </span>
+            {uploadAvatarM.isPending && (
+              <span className="absolute inset-0 rounded-full bg-black/30" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={uploadAvatarM.isPending}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadAvatarM.mutate(f);
+              }}
+            />
+          </label>
           <div className="min-w-0 flex-1 pb-1">
             <h1 className="truncate font-display text-2xl font-semibold leading-tight">@{p.username}</h1>
             {p.display_name && (
