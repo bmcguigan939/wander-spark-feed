@@ -164,6 +164,54 @@ function VideosPage() {
   const counts = data?.counts ?? { all: 0, live: 0, scheduled: 0, draft: 0, processing: 0, hidden: 0 };
   const videos = data?.videos ?? [];
 
+  // Auto-poll while videos are processing so users don't have to tap Refresh.
+  // - Refetch the list every 10s (backing off to 30s/60s).
+  // - Every other tick, silently call reconcile to nudge Mux.
+  // - Pause when the tab is hidden; resume on focus.
+  useEffect(() => {
+    if (counts.processing <= 0) return;
+    let cancelled = false;
+    let tickCount = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const nextDelay = () => {
+      if (tickCount < 6) return 10_000; // first minute: every 10s
+      if (tickCount < 12) return 30_000; // next 3 min: every 30s
+      return 60_000; // after that: every 60s
+    };
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        timer = setTimeout(tick, 5_000);
+        return;
+      }
+      try {
+        await qc.invalidateQueries({ queryKey: ["studio-videos"] });
+        if (tickCount % 2 === 1) {
+          try { await reconcileFn(); } catch { /* silent */ }
+        }
+      } catch { /* silent */ }
+      tickCount += 1;
+      if (!cancelled) timer = setTimeout(tick, nextDelay());
+    };
+
+    timer = setTimeout(tick, nextDelay());
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        qc.invalidateQueries({ queryKey: ["studio-videos"] });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [counts.processing, qc, reconcileFn]);
+
   return (
     <div className="px-5 pb-24 pt-6">
       <div className="relative">
@@ -199,16 +247,18 @@ function VideosPage() {
 
       {counts.processing > 0 && (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2">
-          <p className="text-[11px] text-muted-foreground">
-            {counts.processing} video{counts.processing === 1 ? "" : "s"} still processing. Tap refresh if it's been a while.
+          <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
+            {counts.processing} video{counts.processing === 1 ? "" : "s"} processing — checking automatically…
           </p>
           <button
             onClick={() => reconcileM.mutate()}
             disabled={reconcileM.isPending}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+            aria-label="Check now"
+            title="Check now"
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-50"
           >
             <RefreshCw className={`h-3 w-3 ${reconcileM.isPending ? "animate-spin" : ""}`} />
-            {reconcileM.isPending ? "Refreshing…" : "Refresh status"}
           </button>
         </div>
       )}
