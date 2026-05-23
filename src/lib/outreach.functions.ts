@@ -53,12 +53,21 @@ function fallbackInviteDraft(args: {
   creatorName: string;
   videoTitle: string;
   inviteUrl: string;
+  followers?: number;
+  socialLinksText?: string;
 }): Draft {
+  const followerLine = args.followers && args.followers > 0
+    ? `I share my travel content with ${args.followers.toLocaleString()} followers on Travidz`
+    : `I share my travel content`;
+  const socialsBlock = args.socialLinksText
+    ? `\nYou can check out my work here:\n${args.socialLinksText}\n`
+    : ``;
   return {
     subject: `Featured ${args.businessName} on Travidz — claim your listing`,
     body:
       `Hi ${args.businessName} team,\n\n` +
-      `I'm ${args.creatorName} — I recently featured you in my Travidz video "${args.videoTitle}" and travellers have been asking how to book directly with you.\n\n` +
+      `I'm ${args.creatorName} — I recently featured you in my Travidz video "${args.videoTitle}" and travellers have been asking how to book directly with you. ${followerLine}, and I'd love to keep promoting you on a commission basis.\n` +
+      socialsBlock +
       `Travidz lets you advertise your direct website for a flat ${COMMISSION.totalPct}% commission on sales we send you — no setup fee, no monthly cost.\n\n` +
       `Claim your listing in one click:\n${args.inviteUrl}\n\n` +
       `Happy to answer any questions.\n\nThanks,\n${args.creatorName}`,
