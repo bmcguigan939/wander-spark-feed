@@ -13,6 +13,7 @@ import { MusicPickerSheet } from "@/components/create/MusicPickerSheet";
 import type { MusicTrack } from "@/lib/music.functions";
 import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/lib/cross-links.functions";
+import { ShareToSocialsCard } from "@/components/create/ShareToSocialsCard";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -99,6 +100,8 @@ function UploadFlowBody() {
   const [musicOpen, setMusicOpen] = useState(false);
   const [smartDealsOpen, setSmartDealsOpen] = useState(false);
   const [smartDealsVideoId, setSmartDealsVideoId] = useState<string | null>(null);
+  const [publishedVideoId, setPublishedVideoId] = useState<string | null>(null);
+  const [publishedTitle, setPublishedTitle] = useState("");
   const [crossLinks, setCrossLinks] = useState<Record<CrossLinkPlatform, string>>({
     instagram: "", tiktok: "", facebook: "", youtube: "", x: "",
   });
@@ -159,12 +162,14 @@ function UploadFlowBody() {
         publishMode === "now" ? "Published — processing in the background" :
         publishMode === "draft" ? "Saved as draft" : "Scheduled"
       );
-      // Open Smart Deals sheet if we have a destination signal; otherwise jump.
-      if (videoId && (country || city || destination)) {
-        setSmartDealsVideoId(videoId);
-        setSmartDealsOpen(true);
-      } else {
+      // Draft → straight to studio. Otherwise show the share-to-socials step.
+      if (publishMode === "draft") {
         navigate({ to: "/studio/videos", search: { filter: "all" } });
+        return;
+      }
+      if (videoId) {
+        setPublishedTitle(title);
+        setPublishedVideoId(videoId);
       }
     },
     onError: (e: any) => toast(e.message ?? "Failed to save"),
@@ -172,13 +177,23 @@ function UploadFlowBody() {
 
   return (
     <div className="mt-6">
+        {publishedVideoId && (
+          <ShareToSocialsCard
+            videoId={publishedVideoId}
+            title={publishedTitle}
+            onOpenSmartDeals={(country || city || destination)
+              ? () => { setSmartDealsVideoId(publishedVideoId); setSmartDealsOpen(true); }
+              : undefined}
+            onDone={() => navigate({ to: "/studio/videos", search: { filter: "all" } })}
+          />
+        )}
         {uploadError && !uploading && (
           <div className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <div className="font-semibold">Upload failed</div>
             <div className="mt-1 break-words text-xs opacity-90">{uploadError}</div>
           </div>
         )}
-        {!file && (
+        {!file && !publishedVideoId && (
           <label className="mt-6 flex h-64 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-card text-center">
             <Upload className="mb-3 h-8 w-8 text-primary" />
             <span className="text-sm font-semibold">Choose a video</span>
@@ -187,7 +202,7 @@ function UploadFlowBody() {
           </label>
         )}
 
-        {file && uploading && (
+        {file && uploading && !publishedVideoId && (
           <div className="mt-6 rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin text-primary" /><span className="text-sm font-medium">Uploading {file.name}</span></div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>
@@ -195,7 +210,7 @@ function UploadFlowBody() {
           </div>
         )}
 
-        {file && !uploading && videoId && (
+        {file && !uploading && videoId && !publishedVideoId && (
           <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) finalizeM.mutate(); }} className="mt-6 space-y-3">
             <Field label="Title">
               <div className="relative">
@@ -325,7 +340,9 @@ function UploadFlowBody() {
           videoId={smartDealsVideoId}
           onClose={() => {
             setSmartDealsOpen(false);
-            navigate({ to: "/studio/videos", search: { filter: "all" } });
+            if (!publishedVideoId) {
+              navigate({ to: "/studio/videos", search: { filter: "all" } });
+            }
           }}
         />
     </div>

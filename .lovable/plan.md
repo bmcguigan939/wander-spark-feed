@@ -1,57 +1,56 @@
-# Fix right-rail action buttons
 
-## What's actually broken
+## Goal
 
-A single Like insert is currently being counted **twice** because the database has two identical triggers on every counter table. Same issue affects Save (Bookmark) and Comment counts, plus notifications fire twice.
+Make it effortless for a creator to (1) save their social profile links once, and (2) immediately after publishing a Travidz video, copy the Travidz link and jump straight into Instagram / TikTok / YouTube / Facebook / X to paste it into their bio, caption, or story — so their existing followers land on the Travidz video feed, where bookings and area recommendations are wired up.
 
-Duplicate triggers found on the database:
+The destination URL already works today: `/?v=<videoId>` deep-links into the feed with the video, its attached deals and the area-based "for you" feed. We're not changing that — only the social hand-off around it.
 
-| Table    | Trigger A           | Trigger B (duplicate)    | Function                    |
-|----------|---------------------|--------------------------|-----------------------------|
-| likes    | trg_likes_count     | trg_likes_bump           | bump_video_like_count       |
-| saves    | trg_saves_count     | trg_saves_bump           | bump_video_save_count       |
-| comments | comments_bump_count | trg_comments_bump        | bump_video_comment_count    |
-| likes    | trg_notify_like     | trg_notify_on_like       | notify_on_like              |
-| comments | trg_notify_comment  | trg_notify_on_comment    | notify_on_comment           |
-| comments | comments_touch_updated_at | trg_comments_touch_updated_at | touch_updated_at     |
+## What we'll build
 
-That's why:
-- Heart: 0 → **+2** on click, click again → **−2** back to 0 (toggle logic is fine, count is double-counted).
-- Comment: posting 1 comment shows **2**.
-- Bookmark: same +2/−2 behavior (it does work, but the count makes it look wrong).
+### 1. New "Share to your socials" step after publish
 
-The Share button itself does work, but in the Lovable preview iframe `navigator.share` is blocked and `navigator.clipboard.writeText` can silently reject without a toast, so it looks dead.
+After `finalizeM` succeeds in `src/routes/create.tsx`, replace the immediate redirect with a small success card that shows:
 
-## Fix
+- The Travidz video URL (read-only input + Copy button + native Share button)
+- A QR code (rendered client-side, no new deps if `qrcode.react` is added — single ~12 KB package) for stories / printed media
+- A row of platform buttons (Instagram, TikTok, YouTube, Facebook, X) that:
+  - Copy the URL to the clipboard
+  - Open the platform — preferring the creator's saved profile URL (so they land directly on their own Instagram/TikTok page ready to paste), with sensible web fallbacks if no handle is saved (e.g. `https://www.instagram.com/`, `https://www.tiktok.com/upload`)
+  - Where the platform supports a web "compose / new post" URL (X intent, Facebook sharer), use that with the Travidz link prefilled
+- Secondary actions: "Open Smart Deals" (existing sheet) and "Done → My videos"
 
-### 1. Migration — drop the duplicate triggers (keep one of each)
+This success card lives in `create.tsx` only (presentation layer). Smart Deals stays available, just no longer auto-opens — the share step is the new primary CTA.
 
-```sql
-DROP TRIGGER IF EXISTS trg_likes_bump ON public.likes;
-DROP TRIGGER IF EXISTS trg_saves_bump ON public.saves;
-DROP TRIGGER IF EXISTS trg_comments_bump ON public.comments;
-DROP TRIGGER IF EXISTS trg_notify_on_like ON public.likes;
-DROP TRIGGER IF EXISTS trg_notify_on_comment ON public.comments;
-DROP TRIGGER IF EXISTS trg_comments_touch_updated_at ON public.comments;
-```
+### 2. Tidier profile socials editor
 
-### 2. Migration — reconcile existing inflated counts
+In `src/routes/profile.tsx` the "Link my socials" sheet today only accepts handles. We'll:
 
-Recompute `like_count`, `save_count`, `comment_count` on `videos` from the source tables so today's doubled numbers settle back to reality:
+- Accept either a handle or a full URL per platform — normalise to a canonical `https://…` URL on save, derive the display handle for chips
+- Add a small "Open" link next to each saved row so the creator can verify it works
+- Keep the existing fields (YouTube, TikTok, Instagram, Facebook, X, Website)
 
-```sql
-UPDATE public.videos v SET
-  like_count    = COALESCE((SELECT count(*) FROM public.likes    WHERE video_id = v.id), 0),
-  save_count    = COALESCE((SELECT count(*) FROM public.saves    WHERE video_id = v.id), 0),
-  comment_count = COALESCE((SELECT count(*) FROM public.comments WHERE video_id = v.id), 0);
-```
+No schema change required — `profile_socials.*_handle` columns continue to store the handle; we'll add lightweight URL parsing in `src/lib/social.functions.ts`'s `socialsInput` (strip `https://www.instagram.com/` etc. back to a handle before save). Display-side, we compose the URL from the handle when rendering the share buttons.
 
-### 3. `src/components/feed/VideoCard.tsx` — harden Share fallback
+### 3. Share button on existing video cards keeps working
 
-Update `share()` so the clipboard path is wrapped in try/catch and falls back to a manual "copy this link" toast when both `navigator.share` and `navigator.clipboard` are unavailable/blocked (preview iframe case). Also show a success toast after a real Web Share completes.
+`src/components/feed/VideoCard.tsx` already shares `/?v=<id>` — no change needed. The new post-publish screen reuses the same URL shape so analytics, deals and the area feed all behave identically.
 
 ## Out of scope
 
-- No changes to the toggle/server-fn logic — it's correct.
-- No schema changes beyond dropping the duplicate triggers and the one-time count reconcile.
-- No UI redesign of the right rail.
+- No database migration. `profile_socials` already has every column we need.
+- No new auth/permissions, no changes to feed ranking or booking flow.
+- No native deep-linking into the Instagram/TikTok apps via custom URL schemes (unreliable on web). We open the web URL — on mobile, the OS routes that to the installed app automatically.
+- No changes to `cross_links` on individual videos (that feature stays as-is).
+
+## Files touched
+
+- `src/routes/create.tsx` — add post-publish success view with copy / QR / platform buttons; gate the existing redirect behind a "Done" button.
+- `src/routes/profile.tsx` — accept URL-or-handle in the socials sheet, add "Open" link per row.
+- `src/lib/social.functions.ts` — extend `handleSchema` to extract a handle from a pasted profile URL.
+- `src/components/create/ShareToSocialsCard.tsx` *(new)* — the success card UI, reused nowhere else for now but isolated for clarity.
+- `package.json` — add `qrcode.react` (~12 KB) for the QR.
+
+## Tech notes
+
+- Platform URL helpers live in one small util (e.g. `src/lib/social-share.ts`) so the post-publish card and the public profile chips share the same logic.
+- Web compose URLs we'll use: X → `https://x.com/intent/post?text=…&url=…`, Facebook → `https://www.facebook.com/sharer/sharer.php?u=…`. Instagram, TikTok and YouTube don't have prefill URLs, so those buttons copy the link and open the creator's profile (or the platform's upload page) in a new tab with a toast: "Link copied — paste it into your post."

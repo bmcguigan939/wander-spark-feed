@@ -331,6 +331,15 @@ function ProfilePage() {
                 { key: "website_url", label: "Website", icon: Globe, placeholder: "https://…", prefix: "" },
               ] as const).map((f) => {
                 const val = (socials as any)[f.key] as string;
+                const bare = (val || "").trim().replace(/^@/, "");
+                const looksLikeUrl = /^https?:\/\//i.test(bare) || /^[a-z0-9-]+\.[a-z]{2,}/i.test(bare);
+                const openHref = !bare
+                  ? null
+                  : looksLikeUrl
+                    ? (bare.startsWith("http") ? bare : `https://${bare}`)
+                    : f.prefix
+                      ? `https://${f.prefix}${bare}`
+                      : null;
                 return (
                   <label key={f.key} className="block rounded-xl border border-border bg-card px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -339,10 +348,20 @@ function ProfilePage() {
                       <input
                         value={val}
                         onChange={(e) => setSocials((s) => ({ ...s, [f.key]: e.target.value }))}
-                        placeholder={f.placeholder}
+                        placeholder={f.prefix ? `${f.placeholder} or full URL` : f.placeholder}
                         maxLength={f.key === "website_url" ? 300 : 80}
                         className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
                       />
+                      {openHref && (
+                        <a
+                          href={openHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-semibold uppercase tracking-wide text-primary"
+                        >
+                          Open
+                        </a>
+                      )}
                     </div>
                     {f.prefix && val && (
                       <p className="ml-6 mt-0.5 truncate pl-20 text-[10px] text-muted-foreground">
