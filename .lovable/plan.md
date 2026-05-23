@@ -1,27 +1,50 @@
 ## Goal
-Let creators open any past upload and edit its details — title, description, location, tags, budget — plus add new business affiliations / deals at any time.
 
-## Changes
+When a creator edits a published video (new title/description/tags/location/budget) or attaches/detaches a business deal on an old upload, that video should re-surface in the For-You feed — even for users who already liked or saved it — so they see the new deal CTA and updated info.
 
-### 1. New server fn: `updateVideoMetadata`
-File: `src/lib/studio.functions.ts`
-- `requireSupabaseAuth`, Zod-validated input: `videoId`, `title` (1–160), `description?` (≤2000), `destination?`, `country?`, `city?`, `activity_tags?` (≤10, lowercased), `budget_tag?` (`budget|mid|luxury|none`).
-- Updates `videos` filtered by `id` + `creator_id = userId`. Does NOT touch `status`, `is_draft`, `scheduled_at`, `published_at`, or media fields.
+Today: ranking uses `created_at` only, and `buildAffinity()` excludes any video the user has liked or saved via `seenVideoIds`. An edited 3-month-old video therefore stays buried and never re-appears for past likers.
 
-### 2. Expose editable fields in `getVideoInsights`
-Add `description, destination, country, city, activity_tags, budget_tag` to the existing select so the edit sheet can prefill.
+## Approach
 
-### 3. New component: `EditVideoSheet`
-File: `src/components/studio/EditVideoSheet.tsx`
-- Bottom `Sheet` with form (title, description, country, city, destination, activity tags comma input, budget radio).
-- On save: calls `updateVideoMetadata`, invalidates `["studio-insights", id]`, `["studio-videos"]`, `["feed"]`, toasts "Saved", closes.
+Introduce a single `bumped_at` timestamp on `videos` that ranking treats as the "effective freshness time", and bypass the seen-filter when a video was bumped after the user's interaction.
 
-### 4. Wire into `/studio/videos/$id`
-File: `src/routes/studio.videos.$id.tsx`
-- Add "Edit details" button (opens `EditVideoSheet`) next to the existing Preview link.
-- Add "Add deals" button that opens the existing `SmartDealsSheet` (already used on `studio.videos.tsx`) so creators can attach new business affiliations to any old upload.
+### 1. DB migration
 
-### Out of scope
-Editing the video file/thumbnail/music, changing publish state, profile-level edits.
+- Add `videos.bumped_at timestamptz` (nullable).
+- Index `(bumped_at desc nulls last)` to support ordering.
+- Backfill: leave NULL (means "never re-bumped" — falls back to `created_at`).
 
-Approve to implement.
+### 2. Server functions — set `bumped_at = now()`
+
+In `src/lib/studio.functions.ts` and `src/lib/video-deals.functions.ts`, add `bumped_at: new Date().toISOString()` to the `videos` update payload (or a follow-up update keyed by `video_id`) in:
+
+- `updateVideoMetadata` (already exists, just add the field)
+- `attachDealToVideo` → bump the affected video
+- `detachDealFromVideo` → bump (so a removed deal also refreshes the card)
+
+Out of scope for bumping: thumbnail-only changes, view-count writes, scheduled publishes (those already use `published_at`).
+
+### 3. Feed ranking changes (`src/lib/feed.functions.ts`)
+
+- `fetchFeedRows` and `getForYouFeed` candidate pool: `order by greatest(coalesce(bumped_at, created_at), created_at) desc`. Implement via a new view OR by ordering on `bumped_at desc nulls last, created_at desc` (good enough — bumped rows float to the top, untouched rows keep current order).
+- `scoreVideo`: replace `hoursSince(v.created_at)` with `hoursSince(max(bumped_at, created_at))` so freshness decay restarts on edit.
+- `isFreshUpload`: same — treat a recent bump as a fresh upload for the +18 boost.
+- `buildAffinity` / `seenVideoIds`: query `likes.created_at` and `saves.created_at`. A video is only "seen" (filtered out) if `interaction.created_at >= max(video.bumped_at, video.created_at)`. If the video was bumped after the user liked it, allow it back into the pool. Add `bumped_at` to the `videos` select used for affinity building.
+- Type: add `bumped_at: string | null` to `FeedVideo` and include in all `select(...)` strings.
+
+### 4. Cache invalidation
+
+`updateVideoMetadata` and `attachDealToVideo`/`detachDealFromVideo` already invalidate `["feed"]` from the client. No new wiring needed — the next feed fetch will pick up the bump.
+
+## Out of scope
+
+- Notifications/badging past likers ("a creator you liked added a new deal") — separate feature.
+- Bumping on profile-level changes (avatar, bio).
+- Time-decay tuning beyond restarting from the bump timestamp.
+
+## Files touched
+
+- new migration: add `bumped_at` + index
+- `src/lib/studio.functions.ts` — set `bumped_at` in `updateVideoMetadata`
+- `src/lib/video-deals.functions.ts` — set `bumped_at` in attach/detach
+- `src/lib/feed.functions.ts` — type, selects, ordering, scoring, seen-filter logic

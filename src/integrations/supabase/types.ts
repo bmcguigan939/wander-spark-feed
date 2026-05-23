@@ -2462,6 +2462,7 @@ export type Database = {
           ai_analyzed_at: string | null
           ai_suggested_title: string | null
           budget_tag: string | null
+          bumped_at: string | null
           captions_ready: boolean
           city: string | null
           comment_count: number
@@ -2507,6 +2508,7 @@ export type Database = {
           ai_analyzed_at?: string | null
           ai_suggested_title?: string | null
           budget_tag?: string | null
+          bumped_at?: string | null
           captions_ready?: boolean
           city?: string | null
           comment_count?: number
@@ -2552,6 +2554,7 @@ export type Database = {
           ai_analyzed_at?: string | null
           ai_suggested_title?: string | null
           budget_tag?: string | null
+          bumped_at?: string | null
           captions_ready?: boolean
           city?: string | null
           comment_count?: number
