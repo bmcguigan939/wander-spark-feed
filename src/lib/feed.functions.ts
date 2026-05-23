@@ -40,6 +40,14 @@ export type FeedVideo = {
     discount_label: string | null;
     image_url: string | null;
   } | null;
+  matchedBusiness?: {
+    id: string;
+    name: string;
+    website_url: string | null;
+    logo_url: string | null;
+    city: string | null;
+    country: string | null;
+  } | null;
   music?: {
     id: string;
     title: string;
