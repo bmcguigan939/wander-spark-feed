@@ -145,11 +145,14 @@ function applyBudgetFilter<T>(q: T, budget?: SearchBudget): T {
   return values ? (q as any).in("budget_tag", values) : q;
 }
 
-function isFreshNativeUpload(v: Pick<FeedVideo, "mux_playback_id" | "created_at">) {
-  // Native (Travidz-hosted) videos uploaded in the last 7 days get a small
-  // surfacing boost so brand-new creator content isn't buried by older
-  // engagement-heavy seeded rows.
-  return !!v.mux_playback_id && hoursSince(v.created_at) <= 24 * 7;
+function isFreshUpload(
+  v: Pick<FeedVideo, "mux_playback_id" | "source_platform" | "created_at">,
+) {
+  // Creator uploads (Mux native OR cross-posted link cards like
+  // TikTok/Instagram) from the last 7 days get a surfacing boost so
+  // brand-new content isn't buried by older seeded engagement-heavy rows.
+  const isCreatorUpload = !!v.mux_playback_id || !!v.source_platform;
+  return isCreatorUpload && hoursSince(v.created_at) <= 24 * 7;
 }
 
 function scoreVideo(
@@ -182,10 +185,10 @@ function scoreVideo(
     : 0;
   // Semantic affinity: cosine sim (0..1) against viewer's taste vector.
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
-  const newUploadBoost = isFreshNativeUpload(v) ? 12 : 0;
+  const newUploadBoost = isFreshUpload(v) ? 18 : 0;
   const jitter = Math.random() * 0.4; // small variety
   return (
-    freshness * 4 + engagement * 1.2 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
+    freshness * 4 + engagement * 0.7 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
   );
 }
 
