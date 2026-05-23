@@ -15,6 +15,7 @@ export type ProfileSocials = {
   facebook_handle: string | null;
   x_handle: string | null;
   website_url: string | null;
+  show_social_links: boolean;
 };
 
 function makeHandleSchema(platform: "youtube" | "tiktok" | "instagram" | "facebook" | "x") {
@@ -40,6 +41,7 @@ const socialsInput = z.object({
     .optional()
     .nullable()
     .transform((v) => v || null),
+  show_social_links: z.boolean().optional().default(true),
 });
 
 export const getMySocials = createServerFn({ method: "GET" })
