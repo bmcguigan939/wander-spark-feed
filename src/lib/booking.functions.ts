@@ -46,6 +46,21 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       }
     }
 
+    // Calendar-sync guard: if a travel date was supplied, refuse if it's
+    // blocked by an external feed, a prior Travidz booking, or a manual hold.
+    if (data.travelDate) {
+      const { data: block } = await supabaseAdmin
+        .from("deal_blocked_dates")
+        .select("id")
+        .eq("deal_id", deal.id)
+        .eq("date", data.travelDate)
+        .limit(1)
+        .maybeSingle();
+      if (block) {
+        throw new Error("That date is no longer available — please pick another.");
+      }
+    }
+
     // Pull customer profile for email
     const { data: customer } = await supabaseAdmin
       .from("profiles")
