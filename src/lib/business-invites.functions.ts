@@ -428,14 +428,10 @@ export const checkInviteAccountState = createServerFn({ method: "GET" })
     const email = invite.contact_email.toLowerCase();
     let accountExists = false;
     try {
-      // listUsers supports a filter by email.
-      const { data: list } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-        // @ts-expect-error — `filter` is supported by the GoTrue admin API
-        filter: `email.eq.${email}`,
+      const { data: exists } = await supabaseAdmin.rpc("email_has_account", {
+        _email: email,
       });
-      accountExists = !!(list?.users && list.users.length > 0);
+      accountExists = !!exists;
     } catch {
       accountExists = false;
     }
