@@ -1,20 +1,28 @@
 ## Goal
-Let users set their own profile picture by tapping their avatar circle on the profile screen, picking an image, and having it upload and replace the avatar.
 
-## Approach
-The `avatars` storage bucket and RLS policies (path `<userId>/...`) already exist. The `updateMyProfile` server fn already accepts `avatar_url`. So this is a frontend-only change: add a tap-to-upload control overlaying the avatar in `src/routes/profile.tsx`.
+Keep the "Invite a business" sheet open while the creator switches apps, copies info, or interacts elsewhere on their device. Today it's a Radix Sheet that closes on any outside click, Escape key, or focus loss — so on mobile, opening the mail app or swiping to copy a website URL dismisses everything and wipes their progress.
 
-## Changes
+## Changes (single file)
 
-### `src/routes/profile.tsx`
-- Wrap the avatar `<img>` (line 189) in a `<label>` with a hidden `<input type="file" accept="image/*">`, with a small camera-icon badge in the bottom-right corner of the circle indicating it's tappable.
-- Add an `uploadAvatarM` mutation that:
-  1. Validates type (image/*) and size (≤ 5 MB) — toast on failure.
-  2. Uploads to `avatars` bucket at `${user.id}/${Date.now()}.${ext}` via `supabase.storage.from("avatars").upload(...)` with `upsert: true` and `cacheControl: "3600"`.
-  3. Gets `publicUrl` via `getPublicUrl`.
-  4. Calls `updateFn({ data: { avatar_url: publicUrl } })`.
-  5. On success: invalidate `["my-profile"]`, toast "Profile photo updated".
-- Show a small loading spinner over the avatar while uploading.
-- Use existing `supabase` client (`@/integrations/supabase/client`) and existing `updateFn`/`Camera` icon (lucide-react).
+**`src/components/studio/TagBusinessSheet.tsx`**
 
-No backend, schema, or RLS changes needed.
+1. Make the sheet "sticky" — only close via the explicit close (X) or Done button:
+   - On `<SheetContent>`, add:
+     - `onPointerDownOutside={(e) => e.preventDefault()}`
+     - `onInteractOutside={(e) => e.preventDefault()}`
+     - `onEscapeKeyDown={(e) => e.preventDefault()}`
+     - `onOpenAutoFocus={(e) => e.preventDefault()}` (so focusing another input on the page doesn't yank focus back)
+   - Keep the built-in X close button and the "Done" button as the only ways to dismiss.
+
+2. Persist in-progress invite state across reloads / accidental closes using `sessionStorage` keyed by `videoId` (e.g. `travidz:invite-draft:<videoId>`):
+   - Save `{ businessName, websiteUrl, city, contactEmail, contactPhone, step, inviteId, inviteToken, subject, body }` on change (debounced via `useEffect`).
+   - On mount/open, hydrate from sessionStorage before falling back to `initial`.
+   - Clear the entry when the user clicks Done or when an invite is successfully sent (mail opened).
+
+3. Small UX nit: tighten the wording on the bottom helper to reflect that the sheet now stays open ("Switch apps to copy info — this stays open until you tap Done").
+
+## Out of scope
+
+- No backend, schema, or server function changes.
+- No changes to how invites are created or emails drafted.
+- Other sheets/modals in the app are untouched.

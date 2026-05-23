@@ -44,8 +44,29 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
+  const storageKey = `travidz:invite-draft:${videoId}`;
+
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    let hydrated = false;
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(storageKey) : null;
+      if (raw) {
+        const s = JSON.parse(raw);
+        setStep(s.step ?? "details");
+        setInviteId(s.inviteId ?? null);
+        setInviteToken(s.inviteToken ?? null);
+        setSubject(s.subject ?? "");
+        setBody(s.body ?? "");
+        setBusinessName(s.businessName ?? initial?.businessName ?? "");
+        setWebsiteUrl(s.websiteUrl ?? initial?.websiteUrl ?? "");
+        setCity(s.city ?? initial?.city ?? "");
+        setContactEmail(s.contactEmail ?? "");
+        setContactPhone(s.contactPhone ?? "");
+        hydrated = true;
+      }
+    } catch {}
+    if (!hydrated) {
       setStep("details");
       setInviteId(null);
       setInviteToken(null);
@@ -57,7 +78,25 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
       setWebsiteUrl(initial?.websiteUrl ?? "");
       setCity(initial?.city ?? "");
     }
-  }, [open, initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial, storageKey]);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          businessName, websiteUrl, city, contactEmail, contactPhone,
+          step, inviteId, inviteToken, subject, body,
+        })
+      );
+    } catch {}
+  }, [open, storageKey, businessName, websiteUrl, city, contactEmail, contactPhone, step, inviteId, inviteToken, subject, body]);
+
+  function clearDraft() {
+    try { sessionStorage.removeItem(storageKey); } catch {}
+  }
 
   const draftM = useMutation({
     mutationFn: (id: string) => draftFn({ data: { inviteId: id } }),
@@ -118,7 +157,14 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-3xl">
+      <SheetContent
+        side="bottom"
+        className="max-h-[92dvh] overflow-y-auto rounded-t-3xl"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {step === "review" ? (
@@ -269,13 +315,13 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
           </button>
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={() => { clearDraft(); onOpenChange(false); }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-2 text-xs font-semibold text-muted-foreground"
           >
             Done
           </button>
           <p className="text-[11px] leading-snug text-muted-foreground">
-            The email opens in your own inbox so the business replies directly to you.
+            Switch apps to copy info — this stays open until you tap Done. The email opens in your own inbox so the business replies directly to you.
           </p>
         </div>
         )}
