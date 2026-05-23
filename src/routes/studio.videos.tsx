@@ -80,7 +80,12 @@ function StateBadge({ s }: { s: StudioVideo["derived_state"] }) {
     hidden: { label: "Hidden", cls: "bg-destructive/15 text-destructive" },
   };
   const m = map[s];
-  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${m.cls}`}>{m.label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${m.cls}`}>
+      {s === "processing" && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden />}
+      {m.label}
+    </span>
+  );
 }
 
 function VideosPage() {
