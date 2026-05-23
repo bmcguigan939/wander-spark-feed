@@ -336,6 +336,79 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (<label className="block"><span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>{children}</label>);
 }
 
+// ---------- Coords paste input ----------
+function parseCoords(raw: string): { lat: number; lng: number } | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  // Google Maps URL with @lat,lng,zoom
+  const at = s.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (at) {
+    const lat = parseFloat(at[1]); const lng = parseFloat(at[2]);
+    if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  // ?q=lat,lng or &query=lat,lng
+  const q = s.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (q) {
+    const lat = parseFloat(q[1]); const lng = parseFloat(q[2]);
+    if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  // "lat[NS], lng[EW]" or "lat lng" with optional ° symbols/parens
+  const cleaned = s.replace(/[()°]/g, " ").trim();
+  const m = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*([NS])?[,\s]+(-?\d+(?:\.\d+)?)\s*([EW])?$/i);
+  if (m) {
+    let lat = parseFloat(m[1]); let lng = parseFloat(m[3]);
+    if (m[2] && m[2].toUpperCase() === "S") lat = -Math.abs(lat);
+    if (m[2] && m[2].toUpperCase() === "N") lat = Math.abs(lat);
+    if (m[4] && m[4].toUpperCase() === "W") lng = -Math.abs(lng);
+    if (m[4] && m[4].toUpperCase() === "E") lng = Math.abs(lng);
+    if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  return null;
+}
+
+function CoordsInput({ lat, lng, setLat, setLng, inputCls }: { lat: string; lng: string; setLat: (v: string) => void; setLng: (v: string) => void; inputCls: string }) {
+  const [raw, setRaw] = useState<string>(lat && lng ? `${lat}, ${lng}` : "");
+  const parsed = parseCoords(raw);
+  useEffect(() => {
+    if (!raw.trim()) { setLat(""); setLng(""); return; }
+    if (parsed) { setLat(parsed.lat.toFixed(6)); setLng(parsed.lng.toFixed(6)); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw]);
+  return (
+    <>
+      <input
+        type="text"
+        inputMode="text"
+        placeholder="Paste from Google Maps (e.g. 50.7236, -2.9326)"
+        value={raw}
+        onChange={(e) => setRaw(e.target.value)}
+        className={inputCls}
+      />
+      {raw.trim() && (
+        parsed ? (
+          <p className="mt-1 text-xs text-primary">✓ {parsed.lat.toFixed(6)}, {parsed.lng.toFixed(6)}</p>
+        ) : (
+          <p className="mt-1 text-xs text-muted-foreground">Couldn't read coordinates — paste like "50.7236, -2.9326"</p>
+        )
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          if (!navigator.geolocation) return toast("Geolocation not available");
+          navigator.geolocation.getCurrentPosition(
+            (pos) => setRaw(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`),
+            (err) => toast(err.message),
+            { enableHighAccuracy: true, timeout: 8000 },
+          );
+        }}
+        className="mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary"
+      >
+        <MapPin className="h-3 w-3" /> Use my location
+      </button>
+    </>
+  );
+}
+
 // ---------- Import from socials ----------
 
 const PLATFORM_META: Record<string, { label: string; hint: string; placeholder: string; Icon: typeof Link2 }> = {
