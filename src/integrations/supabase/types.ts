@@ -404,6 +404,36 @@ export type Database = {
           },
         ]
       }
+      business_clicks: {
+        Row: {
+          business_id: string
+          clicked_at: string
+          creator_id: string | null
+          id: string
+          referrer_video_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          clicked_at?: string
+          creator_id?: string | null
+          id?: string
+          referrer_video_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          clicked_at?: string
+          creator_id?: string | null
+          id?: string
+          referrer_video_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       business_invites: {
         Row: {
           accepted_business_id: string | null
@@ -931,6 +961,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      creator_business_signings: {
+        Row: {
+          accepted_at: string
+          agreement_version: string
+          business_id: string
+          commission_pct: number
+          created_at: string
+          creator_id: string
+          creator_share_pct: number
+          id: string
+          platform_share_pct: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_version?: string
+          business_id: string
+          commission_pct?: number
+          created_at?: string
+          creator_id: string
+          creator_share_pct?: number
+          id?: string
+          platform_share_pct?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string
+          agreement_version?: string
+          business_id?: string
+          commission_pct?: number
+          created_at?: string
+          creator_id?: string
+          creator_share_pct?: number
+          id?: string
+          platform_share_pct?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       creator_payout_details: {
         Row: {
@@ -2369,6 +2441,11 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           business_agreement_accepted_at: string | null
+          business_city: string | null
+          business_country: string | null
+          business_logo_url: string | null
+          business_name: string | null
+          business_website_url: string | null
           created_at: string
           creator_agreement_accepted_at: string | null
           creator_joined_at: string | null
@@ -2399,6 +2476,11 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           business_agreement_accepted_at?: string | null
+          business_city?: string | null
+          business_country?: string | null
+          business_logo_url?: string | null
+          business_name?: string | null
+          business_website_url?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
@@ -2429,6 +2511,11 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           business_agreement_accepted_at?: string | null
+          business_city?: string | null
+          business_country?: string | null
+          business_logo_url?: string | null
+          business_name?: string | null
+          business_website_url?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
