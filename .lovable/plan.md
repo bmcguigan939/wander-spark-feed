@@ -1,10 +1,19 @@
+## Current state
+Editing already works end-to-end: `/business/deals/$id/edit` loads the deal into `DealForm`, saves via `updateDeal` server fn, supports calendar sync and delete. The dashboard ("BBM Best Stays" card in the screenshot) already shows a tiny pencil icon at the right that links to it — but it's a 14px icon with no label, so businesses don't notice it.
+
 ## Problem
-The feed (`h-dvh`) and the sticky `BottomNav` are siblings inside `main`. The nav (~56px + safe-area) overlays the bottom of the feed, so the `VideoCard` bottom overlay (caption, business chip, deal card, CTA row) and the right-rail action buttons get hidden behind it. The prior patch attempt was lost — current values are still `bottom-4` / `bottom-32` / `h-64`.
+The edit affordance isn't discoverable. The user couldn't tell their live deal is editable.
 
-## Fix (single file: `src/components/feed/VideoCard.tsx`)
+## Fix — `src/routes/business.index.tsx` deal card only
 
-1. **Bottom overlay** (line 303): `bottom-4` → `bottom-[calc(env(safe-area-inset-bottom)+84px)]` so the caption + deal card sit clearly above the nav.
-2. **Right-rail actions** (line 287): `bottom-32` → `bottom-[calc(env(safe-area-inset-bottom)+196px)]` so like/save/share stay above both the nav and the lifted overlay.
-3. **Bottom scrim** (line 262): `h-64` → `h-80` so the gradient still covers the lifted text for legibility.
+1. **Make the whole card tappable**: wrap the card body in a `Link` to `/business/deals/$id/edit` so tapping anywhere on "BBM Best Stays" opens the edit screen.
+2. **Replace the pencil icon with a labelled button**: `Edit` pill (icon + text) using `bg-secondary text-secondary-foreground rounded-full px-3 py-1.5 text-xs font-medium`, top-right of the card. Keeps the existing route but makes it obvious.
+3. **Add a small helper line** under the location: `Tap to edit price, photo, description…` in `text-[11px] text-muted-foreground` so first-time users understand.
+4. Stop event propagation on the Edit button so it doesn't double-fire with the card link.
 
-No changes to BottomNav, feed container, or any data/logic. Mobile-only impact since the shell is `max-w-md`.
+## Out of scope
+- No changes to the edit page itself (already complete: form, calendar sync, delete).
+- No changes to `DealForm`, server fns, or DB.
+- No new routes.
+
+One file touched: `src/routes/business.index.tsx`.

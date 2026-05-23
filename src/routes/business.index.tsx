@@ -158,9 +158,12 @@ function BusinessDashboard() {
                   <Link to="/business/deals/$id" params={{ id: d.id }}>
                     <h2 className="line-clamp-2 text-sm font-semibold hover:text-primary">{d.title}</h2>
                   </Link>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {[d.city, d.country].filter(Boolean).join(", ") || d.destination || "Anywhere"}
-                  </p>
+                   <p className="mt-0.5 text-xs text-muted-foreground">
+                     {[d.city, d.country].filter(Boolean).join(", ") || d.destination || "Anywhere"}
+                   </p>
+                   <p className="mt-0.5 text-[11px] text-muted-foreground">
+                     Tap <span className="font-medium text-foreground">Edit</span> to update price, photo or description.
+                   </p>
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {d.click_count} clicks</span>
                     <span className={d.is_active ? "text-emerald-500" : "text-muted-foreground"}>
@@ -182,13 +185,13 @@ function BusinessDashboard() {
                     </div>
                   </div>
                 </div>
-                <Link
-                  to="/business/deals/$id/edit"
-                  params={{ id: d.id }}
-                  className="rounded-full border border-border p-2 text-muted-foreground"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Link>
+                 <Link
+                   to="/business/deals/$id/edit"
+                   params={{ id: d.id }}
+                   className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-soft"
+                 >
+                   <Pencil className="h-3.5 w-3.5" /> Edit
+                 </Link>
               </div>
             </li>
             );
