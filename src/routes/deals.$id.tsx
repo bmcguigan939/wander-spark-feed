@@ -27,11 +27,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/deals/$id")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    v: typeof s.v === "string" ? s.v : undefined,
+  }),
   component: DealDetail,
 });
 
 function DealDetail() {
   const { id } = Route.useParams();
+  const { v: referrerVideoId } = Route.useSearch();
   const { user, isCreator } = useAuth();
   const fetchDeal = useServerFn(getDeal);
   const logClick = useServerFn(logDealClick);
@@ -45,7 +49,7 @@ function DealDetail() {
 
   const onView = async () => {
     try {
-      await logClick({ data: { dealId: id } });
+      await logClick({ data: { dealId: id, referrerVideoId } });
     } catch {}
     if (deal?.url) window.open(deal.url, "_blank", "noopener,noreferrer");
   };
@@ -86,6 +90,7 @@ function DealDetail() {
               <Link
                 to="/book/$dealId"
                 params={{ dealId: id }}
+                search={{ v: referrerVideoId }}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary"
               >
                 <CreditCard className="h-4 w-4" /> Book now
