@@ -95,7 +95,7 @@ export const upsertRoom = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureOwnDeal(data.dealId, context.userId);
-    const payload: Record<string, unknown> = { ...data.patch, deal_id: data.dealId };
+    const payload = { ...data.patch, deal_id: data.dealId } as any;
     if (data.patch.inventory_total != null) {
       payload.inventory_remaining = data.patch.inventory_total;
     }
@@ -150,7 +150,7 @@ export const upsertRatePlan = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await ensureOwnDeal(data.dealId, context.userId);
-    const payload: Record<string, unknown> = { ...data.patch, deal_id: data.dealId };
+    const payload = { ...data.patch, deal_id: data.dealId } as any;
     if (data.id) {
       const { error } = await supabaseAdmin
         .from("deal_rate_plans")
