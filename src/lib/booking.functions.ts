@@ -6,6 +6,8 @@ import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 
 const inputSchema = z.object({
   dealId: z.string().uuid(),
+  ratePlanId: z.string().uuid().optional(),
+  roomId: z.string().uuid().optional(),
   guests: z.number().int().min(1).max(20).default(1),
   travelDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   notes: z.string().max(500).optional(),
@@ -37,8 +39,49 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     if (!deal) throw new Error("Deal not found");
     if (!deal.bookable) throw new Error("This deal is not bookable through Travidz");
     if (!deal.is_active || deal.status !== "approved") throw new Error("Deal is not available");
-    if (!deal.price_cents || deal.price_cents <= 0) throw new Error("Deal has no price set");
     if (!deal.business_id) throw new Error("This deal has no business owner");
+
+    // Resolve rate plan — either explicit, or fall back to the cheapest active one for back-compat
+    let ratePlan: {
+      id: string;
+      price_cents: number;
+      currency: string;
+      cancellation_policy_code: string;
+      payment_timing: string;
+      deposit_pct: number | null;
+      is_active: boolean;
+    } | null = null;
+    if (data.ratePlanId) {
+      const { data: rp } = await supabaseAdmin
+        .from("deal_rate_plans")
+        .select(
+          "id,deal_id,price_cents,currency,cancellation_policy_code,payment_timing,deposit_pct,is_active",
+        )
+        .eq("id", data.ratePlanId)
+        .eq("deal_id", deal.id)
+        .maybeSingle();
+      if (!rp || !rp.is_active) throw new Error("Selected rate is no longer available");
+      ratePlan = rp as any;
+    } else {
+      const { data: rp } = await supabaseAdmin
+        .from("deal_rate_plans")
+        .select(
+          "id,deal_id,price_cents,currency,cancellation_policy_code,payment_timing,deposit_pct,is_active",
+        )
+        .eq("deal_id", deal.id)
+        .eq("is_active", true)
+        .order("price_cents", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (rp) ratePlan = rp as any;
+    }
+
+    const unitPrice = ratePlan?.price_cents ?? deal.price_cents ?? 0;
+    if (!unitPrice || unitPrice <= 0) throw new Error("Deal has no price set");
+    const paymentTiming = (ratePlan?.payment_timing ?? "pay_online") as
+      | "pay_online"
+      | "pay_at_property"
+      | "deposit_online_rest_at_property";
 
     if (deal.inventory_mode === "fixed") {
       if ((deal.inventory_remaining ?? 0) < data.guests) {
@@ -71,10 +114,20 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const { data: authUser } = await supabase.auth.getUser();
     const customerEmail = authUser?.user?.email ?? undefined;
 
-    const subtotal = deal.price_cents * data.guests;
+    const subtotal = unitPrice * data.guests;
     const commission = Math.round((subtotal * COMMISSION_PCT) / 100);
     const businessPayout = subtotal - commission;
-    const currency = (deal.currency || "GBP").toLowerCase();
+    const currency = (ratePlan?.currency || deal.currency || "GBP").toLowerCase();
+
+    // For deposit flow, only charge the deposit portion online
+    const depositPct = paymentTiming === "deposit_online_rest_at_property" ? ratePlan?.deposit_pct ?? 25 : null;
+    const chargeNow =
+      paymentTiming === "pay_at_property"
+        ? 0
+        : paymentTiming === "deposit_online_rest_at_property"
+          ? Math.round((subtotal * (depositPct ?? 25)) / 100)
+          : subtotal;
+    const balanceDueAtProperty = subtotal - chargeNow;
 
     // Resolve referring creator, gated by contract.
     let referrerVideoId: string | null = null;
@@ -117,17 +170,30 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         commission_cents: commission,
         business_payout_cents: businessPayout,
         currency: currency.toUpperCase(),
-        status: "pending",
+        status: paymentTiming === "pay_at_property" ? "confirmed" : "pending",
         customer_email: customerEmail ?? undefined,
         customer_name: customer?.display_name ?? customer?.username ?? undefined,
         notes: data.notes ?? undefined,
+        rate_plan_id: ratePlan?.id ?? null,
+        room_id: data.roomId ?? null,
+        payment_timing: paymentTiming,
+        balance_due_at_property_cents: balanceDueAtProperty,
       })
       .select("id")
       .single();
     if (bErr) throw new Error(bErr.message);
 
+    // Pay-at-property: skip Stripe entirely, booking is already confirmed.
+    if (paymentTiming === "pay_at_property") {
+      return { clientSecret: null, bookingId: booking.id, payAtProperty: true };
+    }
+
     const stripe = createStripeClient(data.environment as StripeEnv);
     const productName = `${deal.title}${data.guests > 1 ? ` × ${data.guests}` : ""}`;
+    const lineDescription =
+      paymentTiming === "deposit_online_rest_at_property"
+        ? `${productName} — ${depositPct}% deposit (balance at property)`
+        : productName;
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       ui_mode: "embedded_page",
@@ -137,10 +203,13 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
           price_data: {
             currency,
             product_data: {
-              name: productName,
+              name: lineDescription,
               ...(deal.image_url ? { images: [deal.image_url] } : {}),
             },
-            unit_amount: deal.price_cents,
+            unit_amount:
+              paymentTiming === "deposit_online_rest_at_property"
+                ? Math.round((unitPrice * (depositPct ?? 25)) / 100)
+                : unitPrice,
           },
           quantity: data.guests,
         },
@@ -152,6 +221,8 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         dealId: deal.id,
         userId,
         businessId: deal.business_id ?? "",
+        ratePlanId: ratePlan?.id ?? "",
+        paymentTiming,
       },
     });
 
