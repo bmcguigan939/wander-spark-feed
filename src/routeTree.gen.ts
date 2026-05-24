@@ -18,6 +18,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
@@ -56,6 +57,7 @@ import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculat
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
@@ -152,6 +154,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -343,6 +350,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessThreadsRoute = BusinessThreadsRouteImport.update({
   id: '/business/threads',
@@ -626,6 +638,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -654,6 +667,7 @@ export interface FileRoutesByFullPath {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/checkout/return': typeof CheckoutReturnRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -726,6 +740,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -753,6 +768,7 @@ export interface FileRoutesByTo {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/checkout/return': typeof CheckoutReturnRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -826,6 +842,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -854,6 +871,7 @@ export interface FileRoutesById {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/checkout/return': typeof CheckoutReturnRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -929,6 +947,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/map'
     | '/notifications'
+    | '/pricing'
     | '/profile'
     | '/reset-password'
     | '/robots.txt'
@@ -957,6 +976,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/checkout/return'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1029,6 +1049,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/map'
     | '/notifications'
+    | '/pricing'
     | '/profile'
     | '/reset-password'
     | '/robots.txt'
@@ -1056,6 +1077,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/checkout/return'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1128,6 +1150,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/map'
     | '/notifications'
+    | '/pricing'
     | '/profile'
     | '/reset-password'
     | '/robots.txt'
@@ -1156,6 +1179,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/checkout/return'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1230,6 +1254,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MapRoute: typeof MapRoute
   NotificationsRoute: typeof NotificationsRoute
+  PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -1248,6 +1273,7 @@ export interface RootRouteChildren {
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
   BusinessThreadsRoute: typeof BusinessThreadsRouteWithChildren
+  CheckoutReturnRoute: typeof CheckoutReturnRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
@@ -1363,6 +1389,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -1630,6 +1663,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/collections/$id'
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/business/threads': {
       id: '/business/threads'
@@ -2130,6 +2170,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MapRoute: MapRoute,
   NotificationsRoute: NotificationsRoute,
+  PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -2148,6 +2189,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   BusinessSignupRoute: BusinessSignupRoute,
   BusinessThreadsRoute: BusinessThreadsRouteWithChildren,
+  CheckoutReturnRoute: CheckoutReturnRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   CreatorCalculatorRoute: CreatorCalculatorRoute,
