@@ -1,51 +1,49 @@
-# Why the page doesn't close & the deal card never appears
+# Get a Travidz symbol next to your name in Google results
 
-## What the data shows
-- Every recent invite in `business_invites` is still `status = 'pending'` — including the Test 02 invite from your screenshot. That means **`acceptInvite` never reaches its final UPDATE**.
-- Worker logs for the last hour show only GET server-fn calls (status reads, invite landings). There are **zero POST calls to `acceptInvite`**.
-- Net effect: the button click either never fires the mutation, or it errors so early/silently that nothing reaches the server. With no DB write, there is no deal → no `matchedBusiness` → no card on the creator's video; and with no `onSuccess`, no toast and no `navigate({ to: "/business" })`.
+That symbol Google shows is your **favicon**. You already have `public/icon.svg` (gradient "T"), but Google's favicon crawler has a few extra requirements, and it can take 1–4 weeks to refresh once everything is right.
 
-So both symptoms have the same upstream cause. We need to (a) actually find out *why* the click is a no-op, and (b) make the success path land on the invite page itself instead of bouncing the user off to `/business`.
+## What we'll do
 
-## Change
+### 1. Generate a polished, high-res icon set
+Keep the gradient "T" concept but render it on the sunset → coral → twilight brand gradient tile (matches the logo in your top bar) and ship it at the sizes Google + iOS + Android all want:
 
-### 1. Make the failure observable (`src/routes/business.invite.$token.tsx`)
-- Wrap the accept button in an `onClick` that logs `{ canAccept, agreed, websiteValid, websiteUrl, hasUser: !!user }` to the console *before* calling `acceptM.mutate()`. If `canAccept` is false, surface a `toast.error` saying which field is blocking (so the user stops getting a dead button with no feedback).
-- In `acceptM.onError`, also `console.error("acceptInvite failed", e)` and `POST` the error to the existing `client_error_logs` insert path so it shows up in the dashboard. Today silent failures vanish.
-- Add a tiny `onMutate` log so we can confirm in the network panel that a POST was actually issued.
+- `public/favicon.ico` — 32×32, classic browser tab icon (also a Google fallback)
+- `public/icon-192.png` — 192×192, Google search + PWA
+- `public/icon-512.png` — 512×512, PWA splash + Android home screen
+- `public/apple-touch-icon.png` — 180×180, iOS home screen
+- Keep `public/icon.svg` — refresh it to match the new design (vector, scales infinitely)
 
-### 2. Replace the redirect with an in-page success view
-The current `onSuccess` calls `navigate({ to: "/business" })`, which (i) closes the invite context the business was just reading, (ii) sends them to a dashboard that's empty for a brand-new account, and (iii) gives no confirmation of *what* just happened.
+### 2. Wire them into `src/routes/__root.tsx`
+Today only one `<link rel="icon">` points at the SVG. Google specifically looks for a `rel="icon"` with a real raster size declared. Update the `links:` array to:
 
-Instead:
-- On success, set local `accepted = true` (and also let the invite query refetch — it will return `status: "accepted"`).
-- Render a new success card in place of the form: green check, "You're live on Travidz", the business name, and three actions:
-  - **Open your dashboard** → `/business`
-  - **See it on @{creator}'s video** → deep link to the video the invite came from (we already have `video.id` in `data`)
-  - **Reply to {creator}** → scrolls to the existing thread block below
-- Keep the existing `invite.status === "accepted"` early-return branch as the fallback for users returning to the link later.
-- Remove the automatic `navigate(...)`. No redirect.
-
-### 3. Make the deal card actually appear (`src/lib/business-invites.functions.ts` + feed cache)
-Server-side, after the successful accept, also:
-- Insert a `video_deals` row for *every* existing video by that creator in the same city as the invite (today we only attach to `invite.video_id`). That guarantees the auto-surfaced card isn't gated on the feed's city/country fallback finding a match.
-- After the upsert into `creator_business_signings`, double-check `profiles.business_name` was actually written (handle the case where the profile row was created with NULL country and the matcher in `attachMatchedBusiness` falls through to the `list[0]` branch — it already does, so this is a sanity log only).
-
-Client-side, on `onSuccess` also call:
 ```ts
-qc.invalidateQueries({ queryKey: ["feed"] });
-qc.invalidateQueries({ queryKey: ["video", data.video?.id] });
+{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+{ rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
+{ rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+{ rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
+{ rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
 ```
-so if the business (or the creator viewing in another tab) opens the video, the card paints on next mount instead of after a stale-time window.
 
-### 4. Add server-side guardrail logs in `acceptInvite`
-Inside the `.handler`, wrap each external write in a `try/catch` that re-throws with a labelled message (`"accept: insert deals failed: ..."`, `"accept: upsert signing failed: ..."`). Right now any one of ~8 awaits can throw with a generic Postgres error and the client just shows `e.message`. Labelled errors will make the next failure self-diagnosing.
+### 3. Update `public/manifest.webmanifest`
+Replace the single SVG entry with the PNG set so Android/PWA installs use the proper raster icons.
 
-## Out of scope
-- No schema changes.
-- No change to who is allowed to accept (still requires auth + agreement + valid URL).
-- No change to commission, payouts, or thread behaviour.
+### 4. Update the JSON-LD Organization `logo`
+Point it at `/icon-512.png` instead of the SVG — Google's structured-data parser prefers raster logos with known dimensions.
 
-## Expected outcome
-- Tapping Accept either succeeds (and you stay on the invite page with a green success card + link to the video) or shows a precise error toast + a logged entry — no more silent dead button.
-- The "Book with {business}" card surfaces on the creator's video the moment the feed query refetches.
+## After deploy
+
+Google won't update overnight. To speed it up:
+
+1. **Publish** the change.
+2. In **Google Search Console** → URL Inspection, paste `https://www.travidz.com/` and click **Request indexing**. This re-fetches the page + favicon.
+3. Wait. Typical refresh is 1–4 weeks. The favicon must be reachable at a stable URL the whole time (it will be).
+
+## Why this works
+
+Google's documented favicon rules: square, ≥ 48px, multiple of 48 preferred, referenced via `<link rel="icon">`, crawlable, and the same favicon used consistently. A single SVG technically qualifies but PNG fallbacks at 192/512 are what their crawler actually caches and serves on mobile results. Source: developers.google.com/search/docs/appearance/favicon-in-search.
+
+## Files changed
+
+- `public/favicon.ico` (new), `public/icon-192.png` (new), `public/icon-512.png` (new), `public/apple-touch-icon.png` (new), `public/icon.svg` (refreshed)
+- `src/routes/__root.tsx` — expanded `links` + updated JSON-LD logo
+- `public/manifest.webmanifest` — PNG icon set
