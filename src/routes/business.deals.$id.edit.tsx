@@ -6,6 +6,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { DealForm } from "@/components/business/DealForm";
 import { getDeal, updateDeal, deleteDeal } from "@/lib/deals.functions";
 import { DealCalendarSync } from "@/components/business/DealCalendarSync";
+import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ function EditDealPage() {
               }}
             />
             <DealCalendarSync dealId={id} />
+            <RoomsAndRatesEditor dealId={id} category={deal.category} />
             <button
               type="button"
               onClick={() => {
