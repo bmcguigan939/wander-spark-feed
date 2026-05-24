@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck, CreditCard } from "lucide-react";
 import { claimRedemption } from "@/lib/redemptions.functions";
+import { RateSelector } from "@/components/deals/RateSelector";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +96,14 @@ function DealDetail() {
               >
                 <CreditCard className="h-4 w-4" /> Book now
               </Link>
+            )}
+            {deal.bookable && (
+              <RateSelector
+                dealId={id}
+                category={deal.category}
+                currency={deal.currency}
+                referrerVideoId={referrerVideoId}
+              />
             )}
             {user && <ClaimRedemptionBlock />}
             {user && isCreator && deal.business_id !== user.id && (

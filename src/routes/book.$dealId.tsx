@@ -16,13 +16,15 @@ export const Route = createFileRoute("/book/$dealId")({
   head: () => ({ meta: [{ title: "Book — Travidz" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     v: typeof s.v === "string" ? s.v : undefined,
+    rate: typeof s.rate === "string" ? s.rate : undefined,
+    room: typeof s.room === "string" ? s.room : undefined,
   }),
   component: BookPage,
 });
 
 function BookPage() {
   const { dealId } = Route.useParams();
-  const { v: referrerVideoId } = Route.useSearch();
+  const { v: referrerVideoId, rate: ratePlanId, room: roomId } = Route.useSearch();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const fetchDeal = useServerFn(getDeal);
@@ -73,6 +75,8 @@ function BookPage() {
       const res = await checkoutFn({
         data: {
           dealId,
+          ratePlanId,
+          roomId,
           guests,
           travelDate: travelDate || undefined,
           returnUrl: `${window.location.origin}/book/return?session_id={CHECKOUT_SESSION_ID}`,
@@ -80,7 +84,12 @@ function BookPage() {
           referrerVideoId,
         },
       });
-      setClientSecret(res.clientSecret);
+      if (res.clientSecret) {
+        setClientSecret(res.clientSecret);
+      } else {
+        // pay_at_property — booking confirmed, no Stripe redirect
+        navigate({ to: "/book/return", search: { booking_id: res.bookingId } as any });
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Could not start checkout");
     } finally {

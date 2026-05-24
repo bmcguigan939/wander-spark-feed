@@ -264,6 +264,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          balance_due_at_property_cents: number
           business_id: string
           business_payout_cents: number
           cancelled_at: string | null
@@ -281,8 +282,11 @@ export type Database = {
           id: string
           notes: string | null
           paid_at: string | null
+          payment_timing: string
+          rate_plan_id: string | null
           referrer_video_id: string | null
           refunded_at: string | null
+          room_id: string | null
           status: string
           stripe_checkout_session_id: string | null
           stripe_payment_intent_id: string | null
@@ -295,6 +299,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          balance_due_at_property_cents?: number
           business_id: string
           business_payout_cents?: number
           cancelled_at?: string | null
@@ -312,8 +317,11 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_timing?: string
+          rate_plan_id?: string | null
           referrer_video_id?: string | null
           refunded_at?: string | null
+          room_id?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -326,6 +334,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          balance_due_at_property_cents?: number
           business_id?: string
           business_payout_cents?: number
           cancelled_at?: string | null
@@ -343,8 +352,11 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_timing?: string
+          rate_plan_id?: string | null
           referrer_video_id?: string | null
           refunded_at?: string | null
+          room_id?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -362,6 +374,20 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_rate_plan_id_fkey"
+            columns: ["rate_plan_id"]
+            isOneToOne: false
+            referencedRelation: "deal_rate_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "deal_rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -1360,6 +1386,84 @@ export type Database = {
           },
         ]
       }
+      deal_rate_plans: {
+        Row: {
+          breakfast: string
+          cancellation_policy_code: string
+          compare_at_price_cents: number | null
+          created_at: string
+          currency: string
+          deal_id: string
+          deposit_pct: number | null
+          discount_label: string | null
+          guests_included: number
+          id: string
+          is_active: boolean
+          name: string
+          payment_timing: string
+          perks: Json
+          price_cents: number
+          room_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          breakfast?: string
+          cancellation_policy_code?: string
+          compare_at_price_cents?: number | null
+          created_at?: string
+          currency?: string
+          deal_id: string
+          deposit_pct?: number | null
+          discount_label?: string | null
+          guests_included?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          payment_timing?: string
+          perks?: Json
+          price_cents: number
+          room_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          breakfast?: string
+          cancellation_policy_code?: string
+          compare_at_price_cents?: number | null
+          created_at?: string
+          currency?: string
+          deal_id?: string
+          deposit_pct?: number | null
+          discount_label?: string | null
+          guests_included?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          payment_timing?: string
+          perks?: Json
+          price_cents?: number
+          room_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_rate_plans_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_rate_plans_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "deal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_redemptions: {
         Row: {
           booking_id: string | null
@@ -1513,6 +1617,65 @@ export type Database = {
           },
           {
             foreignKeyName: "deal_redirects_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_rooms: {
+        Row: {
+          bed_config: Json
+          created_at: string
+          deal_id: string
+          description: string | null
+          id: string
+          inventory_remaining: number | null
+          inventory_total: number | null
+          is_active: boolean
+          max_guests: number
+          name: string
+          photos: Json
+          room_size_sqm: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          bed_config?: Json
+          created_at?: string
+          deal_id: string
+          description?: string | null
+          id?: string
+          inventory_remaining?: number | null
+          inventory_total?: number | null
+          is_active?: boolean
+          max_guests?: number
+          name: string
+          photos?: Json
+          room_size_sqm?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          bed_config?: Json
+          created_at?: string
+          deal_id?: string
+          description?: string | null
+          id?: string
+          inventory_remaining?: number | null
+          inventory_total?: number | null
+          is_active?: boolean
+          max_guests?: number
+          name?: string
+          photos?: Json
+          room_size_sqm?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_rooms_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
