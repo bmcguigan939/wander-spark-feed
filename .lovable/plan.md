@@ -1,74 +1,44 @@
-# Launch + scale-ready sprint
+## What's broken
 
-Goal: lock in the three highest-impact items now (#9, #7, #10), then sweep the rest of the checklist so Travidz can absorb a traffic spike at launch without breaking or burning cash.
+**1. The "4" on the bookmark drifts upward on every tap**
+The right-rail icons are Like, Comments, **Save (the 4)**, Share. Server-side `toggleLike` / `toggleSave` correctly toggle the row in the DB. The bug is purely client-side: the optimistic update in `VideoCard.tsx` always applies `+1`, regardless of whether the tap is a save or an un-save. So tap → +1, tap again → +1 (should be −1), etc. The number only "corrects" itself on a full refetch.
 
-## 1. Mux delivery cost guardrails (#9)
+**2. iOS Safari's bottom bar shows on Travidz, not on Instagram**
+That's iOS browser chrome — it disappears only when the app is launched from the Home Screen (standalone PWA mode). Our `manifest.webmanifest` already has `"display": "standalone"`, so the capability exists. The gap is UX: we don't actively tell iOS users "Add Travidz to your Home Screen to get the full-screen, app-like experience." The existing `PWAInstallPrompt` component is wired for Android's `beforeinstallprompt` event (which iOS Safari doesn't fire), so iOS users never see anything.
 
-File: `src/lib/mux.functions.ts` (in `createDirectUpload`).
+---
 
-- Add `max_resolution_tier: "1080p"` to `new_asset_settings` so creators can't push 4K masters that 10x our storage + delivery bill.
-- Keep `video_quality: "basic"` (already set) — confirms HLS adaptive bitrate ladder, no MP4 renditions.
-- Add `mp4_support: "none"` explicitly so nobody can hot-link the source MP4 and bypass HLS/CDN.
-- No DB changes. Only affects new uploads (existing assets unchanged).
+## Fix plan
 
-This is the single biggest lever on the £300k-£500k Y5 infra line.
+### A. Correct optimistic counts for Like + Save
 
-## 2. Rate-limit audit (#7)
+1. **Return viewer state from the feed APIs.** Extend `FeedVideo` with `viewer_liked: boolean` and `viewer_saved: boolean`. Populate them in `getForYouFeed`, `getFeed`, `getFollowingFeed`, and `getVideosByIds` by joining/loading the current user's rows from `likes` and `saves` for the returned video ids (single batched query per feed page, no N+1). When unauthenticated, return `false`.
 
-Today `checkRateLimit` is only wired into `comments.functions.ts` and `redemptions.functions.ts`. Add it to the abuse-prone surfaces:
+2. **Use viewer state to drive the toggle direction in `VideoCard.tsx`.**
+   - Track a local `liked` / `saved` boolean seeded from `video.viewer_liked` / `video.viewer_saved`.
+   - On tap: flip the local boolean, and apply `+1` or `−1` to the count based on the previous value (not always `+1`).
+   - Patch the same delta into every cached feed entry (existing `patchFeeds` helper, just pass the signed delta).
+   - On error, roll back both the boolean and the count.
 
-Server functions (per-user, sliding window):
-- `mux.functions.ts` → `createDirectUpload` — 10/min, 50/hour (prevents upload-spam → Mux ingest cost).
-- `mux.functions.ts` → `reconcileMyStuckUploads` — 5/min (hits Mux API in a loop).
-- `itineraries.functions.ts` → create/save flows — 30/min.
-- `destinations.functions.ts` → write paths — 30/min.
-- `profile.functions.ts` → profile update — 20/min.
+3. **Invalidate `["feed"]` and `["shared-video"]` on settle** so the source of truth re-syncs without disturbing scroll position (the feed already preserves the active card via `data-idx`).
 
-Public HTTP routes (per-IP, since no userId):
-- `routes/api/public/b.$id.ts`, `d.$id.ts`, `go.$id.ts`, `r.$code.ts` — 120/min per IP (click/redirect endpoints; easy DoS target).
-- `routes/api/public/attribute.ts` — 60/min per IP.
-- `routes/api/public/mux-webhook.ts` — do NOT rate limit; rely on signature verification.
+### B. iOS "Add to Home Screen" prompt
 
-Add a small `getIpKey(request)` helper in `rate-limit.server.ts` reading `cf-connecting-ip` / `x-forwarded-for`.
+1. **Detect iOS Safari** (UA-based; iPad on iPadOS too) **and standalone mode** (`window.navigator.standalone === true` or `display-mode: standalone` media query).
+2. If the user is on iOS Safari **and** not already standalone **and** hasn't dismissed the prompt in the last 14 days (localStorage flag), show a one-time bottom sheet on the feed: *"Get the full-screen Travidz experience — tap the Share icon ⬆️ then 'Add to Home Screen'."* with a small illustration of the Share → Add to Home Screen flow and a "Don't show again" dismiss.
+3. Add an "Install app" entry inside `Settings` so users who dismissed can re-open the instructions.
+4. Leave the existing Android `beforeinstallprompt` flow alone — just extend the same component to also handle iOS.
 
-## 3. CDN caching headers (#10)
+### C. Verify
 
-Public read pages that are safe to cache at the edge:
+- Tap save on a fresh video, count goes 4 → 5, tap again → 4, refresh page → still 4. Repeat for like.
+- Open the preview on iPhone Safari → see the install prompt once; tap dismiss → it's gone for 14 days; tap Settings → "Install app" → instructions reappear.
+- After "Add to Home Screen", relaunch from the icon → no Safari top/bottom bars, identical to Instagram's chrome-free view.
 
-- Public deal pages (`/d/:id` route + deal landing): `Cache-Control: public, s-maxage=60, stale-while-revalidate=600`.
-- Public profile pages (`/u/:handle` or equivalent): same.
-- Public video share pages: `s-maxage=30, stale-while-revalidate=300` (feed freshness matters more).
-- Leave `no-store` on redirect endpoints (`b.$id`, `go.$id`, `r.$code`, `d.$id`) — already correct.
-- `sitemap.xml` and `robots.txt` already cached — no change.
+---
 
-Implementation: set `Cache-Control` in the route's `head()`/response in TanStack server routes, and add `<meta http-equiv="Cache-Control" ...>` is NOT used — caching is response-header driven, so we set it on the document response where possible. For SSR pages, set via the route's `loader` returning headers on the Response.
+## Technical notes
 
-## 4. Sweep of remaining items
-
-After the above ships, run a quick readiness pass and report status — no code changes unless something is missing:
-
-- **#1 Cloud instance size** — check current size vs MAU forecast; recommend bump if on Micro.
-- **#2 DB hardening** — run `supabase--linter` and `security--run_security_scan`; fix any criticals (missing RLS, hot-path indexes on `videos.published_at`, `feed_*` queries).
-- **#3 Mux production keys** — verify `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` are live keys (check via `secrets--fetch_secrets` listing only).
-- **#4 Email domain** — `email_domain--check_email_domain_status` for `notify.travidz.com`.
-- **#5 Stripe live mode** — `payments--get_go_live_status`.
-- **#6 Backups** — confirm `docs/backup-restore-drill.md` exists and is current.
-- **#8 Realtime publication** — query `supabase_realtime` for tables; flag any not needed.
-- **#11 Observability** — confirm `/admin/errors` exists; recommend external uptime monitor (UptimeRobot/Better Stack).
-- **#12 Cloud usage alerts** — note: must be set in Cloud UI; flag to user.
-
-Items #13-#17 are "at scale" — note them but defer until MAU climbs.
-
-## Deliverable
-
-A single follow-up message after implementation with:
-- ✅ what shipped (#9, #7, #10)
-- 🟡 what needs your action in the Cloud / Stripe / Mux UIs
-- 🔴 anything blocking launch
-
-## Out of scope
-
-- No new tables, no schema migrations (rate-limit table already exists).
-- No changes to billing/commission logic.
-- No frontend visual changes.
-- Items #13-#17 (read replicas, cold storage, image CDN) deferred until traffic warrants.
+- The `likes` and `saves` tables already exist (used by `toggleLike`/`toggleSave`); the batched viewer-state query is `select video_id from likes where user_id = $me and video_id = any($ids)` → set of liked ids. No schema change required.
+- No PWA service worker is being added — manifest-only install. This keeps us inside Lovable's "no service workers in preview" guidance.
+- Files touched: `src/lib/feed.functions.ts` (FeedVideo type + viewer flags in 4 server fns), `src/components/feed/VideoCard.tsx` (toggle logic), `src/components/PWAInstallPrompt.tsx` (iOS branch), `src/routes/settings.tsx` (re-open entry). No DB migration.
