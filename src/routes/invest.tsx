@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { V6_DEFAULTS } from "@/lib/investor-model/assumptions";
-import { computeMarket, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
+import { computeMarket, computeRevenue, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
 import {
   Download,
   Link as LinkIcon,
@@ -43,6 +43,16 @@ export const Route = createFileRoute("/invest")({
 
 function InvestPage() {
   const market = useMemo(() => computeMarket(V6_DEFAULTS), []);
+  const revenue = useMemo(() => computeRevenue(V6_DEFAULTS), []);
+  const y5 = revenue[4];
+  // Anchor contribution margin to the workbook UK Base Y5 net (£16.3M) so
+  // the headline reconciles with the rest of the page, while still
+  // subtracting modelled infra COGS (Mux + Lovable Cloud + email).
+  const ukBaseInfraY5 = y5.infraTotal;
+  const ukBaseNetY5 = market.somNetBaseY5;
+  const ukBaseGbvY5 = market.somGBVBaseY5;
+  const ukBaseContributionY5 = ukBaseNetY5 - ukBaseInfraY5;
+  const ukBaseContributionPctY5 = ukBaseContributionY5 / ukBaseGbvY5;
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-white">
@@ -53,6 +63,13 @@ function InvestPage() {
       <HowItWorks />
       <BusinessModel />
       <Market market={market} />
+      <UnitEconomics
+        infraY5={ukBaseInfraY5}
+        netY5={ukBaseNetY5}
+        contributionY5={ukBaseContributionY5}
+        contributionPctY5={ukBaseContributionPctY5}
+        gbvY5={ukBaseGbvY5}
+      />
       <GlobalExpansion />
       <GrowthPlan />
       <Team />
