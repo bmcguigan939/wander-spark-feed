@@ -582,11 +582,15 @@ function Action({
   count,
   onClick,
   label,
+  active,
+  activeClass,
 }: {
   icon: typeof Heart;
   count?: number;
   onClick?: () => void;
   label: string;
+  active?: boolean;
+  activeClass?: string;
 }) {
   return (
     <button
@@ -594,8 +598,8 @@ function Action({
       aria-label={label}
       className="group flex flex-col items-center gap-1 text-white"
     >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition group-hover:bg-white/20 group-active:scale-95">
-        <Icon className="h-5 w-5" strokeWidth={1.9} />
+      <span className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition group-hover:bg-white/20 group-active:scale-95 ${active ? activeClass ?? "" : ""}`}>
+        <Icon className="h-5 w-5" strokeWidth={1.9} fill={active ? "currentColor" : "none"} />
       </span>
       {typeof count === "number" && (
         <span className="text-[11px] font-semibold tabular-nums text-white/90 drop-shadow">{formatCount(count)}</span>
