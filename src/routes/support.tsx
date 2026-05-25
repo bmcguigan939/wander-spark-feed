@@ -147,6 +147,12 @@ function SupportPage() {
               </button>
             ))}
           </div>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Prefer email? Reach a human at{" "}
+            <a href="mailto:support@travidz.com" className="font-medium text-primary hover:underline">
+              support@travidz.com
+            </a>
+          </p>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
