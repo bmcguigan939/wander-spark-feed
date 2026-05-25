@@ -117,12 +117,15 @@ export const listVideoAffiliateLinks = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<AffiliateLink[]> => {
     const { data: rows, error } = await supabaseAdmin
       .from("affiliate_links")
-      .select("*")
+      .select(
+        "id,creator_id,video_id,provider,label,url,is_active,click_count,created_at",
+      )
       .eq("video_id", data.videoId)
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (rows as AffiliateLink[]) ?? [];
+    // commission_pct is intentionally not exposed to public viewers
+    return (rows ?? []).map((r) => ({ ...r, commission_pct: null })) as AffiliateLink[];
   });
 
 export const PROVIDER_LABELS: Record<AffiliateProvider, string> = {
