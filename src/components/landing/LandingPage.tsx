@@ -96,7 +96,7 @@ function Hero({ spotsRemaining }: { spotsRemaining?: number }) {
         {typeof spotsRemaining === "number" && spotsRemaining > 0 && (
           <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/70 px-4 py-1.5 text-xs font-semibold backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-[var(--coral)]" />
-            Only {spotsRemaining} founding creator spots left — lifetime perks
+            {spotsRemaining.toLocaleString()} of 5,000 Founding Creator spots left — 50% for 24 months
           </div>
         )}
 
