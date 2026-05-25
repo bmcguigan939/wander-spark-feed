@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AddToCollectionSheet } from "@/components/feed/AddToCollectionSheet";
 import { CommentsSheet } from "@/components/feed/CommentsSheet";
 import { getPlatformStyle } from "@/lib/platform-style";
+import { haptic, nativeShare } from "@/lib/native";
 
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
   const [muted, setMuted] = useState(true);
@@ -111,6 +112,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
     onMutate: () => {
+      haptic("light");
       const delta = liked ? -1 : 1;
       const prevLiked = liked;
       setLiked(!prevLiked);
@@ -130,6 +132,7 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const saveM = useMutation({
     mutationFn: () => saveFn({ data: { videoId: video.id } }),
     onMutate: () => {
+      haptic("light");
       const delta = saved ? -1 : 1;
       const prevSaved = saved;
       setSaved(!prevSaved);
@@ -157,8 +160,11 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
 
   async function share() {
     const url = `${window.location.origin}/?v=${video.id}`;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ title: video.title, url }); toast("Shared"); return; } catch {}
+    haptic("light");
+    const shared = await nativeShare({ title: video.title, url });
+    if (shared) {
+      toast("Shared");
+      return;
     }
     try {
       if (navigator?.clipboard?.writeText) {

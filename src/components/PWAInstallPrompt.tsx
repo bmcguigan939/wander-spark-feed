@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Download, Share, Plus } from "lucide-react";
+import { isNative } from "@/lib/native";
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>;
@@ -47,6 +48,8 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Already running inside the native shell — no PWA install prompt needed.
+    if (isNative()) return;
 
     // Track visit count
     try {
