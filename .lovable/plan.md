@@ -1,12 +1,11 @@
-## Move the Founding Creator spots badge lower on the page
+## Add clickable Travidz logo to top-left of landing page
 
-The "5,000 of 5,000 Founding Creator spots left — 50% for 24 months" pill currently sits at the very top of the hero, which feels off while we're still pre-launch and the counter is at its starting value.
+Replace the generic Compass icon in the `TopBar` lockup with the actual app icon. The existing `<Link to="/">` wrapper already makes the whole lockup (icon + wordmark) clickable and route to home — no extra wiring needed.
 
 ### Change
-In `src/components/landing/LandingPage.tsx`:
-- Remove the spots badge from the `Hero` component (lines 96–101).
-- Re-render the same badge as a centered standalone strip placed **between the `HowItWorks` section and the `WhyTravidz`/pricing section** further down the page, so visitors see the headline + CTAs first and only encounter the founding-spots messaging after they understand the product.
-- Keep the same styling (rounded pill, Sparkles icon, coral accent) so it stays on-brand, just in a quieter position.
-- Keep the conditional render (`spotsRemaining > 0`) so it disappears cleanly once spots fill up.
+In `src/components/landing/LandingPage.tsx` `TopBar`:
+- Import `appIcon from "@/assets/app-icon-1024.png"`.
+- Replace the `<span>` containing the `<Compass>` icon with `<img src={appIcon} alt="Travidz logo" className="h-8 w-8 rounded-xl object-cover" />` so it matches the current footprint beside the "travidz" wordmark.
+- Leave the surrounding `<Link to="/">` untouched so the logo is clickable and navigates to the homepage.
 
-No backend, copy, or commission logic changes — purely repositioning a single element on the landing page.
+No other layout or routing changes.
