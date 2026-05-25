@@ -177,7 +177,6 @@ function ProfilePage() {
   });
 
   function handleSignOut() {
-    if (typeof window !== "undefined" && !window.confirm("Sign out of Travidz?")) return;
     signOut();
   }
 
