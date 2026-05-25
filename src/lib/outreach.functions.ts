@@ -53,7 +53,7 @@ async function callDraftGateway(system: string, user: string): Promise<Draft | n
 function fallbackInviteDraft(args: {
   businessName: string;
   creatorName: string;
-  videoTitle: string;
+  videoTitle: string | null;
   inviteUrl: string;
   followers?: number;
   socialLinksText?: string;
@@ -64,11 +64,14 @@ function fallbackInviteDraft(args: {
   const socialsBlock = args.socialLinksText
     ? `\nYou can check out my work here:\n${args.socialLinksText}\n`
     : ``;
+  const featureLine = args.videoTitle
+    ? `I'm ${args.creatorName} — I recently featured you in my Travidz video "${args.videoTitle}" and travellers have been asking how to book with you directly.`
+    : `I'm ${args.creatorName} — I recently featured you in a short video on Travidz and travellers have been asking how to book with you directly.`;
   return {
     subject: `Featured ${args.businessName} on Travidz — claim your listing`,
     body:
       `Hi ${args.businessName} team,\n\n` +
-      `I'm ${args.creatorName} — I recently featured you in my Travidz video "${args.videoTitle}" and travellers have been asking how to book with you directly.\n\n` +
+      `${featureLine}\n\n` +
       `Travidz is a short-video travel platform where creators share places they love and send bookings straight to the business. It costs nothing to list — Travidz simply takes a flat ${COMMISSION.totalPct}% commission on any confirmed bookings sent your way. No setup fee, no monthly cost — you only pay on actual sales.\n` +
       followerLine +
       socialsBlock +
@@ -117,7 +120,19 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     const creatorName =
       creator?.display_name || (creator?.username ? `@${creator.username}` : "a Travidz creator");
     const inviteUrl = `https://travidz.com/business/invite/${inv.token}`;
-    const videoTitle = video?.title ?? "a recent video";
+    // Only treat the title as real if it's human-looking text — not a UUID,
+    // not the video id, and not a stub like "untitled". Otherwise we'd pass
+    // garbage to the model and it would invent details to fit it.
+    const rawTitle = (video?.title ?? "").trim();
+    const looksLikeId =
+      !rawTitle ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTitle) ||
+      /^untitled$/i.test(rawTitle) ||
+      rawTitle.toLowerCase() === inv.video_id?.toLowerCase();
+    const videoTitle: string | null = looksLikeId ? null : rawTitle;
+    const rawDescription = (video?.description ?? "").trim();
+    const videoDescription =
+      rawDescription && !/^[0-9a-f-]{30,}$/i.test(rawDescription) ? rawDescription : null;
 
     const followers = followerCount ?? 0;
     const crossLinks = Array.isArray((video as any)?.cross_links) ? (video as any).cross_links : [];
@@ -148,7 +163,8 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
     const system =
       "You write warm, concise outreach emails from a travel creator who is introducing a local business to the Travidz platform after featuring them in a short video. " +
       "The creator is the messenger, NOT the dealmaker — they are explaining what Travidz is and how it works, not negotiating a personal arrangement. " +
-      "Tone: friendly, professional, never salesy or pushy. Mention specific details from the video when helpful. Keep the body under 180 words. " +
+      "Tone: friendly, professional, never salesy or pushy. Keep the body under 180 words. " +
+      "CRITICAL ANTI-HALLUCINATION RULES: Do NOT describe what is in the video — no property types, accommodation types, activities, scenery, season, weather, food, or any sensory detail — unless that exact detail is explicitly stated in the data block below. If no video title or description is provided, write a generic opening like 'I recently featured you in a short video on Travidz' and do NOT guess what the video shows. Never include IDs, UUIDs, file names, hex codes, or technical identifiers in the email body. Do not invent facts about the business beyond its name and (if given) city. " +
       "Structure: (1) short intro from the creator referencing the video, (2) one or two sentences explaining Travidz — a short-video travel platform where creators share places they love and send bookings directly to the business, (3) explain the commercial model clearly: Travidz charges a flat " + COMMISSION.totalPct + "% commission on any confirmed bookings sent to the business, with no setup fee and no monthly cost — the business only pays on actual sales, (4) optional one-line follower mention if a count is provided, (5) social feed links as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can review the creator's work, (6) a clear single-line CTA containing the invite URL. " +
       "BANNED phrases — do NOT use any of these or close paraphrases: 'I'm proposing', 'I propose', 'I'd like to offer', 'I'd like to propose', 'performance-based partnership', 'partnership proposal', 'let's partner'. Frame the offer as Travidz's standard model, not the creator's personal proposal. " +
       "Do NOT invent stats. " +
@@ -158,8 +174,8 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       `Creator: ${creatorName}`,
       `Business: ${inv.business_name}${inv.city ? ` (${inv.city})` : ""}`,
       `Their website: ${inv.website_url}`,
-      `Video title: ${videoTitle}`,
-      video?.description ? `Video description: ${video.description.slice(0, 400)}` : "",
+      videoTitle ? `Video title: ${videoTitle}` : `Video title: (not provided — do not invent one or describe the video)`,
+      videoDescription ? `Video description: ${videoDescription.slice(0, 400)}` : "",
       video?.destination ? `Destination: ${video.destination}` : "",
       followers > 0 ? `Creator following on Travidz: ${followers} followers` : "",
       socialLinksText ? `Creator's social feeds (include verbatim as a labelled list):\n${socialLinksText}` : "",
