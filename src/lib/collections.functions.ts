@@ -55,7 +55,11 @@ export const updateCollection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
-    const { error } = await context.supabase.from("collections").update(patch).eq("id", id);
+    const { error } = await context.supabase
+      .from("collections")
+      .update(patch)
+      .eq("id", id)
+      .eq("owner_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -64,8 +68,20 @@ export const deleteCollection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    // Verify ownership first (defense-in-depth above RLS).
+    const { data: owned } = await context.supabase
+      .from("collections")
+      .select("id")
+      .eq("id", data.id)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!owned) throw new Error("Not found");
     await context.supabase.from("collection_items").delete().eq("collection_id", data.id);
-    const { error } = await context.supabase.from("collections").delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("collections")
+      .delete()
+      .eq("id", data.id)
+      .eq("owner_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -76,6 +92,13 @@ export const addToCollection = createServerFn({ method: "POST" })
     z.object({ collectionId: z.string().uuid(), videoId: z.string().uuid() }).parse(input)
   )
   .handler(async ({ data, context }) => {
+    const { data: owned } = await context.supabase
+      .from("collections")
+      .select("id")
+      .eq("id", data.collectionId)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!owned) throw new Error("Not found");
     const { error } = await context.supabase
       .from("collection_items")
       .upsert({ collection_id: data.collectionId, video_id: data.videoId }, { onConflict: "collection_id,video_id" });
@@ -89,6 +112,13 @@ export const removeFromCollection = createServerFn({ method: "POST" })
     z.object({ collectionId: z.string().uuid(), videoId: z.string().uuid() }).parse(input)
   )
   .handler(async ({ data, context }) => {
+    const { data: owned } = await context.supabase
+      .from("collections")
+      .select("id")
+      .eq("id", data.collectionId)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!owned) throw new Error("Not found");
     const { error } = await context.supabase
       .from("collection_items").delete()
       .eq("collection_id", data.collectionId).eq("video_id", data.videoId);
