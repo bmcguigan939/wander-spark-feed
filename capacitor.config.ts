@@ -13,9 +13,12 @@
  * OR Codemagic's cloud builders (see codemagic.yaml). They are intentionally
  * NOT run from this sandbox.
  */
-import type { CapacitorConfig } from "@capacitor/cli";
-
-const config: CapacitorConfig = {
+// Note: we don't `import type { CapacitorConfig } from "@capacitor/cli"`
+// because @capacitor/cli isn't installed in the web project — it gets added
+// later when generating the native projects on a Mac or Codemagic builder.
+// The Capacitor CLI reads this file as a plain JS module at native build
+// time, so a typed object literal is sufficient.
+const config = {
   appId: "com.travidz.app",
   appName: "Travidz",
   webDir: "dist",
