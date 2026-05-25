@@ -93,16 +93,19 @@ export const V6_DEFAULTS: Assumptions = {
 
   creatorsActiveByYear: [500, 2_400, 6_800, 14_000, 24_000],
   gbvPerActiveCreator: 18_500,
-  foundingCap: 500,
+  foundingCap: 5000,
   powerThresholdGBP: 25_000,
 
-  // founding share decays as cohort dilutes; power tier grows as creators mature
+  // Founding 50/50 is locked for 24 months from join, so the founding share
+  // is meaningful in Y1–Y2 only and decays sharply from Y3 onward. The slack
+  // moves into maturing/mature, with Power Creator taking the top of the
+  // cohort that meets the £25k + 1 video / 30d bar.
   tierMixByYear: [
     { founding: 1.0, power: 0.0, mature: 0.0, maturing: 0.0, new: 0.0 },
-    { founding: 0.45, power: 0.05, mature: 0.0, maturing: 0.15, new: 0.35 },
-    { founding: 0.22, power: 0.18, mature: 0.1, maturing: 0.3, new: 0.2 },
-    { founding: 0.12, power: 0.28, mature: 0.25, maturing: 0.25, new: 0.1 },
-    { founding: 0.08, power: 0.34, mature: 0.32, maturing: 0.18, new: 0.08 },
+    { founding: 0.70, power: 0.05, mature: 0.0,  maturing: 0.10, new: 0.15 },
+    { founding: 0.05, power: 0.20, mature: 0.15, maturing: 0.35, new: 0.25 },
+    { founding: 0.0,  power: 0.28, mature: 0.32, maturing: 0.28, new: 0.12 },
+    { founding: 0.0,  power: 0.32, mature: 0.40, maturing: 0.20, new: 0.08 },
   ],
 
   grossCommissionPct: 0.11,
