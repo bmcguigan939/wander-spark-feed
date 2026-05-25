@@ -2677,6 +2677,7 @@ export type Database = {
           payout_bank_details_encrypted: string | null
           payout_method: string
           place_name: string | null
+          power_tier_last_qualified_at: string | null
           power_tier_locked_at: string | null
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
@@ -2712,6 +2713,7 @@ export type Database = {
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           place_name?: string | null
+          power_tier_last_qualified_at?: string | null
           power_tier_locked_at?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
@@ -2747,6 +2749,7 @@ export type Database = {
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           place_name?: string | null
+          power_tier_last_qualified_at?: string | null
           power_tier_locked_at?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
