@@ -150,6 +150,8 @@ function OverviewPane({
     year: `Y${r.year}`,
     GBV: r.gbv,
     "Travidz net": r.travidzNet,
+    "Infra costs": r.infraTotal,
+    "Contribution margin": r.contributionMargin,
     "Creator payout": r.creatorPayout,
     "Take-rate %": r.blendedTakeRatePct * 100,
     Creators: cohorts[i].activeCreators,
@@ -217,6 +219,12 @@ function OverviewPane({
             <Row label="Creator payout" values={revenue.map((r) => fmtGBP(r.creatorPayout, { compact: true }))} />
             <Row label="Travidz net" values={revenue.map((r) => fmtGBP(r.travidzNet, { compact: true }))} strong />
             <Row label="Blended take-rate" values={revenue.map((r) => fmtPct(r.blendedTakeRatePct, 2))} />
+            <Row label="Mux (encode + storage + stream)" values={revenue.map((r) => fmtGBP(r.muxTotal, { compact: true }))} />
+            <Row label="Lovable Cloud" values={revenue.map((r) => fmtGBP(r.lovableCloudCost, { compact: true }))} />
+            <Row label="Email" values={revenue.map((r) => fmtGBP(r.emailCost, { compact: true }))} />
+            <Row label="Infra total" values={revenue.map((r) => fmtGBP(r.infraTotal, { compact: true }))} />
+            <Row label="Contribution margin" values={revenue.map((r) => fmtGBP(r.contributionMargin, { compact: true }))} strong />
+            <Row label="Contribution margin %" values={revenue.map((r) => fmtPct(r.contributionMarginPct, 2))} />
           </tbody>
         </table>
       </Card>
