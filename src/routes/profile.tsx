@@ -177,7 +177,6 @@ function ProfilePage() {
   });
 
   function handleSignOut() {
-    if (typeof window !== "undefined" && !window.confirm("Sign out of Travidz?")) return;
     signOut();
   }
 
@@ -332,8 +331,9 @@ function ProfilePage() {
       </div>
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl">
-          <SheetHeader><SheetTitle>Edit profile</SheetTitle></SheetHeader>
-          <form onSubmit={(e) => { e.preventDefault(); updateM.mutate(); }} className="mt-4 space-y-3">
+          <SheetHeader><SheetTitle>Profile & account</SheetTitle></SheetHeader>
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Edit profile</h3>
+          <form onSubmit={(e) => { e.preventDefault(); updateM.mutate(); }} className="mt-2 space-y-3">
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Display name</span>
               <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={80}
@@ -346,10 +346,11 @@ function ProfilePage() {
             </label>
             <button disabled={updateM.isPending} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">Save</button>
           </form>
+          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Account</h3>
           <button
             type="button"
             onClick={handleSignOut}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-destructive/40 bg-destructive/5 py-3 text-sm font-semibold text-destructive"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-destructive/40 bg-destructive/5 py-3 text-sm font-semibold text-destructive"
           >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
