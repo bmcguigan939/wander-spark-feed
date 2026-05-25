@@ -530,6 +530,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
       .map((x) => x.v);
 
     await attachMatchedDeals(ranked);
+    await attachViewerInteractions(ranked, userId);
     return { videos: ranked };
   });
 
@@ -543,7 +544,9 @@ export const getFollowingFeed = createServerFn({ method: "GET" })
     const { data: follows } = await supabaseAdmin
       .from("follows").select("creator_id").eq("follower_id", userId);
     const ids = (follows ?? []).map((r: any) => r.creator_id as string);
-    return { videos: await fetchFeedRows(data.limit, data.offset, ids) };
+    const videos = await fetchFeedRows(data.limit, data.offset, ids);
+    await attachViewerInteractions(videos, userId);
+    return { videos };
   });
 
 export const searchAll = createServerFn({ method: "GET" })
