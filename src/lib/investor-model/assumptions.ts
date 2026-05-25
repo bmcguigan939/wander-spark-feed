@@ -115,6 +115,18 @@ export const V6_DEFAULTS: Assumptions = {
     maturing: 0.4,
     mature: 0.3,
   },
+  infraCosts: {
+    // USD prices converted at ~0.80 GBP/USD (conservative).
+    muxEncodePerMin: 0.032,        // ~$0.04/min
+    muxStoragePerMinMonth: 0.0024, // ~$0.003/min/mo
+    muxStreamPerMin: 0.00077,      // ~$0.00096/min
+    avgVideoLengthMin: 1.0,
+    videosPerActiveCreatorPerYr: 20,
+    viewsPerVideoByYear: [50, 150, 400, 900, 1800],
+    avgStorageMonths: 12,
+    lovableCloudByYear: [300, 1_200, 6_000, 24_000, 60_000],
+    emailByYear: [120, 600, 2_400, 7_200, 18_000],
+  },
 };
 
 export const TIER_ORDER: CreatorTier[] = ["founding", "power", "new", "maturing", "mature"];
