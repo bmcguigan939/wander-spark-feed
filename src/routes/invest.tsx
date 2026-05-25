@@ -564,6 +564,7 @@ function _GlobalExpansionImpl() {
     { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
     { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
     { label: "Travidz net revenue (Y5)", uk: "£16.3M", gv: "£61.9M", mult: "3.8x" },
+    { label: "Contribution margin (Y5, after infra)", uk: "£15.5M", gv: "£58.9M", mult: "3.8x" },
     { label: "Blended take-rate", uk: "4.68%", gv: "4.69%", mult: "—" },
   ];
   return (
