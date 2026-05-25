@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { COMMISSION } from "@/lib/commission";
+import { isSelfHost } from "@/lib/url-guards";
 
 export type InviteStatus = "pending" | "accepted" | "declined" | "expired";
 
@@ -325,6 +326,13 @@ export const acceptInvite = createServerFn({ method: "POST" })
     const resolvedWebsiteUrl = data.websiteUrl ?? invite.website_url ?? null;
     if (!resolvedWebsiteUrl) {
       throw new Error("Please enter your website URL to continue.");
+    }
+    // Block self-referential URLs (e.g. https://travidz.com) — they create
+    // a redirect loop on the "Book direct" CTA in the feed.
+    if (isSelfHost(resolvedWebsiteUrl)) {
+      throw new Error(
+        "Please enter your own booking website (not a travidz.com URL).",
+      );
     }
 
     // If the business overrode the URL, persist it on the invite so the audit

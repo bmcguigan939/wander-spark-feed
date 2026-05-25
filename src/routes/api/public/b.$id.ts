@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enforceIpRateLimit } from "@/lib/rate-limit.server";
+import { isSelfHost } from "@/lib/url-guards";
 
 // Public click-through for a signed business card on a creator video.
 // Logs the click (attributed to the video's creator) and 302-redirects
@@ -21,6 +22,12 @@ export const Route = createFileRoute("/api/public/b/$id")({
           .eq("id", id)
           .maybeSingle();
         if (!biz || !biz.business_website_url) {
+          return new Response("Business unavailable", { status: 404 });
+        }
+        // Defensive: never 302 a user back to one of our own domains —
+        // that loops them straight into the feed and looks like the
+        // "Book" button did nothing.
+        if (isSelfHost(biz.business_website_url)) {
           return new Response("Business unavailable", { status: 404 });
         }
 
