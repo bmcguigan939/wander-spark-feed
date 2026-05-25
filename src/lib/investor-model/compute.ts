@@ -83,6 +83,16 @@ export type RevenueYear = {
   travidzNet: number;
   blendedCreatorSharePct: number; // of the net pool (post-Stripe)
   blendedTakeRatePct: number; // travidzNet / gbv
+  // Infrastructure COGS — subtracted from travidzNet to get contribution margin.
+  muxEncodeCost: number;
+  muxStorageCost: number;
+  muxStreamCost: number;
+  muxTotal: number;
+  lovableCloudCost: number;
+  emailCost: number;
+  infraTotal: number;
+  contributionMargin: number;       // travidzNet − infraTotal
+  contributionMarginPct: number;    // of GBV
 };
 
 export function computeRevenue(a: Assumptions): RevenueYear[] {
@@ -111,6 +121,24 @@ export function computeRevenue(a: Assumptions): RevenueYear[] {
     const travidzNet = netPool - creatorPayout;
     const blendedCreatorSharePct = netPool > 0 ? creatorPayout / netPool : 0;
     const blendedTakeRatePct = gbv > 0 ? travidzNet / gbv : 0;
+
+    // Infra COGS
+    const ic = a.infraCosts;
+    const videoCount = creators * ic.videosPerActiveCreatorPerYr;
+    const totalUploadMinutes = videoCount * ic.avgVideoLengthMin;
+    const muxEncodeCost = totalUploadMinutes * ic.muxEncodePerMin;
+    const muxStorageCost =
+      totalUploadMinutes * ic.muxStoragePerMinMonth * ic.avgStorageMonths;
+    const streamMinutes =
+      videoCount * (ic.viewsPerVideoByYear[i] ?? 0) * ic.avgVideoLengthMin;
+    const muxStreamCost = streamMinutes * ic.muxStreamPerMin;
+    const muxTotal = muxEncodeCost + muxStorageCost + muxStreamCost;
+    const lovableCloudCost = ic.lovableCloudByYear[i] ?? 0;
+    const emailCost = ic.emailByYear[i] ?? 0;
+    const infraTotal = muxTotal + lovableCloudCost + emailCost;
+    const contributionMargin = travidzNet - infraTotal;
+    const contributionMarginPct = gbv > 0 ? contributionMargin / gbv : 0;
+
     return {
       year,
       gbv,
@@ -122,6 +150,15 @@ export function computeRevenue(a: Assumptions): RevenueYear[] {
       travidzNet,
       blendedCreatorSharePct,
       blendedTakeRatePct,
+      muxEncodeCost,
+      muxStorageCost,
+      muxStreamCost,
+      muxTotal,
+      lovableCloudCost,
+      emailCost,
+      infraTotal,
+      contributionMargin,
+      contributionMarginPct,
     };
   });
 }
