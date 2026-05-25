@@ -1,0 +1,25 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.travidz.app",
+        "paths": [
+          "/",
+          "/v/*",
+          "/u/*",
+          "/deals/*",
+          "/destinations/*",
+          "/collections/*",
+          "/itineraries/*",
+          "NOT /api/*",
+          "NOT /admin/*",
+          "NOT /lovable/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.travidz.app"]
+  }
+}
