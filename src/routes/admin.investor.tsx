@@ -107,10 +107,15 @@ function InvestorModelPage() {
 
 function HeadlineStrip({ y5, market }: { y5: ReturnType<typeof computeRevenue>[number]; market: ReturnType<typeof computeMarket> }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <Stat label="TAM (UK only)" value={fmtGBP(market.tamGBV, { compact: true })} hint={`UK + EU-5: ${fmtGBP(market.tamGBVAll, { compact: true })}`} />
       <Stat label="Year 5 GBV" value={fmtGBP(y5.gbv, { compact: true })} hint={`${fmtPct(y5.gbv / market.samGBV, 2)} of UK SAM`} />
       <Stat label="Year 5 Travidz net" value={fmtGBP(y5.travidzNet, { compact: true })} hint={`take-rate ${fmtPct(y5.blendedTakeRatePct, 2)}`} />
+      <Stat
+        label="Y5 contribution margin"
+        value={fmtGBP(y5.contributionMargin, { compact: true })}
+        hint={`after ${fmtGBP(y5.infraTotal, { compact: true })} infra · ${fmtPct(y5.contributionMarginPct, 2)} of GBV`}
+      />
       <Stat label="Year 5 creator payout" value={fmtGBP(y5.creatorPayout, { compact: true })} hint={`avg share ${fmtPct(y5.blendedCreatorSharePct, 0)} of net pool`} />
     </div>
   );
