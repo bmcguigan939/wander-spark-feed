@@ -35,7 +35,7 @@ export const BusinessInviteEmail = ({
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>
-      {creatorName} featured {businessName} on {siteName} — claim your listing
+      {creatorName} featured {businessName} on {siteName} — approve your listing
     </Preview>
     <Body style={main}>
       <Container style={container}>
@@ -51,7 +51,7 @@ export const BusinessInviteEmail = ({
           ),
         )}
         <Button style={button} href={inviteUrl}>
-          Claim your listing
+          Approve your listing
         </Button>
         <Text style={text}>
           Before you accept, you can read the full terms here:{' '}
