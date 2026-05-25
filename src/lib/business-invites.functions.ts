@@ -326,6 +326,13 @@ export const acceptInvite = createServerFn({ method: "POST" })
     if (!resolvedWebsiteUrl) {
       throw new Error("Please enter your website URL to continue.");
     }
+    // Block self-referential URLs (e.g. https://travidz.com) — they create
+    // a redirect loop on the "Book direct" CTA in the feed.
+    if (isSelfHost(resolvedWebsiteUrl)) {
+      throw new Error(
+        "Please enter your own booking website (not a travidz.com URL).",
+      );
+    }
 
     // If the business overrode the URL, persist it on the invite so the audit
     // trail and any follow-up emails reflect the final destination.
