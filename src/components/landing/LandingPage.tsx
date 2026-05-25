@@ -287,6 +287,10 @@ function FAQ() {
       a: "You earn commission on every confirmed booking. Earnings show in your dashboard instantly, and payouts are sent at the end of each month for the prior month's confirmed bookings (£20 minimum).",
     },
     {
+      q: "How does the creator commission split work?",
+      a: "Founding Creators (first 5,000) keep 50% of the net commission pool for 24 months. After that you stay at 50% forever as a Power Creator as long as you keep posting at least 1 video a month and your videos drive at least £25,000 in rolling 12-month bookings (with a 60-day grace period if you slip below either bar). Otherwise the standard ladder applies: 50% for months 1–6, 40% for months 7–18, 30% from month 19.",
+    },
+    {
       q: "What kind of videos work?",
       a: "Vertical clips of hotels, restaurants, activities, viewpoints — anywhere a viewer might want to go. Same energy as your TikToks.",
     },
