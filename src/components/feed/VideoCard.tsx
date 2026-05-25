@@ -20,6 +20,14 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const [muted, setMuted] = useState(true);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // Local mirror of viewer's like/save state. Seeded from the feed payload
+  // and re-synced when the underlying video prop changes (e.g. tab switch
+  // or refetch). This drives the optimistic +1/-1 delta so the count no
+  // longer drifts upward on every tap.
+  const [liked, setLiked] = useState<boolean>(!!video.viewer_liked);
+  const [saved, setSaved] = useState<boolean>(!!video.viewer_saved);
+  useEffect(() => { setLiked(!!video.viewer_liked); }, [video.viewer_liked]);
+  useEffect(() => { setSaved(!!video.viewer_saved); }, [video.viewer_saved]);
   const playerRef = useRef<any>(null);
   const [ccAvailable, setCcAvailable] = useState(false);
   const [ccOn, setCcOn] = useState<boolean>(() => {
@@ -103,8 +111,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
     onMutate: () => {
-      patchFeeds("like_count", 1);
-      return { rollback: () => patchFeeds("like_count", -1) };
+      const delta = liked ? -1 : 1;
+      const prevLiked = liked;
+      setLiked(!prevLiked);
+      patchFeeds("like_count", delta);
+      return {
+        rollback: () => {
+          setLiked(prevLiked);
+          patchFeeds("like_count", -delta);
+        },
+      };
     },
     onError: (err, _v, ctx) => {
       ctx?.rollback?.();
@@ -114,8 +130,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const saveM = useMutation({
     mutationFn: () => saveFn({ data: { videoId: video.id } }),
     onMutate: () => {
-      patchFeeds("save_count", 1);
-      return { rollback: () => patchFeeds("save_count", -1) };
+      const delta = saved ? -1 : 1;
+      const prevSaved = saved;
+      setSaved(!prevSaved);
+      patchFeeds("save_count", delta);
+      return {
+        rollback: () => {
+          setSaved(prevSaved);
+          patchFeeds("save_count", -delta);
+        },
+      };
     },
     onError: (err, _v, ctx) => {
       ctx?.rollback?.();
@@ -307,9 +331,9 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         className="absolute right-3 z-20 flex flex-col items-center gap-4 text-white transition-[bottom] duration-200"
         style={{ bottom: `calc(env(safe-area-inset-bottom) + 84px + ${overlayHeight + 16}px)` }}
       >
-        <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
+        <Action icon={Heart} count={video.like_count} label="Like" active={liked} activeClass="text-rose-500" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
-        <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
+        <Action icon={Bookmark} count={video.save_count} label="Save" active={saved} activeClass="text-amber-300" onClick={() => requireAuth(() => saveM.mutate())} />
         <Action icon={Share2} label="Share" onClick={share} />
         <button
           onClick={(e) => { e.stopPropagation(); requireAuth(() => setCollectionOpen(true)); }}
@@ -558,11 +582,15 @@ function Action({
   count,
   onClick,
   label,
+  active,
+  activeClass,
 }: {
   icon: typeof Heart;
   count?: number;
   onClick?: () => void;
   label: string;
+  active?: boolean;
+  activeClass?: string;
 }) {
   return (
     <button
@@ -570,8 +598,8 @@ function Action({
       aria-label={label}
       className="group flex flex-col items-center gap-1 text-white"
     >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition group-hover:bg-white/20 group-active:scale-95">
-        <Icon className="h-5 w-5" strokeWidth={1.9} />
+      <span className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition group-hover:bg-white/20 group-active:scale-95 ${active ? activeClass ?? "" : ""}`}>
+        <Icon className="h-5 w-5" strokeWidth={1.9} fill={active ? "currentColor" : "none"} />
       </span>
       {typeof count === "number" && (
         <span className="text-[11px] font-semibold tabular-nums text-white/90 drop-shadow">{formatCount(count)}</span>

@@ -28,6 +28,8 @@ export type FeedVideo = {
   source_url?: string | null;
   embed_mode?: string | null;
   cross_links?: Array<{ platform: string; url: string }>;
+  viewer_liked?: boolean;
+  viewer_saved?: boolean;
   creator: {
     id: string;
     username: string;
@@ -82,6 +84,25 @@ async function fetchFeedRows(
   await attachMatchedDeals(videos);
   await applySocialVisibility(videos);
   return videos;
+}
+
+async function attachViewerInteractions(videos: FeedVideo[], userId: string | null) {
+  if (!videos.length) return;
+  if (!userId) {
+    for (const v of videos) { v.viewer_liked = false; v.viewer_saved = false; }
+    return;
+  }
+  const ids = videos.map((v) => v.id);
+  const [likesRes, savesRes] = await Promise.all([
+    supabaseAdmin.from("likes").select("video_id").eq("user_id", userId).in("video_id", ids),
+    supabaseAdmin.from("saves").select("video_id").eq("user_id", userId).in("video_id", ids),
+  ]);
+  const liked = new Set<string>((likesRes.data ?? []).map((r: any) => r.video_id));
+  const saved = new Set<string>((savesRes.data ?? []).map((r: any) => r.video_id));
+  for (const v of videos) {
+    v.viewer_liked = liked.has(v.id);
+    v.viewer_saved = saved.has(v.id);
+  }
 }
 
 function locKey(country?: string | null, city?: string | null) {
@@ -242,11 +263,14 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
 }
 
 export const getFeed = createServerFn({ method: "GET" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({ limit: z.number().min(1).max(50).default(20), offset: z.number().min(0).default(0) }).parse(input)
   )
-  .handler(async ({ data }) => {
-    return { videos: await fetchFeedRows(data.limit, data.offset) };
+  .handler(async ({ data, context }) => {
+    const videos = await fetchFeedRows(data.limit, data.offset);
+    await attachViewerInteractions(videos, context.userId ?? null);
+    return { videos };
   });
 
 const idsInput = z.object({
@@ -254,8 +278,9 @@ const idsInput = z.object({
 });
 
 export const getVideosByIds = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((i: unknown) => idsInput.parse(i))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
@@ -272,6 +297,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const videos = data.ids.map((id) => byId.get(id)).filter(Boolean) as FeedVideo[];
     await attachMatchedDeals(videos);
     await applySocialVisibility(videos);
+    await attachViewerInteractions(videos, context.userId ?? null);
     return { videos };
   });
 
@@ -504,6 +530,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
       .map((x) => x.v);
 
     await attachMatchedDeals(ranked);
+    await attachViewerInteractions(ranked, userId);
     return { videos: ranked };
   });
 
@@ -517,7 +544,9 @@ export const getFollowingFeed = createServerFn({ method: "GET" })
     const { data: follows } = await supabaseAdmin
       .from("follows").select("creator_id").eq("follower_id", userId);
     const ids = (follows ?? []).map((r: any) => r.creator_id as string);
-    return { videos: await fetchFeedRows(data.limit, data.offset, ids) };
+    const videos = await fetchFeedRows(data.limit, data.offset, ids);
+    await attachViewerInteractions(videos, userId);
+    return { videos };
   });
 
 export const searchAll = createServerFn({ method: "GET" })
