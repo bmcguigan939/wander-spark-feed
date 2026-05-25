@@ -1,11 +1,10 @@
-## Add clickable Travidz logo to top-left of landing page
+## Use the lowercase-t favicon as the top-left logo
 
-Replace the generic Compass icon in the `TopBar` lockup with the actual app icon. The existing `<Link to="/">` wrapper already makes the whole lockup (icon + wordmark) clickable and route to home — no extra wiring needed.
+Swap the top-left lockup image in `src/components/landing/LandingPage.tsx` from `@/assets/app-icon-1024.png` (uppercase T) to the lowercase-t mark at `public/icon-512.png` — the same one we generated for Google Search results.
 
 ### Change
-In `src/components/landing/LandingPage.tsx` `TopBar`:
-- Import `appIcon from "@/assets/app-icon-1024.png"`.
-- Replace the `<span>` containing the `<Compass>` icon with `<img src={appIcon} alt="Travidz logo" className="h-8 w-8 rounded-xl object-cover" />` so it matches the current footprint beside the "travidz" wordmark.
-- Leave the surrounding `<Link to="/">` untouched so the logo is clickable and navigates to the homepage.
+- Remove `import appIcon from "@/assets/app-icon-1024.png"`.
+- Change the `<img>` in `TopBar` to `src="/icon-512.png"` (served straight from `public/`), keeping `alt="Travidz logo"` and `className="h-8 w-8 rounded-xl object-cover"`.
+- The surrounding `<Link to="/">` stays, so the logo remains clickable.
 
-No other layout or routing changes.
+No other changes.

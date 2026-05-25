@@ -19,7 +19,6 @@ import {
   Music2,
   Youtube,
 } from "lucide-react";
-import appIcon from "@/assets/app-icon-1024.png";
 
 const CTA_PRIMARY = "Sign up & start earning";
 const CTA_TAGLINE = "Sign up and start earning on your travel posts";
@@ -53,7 +52,7 @@ function TopBar() {
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
         <Link to="/" className="flex items-center gap-2 font-display text-xl font-black tracking-tight">
-          <img src={appIcon} alt="Travidz logo" className="h-8 w-8 rounded-xl object-cover" />
+          <img src="/icon-512.png" alt="Travidz logo" className="h-8 w-8 rounded-xl object-cover" />
           travidz
         </Link>
         <div className="flex items-center gap-2">
