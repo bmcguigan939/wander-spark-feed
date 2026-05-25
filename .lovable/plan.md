@@ -1,73 +1,37 @@
 
-## Safe security fixes — single migration
+## Restrict storage bucket listing
 
-One migration covering the four "safe to auto-fix" findings. Application code is not touched.
+The scanner flagged two buckets, `avatars` and `deal-images`, as "Public Bucket Allows Listing". Both have a broad `SELECT USING (bucket_id = 'X')` policy on `storage.objects` that lets any client paginate through every file in the bucket via the list API.
 
-### 1. Function `search_path` hardening (5 findings)
+These buckets are intentionally **public-read by URL** — avatars and deal images must be fetchable globally — but they should not be **enumerable**. Public buckets serve files via `/storage/v1/object/public/<bucket>/<path>` which bypasses RLS, so dropping the broad SELECT policy preserves all real read access while removing the enumeration vector.
 
-Add `SET search_path = public, pg_temp` to every PL/pgSQL function in `public` that's missing it. Confirmed targets via `pg_proc` inspection:
+### Verified safe
 
-- `enqueue_email(text, jsonb)` — SECURITY DEFINER
-- `read_email_batch(text, integer, integer)` — SECURITY DEFINER
-- `delete_email(text, bigint)` — SECURITY DEFINER
-- `move_to_dlq(text, text, bigint, jsonb)` — SECURITY DEFINER
-- `videos_update_search_tsv()` — trigger function
+Code audit: the app only calls `upload()` and `getPublicUrl()` on these buckets (in `src/routes/profile.tsx` and `src/components/business/DealForm.tsx`). No `.list()` calls anywhere. `getPublicUrl()` is a pure URL builder — it doesn't hit RLS.
 
-Done via `ALTER FUNCTION ... SET search_path = public, pg_temp` — bodies untouched.
+### Per-bucket disposition
 
-### 2. RLS-enabled-no-policy tables (2 findings)
+| Bucket | Public? | Current SELECT policy | Action |
+| --- | --- | --- | --- |
+| `avatars` | yes | `bucket_id = 'avatars'` for all roles | **DROP** the policy. Public CDN URLs still work; listing blocked. |
+| `deal-images` | yes | `bucket_id = 'deal-images'` for all roles | **DROP** the policy. Public CDN URLs still work; listing blocked. |
+| `price-evidence` | no | already scoped: admin OR `affiliate_links.business_id = auth.uid()` | **No change**. Already correct. |
 
-Confirmed: `public.rate_limit_hits` and `public.video_views`. Both are written exclusively server-side via `supabaseAdmin` (which bypasses RLS) and never queried from the browser. Current state silently blocks all client access — correct behavior, but the linter flags the empty-policy ambiguity.
+INSERT / UPDATE / DELETE policies on these buckets remain (owner-scoped via `storage.foldername(name)[1] = auth.uid()::text`) — they're unaffected.
 
-Fix: add an explicit restrictive deny-all policy on each so intent is documented:
-
-```sql
-CREATE POLICY "deny all client access" ON public.rate_limit_hits
-  AS RESTRICTIVE FOR ALL TO anon, authenticated
-  USING (false) WITH CHECK (false);
--- same for video_views
-```
-
-This is a no-op at runtime (already blocked) but makes the policy explicit so the scanner and future readers see the intent.
-
-Note: `video_views` previously had no client-side insert path — confirmed `recordView` and similar are server-fn only. If you ever want client-side view logging we'd add a separate INSERT policy.
-
-### 3. Overly permissive INSERT policies (2 findings)
-
-Two intentional anonymous click-tracking inserts use `WITH CHECK (true)`:
-
-- `public.business_clicks` — `Anyone can log a click`
-- `public.partner_clicks` — `partner_clicks anon insert`
-
-Tighten the `WITH CHECK` so authenticated users can only insert rows attributed to themselves (or anonymous), preventing one user from forging clicks attributed to another:
+### Migration
 
 ```sql
-WITH CHECK (user_id IS NULL OR user_id = auth.uid())
+DROP POLICY "avatars public read" ON storage.objects;
+DROP POLICY "deal images public read" ON storage.objects;
 ```
 
-For `partner_clicks` we'll also constrain `partner` and `destination_url` lengths via a CHECK constraint to mildly cap junk payloads.
+That's the whole change. Single migration, no application-code edits.
 
-### 4. Scope of work (single migration)
+### After applying
 
-```text
-supabase/migrations/<ts>_safe_security_hardening.sql
-├─ ALTER FUNCTION search_path on 5 functions
-├─ CREATE POLICY restrictive deny-all on rate_limit_hits, video_views
-└─ DROP + CREATE tightened INSERT policies on business_clicks, partner_clicks
-```
+I'll mark the two `Public Bucket Allows Listing` findings as fixed and update `@security-memory` to record that `avatars` and `deal-images` are public-read-by-URL only, with listing intentionally blocked.
 
-No application code changes. No data migrations. Fully reversible.
+### Note on "only authorized users can read their own media"
 
----
-
-### Deferred for explicit review (NOT in this migration)
-
-These remain open and need your sign-off before I touch them, because each has app-behaviour or business risk:
-
-- **Errors (3):** profiles column-leakage policy rewrite, business_invites commission-column split, removing/gating the `users can self-assign creator role` policy.
-- **SECURITY DEFINER function executability (50):** mass `REVOKE EXECUTE FROM anon, authenticated` requires whitelisting the few functions the client actually calls — risk of breaking realtime/match search if I get the whitelist wrong.
-- **Public storage bucket listing (2):** need to confirm which buckets and whether listing is used anywhere in the app.
-- **Hardcoded Mapbox token + `logClientError` auth gap (2):** these are code changes (not migrations) and require token rotation on your side.
-- **Extensions in public (2):** already accepted in security memory; will mark as ignored after this migration.
-
-I'll surface each deferred group as a follow-up once the safe set lands.
+The two flagged buckets hold inherently public media (profile photos, deal photos shown on the consumer feed). Restricting reads to the owner would break the feed. The private/owner-scoped bucket (`price-evidence`) is already correctly scoped to the owning business + admins. If you want a separate truly-private media bucket (e.g. uploaded passports, receipts), say the word and I'll add it as a follow-up — it's out of scope here.
