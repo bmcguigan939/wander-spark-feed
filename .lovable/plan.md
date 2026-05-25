@@ -1,33 +1,24 @@
-## Add Website URL editor to /admin/users
+## Fix login form on mobile keyboards
 
-Let admins fix any business's `business_website_url` (and `business_name`) inline from the admin users list — the same field that drives the pink "Book direct" card on feed videos.
+Two small UX issues on `/login` (visible in the screenshots):
 
-### Backend
+1. When the on-screen keyboard opens, it covers the password input so users can't see what they're typing.
+2. The password field has no way to reveal what's been typed.
 
-`src/lib/admin.functions.ts`
-- Extend `listAdminUsers` to also select `business_name` and `business_website_url` from `profiles`, so admins see them in the list.
-- Add new server fn `setBusinessWebsite`:
-  - Auth: `requireSupabaseAuth` + `assertAdmin`.
-  - Input (Zod): `{ userId: uuid, businessName?: string|null (max 160), websiteUrl?: string|null (max 500) }`.
-  - Validation: if `websiteUrl` is non-empty, normalize to absolute https URL, then reject via `isSelfHost()` (reuse `src/lib/url-guards.ts`) with message *"Enter the business's own booking website, not a travidz.com URL."*
-  - Empty string → store `null` (clears the field, hides the Book-direct card).
-  - Updates `profiles` for that user_id via `supabaseAdmin`.
+### Changes (all in `src/routes/login.tsx`)
 
-### Frontend
+**1. Keep the form visible above the keyboard**
+- Replace the `justify-center` full-height layout with a top-aligned layout that has comfortable top padding instead of vertical centering. That way when the keyboard pushes the viewport up, the email + password inputs stay in view (centered layouts get clipped because the centered content sits behind the keyboard).
+- Tighten the header spacing (logo + "Travidz" + tagline) so the inputs sit higher on the initial screen too.
+- Add `scroll-margin-top` to the inputs and an `onFocus` `scrollIntoView({ block: 'center' })` on the password input as a belt-and-braces fix on iOS Safari, which doesn't always auto-scroll focused inputs above the keyboard.
 
-`src/routes/admin.users.tsx`
-- For each user row that has the `business` role (or already has a `business_name`), render a small "Business website" editor below the role chips:
-  - Two compact inputs: Business name + Website URL, pre-filled from the user row.
-  - "Save" button → calls `setBusinessWebsite` mutation; on success invalidates `admin-users` and toasts "Saved".
-  - Inline error toast on validation failure (self-host rejection, etc.).
-- Keep visual styling consistent with existing pill/input look in the file.
+**2. Add a show/hide eye toggle to the password field**
+- Wrap the password `<input>` in a relative container.
+- Add a button positioned at the right edge of the input that toggles `showPassword` state between `type="password"` and `type="text"`.
+- Use `Eye` / `EyeOff` icons from `lucide-react` (already used elsewhere in the project).
+- Give the button an `aria-label` ("Show password" / "Hide password") and `aria-pressed` for accessibility, and bump padding-right on the input so the typed text doesn't run under the icon.
 
 ### Out of scope
 
-- No schema migration (columns already exist on `profiles`).
-- No change to feed `VideoCard` or `/api/public/b/$id` — the existing self-host guard there is sufficient.
-
-### Files touched
-
-- `src/lib/admin.functions.ts` — extend `listAdminUsers` select; add `setBusinessWebsite`.
-- `src/routes/admin.users.tsx` — add inline website editor UI + mutation wiring.
+- No change to the reset-password page (can add the same toggle there in a follow-up if you want — let me know).
+- No change to auth logic, validation, or styling tokens.

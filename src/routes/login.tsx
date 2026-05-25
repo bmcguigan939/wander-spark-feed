@@ -3,7 +3,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { Compass } from "lucide-react";
+import { Compass, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 const searchSchema = z.object({
@@ -30,6 +30,7 @@ function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">(initialMode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,19 +81,19 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative isolate min-h-dvh w-full overflow-hidden bg-background">
+    <div className="relative isolate min-h-dvh w-full overflow-x-hidden bg-background">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full bg-[var(--sunset)] opacity-40 blur-3xl animate-blob" />
         <div className="absolute right-[-6rem] top-24 h-[24rem] w-[24rem] rounded-full bg-[var(--coral)] opacity-40 blur-3xl animate-blob [animation-delay:-4s]" />
         <div className="absolute bottom-[-8rem] left-1/3 h-[26rem] w-[26rem] rounded-full bg-[var(--twilight)] opacity-30 blur-3xl animate-blob [animation-delay:-8s]" />
       </div>
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-          <Compass className="h-6 w-6" />
+      <div className="mx-auto flex max-w-md flex-col px-6 pb-16 pt-[max(env(safe-area-inset-top),2rem)]">
+      <div className="mb-5 text-center">
+        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+          <Compass className="h-5 w-5" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Travidz</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Discover travel through video.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Travidz</h1>
+        <p className="mt-1 text-xs text-muted-foreground">Discover travel through video.</p>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-card/80 p-1 text-sm font-semibold backdrop-blur">
@@ -123,13 +124,32 @@ function LoginPage() {
           type="email" required placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary"
+          style={{ scrollMarginTop: 80, scrollMarginBottom: 120 }}
         />
-        <input
-          type="password" required minLength={6} placeholder="Password" value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          className="w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary"
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            required minLength={6} placeholder="Password" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={(e) => {
+              setTimeout(() => {
+                e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+              }, 300);
+            }}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            className="w-full rounded-xl border border-border bg-card/80 py-3 pl-4 pr-12 text-sm outline-none backdrop-blur focus:border-primary"
+            style={{ scrollMarginTop: 80, scrollMarginBottom: 120 }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((s) => !s)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {info && <p className="text-xs text-primary">{info}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
         <button disabled={loading} className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">
