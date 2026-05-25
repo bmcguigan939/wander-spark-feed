@@ -75,8 +75,7 @@ function fallbackInviteDraft(args: {
       `Travidz is a short-video travel platform where creators share places they love and send bookings straight to the business. It costs nothing to list — Travidz simply takes a flat ${COMMISSION.totalPct}% commission on any confirmed bookings sent your way. No setup fee, no monthly cost — you only pay on actual sales.\n` +
       followerLine +
       socialsBlock +
-      `\nYou can claim your free listing in one click:\n${args.inviteUrl}\n\n` +
-      `Happy to answer any questions.\n\nThanks,\n${args.creatorName}`,
+      `\nUse the button below to approve your free listing — happy to answer any questions.\n\nThanks,\n${args.creatorName}`,
   };
 }
 
@@ -165,7 +164,8 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       "The creator is the messenger, NOT the dealmaker — they are explaining what Travidz is and how it works, not negotiating a personal arrangement. " +
       "Tone: friendly, professional, never salesy or pushy. Keep the body under 180 words. " +
       "CRITICAL ANTI-HALLUCINATION RULES: Do NOT describe what is in the video — no property types, accommodation types, activities, scenery, season, weather, food, or any sensory detail — unless that exact detail is explicitly stated in the data block below. If no video title or description is provided, write a generic opening like 'I recently featured you in a short video on Travidz' and do NOT guess what the video shows. Never include IDs, UUIDs, file names, hex codes, or technical identifiers in the email body. Do not invent facts about the business beyond its name and (if given) city. " +
-      "Structure: (1) short intro from the creator referencing the video, (2) one or two sentences explaining Travidz — a short-video travel platform where creators share places they love and send bookings directly to the business, (3) explain the commercial model clearly: Travidz charges a flat " + COMMISSION.totalPct + "% commission on any confirmed bookings sent to the business, with no setup fee and no monthly cost — the business only pays on actual sales, (4) optional one-line follower mention if a count is provided, (5) social feed links as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can review the creator's work, (6) a clear single-line CTA containing the invite URL. " +
+      "Structure: (1) short intro from the creator referencing the video, (2) one or two sentences explaining Travidz — a short-video travel platform where creators share places they love and send bookings directly to the business, (3) explain the commercial model clearly: Travidz charges a flat " + COMMISSION.totalPct + "% commission on any confirmed bookings sent to the business, with no setup fee and no monthly cost — the business only pays on actual sales, (4) optional one-line follower mention if a count is provided, (5) social feed links as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can review the creator's work, (6) a brief closing line such as 'Use the button below to approve your listing — happy to answer any questions' and a sign-off. " +
+      "CRITICAL: Do NOT include the invite URL, any travidz.com/business/invite link, any 'click here' link, or any raw URL or token in the email body — the email template renders the call-to-action button separately. " +
       "BANNED phrases — do NOT use any of these or close paraphrases: 'I'm proposing', 'I propose', 'I'd like to offer', 'I'd like to propose', 'performance-based partnership', 'partnership proposal', 'let's partner'. Frame the offer as Travidz's standard model, not the creator's personal proposal. " +
       "Do NOT invent stats. " +
       "Reply ONLY with JSON: { subject: string, body: string } where body is plain text with \\n line breaks.";
@@ -181,7 +181,6 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       socialLinksText ? `Creator's social feeds (include verbatim as a labelled list):\n${socialLinksText}` : "",
       crossHandles ? `Also posts the same video on: ${crossHandles}` : "",
       `Travidz commercial model (explain as the platform's standard terms, not a personal proposal): flat ${COMMISSION.totalPct}% commission on confirmed bookings Travidz sends them, no setup fee, no monthly cost, free to list.`,
-      `Invite URL (include verbatim in the email body): ${inviteUrl}`,
       ``,
       `Write the email draft as JSON.`,
     ]
