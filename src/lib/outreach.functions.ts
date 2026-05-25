@@ -75,8 +75,7 @@ function fallbackInviteDraft(args: {
       `Travidz is a short-video travel platform where creators share places they love and send bookings straight to the business. It costs nothing to list — Travidz simply takes a flat ${COMMISSION.totalPct}% commission on any confirmed bookings sent your way. No setup fee, no monthly cost — you only pay on actual sales.\n` +
       followerLine +
       socialsBlock +
-      `\nYou can claim your free listing in one click:\n${args.inviteUrl}\n\n` +
-      `Happy to answer any questions.\n\nThanks,\n${args.creatorName}`,
+      `\nUse the button below to approve your free listing — happy to answer any questions.\n\nThanks,\n${args.creatorName}`,
   };
 }
 
