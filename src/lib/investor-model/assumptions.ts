@@ -29,6 +29,21 @@ export type Assumptions = {
   stripeFixedPerTxn: number; // £0.20
   // Creator share of the NET pool (post-Stripe) by tier
   creatorSharePctByTier: Record<CreatorTier, number>; // 0.5, 0.5, 0.5, 0.4, 0.3
+
+  // Infrastructure COGS (year 1..5, GBP). Mux is the dominant variable cost
+  // — encoding once per upload, storage per minute/month, streaming per
+  // minute viewed. Lovable Cloud + email scale with MAU.
+  infraCosts: {
+    muxEncodePerMin: number;        // £/min encoded
+    muxStoragePerMinMonth: number;  // £/min stored per month
+    muxStreamPerMin: number;        // £/min streamed
+    avgVideoLengthMin: number;      // minutes per upload
+    videosPerActiveCreatorPerYr: number;
+    viewsPerVideoByYear: number[];  // ramps with audience
+    avgStorageMonths: number;       // avg retention of a video, in months
+    lovableCloudByYear: number[];   // £/yr — DB + auth + storage tier
+    emailByYear: number[];          // £/yr — Resend / transactional email
+  };
 };
 
 // Global market layer — matches the `regions` sheet of
@@ -99,6 +114,18 @@ export const V6_DEFAULTS: Assumptions = {
     new: 0.5,
     maturing: 0.4,
     mature: 0.3,
+  },
+  infraCosts: {
+    // USD prices converted at ~0.80 GBP/USD (conservative).
+    muxEncodePerMin: 0.032,        // ~$0.04/min
+    muxStoragePerMinMonth: 0.0024, // ~$0.003/min/mo
+    muxStreamPerMin: 0.00077,      // ~$0.00096/min
+    avgVideoLengthMin: 1.0,
+    videosPerActiveCreatorPerYr: 20,
+    viewsPerVideoByYear: [50, 150, 400, 900, 1800],
+    avgStorageMonths: 12,
+    lovableCloudByYear: [300, 1_200, 6_000, 24_000, 60_000],
+    emailByYear: [120, 600, 2_400, 7_200, 18_000],
   },
 };
 

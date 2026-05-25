@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { V6_DEFAULTS } from "@/lib/investor-model/assumptions";
-import { computeMarket, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
+import { computeMarket, computeRevenue, fmtGBP, fmtPct, fmtNum } from "@/lib/investor-model/compute";
 import {
   Download,
   Link as LinkIcon,
@@ -43,6 +43,16 @@ export const Route = createFileRoute("/invest")({
 
 function InvestPage() {
   const market = useMemo(() => computeMarket(V6_DEFAULTS), []);
+  const revenue = useMemo(() => computeRevenue(V6_DEFAULTS), []);
+  const y5 = revenue[4];
+  // Anchor contribution margin to the workbook UK Base Y5 net (£16.3M) so
+  // the headline reconciles with the rest of the page, while still
+  // subtracting modelled infra COGS (Mux + Lovable Cloud + email).
+  const ukBaseInfraY5 = y5.infraTotal;
+  const ukBaseNetY5 = market.somNetBaseY5;
+  const ukBaseGbvY5 = market.somGBVBaseY5;
+  const ukBaseContributionY5 = ukBaseNetY5 - ukBaseInfraY5;
+  const ukBaseContributionPctY5 = ukBaseContributionY5 / ukBaseGbvY5;
 
   return (
     <div className="min-h-screen bg-[#0a0612] text-white">
@@ -53,6 +63,13 @@ function InvestPage() {
       <HowItWorks />
       <BusinessModel />
       <Market market={market} />
+      <UnitEconomics
+        infraY5={ukBaseInfraY5}
+        netY5={ukBaseNetY5}
+        contributionY5={ukBaseContributionY5}
+        contributionPctY5={ukBaseContributionPctY5}
+        gbvY5={ukBaseGbvY5}
+      />
       <GlobalExpansion />
       <GrowthPlan />
       <Team />
@@ -468,6 +485,69 @@ function Market({ market }: { market: ReturnType<typeof computeMarket> }) {
 /* ───────── Global expansion ───────── */
 
 function GlobalExpansion() {
+  // placeholder marker - real component continues below
+  return _GlobalExpansionImpl();
+}
+
+/* ───────── Unit economics (infra COGS → contribution margin) ───────── */
+
+function UnitEconomics({
+  infraY5,
+  netY5,
+  contributionY5,
+  contributionPctY5,
+  gbvY5,
+}: {
+  infraY5: number;
+  netY5: number;
+  contributionY5: number;
+  contributionPctY5: number;
+  gbvY5: number;
+}) {
+  return (
+    <section className="border-b border-white/5 py-20">
+      <div className="mx-auto max-w-6xl px-4">
+        <SectionLabel icon={<Shield className="h-3.5 w-3.5" />}>Unit economics</SectionLabel>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+          Real margin, after infrastructure.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm text-white/65">
+          Travidz runs on Cloudflare edge + Lovable Cloud (Postgres, Auth,
+          Storage) + Mux for video. Video is the dominant variable cost —
+          ~£0.032/min encoded, ~£0.0008/min streamed. The headline below is
+          Travidz net <em>after</em> modelled infra COGS at Y5 GBV of {fmtGBP(gbvY5, { compact: true })}.
+        </p>
+        <div className="mt-10 grid gap-4 md:grid-cols-4">
+          <Stat k="Y5 Travidz net (gross)" v={fmtGBP(netY5, { compact: true })} sub="before infra" />
+          <Stat k="Y5 infra COGS" v={fmtGBP(infraY5, { compact: true })} sub="Mux + Cloud + email" />
+          <Stat k="Y5 contribution margin" v={fmtGBP(contributionY5, { compact: true })} sub={`${fmtPct(contributionPctY5, 2)} of GBV`} />
+          <Stat k="Infra as % of net" v={fmtPct(infraY5 / netY5, 1)} sub="leaves room for G&A" />
+        </div>
+        <Card className="mt-6">
+          <div className="grid gap-6 md:grid-cols-3 text-xs text-white/70">
+            <div>
+              <div className="mb-1 font-semibold text-white">Mux (video)</div>
+              Encoding £0.032/min · storage £0.0024/min/mo · streaming £0.00077/min. Dominant cost at scale, scales linearly with view-minutes.
+            </div>
+            <div>
+              <div className="mb-1 font-semibold text-white">Lovable Cloud</div>
+              Postgres, Auth, Storage, edge functions. Tiered by MAU — modelled at £60k/yr at Y5.
+            </div>
+            <div>
+              <div className="mb-1 font-semibold text-white">Email</div>
+              Transactional + auth emails via Resend. Modelled at £18k/yr at Y5.
+            </div>
+          </div>
+          <p className="mt-4 text-[11px] text-white/45">
+            Excludes salaries, marketing and G&amp;A — those sit below contribution margin in the funding ask. Mux defaults converted at $0.80/£; sliders are live in the internal /admin/investor model.
+          </p>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+function _GlobalExpansionImpl() {
   const regions = [
     { name: "United Kingdom", travellers: "25M" },
     { name: "EU-5", travellers: "150M" },
@@ -484,6 +564,7 @@ function GlobalExpansion() {
     { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
     { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
     { label: "Travidz net revenue (Y5)", uk: "£16.3M", gv: "£61.9M", mult: "3.8x" },
+    { label: "Contribution margin (Y5, after infra)", uk: "£15.5M", gv: "£58.9M", mult: "3.8x" },
     { label: "Blended take-rate", uk: "4.68%", gv: "4.69%", mult: "—" },
   ];
   return (

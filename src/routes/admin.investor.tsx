@@ -107,10 +107,15 @@ function InvestorModelPage() {
 
 function HeadlineStrip({ y5, market }: { y5: ReturnType<typeof computeRevenue>[number]; market: ReturnType<typeof computeMarket> }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       <Stat label="TAM (UK only)" value={fmtGBP(market.tamGBV, { compact: true })} hint={`UK + EU-5: ${fmtGBP(market.tamGBVAll, { compact: true })}`} />
       <Stat label="Year 5 GBV" value={fmtGBP(y5.gbv, { compact: true })} hint={`${fmtPct(y5.gbv / market.samGBV, 2)} of UK SAM`} />
       <Stat label="Year 5 Travidz net" value={fmtGBP(y5.travidzNet, { compact: true })} hint={`take-rate ${fmtPct(y5.blendedTakeRatePct, 2)}`} />
+      <Stat
+        label="Y5 contribution margin"
+        value={fmtGBP(y5.contributionMargin, { compact: true })}
+        hint={`after ${fmtGBP(y5.infraTotal, { compact: true })} infra · ${fmtPct(y5.contributionMarginPct, 2)} of GBV`}
+      />
       <Stat label="Year 5 creator payout" value={fmtGBP(y5.creatorPayout, { compact: true })} hint={`avg share ${fmtPct(y5.blendedCreatorSharePct, 0)} of net pool`} />
     </div>
   );
@@ -145,6 +150,8 @@ function OverviewPane({
     year: `Y${r.year}`,
     GBV: r.gbv,
     "Travidz net": r.travidzNet,
+    "Infra costs": r.infraTotal,
+    "Contribution margin": r.contributionMargin,
     "Creator payout": r.creatorPayout,
     "Take-rate %": r.blendedTakeRatePct * 100,
     Creators: cohorts[i].activeCreators,
@@ -212,6 +219,12 @@ function OverviewPane({
             <Row label="Creator payout" values={revenue.map((r) => fmtGBP(r.creatorPayout, { compact: true }))} />
             <Row label="Travidz net" values={revenue.map((r) => fmtGBP(r.travidzNet, { compact: true }))} strong />
             <Row label="Blended take-rate" values={revenue.map((r) => fmtPct(r.blendedTakeRatePct, 2))} />
+            <Row label="Mux (encode + storage + stream)" values={revenue.map((r) => fmtGBP(r.muxTotal, { compact: true }))} />
+            <Row label="Lovable Cloud" values={revenue.map((r) => fmtGBP(r.lovableCloudCost, { compact: true }))} />
+            <Row label="Email" values={revenue.map((r) => fmtGBP(r.emailCost, { compact: true }))} />
+            <Row label="Infra total" values={revenue.map((r) => fmtGBP(r.infraTotal, { compact: true }))} />
+            <Row label="Contribution margin" values={revenue.map((r) => fmtGBP(r.contributionMargin, { compact: true }))} strong />
+            <Row label="Contribution margin %" values={revenue.map((r) => fmtPct(r.contributionMarginPct, 2))} />
           </tbody>
         </table>
       </Card>
@@ -469,6 +482,13 @@ function RevenuePane({
             <KV k="Travidz net" v={fmtGBP(r.travidzNet, { compact: true })} strong />
             <KV k="Blended take-rate" v={fmtPct(r.blendedTakeRatePct, 2)} />
             <KV k="Avg creator share of net pool" v={fmtPct(r.blendedCreatorSharePct, 0)} />
+            <div className="border-t border-border pt-2 text-xs font-semibold uppercase text-muted-foreground">Infrastructure COGS</div>
+            <KV k="Mux total" v={fmtGBP(r.muxTotal, { compact: true })} />
+            <KV k="Lovable Cloud" v={fmtGBP(r.lovableCloudCost, { compact: true })} />
+            <KV k="Email" v={fmtGBP(r.emailCost, { compact: true })} />
+            <KV k="Infra total" v={fmtGBP(r.infraTotal, { compact: true })} />
+            <KV k="Contribution margin" v={fmtGBP(r.contributionMargin, { compact: true })} strong />
+            <KV k="Contribution margin %" v={fmtPct(r.contributionMarginPct, 2)} />
           </>
         ); })()}
       </Card>
@@ -506,6 +526,7 @@ function ScenariosPane({
               <div className="mt-4 space-y-1.5 text-sm">
                 <KV k="Y5 GBV" v={fmtGBP(revenue[4].gbv, { compact: true })} />
                 <KV k="Y5 Travidz net" v={fmtGBP(revenue[4].travidzNet, { compact: true })} />
+                <KV k="Y5 contribution margin" v={fmtGBP(revenue[4].contributionMargin, { compact: true })} />
                 <KV k="Y5 take-rate" v={fmtPct(revenue[4].blendedTakeRatePct, 2)} />
               </div>
             )}
