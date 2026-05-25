@@ -1,34 +1,33 @@
-## What's actually happening
+## Add Website URL editor to /admin/users
 
-The "Book direct" pink button → `/api/public/b/$id?v=…` → 302-redirects to the business's `business_website_url`.
+Let admins fix any business's `business_website_url` (and `business_name`) inline from the admin users list — the same field that drives the pink "Book direct" card on feed videos.
 
-For the **Test 02** business, that URL is set to `https://www.travidz.com/`, so the redirect just lands you back on the Travidz feed — which auto-plays the same video. It looks like the button "did nothing", but it's actually completing a redirect loop back to our own site.
+### Backend
 
-## Fix — 3 parts
+`src/lib/admin.functions.ts`
+- Extend `listAdminUsers` to also select `business_name` and `business_website_url` from `profiles`, so admins see them in the list.
+- Add new server fn `setBusinessWebsite`:
+  - Auth: `requireSupabaseAuth` + `assertAdmin`.
+  - Input (Zod): `{ userId: uuid, businessName?: string|null (max 160), websiteUrl?: string|null (max 500) }`.
+  - Validation: if `websiteUrl` is non-empty, normalize to absolute https URL, then reject via `isSelfHost()` (reuse `src/lib/url-guards.ts`) with message *"Enter the business's own booking website, not a travidz.com URL."*
+  - Empty string → store `null` (clears the field, hides the Book-direct card).
+  - Updates `profiles` for that user_id via `supabaseAdmin`.
 
-### 1. Clean up the bad data (the immediate cause)
+### Frontend
 
-Either:
-- Update Test 02's website to the real booking URL, or
-- Blank it out so the "Book direct" card stops rendering for that business.
+`src/routes/admin.users.tsx`
+- For each user row that has the `business` role (or already has a `business_name`), render a small "Business website" editor below the role chips:
+  - Two compact inputs: Business name + Website URL, pre-filled from the user row.
+  - "Save" button → calls `setBusinessWebsite` mutation; on success invalidates `admin-users` and toasts "Saved".
+  - Inline error toast on validation failure (self-host rejection, etc.).
+- Keep visual styling consistent with existing pill/input look in the file.
 
-I'll do this with a one-off SQL update once you tell me which.
+### Out of scope
 
-### 2. Block self-referential URLs at the redirect handler
+- No schema migration (columns already exist on `profiles`).
+- No change to feed `VideoCard` or `/api/public/b/$id` — the existing self-host guard there is sufficient.
 
-`src/routes/api/public/b.$id.ts` — after resolving `business_website_url`, reject any URL whose host is one of ours (`travidz.com`, `www.travidz.com`, `*.lovable.app`). Return a 404 (`"Business unavailable"`) instead of redirecting. This stops the loop even if someone re-enters a bad URL later.
+### Files touched
 
-### 3. Validate on the way in (business profile form)
-
-Wherever `business_website_url` is saved (the business onboarding / profile form), add the same host check + a clear inline error: *"Enter your own booking website, not travidz.com."* Prevents this from happening again.
-
-## Out of scope
-
-- The other pink **"Book →"** under *Book this trip* (BBM Best Stays) is fine — its URL is a real external site.
-- No change to the feed `VideoCard` itself; the link is correct, the destination is wrong.
-
-## Question before I build
-
-Which do you want for Test 02's website:
-1. Set to a specific URL (paste it and I'll update), or
-2. Clear it (the "Book direct" card will simply not show until they set a real one)?
+- `src/lib/admin.functions.ts` — extend `listAdminUsers` select; add `setBusinessWebsite`.
+- `src/routes/admin.users.tsx` — add inline website editor UI + mutation wiring.
