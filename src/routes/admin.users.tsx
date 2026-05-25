@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { listAdminUsers, grantRole, revokeRole } from "@/lib/admin.functions";
+import { listAdminUsers, grantRole, revokeRole, setBusinessWebsite } from "@/lib/admin.functions";
 import { setProfileVerified } from "@/lib/verification.functions";
 import { useAuth } from "@/lib/auth";
 import { Plus, X, BadgeCheck, Crown, Lock, ShieldCheck } from "lucide-react";
@@ -21,6 +21,7 @@ function AdminUsers() {
   const grantFn = useServerFn(grantRole);
   const revokeFn = useServerFn(revokeRole);
   const verifyFn = useServerFn(setProfileVerified);
+  const setWebsiteFn = useServerFn(setBusinessWebsite);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "trusted" | "untrusted">("all");
 
@@ -45,6 +46,15 @@ function AdminUsers() {
   const verify = useMutation({
     mutationFn: (v: { userId: string; verified: boolean }) => verifyFn({ data: v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onError: (e: any) => toast(e?.message ?? "Failed"),
+  });
+  const setWebsite = useMutation({
+    mutationFn: (v: { userId: string; businessName: string | null; websiteUrl: string | null }) =>
+      setWebsiteFn({ data: v }),
+    onSuccess: () => {
+      toast("Saved");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
     onError: (e: any) => toast(e?.message ?? "Failed"),
   });
 
@@ -118,9 +128,68 @@ function AdminUsers() {
                 );
               })}
             </div>
+            {(u.roles?.includes("business") || u.business_name || u.business_website_url) && (
+              <BusinessWebsiteEditor
+                userId={u.id}
+                initialName={u.business_name ?? ""}
+                initialUrl={u.business_website_url ?? ""}
+                onSave={(businessName, websiteUrl) =>
+                  setWebsite.mutate({ userId: u.id, businessName, websiteUrl })
+                }
+                saving={setWebsite.isPending && setWebsite.variables?.userId === u.id}
+              />
+            )}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function BusinessWebsiteEditor({
+  userId,
+  initialName,
+  initialUrl,
+  onSave,
+  saving,
+}: {
+  userId: string;
+  initialName: string;
+  initialUrl: string;
+  onSave: (businessName: string | null, websiteUrl: string | null) => void;
+  saving: boolean;
+}) {
+  const [name, setName] = useState(initialName);
+  const [url, setUrl] = useState(initialUrl);
+  const dirty = name !== initialName || url !== initialUrl;
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-background p-2 space-y-1.5">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Business
+      </div>
+      <input
+        key={`name-${userId}`}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Business name"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+      />
+      <input
+        key={`url-${userId}`}
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://booking.example.com"
+        className="w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+      />
+      <div className="flex justify-end">
+        <button
+          disabled={!dirty || saving}
+          onClick={() => onSave(name.trim() || null, url.trim() || null)}
+          className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground disabled:opacity-40"
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
     </div>
   );
 }
