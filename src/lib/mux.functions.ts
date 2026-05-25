@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { crossLinksSchema } from "./cross-links.functions";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 async function muxClient() {
   // Lazy import keeps Mux SDK out of any code path that doesn't call it.
@@ -32,6 +33,14 @@ export const createDirectUpload = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Cost guardrail: cap upload attempts so a single account can't
+    // burn Mux ingest budget (10/min, 50/hour per user).
+    const okMin = await checkRateLimit("mux_upload_create", userId, 10, 60);
+    const okHour = await checkRateLimit("mux_upload_create_hour", userId, 50, 3600);
+    if (!okMin || !okHour) {
+      throw new Error("Too many uploads in a short time. Please wait a moment and try again.");
+    }
+
     // Check creator role
     const { data: roleRow } = await supabase
       .from("user_roles").select("role").eq("user_id", userId).eq("role", "creator").maybeSingle();
@@ -45,6 +54,12 @@ export const createDirectUpload = createServerFn({ method: "POST" })
         new_asset_settings: {
           playback_policies: ["public"],
           video_quality: "basic",
+          // Delivery cost guardrails: cap resolution at 1080p so creators
+          // can't push 4K masters that 10x storage + delivery bills. Disable
+          // MP4 renditions so nobody can hot-link the source file and bypass
+          // HLS adaptive bitrate + CDN.
+          max_resolution_tier: "1080p",
+          mp4_support: "none",
           // Auto-generate English subtitles for accessibility & richer AI tagging
           input: [
             {
@@ -148,6 +163,12 @@ export const reconcileMyStuckUploads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+
+    // Each call fans out up to 20 Mux API requests; cap to 5/min per user.
+    const ok = await checkRateLimit("mux_reconcile", userId, 5, 60);
+    if (!ok) {
+      throw new Error("Already checking — please wait a moment before retrying.");
+    }
 
     const { data: rows, error: fetchErr } = await supabase
       .from("videos")
