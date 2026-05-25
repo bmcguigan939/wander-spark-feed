@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { setResponseHeaders } from "@tanstack/react-start/server";
+
+const PUBLIC_READ_CACHE = "public, s-maxage=60, stale-while-revalidate=600";
 
 export type MusicTrack = {
   id: string;
@@ -17,6 +20,7 @@ export const listMusicTracks = createServerFn({ method: "GET" })
     z.object({ q: z.string().max(120).optional() }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     let q = supabaseAdmin
       .from("music_tracks")
       .select("id,title,artist,audio_url,cover_url,duration_sec")
@@ -35,6 +39,7 @@ export const listMusicTracks = createServerFn({ method: "GET" })
 export const getMusicTrack = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     const { data: track } = await supabaseAdmin
       .from("music_tracks")
       .select("id,title,artist,audio_url,cover_url,duration_sec,source,license")

@@ -3,8 +3,14 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { checkRateLimit } from "@/lib/rate-limit.server";
+import { setResponseHeaders } from "@tanstack/react-start/server";
+
+// Country/city overview pages get heavy SEO traffic. Short TTL + long SWR
+// so the edge absorbs spikes while origin refreshes in the background.
+const PUBLIC_READ_CACHE = "public, s-maxage=120, stale-while-revalidate=900";
 
 export const listDestinations = createServerFn({ method: "GET" }).handler(async () => {
+  setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
   const { data, error } = await supabaseAdmin
     .from("videos")
     .select("country,city,thumbnail_url")
@@ -35,6 +41,7 @@ export const getDestination = createServerFn({ method: "GET" })
     z.object({ country: z.string().min(1).max(100), city: z.string().min(1).max(100).optional() }).parse(input)
   )
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     let q = supabaseAdmin
       .from("videos")
       .select(
@@ -68,6 +75,7 @@ const OverviewInput = z.object({
 export const getDestinationOverview = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => OverviewInput.parse(input))
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     const { country, city } = data;
 
     const [{ data: videos, error: vErr }, { data: summary }, { data: deals }] = await Promise.all([

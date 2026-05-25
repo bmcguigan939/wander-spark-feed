@@ -3,6 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { optionalSupabaseAuth } from "@/lib/optional-auth";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { setResponseHeaders } from "@tanstack/react-start/server";
+
+// Public-read pages: serve from edge with short TTL + long SWR so a traffic
+// spike doesn't hammer the origin DB. Safe because all returned fields are
+// already public (status=active deals, public profiles).
+const PUBLIC_READ_CACHE = "public, s-maxage=60, stale-while-revalidate=600";
 
 const dealSelect =
   "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
@@ -19,6 +25,7 @@ const filterSchema = z
 export const listDeals = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => filterSchema.parse(input ?? {}))
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     let q = supabaseAdmin
       .from("deals")
       .select(dealSelect)
@@ -38,6 +45,7 @@ export const listDeals = createServerFn({ method: "GET" })
 export const getDeal = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
+    setResponseHeaders(new Headers({ "Cache-Control": PUBLIC_READ_CACHE }));
     const { data: deal, error } = await supabaseAdmin
       .from("deals")
       .select(dealSelect)
