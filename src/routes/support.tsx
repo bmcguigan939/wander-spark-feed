@@ -153,6 +153,17 @@ function SupportPage() {
               support@travidz.com
             </a>
           </p>
+          <details className="mt-3 rounded-lg border border-border/60 bg-card/50 px-3 py-2 text-[11px] text-muted-foreground">
+            <summary className="cursor-pointer font-semibold text-foreground">
+              How to delete your Travidz account
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-4">
+              <li>Sign in at travidz.com and open <Link to="/settings" className="text-primary underline">Settings</Link>.</li>
+              <li>Scroll to "Danger zone" and tap "Open dedicated delete page" (or go directly to <Link to="/account/delete" className="text-primary underline">travidz.com/account/delete</Link>).</li>
+              <li>Type DELETE to confirm. Your account, videos, comments, follows, saves, collections, and push subscriptions are permanently removed.</li>
+              <li>Can't sign in? Email <a href="mailto:support@travidz.com?subject=Account%20deletion%20request" className="text-primary underline">support@travidz.com</a> from the address on file and we'll process it within 30 days.</li>
+            </ol>
+          </details>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
