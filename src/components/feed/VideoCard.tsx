@@ -331,9 +331,9 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
         className="absolute right-3 z-20 flex flex-col items-center gap-4 text-white transition-[bottom] duration-200"
         style={{ bottom: `calc(env(safe-area-inset-bottom) + 84px + ${overlayHeight + 16}px)` }}
       >
-        <Action icon={Heart} count={video.like_count} label="Like" onClick={() => requireAuth(() => likeM.mutate())} />
+        <Action icon={Heart} count={video.like_count} label="Like" active={liked} activeClass="text-rose-500" onClick={() => requireAuth(() => likeM.mutate())} />
         <Action icon={MessageCircle} count={video.comment_count ?? 0} label="Comments" onClick={() => setCommentsOpen(true)} />
-        <Action icon={Bookmark} count={video.save_count} label="Save" onClick={() => requireAuth(() => saveM.mutate())} />
+        <Action icon={Bookmark} count={video.save_count} label="Save" active={saved} activeClass="text-amber-300" onClick={() => requireAuth(() => saveM.mutate())} />
         <Action icon={Share2} label="Share" onClick={share} />
         <button
           onClick={(e) => { e.stopPropagation(); requireAuth(() => setCollectionOpen(true)); }}
