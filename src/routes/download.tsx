@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { Apple, Smartphone, Share, Plus, Check, Compass, ArrowRight, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { joinLaunchWaitlist } from "@/lib/waitlist.functions";
@@ -132,7 +132,7 @@ function DownloadPage() {
                 </p>
               </div>
               <div className="flex items-center justify-center rounded-2xl border border-border/40 bg-white p-5">
-                <QRCode value={downloadUrl} size={160} bgColor="#ffffff" fgColor="#0F172A" />
+                <QRCodeSVG value={downloadUrl} size={160} bgColor="#ffffff" fgColor="#0F172A" />
               </div>
             </div>
           )}

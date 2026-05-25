@@ -22,6 +22,7 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvestRouteImport } from './routes/invest'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -172,6 +173,11 @@ const LoginRoute = LoginRouteImport.update({
 const InvestRoute = InvestRouteImport.update({
   id: '/invest',
   path: '/invest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateRoute = CreateRouteImport.update({
@@ -622,6 +628,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/download': typeof DownloadRoute
   '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
@@ -722,6 +729,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/download': typeof DownloadRoute
   '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
@@ -822,6 +830,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/create': typeof CreateRoute
+  '/download': typeof DownloadRoute
   '/invest': typeof InvestRoute
   '/login': typeof LoginRoute
   '/map': typeof MapRoute
@@ -925,6 +934,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/collections'
     | '/create'
+    | '/download'
     | '/invest'
     | '/login'
     | '/map'
@@ -1025,6 +1035,7 @@ export interface FileRouteTypes {
     | '/'
     | '/collections'
     | '/create'
+    | '/download'
     | '/invest'
     | '/login'
     | '/map'
@@ -1124,6 +1135,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/collections'
     | '/create'
+    | '/download'
     | '/invest'
     | '/login'
     | '/map'
@@ -1226,6 +1238,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CreateRoute: typeof CreateRoute
+  DownloadRoute: typeof DownloadRoute
   InvestRoute: typeof InvestRoute
   LoginRoute: typeof LoginRoute
   MapRoute: typeof MapRoute
@@ -1391,6 +1404,13 @@ declare module '@tanstack/react-router' {
       path: '/invest'
       fullPath: '/invest'
       preLoaderRoute: typeof InvestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create': {
@@ -2126,6 +2146,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CollectionsRoute: CollectionsRouteWithChildren,
   CreateRoute: CreateRoute,
+  DownloadRoute: DownloadRoute,
   InvestRoute: InvestRoute,
   LoginRoute: LoginRoute,
   MapRoute: MapRoute,
