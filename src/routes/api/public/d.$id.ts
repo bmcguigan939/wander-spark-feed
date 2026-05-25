@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { wrapWithAffiliate } from "@/lib/affiliate-wrapper";
+import { enforceIpRateLimit } from "@/lib/rate-limit.server";
 
 // Public click-through for AI-discovered or business deals. Wraps the
 // supplier URL with our affiliate tracking + utm_source=travidz, records
@@ -9,6 +10,8 @@ export const Route = createFileRoute("/api/public/d/$id")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        const limited = await enforceIpRateLimit("public_d_click", request, 120, 60);
+        if (limited) return limited;
         const id = params.id;
         if (!/^[0-9a-f-]{36}$/i.test(id)) {
           return new Response("Invalid link", { status: 400 });

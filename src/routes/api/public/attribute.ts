@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { COMMISSION } from "@/lib/commission";
 import { stampRedemptionSplit } from "@/lib/commission.server";
+import { enforceIpRateLimit } from "@/lib/rate-limit.server";
 
 /**
  * B10: Booking attribution beacon.
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/api/public/attribute")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const limited = await enforceIpRateLimit("public_attribute", request, 60, 60);
+        if (limited) return limited;
         const url = new URL(request.url);
         const code = url.searchParams.get("match");
         const orderValueRaw = url.searchParams.get("order_value");

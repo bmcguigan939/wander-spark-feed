@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { embedText } from "./ai.functions";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 const DaySchema = z.object({
   day: z.number().int().min(1),
@@ -253,6 +254,13 @@ export const generateItinerary = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    // AI itinerary generation hits Lovable AI + embeddings — cap to
+    // 10/min, 30/hour per user.
+    const okMin = await checkRateLimit("itinerary_generate", userId, 10, 60);
+    const okHour = await checkRateLimit("itinerary_generate_hour", userId, 30, 3600);
+    if (!okMin || !okHour) {
+      throw new Error("You're generating itineraries quickly — give it a minute and try again.");
+    }
     const plan = await generatePlan(data);
     const enrichedDays = await enrichPlan(plan.days, data.destination);
     const title = `${data.days}-day ${data.destination}`;

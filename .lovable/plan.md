@@ -1,103 +1,74 @@
-## Goal
+# Launch + scale-ready sprint
 
-Today the model reports `travidzNet` as the bottom line, but it is **gross margin before infrastructure COGS**. At Y3+ scale, Mux video infra alone is material (~£60k Y3 → £300k–£500k Y5). Add a COGS layer so the headline number investors see is a real **contribution margin**, not a pre-infra figure.
+Goal: lock in the three highest-impact items now (#9, #7, #10), then sweep the rest of the checklist so Travidz can absorb a traffic spike at launch without breaking or burning cash.
 
-## Changes
+## 1. Mux delivery cost guardrails (#9)
 
-### 1. `src/lib/investor-model/assumptions.ts` — add COGS inputs
+File: `src/lib/mux.functions.ts` (in `createDirectUpload`).
 
-Add a new block to `Assumptions`:
+- Add `max_resolution_tier: "1080p"` to `new_asset_settings` so creators can't push 4K masters that 10x our storage + delivery bill.
+- Keep `video_quality: "basic"` (already set) — confirms HLS adaptive bitrate ladder, no MP4 renditions.
+- Add `mp4_support: "none"` explicitly so nobody can hot-link the source MP4 and bypass HLS/CDN.
+- No DB changes. Only affects new uploads (existing assets unchanged).
 
-```ts
-// Infrastructure COGS (per-year, GBP)
-infraCosts: {
-  // Mux — encoding (one-off per upload) + storage (per-min/mo) + streaming (per-min played)
-  muxEncodePerMin: number;        // £0.032 (~$0.04)
-  muxStoragePerMinMonth: number;  // £0.0024 (~$0.003)
-  muxStreamPerMin: number;        // £0.00077 (~$0.00096)
-  avgVideoLengthMin: number;      // 1.0 (60s shortform)
-  videosPerActiveCreatorPerYr: number; // 20
-  viewsPerVideoPerYr: number;     // grows with audience; ramp by year
-  viewsPerVideoByYear: number[];  // [50, 150, 400, 900, 1800]
-  // Lovable Cloud (Postgres + Auth + Storage) — tiered by active creators/MAU
-  lovableCloudByYear: number[];   // [300, 1_200, 6_000, 24_000, 60_000] £/yr
-  // Email (Resend / SES) — flat per-year estimate
-  emailByYear: number[];          // [120, 600, 2_400, 7_200, 18_000] £/yr
-};
-```
+This is the single biggest lever on the £300k-£500k Y5 infra line.
 
-Populate `V6_DEFAULTS.infraCosts` with the values above (conservative, USD→GBP at 0.80).
+## 2. Rate-limit audit (#7)
 
-### 2. `src/lib/investor-model/compute.ts` — compute & expose COGS
+Today `checkRateLimit` is only wired into `comments.functions.ts` and `redemptions.functions.ts`. Add it to the abuse-prone surfaces:
 
-Extend `RevenueYear`:
+Server functions (per-user, sliding window):
+- `mux.functions.ts` → `createDirectUpload` — 10/min, 50/hour (prevents upload-spam → Mux ingest cost).
+- `mux.functions.ts` → `reconcileMyStuckUploads` — 5/min (hits Mux API in a loop).
+- `itineraries.functions.ts` → create/save flows — 30/min.
+- `destinations.functions.ts` → write paths — 30/min.
+- `profile.functions.ts` → profile update — 20/min.
 
-```ts
-muxEncodeCost: number;
-muxStorageCost: number;
-muxStreamCost: number;
-muxTotal: number;
-lovableCloudCost: number;
-emailCost: number;
-infraTotal: number;
-contributionMargin: number;      // travidzNet − infraTotal
-contributionMarginPct: number;   // of GBV
-```
+Public HTTP routes (per-IP, since no userId):
+- `routes/api/public/b.$id.ts`, `d.$id.ts`, `go.$id.ts`, `r.$code.ts` — 120/min per IP (click/redirect endpoints; easy DoS target).
+- `routes/api/public/attribute.ts` — 60/min per IP.
+- `routes/api/public/mux-webhook.ts` — do NOT rate limit; rely on signature verification.
 
-In `computeRevenue(a)` per year `i`:
+Add a small `getIpKey(request)` helper in `rate-limit.server.ts` reading `cf-connecting-ip` / `x-forwarded-for`.
 
-```
-videoCount       = activeCreators[i] * videosPerActiveCreatorPerYr
-totalMinutes     = videoCount * avgVideoLengthMin
-encode           = totalMinutes * muxEncodePerMin
-storage          = totalMinutes * muxStoragePerMinMonth * 12   // assume avg 12mo retention
-streamMinutes    = videoCount * viewsPerVideoByYear[i] * avgVideoLengthMin
-stream           = streamMinutes * muxStreamPerMin
-muxTotal         = encode + storage + stream
-infraTotal       = muxTotal + lovableCloudByYear[i] + emailByYear[i]
-contributionMargin    = travidzNet - infraTotal
-contributionMarginPct = contributionMargin / gbv
-```
+## 3. CDN caching headers (#10)
 
-### 3. `src/routes/admin.investor.tsx` — show COGS in the model
+Public read pages that are safe to cache at the edge:
 
-- Add new rows to the year-by-year table under "Travidz net":
-  - Mux total
-  - Lovable Cloud
-  - Email
-  - **Infra total** (subtotal)
-  - **Contribution margin** (bold)
-  - Contribution margin % of GBV
-- Add a `HeadlineStrip` stat: "Y5 contribution margin" alongside the existing "Y5 Travidz net".
-- Add the same rows to the per-year `KV` card.
-- Add the new series ("Infra costs", "Contribution margin") to the existing revenue chart payload.
+- Public deal pages (`/d/:id` route + deal landing): `Cache-Control: public, s-maxage=60, stale-while-revalidate=600`.
+- Public profile pages (`/u/:handle` or equivalent): same.
+- Public video share pages: `s-maxage=30, stale-while-revalidate=300` (feed freshness matters more).
+- Leave `no-store` on redirect endpoints (`b.$id`, `go.$id`, `r.$code`, `d.$id`) — already correct.
+- `sitemap.xml` and `robots.txt` already cached — no change.
 
-### 4. `src/routes/invest.tsx` — public investor narrative
+Implementation: set `Cache-Control` in the route's `head()`/response in TanStack server routes, and add `<meta http-equiv="Cache-Control" ...>` is NOT used — caching is response-header driven, so we set it on the document response where possible. For SSR pages, set via the route's `loader` returning headers on the Response.
 
-- Replace the "Travidz net @ 4.68%" headline with a two-line stat:
-  - "Travidz net (gross) — £16.3M" *(small, muted)*
-  - "Contribution margin (after infra) — £{computed}M" *(bold, primary)*
-- Add a short "Infrastructure & unit economics" section explaining the stack:
-  > Travidz runs on Cloudflare edge + Lovable Cloud (Postgres/Auth/Storage) + Mux for video. Video is the dominant variable cost: ~£0.032/min encoded, ~£0.00077/min streamed. Y5 infra is modelled at ~£{X}M against £350M GBV, leaving ~{Y}% contribution margin.
-- Update the UK Base / Global Viral comparison table to add a "Contribution margin (Y5)" row.
+## 4. Sweep of remaining items
 
-### 5. Out of scope
+After the above ships, run a quick readiness pass and report status — no code changes unless something is missing:
 
-- No changes to commission logic, Stripe handling, or tier splits.
-- No new database tables — COGS lives in the in-memory assumptions model.
-- Salaries/G&A/marketing are still excluded (these are operating costs below contribution margin, handled separately in the funding ask).
+- **#1 Cloud instance size** — check current size vs MAU forecast; recommend bump if on Micro.
+- **#2 DB hardening** — run `supabase--linter` and `security--run_security_scan`; fix any criticals (missing RLS, hot-path indexes on `videos.published_at`, `feed_*` queries).
+- **#3 Mux production keys** — verify `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` are live keys (check via `secrets--fetch_secrets` listing only).
+- **#4 Email domain** — `email_domain--check_email_domain_status` for `notify.travidz.com`.
+- **#5 Stripe live mode** — `payments--get_go_live_status`.
+- **#6 Backups** — confirm `docs/backup-restore-drill.md` exists and is current.
+- **#8 Realtime publication** — query `supabase_realtime` for tables; flag any not needed.
+- **#11 Observability** — confirm `/admin/errors` exists; recommend external uptime monitor (UptimeRobot/Better Stack).
+- **#12 Cloud usage alerts** — note: must be set in Cloud UI; flag to user.
 
-## Default values (sources)
+Items #13-#17 are "at scale" — note them but defer until MAU climbs.
 
-| Input | Default | Source |
-|---|---|---|
-| Mux encode | £0.032/min | Mux pricing $0.04/min → 0.80 FX |
-| Mux storage | £0.0024/min/mo | Mux $0.003/min/mo |
-| Mux streaming | £0.00077/min | Mux $0.00096/min |
-| Avg video length | 1.0 min | Shortform UGC |
-| Videos / creator / yr | 20 | Conservative active-creator output |
-| Views/video by year | 50 / 150 / 400 / 900 / 1800 | Audience ramp w/ MAU |
-| Lovable Cloud £/yr | 300 / 1.2k / 6k / 24k / 60k | Tier upgrades w/ MAU |
-| Email £/yr | 120 / 600 / 2.4k / 7.2k / 18k | Resend volume tiers |
+## Deliverable
 
-All sliders editable in `/admin/investor` via the existing `useAssumptions` flow (the new `infraCosts` block just becomes another editable group).
+A single follow-up message after implementation with:
+- ✅ what shipped (#9, #7, #10)
+- 🟡 what needs your action in the Cloud / Stripe / Mux UIs
+- 🔴 anything blocking launch
+
+## Out of scope
+
+- No new tables, no schema migrations (rate-limit table already exists).
+- No changes to billing/commission logic.
+- No frontend visual changes.
+- Items #13-#17 (read replicas, cold storage, image CDN) deferred until traffic warrants.
