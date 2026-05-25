@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { exportMyData, deleteMyAccount } from "@/lib/account.functions";
 import { getEmailPreferences, updateEmailPreferences, type EmailPreferences } from "@/lib/email-preferences.functions";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  type NotificationPreferences,
+} from "@/lib/notification-preferences.functions";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/settings")({
@@ -31,19 +36,26 @@ function SettingsPage() {
   const deleteFn = useServerFn(deleteMyAccount);
   const getPrefs = useServerFn(getEmailPreferences);
   const updatePrefs = useServerFn(updateEmailPreferences);
+  const getPushPrefs = useServerFn(getNotificationPreferences);
+  const updatePushPrefs = useServerFn(updateNotificationPreferences);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [prefs, setPrefs] = useState<EmailPreferences | null>(null);
   const [savingPref, setSavingPref] = useState<keyof EmailPreferences | null>(null);
+  const [pushPrefs, setPushPrefs] = useState<NotificationPreferences | null>(null);
+  const [savingPushPref, setSavingPushPref] = useState<keyof NotificationPreferences | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getPrefs({ data: undefined as any })
       .then((r) => { if (!cancelled) setPrefs(r.preferences); })
       .catch(() => { /* silent */ });
+    getPushPrefs({ data: undefined as any })
+      .then((r) => { if (!cancelled) setPushPrefs(r.preferences); })
+      .catch(() => { /* silent */ });
     return () => { cancelled = true; };
-  }, [getPrefs]);
+  }, [getPrefs, getPushPrefs]);
 
   async function togglePref(key: keyof EmailPreferences) {
     if (!prefs) return;
@@ -57,6 +69,21 @@ function SettingsPage() {
       toast.error("Couldn't save preference");
     } finally {
       setSavingPref(null);
+    }
+  }
+
+  async function togglePushPref(key: keyof NotificationPreferences) {
+    if (!pushPrefs) return;
+    const next = { ...pushPrefs, [key]: !pushPrefs[key] } as NotificationPreferences;
+    setPushPrefs(next);
+    setSavingPushPref(key);
+    try {
+      await updatePushPrefs({ data: { [key]: next[key] } as any });
+    } catch (e) {
+      setPushPrefs(pushPrefs);
+      toast.error("Couldn't save preference");
+    } finally {
+      setSavingPushPref(null);
     }
   }
 
