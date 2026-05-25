@@ -482,6 +482,13 @@ function RevenuePane({
             <KV k="Travidz net" v={fmtGBP(r.travidzNet, { compact: true })} strong />
             <KV k="Blended take-rate" v={fmtPct(r.blendedTakeRatePct, 2)} />
             <KV k="Avg creator share of net pool" v={fmtPct(r.blendedCreatorSharePct, 0)} />
+            <div className="border-t border-border pt-2 text-xs font-semibold uppercase text-muted-foreground">Infrastructure COGS</div>
+            <KV k="Mux total" v={fmtGBP(r.muxTotal, { compact: true })} />
+            <KV k="Lovable Cloud" v={fmtGBP(r.lovableCloudCost, { compact: true })} />
+            <KV k="Email" v={fmtGBP(r.emailCost, { compact: true })} />
+            <KV k="Infra total" v={fmtGBP(r.infraTotal, { compact: true })} />
+            <KV k="Contribution margin" v={fmtGBP(r.contributionMargin, { compact: true })} strong />
+            <KV k="Contribution margin %" v={fmtPct(r.contributionMarginPct, 2)} />
           </>
         ); })()}
       </Card>
