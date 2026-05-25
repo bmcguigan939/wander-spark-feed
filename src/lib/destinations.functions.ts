@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 export const listDestinations = createServerFn({ method: "GET" }).handler(async () => {
   const { data, error } = await supabaseAdmin
@@ -218,6 +219,8 @@ export const generateDestinationOverview = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (!isAdmin) throw new Error("Forbidden");
+    const ok = await checkRateLimit("dest_overview_generate", context.userId, 10, 60);
+    if (!ok) throw new Error("Generating overviews too quickly — please wait.");
     return buildAndStoreOverview(data.country, data.city);
   });
 

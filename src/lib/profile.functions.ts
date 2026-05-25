@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { checkRateLimit } from "@/lib/rate-limit.server";
 
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -38,6 +39,8 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const ok = await checkRateLimit("profile_update", userId, 20, 60);
+    if (!ok) throw new Error("Too many profile updates — slow down for a moment.");
     const { error } = await supabase.from("profiles").update(data).eq("id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
