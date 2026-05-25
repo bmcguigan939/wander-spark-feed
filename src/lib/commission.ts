@@ -6,8 +6,9 @@
 // creator and Travidz on every booking. The tier split applies to the
 // net pool, not to the gross 11%:
 //
-//   founding       50 / 50  (first 500 creators — locked for life)
-//   power          50 / 50  (rolling-12mo GBV ≥ £25k — locked once crossed)
+//   founding       50 / 50  (first 5,000 creators — locked for first 24 months)
+//   power          50 / 50  (rolling-12mo GBV ≥ £25k AND ≥1 published video
+//                            in the last 30 days — 60-day grace before losing it)
 //   new (0–6mo)    50 / 50
 //   maturing (7–18mo)  40 / 60
 //   mature (19+mo) 30 / 70
@@ -26,7 +27,15 @@ export const COMMISSION = {
   creatorPct: 5.5,
   platformPct: 5.5,
   powerTierGbvThresholdCents: 2_500_000, // £25,000
-  foundingCap: 500,
+  foundingCap: 5000,
+  /** Founding 50/50 is locked for this many months from creator_joined_at,
+   *  then falls through to the standard tier ladder (or Power, if qualified). */
+  foundingLockMonths: 24,
+  /** Power Tier activity bar: at least this many published videos in the
+   *  rolling 30-day window in addition to the £25k GBV threshold. */
+  powerTierMinVideosPer30Days: 1,
+  /** Days a Power Creator can stay below the bar before losing Power tier. */
+  powerTierGraceDays: 60,
 } as const;
 
 export type CreatorTier = "founding" | "power" | "new" | "maturing" | "mature";
@@ -35,6 +44,9 @@ export type CreatorSplitInput = {
   joinedAt: Date | string | null;
   isFounding: boolean;
   powerTierLockedAt: Date | string | null;
+  /** When the creator last met the Power Tier activity bar. If older than
+   *  `powerTierGraceDays`, Power status is treated as expired. */
+  powerTierLastQualifiedAt?: Date | string | null;
   bookingAt?: Date | string;
 };
 
@@ -51,10 +63,24 @@ function monthsBetween(a: Date, b: Date): number {
 
 export function resolveSplit(input: CreatorSplitInput): CreatorSplit {
   const bookingAt = input.bookingAt ? new Date(input.bookingAt) : new Date();
-  if (input.isFounding) return { tier: "founding", creatorPct: 50, platformPct: 50 };
-  if (input.powerTierLockedAt) return { tier: "power", creatorPct: 50, platformPct: 50 };
   const joined = input.joinedAt ? new Date(input.joinedAt) : bookingAt;
   const tenureMonths = Math.max(0, monthsBetween(joined, bookingAt));
+
+  // Founding 50/50 only holds for the first `foundingLockMonths` months.
+  if (input.isFounding && tenureMonths < COMMISSION.foundingLockMonths) {
+    return { tier: "founding", creatorPct: 50, platformPct: 50 };
+  }
+
+  // Power tier: still locked AND last-qualified within grace window
+  // (if no qualifier timestamp is supplied, fall back to locked timestamp).
+  if (input.powerTierLockedAt) {
+    const qualifier = input.powerTierLastQualifiedAt ?? input.powerTierLockedAt;
+    const ageDays = (bookingAt.getTime() - new Date(qualifier).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays <= COMMISSION.powerTierGraceDays) {
+      return { tier: "power", creatorPct: 50, platformPct: 50 };
+    }
+  }
+
   if (tenureMonths < 6) return { tier: "new", creatorPct: 50, platformPct: 50 };
   if (tenureMonths < 18) return { tier: "maturing", creatorPct: 40, platformPct: 60 };
   return { tier: "mature", creatorPct: 30, platformPct: 70 };
