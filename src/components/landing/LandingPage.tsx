@@ -84,6 +84,7 @@ function TopBar() {
 }
 
 function Hero({ spotsRemaining }: { spotsRemaining?: number }) {
+  void spotsRemaining;
   return (
     <section className="relative isolate overflow-hidden px-5 pb-24 pt-16 sm:pt-24">
       {/* colourful blobs */}
@@ -134,6 +135,24 @@ function Hero({ spotsRemaining }: { spotsRemaining?: number }) {
 }
 
 function SocialProof() {
+  return socialProofMarkup();
+}
+
+function FoundingSpotsStrip({ spotsRemaining }: { spotsRemaining?: number }) {
+  if (typeof spotsRemaining !== "number" || spotsRemaining <= 0) return null;
+  return (
+    <section className="px-5 pt-4 pb-2">
+      <div className="mx-auto flex max-w-5xl justify-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/70 px-4 py-1.5 text-xs font-semibold backdrop-blur">
+          <Sparkles className="h-3.5 w-3.5 text-[var(--coral)]" />
+          {spotsRemaining.toLocaleString()} of 5,000 Founding Creator spots left — 50% for 24 months
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function socialProofMarkup() {
   return (
     <section className="border-y border-foreground/10 bg-card/40 py-8">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-5 text-sm font-semibold text-foreground/60">
