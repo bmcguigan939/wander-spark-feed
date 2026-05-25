@@ -20,6 +20,7 @@ type CreatorTierRow = {
   founding_creator_number: number | null;
   creator_joined_at: string | null;
   power_tier_locked_at: string | null;
+  power_tier_last_qualified_at: string | null;
   rolling_12mo_gbv_cents: number | null;
 };
 
@@ -33,7 +34,7 @@ export async function loadCreatorSplit(
   const { data } = await supabaseAdmin
     .from("profiles")
     .select(
-      "id,is_founding_creator,founding_creator_number,creator_joined_at,power_tier_locked_at,rolling_12mo_gbv_cents",
+      "id,is_founding_creator,founding_creator_number,creator_joined_at,power_tier_locked_at,power_tier_last_qualified_at,rolling_12mo_gbv_cents",
     )
     .eq("id", creatorId)
     .maybeSingle<CreatorTierRow>();
@@ -42,6 +43,7 @@ export async function loadCreatorSplit(
     joinedAt: data.creator_joined_at,
     isFounding: !!data.is_founding_creator,
     powerTierLockedAt: data.power_tier_locked_at,
+    powerTierLastQualifiedAt: (data as any).power_tier_last_qualified_at,
     bookingAt,
   });
 }

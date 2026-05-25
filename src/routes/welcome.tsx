@@ -89,10 +89,30 @@ function WelcomePage() {
           <Crown className="h-4 w-4 text-primary" />
           <span>
             <span className="font-bold text-primary">{spots.remaining}</span> Founding Creator
-            spots left — join now and keep <span className="font-semibold">50% commission for life</span>.
+            spots left — join now and keep <span className="font-semibold">50% commission for 24 months</span>.
           </span>
         </div>
       )}
+
+      <div className="mb-4 rounded-2xl border border-border bg-card/40 p-4 text-xs leading-relaxed">
+        <p className="mb-2 text-sm font-semibold text-foreground">Creator earnings — how the split works</p>
+        <ul className="space-y-1.5 text-muted-foreground">
+          <li>
+            <span className="font-semibold text-foreground">Founding Creator</span> (first 5,000):
+            keep 50% for the first 24 months.
+          </li>
+          <li>
+            <span className="font-semibold text-foreground">Power Creator</span>: keep 50% for life
+            as long as you post <span className="font-semibold text-foreground">≥ 1 video / month</span>
+            and drive <span className="font-semibold text-foreground">≥ £25k</span> in rolling
+            12-month bookings. 60-day grace if you slip.
+          </li>
+          <li>
+            <span className="font-semibold text-foreground">Standard ladder</span>: 50% (months 1–6)
+            → 40% (7–18) → 30% (19+).
+          </li>
+        </ul>
+      </div>
 
       <div className="space-y-3">
         <RoleCard
