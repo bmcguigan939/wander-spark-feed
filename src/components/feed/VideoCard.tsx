@@ -20,6 +20,14 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const [muted, setMuted] = useState(true);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // Local mirror of viewer's like/save state. Seeded from the feed payload
+  // and re-synced when the underlying video prop changes (e.g. tab switch
+  // or refetch). This drives the optimistic +1/-1 delta so the count no
+  // longer drifts upward on every tap.
+  const [liked, setLiked] = useState<boolean>(!!video.viewer_liked);
+  const [saved, setSaved] = useState<boolean>(!!video.viewer_saved);
+  useEffect(() => { setLiked(!!video.viewer_liked); }, [video.viewer_liked]);
+  useEffect(() => { setSaved(!!video.viewer_saved); }, [video.viewer_saved]);
   const playerRef = useRef<any>(null);
   const [ccAvailable, setCcAvailable] = useState(false);
   const [ccOn, setCcOn] = useState<boolean>(() => {
@@ -103,8 +111,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const likeM = useMutation({
     mutationFn: () => likeFn({ data: { videoId: video.id } }),
     onMutate: () => {
-      patchFeeds("like_count", 1);
-      return { rollback: () => patchFeeds("like_count", -1) };
+      const delta = liked ? -1 : 1;
+      const prevLiked = liked;
+      setLiked(!prevLiked);
+      patchFeeds("like_count", delta);
+      return {
+        rollback: () => {
+          setLiked(prevLiked);
+          patchFeeds("like_count", -delta);
+        },
+      };
     },
     onError: (err, _v, ctx) => {
       ctx?.rollback?.();
@@ -114,8 +130,16 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const saveM = useMutation({
     mutationFn: () => saveFn({ data: { videoId: video.id } }),
     onMutate: () => {
-      patchFeeds("save_count", 1);
-      return { rollback: () => patchFeeds("save_count", -1) };
+      const delta = saved ? -1 : 1;
+      const prevSaved = saved;
+      setSaved(!prevSaved);
+      patchFeeds("save_count", delta);
+      return {
+        rollback: () => {
+          setSaved(prevSaved);
+          patchFeeds("save_count", -delta);
+        },
+      };
     },
     onError: (err, _v, ctx) => {
       ctx?.rollback?.();
