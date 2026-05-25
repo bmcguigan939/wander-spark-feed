@@ -1,33 +1,36 @@
-## Goal
+## Security fixes — round 4
 
-Resolve the 2 ERROR-level security findings from the latest scan. Skip the WARN-level rate-limit findings — Lovable's backend has no rate-limiting primitives yet (per platform guidance, those should be ignored at the scanner level rather than implemented ad-hoc).
+### 1. ERROR — Bookings PII leak to business accounts
+Business users (`auth.uid() = business_id`) currently SELECT entire `bookings` rows including traveller `customer_name` / `customer_email`. Travidz attribution flows already serve business-side data through server fns with safe column projections, so direct table access can be tightened.
 
-## Changes
+Migration:
+- `REVOKE SELECT (customer_name, customer_email, notes) ON public.bookings FROM authenticated;`
+- Keep `bookings business read` policy (business still needs row visibility for IDs, status, dates, amounts).
+- `bookings admin all` and the customer's own SELECT (`auth.uid() = user_id`) keep full access via the `postgres`/admin path and via the customer's own column GRANTs (no change needed — customer is the row's user, gets full row via policy + default GRANT on remaining columns; we only strip the two PII columns from `authenticated` BASE GRANT, which also blocks the customer reading their own name/email from the client).
 
-### 1. Realtime channel authorization (ERROR)
-**Problem:** `realtime.messages` has no RLS. The `notifications` table is published to Realtime, so any authenticated user can subscribe to another user's notification topic and receive their events.
+Because the strip is column-wide, also expose a server fn `getMyBookingContact` that reads `customer_name` / `customer_email` via `supabaseAdmin` for the authenticated customer (`user_id = auth.uid()`) so the traveller's own UI still shows their contact details. Audit existing callers of `bookings` in client code; any that select these columns must route through a new server fn (`getBusinessBookings`) that uses `supabaseAdmin` with explicit business-side column allowlist (omitting PII).
 
-**Fix (migration):**
-- Enable RLS on `realtime.messages`.
-- Add policy: authenticated users may only `SELECT` (subscribe) when the topic encodes their own `auth.uid()`. Convention: topic format `notifications:<user_id>`.
-- Update client-side notification subscription code (if any) to use the new topic naming. Search: `supabase.channel(` for notification-related subscriptions and align the topic string.
+### 2. WARN — Collections server fns missing ownership predicate
+`src/lib/collections.functions.ts`:
+- `updateCollection` → add `.eq("owner_id", userId)` to the `.update().eq("id", id)` chain.
+- `deleteCollection` → add ownership check before deleting items + collection (either a precondition SELECT or `.eq("owner_id", userId)` on the final delete; the `collection_items` delete is fine since it's gated by the parent delete failing).
+- `addToCollection` / `removeFromCollection` → precondition: verify the target collection's `owner_id = userId` before the upsert/delete.
 
-### 2. Open redirect in `createBookingCheckout` (ERROR)
-**Problem:** `returnUrl` only validated as `z.string().url()`; passed straight to Stripe `return_url`. Attacker-controlled domains can be used for post-payment phishing.
+Defense-in-depth: keeps RLS as the second layer, server fn as the first.
 
-**Fix (`src/lib/booking.functions.ts`):**
-- Add origin allowlist constant: `https://travidz.com`, `https://www.travidz.com`, `https://wander-spark-feed.lovable.app`, plus preview origin pattern `*.lovable.app`.
-- After `inputSchema.parse`, validate `new URL(data.returnUrl).origin` against the allowlist; throw if not allowed.
-- Allow localhost in non-production for dev only (gated on `process.env.NODE_ENV !== "production"`).
+### 3. WARN — `business_invites.contact_phone` exposed to inviting creator
+Migration: `REVOKE SELECT (contact_phone) ON public.business_invites FROM authenticated;` — admins keep access via service role. If the creator UI needs to show phone, add a server fn that returns it only for admin role.
 
-## Skipped (with rationale)
+### 4. WARN — `business_agreement_acceptances.ip` (GDPR personal data)
+Migration: `REVOKE SELECT (ip, user_agent) ON public.business_agreement_acceptances FROM authenticated;` — admins keep audit access via service role / `admin read all acceptances` policy + `postgres` grants.
 
-- **`askSupport` no rate limit (WARN)** — platform guidance: do not implement backend rate limiting yet. Will mark the scanner finding as ignored with that reason.
-- **`logClientError` no rate limit (WARN)** — same reason; ignore.
-- **Other WARNs** (SECURITY DEFINER executable, extensions in public, profiles/deals/affiliate_links column GRANTs, business_invites token, avatar bucket SELECT policy) — already accepted in security memory or downgraded from prior ERRORs.
+### 5. Verification
+- Re-run `security--run_security_scan`; expect 0 ERROR, the 3 WARNs gone.
+- Smoke test: business dashboard still lists bookings (without PII), traveller still sees their own contact info via the new server fn, creator invite UI still works without phone column, agreement acceptance flow still writes IP server-side.
+- Update security memory: note the column GRANT strips and the bookings PII server-fn pattern.
 
-## Verification
-
-1. Re-run `security--run_security_scan`; expect 0 ERRORs.
-2. Manually test booking checkout with a valid origin (passes) and a foreign origin (throws).
-3. Confirm notification realtime subscription still delivers events to the owning user only.
+### Files / migrations
+- New migration: column REVOKEs for `bookings` (customer_name, customer_email, notes), `business_invites.contact_phone`, `business_agreement_acceptances.ip` + `user_agent`.
+- Edit `src/lib/collections.functions.ts` — add ownership predicates to 4 handlers.
+- New server fn (likely in `src/lib/booking.functions.ts`) — `getBusinessBookings` and `getMyBookingContact` using `supabaseAdmin` with column allowlists.
+- Audit & update any client component that selected the now-revoked columns directly (likely under `src/routes/_authenticated/business/**` and `src/routes/_authenticated/bookings/**`) to call the new server fns instead.
