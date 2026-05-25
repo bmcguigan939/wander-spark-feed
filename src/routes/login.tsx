@@ -80,7 +80,13 @@ function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
+    <div className="relative isolate min-h-dvh w-full overflow-hidden bg-background">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full bg-[var(--sunset)] opacity-40 blur-3xl animate-blob" />
+        <div className="absolute right-[-6rem] top-24 h-[24rem] w-[24rem] rounded-full bg-[var(--coral)] opacity-40 blur-3xl animate-blob [animation-delay:-4s]" />
+        <div className="absolute bottom-[-8rem] left-1/3 h-[26rem] w-[26rem] rounded-full bg-[var(--twilight)] opacity-30 blur-3xl animate-blob [animation-delay:-8s]" />
+      </div>
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
           <Compass className="h-6 w-6" />
@@ -89,7 +95,7 @@ function LoginPage() {
         <p className="mt-1 text-sm text-muted-foreground">Discover travel through video.</p>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-card p-1 text-sm font-semibold">
+      <div className="mb-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-card/80 p-1 text-sm font-semibold backdrop-blur">
         {(["signin", "signup"] as const).map((m) => (
           <button
             key={m}
@@ -104,7 +110,7 @@ function LoginPage() {
         ))}
       </div>
 
-      <button onClick={google} className="mb-5 w-full rounded-full border border-border bg-card py-3 text-sm font-semibold">
+      <button onClick={google} className="mb-5 w-full rounded-full border border-border bg-card/80 py-3 text-sm font-semibold backdrop-blur">
         Continue with Google
       </button>
 
@@ -116,13 +122,13 @@ function LoginPage() {
         <input
           type="email" required placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+          className="w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary"
         />
         <input
           type="password" required minLength={6} placeholder="Password" value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+          className="w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary"
         />
         {info && <p className="text-xs text-primary">{info}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -145,6 +151,7 @@ function LoginPage() {
         and{" "}
         <Link to="/legal/privacy" className="underline underline-offset-2 hover:text-foreground">Privacy Policy</Link>.
       </p>
+      </div>
     </div>
   );
 }
