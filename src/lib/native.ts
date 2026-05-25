@@ -8,6 +8,12 @@
  * `Capacitor` global that the native shell injects into the WebView.
  */
 
+// We dynamically import optional native plugins. They may not be installed
+// in the web-only build, so we resolve via a runtime-only helper that the
+// TypeScript checker cannot statically analyse.
+const dynamicImport = (mod: string): Promise<any> =>
+  (new Function("m", "return import(m)") as (m: string) => Promise<any>)(mod);
+
 type CapacitorGlobal = {
   isNativePlatform?: () => boolean;
   getPlatform?: () => "ios" | "android" | "web";
@@ -33,9 +39,9 @@ export function nativePlatform(): "ios" | "android" | "web" {
 export async function haptic(style: "light" | "medium" | "heavy" = "light"): Promise<void> {
   if (!isNative()) return;
   try {
-    const mod = await import(/* @vite-ignore */ "@capacitor/haptics");
-    const ImpactStyle = (mod as any).ImpactStyle;
-    await (mod as any).Haptics.impact({
+    const mod = await dynamicImport("@capacitor/haptics");
+    const ImpactStyle = mod.ImpactStyle;
+    await mod.Haptics.impact({
       style: ImpactStyle?.[style.charAt(0).toUpperCase() + style.slice(1)] ?? style,
     });
   } catch {
@@ -50,8 +56,8 @@ export async function haptic(style: "light" | "medium" | "heavy" = "light"): Pro
 export async function openExternal(url: string): Promise<void> {
   if (isNative()) {
     try {
-      const mod = await import(/* @vite-ignore */ "@capacitor/browser");
-      await (mod as any).Browser.open({ url, presentationStyle: "popover" });
+      const mod = await dynamicImport("@capacitor/browser");
+      await mod.Browser.open({ url, presentationStyle: "popover" });
       return;
     } catch {
       /* fall through to web open */
@@ -69,8 +75,8 @@ export async function openExternal(url: string): Promise<void> {
 export async function nativeShare(opts: { title?: string; text?: string; url: string }): Promise<boolean> {
   if (isNative()) {
     try {
-      const mod = await import(/* @vite-ignore */ "@capacitor/share");
-      await (mod as any).Share.share(opts);
+      const mod = await dynamicImport("@capacitor/share");
+      await mod.Share.share(opts);
       return true;
     } catch {
       return false;
