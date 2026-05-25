@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { wrapWithAffiliate } from "@/lib/affiliate-wrapper";
+import { enforceIpRateLimit } from "@/lib/rate-limit.server";
 
 // Public referral redirect: /r/CODE[?v=<videoId>]
 // Resolves the short code to a deal, logs a click, wraps the URL with
@@ -9,6 +10,8 @@ export const Route = createFileRoute("/r/$code")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        const limited = await enforceIpRateLimit("public_r_click", request, 120, 60);
+        if (limited) return limited;
         const code = params.code?.trim().toUpperCase();
         if (!code || code.length > 40) {
           return notFoundResponse(code ?? "");

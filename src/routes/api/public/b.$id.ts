@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { enforceIpRateLimit } from "@/lib/rate-limit.server";
 
 // Public click-through for a signed business card on a creator video.
 // Logs the click (attributed to the video's creator) and 302-redirects
@@ -8,6 +9,8 @@ export const Route = createFileRoute("/api/public/b/$id")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        const limited = await enforceIpRateLimit("public_b_click", request, 120, 60);
+        if (limited) return limited;
         const id = params.id;
         if (!/^[0-9a-f-]{36}$/i.test(id)) {
           return new Response("Invalid link", { status: 400 });

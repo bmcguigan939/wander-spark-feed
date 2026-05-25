@@ -2,11 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runParityCheck } from "@/lib/price-compare.server";
 import { issueMatchCode } from "@/lib/match-codes.server";
+import { enforceIpRateLimit } from "@/lib/rate-limit.server";
 
 export const Route = createFileRoute("/api/public/go/$id")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        const limited = await enforceIpRateLimit("public_go_click", request, 120, 60);
+        if (limited) return limited;
         const id = params.id;
         if (!/^[0-9a-f-]{36}$/i.test(id)) {
           return new Response("Invalid link", { status: 400 });
