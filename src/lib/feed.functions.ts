@@ -263,11 +263,14 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
 }
 
 export const getFeed = createServerFn({ method: "GET" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({ limit: z.number().min(1).max(50).default(20), offset: z.number().min(0).default(0) }).parse(input)
   )
-  .handler(async ({ data }) => {
-    return { videos: await fetchFeedRows(data.limit, data.offset) };
+  .handler(async ({ data, context }) => {
+    const videos = await fetchFeedRows(data.limit, data.offset);
+    await attachViewerInteractions(videos, context.userId ?? null);
+    return { videos };
   });
 
 const idsInput = z.object({
@@ -275,8 +278,9 @@ const idsInput = z.object({
 });
 
 export const getVideosByIds = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
   .inputValidator((i: unknown) => idsInput.parse(i))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
@@ -293,6 +297,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const videos = data.ids.map((id) => byId.get(id)).filter(Boolean) as FeedVideo[];
     await attachMatchedDeals(videos);
     await applySocialVisibility(videos);
+    await attachViewerInteractions(videos, context.userId ?? null);
     return { videos };
   });
 
