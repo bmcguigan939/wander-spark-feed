@@ -11,12 +11,15 @@ const PayloadSchema = z.object({
   user_agent: z.string().max(500).optional().nullable(),
   severity: z.enum(["error", "warning", "info"]).default("error"),
   context: z.record(z.string(), z.any()).optional().nullable(),
-  user_id: z.string().uuid().optional().nullable(),
 });
 
 export const logClientError = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => PayloadSchema.parse(input))
   .handler(async ({ data }) => {
+    // Note: user_id is intentionally not derived here. Authenticated
+    // attribution would require requireSupabaseAuth, which would 401 the
+    // (legitimate) anonymous error reports from public pages. Logs are
+    // anonymous; correlate via route/source/user_agent if needed.
     try {
       await supabaseAdmin.from("client_error_logs").insert({
         message: data.message,
@@ -26,7 +29,7 @@ export const logClientError = createServerFn({ method: "POST" })
         user_agent: data.user_agent ?? null,
         severity: data.severity,
         context: data.context ?? null,
-        user_id: data.user_id ?? null,
+        user_id: null,
       });
     } catch (e) {
       console.error("[errors] failed to log client error", e);

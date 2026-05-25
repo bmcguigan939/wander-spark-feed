@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { logClientError } from "@/lib/errors.functions";
-import { useAuth } from "@/lib/auth";
 
 // Throttle: max one report per (message+route) per session, and a small global cap.
 const seen = new Set<string>();
@@ -11,7 +10,6 @@ const MAX_REPORTS = 25;
 
 export function ErrorReporter() {
   const router = useRouter();
-  const { user } = useAuth();
   const report = useServerFn(logClientError);
   const reportRef = useRef(report);
   reportRef.current = report;
@@ -40,7 +38,6 @@ export function ErrorReporter() {
               ? navigator.userAgent.slice(0, 500)
               : null,
           severity: "error",
-          user_id: user?.id ?? null,
         },
       }).catch(() => {});
     }
@@ -70,7 +67,7 @@ export function ErrorReporter() {
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
     };
-  }, [router, user?.id]);
+  }, [router]);
 
   return null;
 }
