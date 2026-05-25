@@ -341,6 +341,7 @@ function Footer() {
         <nav className="flex flex-wrap gap-x-6 gap-y-2">
           <Link to="/login">Log in</Link>
           <Link to="/business">For businesses</Link>
+          <a href="mailto:support@travidz.com">support@travidz.com</a>
           <Link to="/legal/terms">Terms</Link>
           <Link to="/legal/privacy">Privacy</Link>
         </nav>
