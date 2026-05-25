@@ -21,11 +21,40 @@ const inputSchema = z.object({
 
 const COMMISSION_PCT = 8;
 
+const ALLOWED_RETURN_HOSTS = new Set([
+  "travidz.com",
+  "www.travidz.com",
+  "wander-spark-feed.lovable.app",
+]);
+
+function assertSafeReturnUrl(returnUrl: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(returnUrl);
+  } catch {
+    throw new Error("Invalid return URL");
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error("Invalid return URL protocol");
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (ALLOWED_RETURN_HOSTS.has(host)) return;
+  // Allow Lovable preview subdomains (e.g. id-preview--*.lovable.app, *--*.lovable.app)
+  if (host.endsWith(".lovable.app")) return;
+  // Dev only
+  if (process.env.NODE_ENV !== "production" && (host === "localhost" || host === "127.0.0.1")) {
+    return;
+  }
+  throw new Error("Return URL host is not allowed");
+}
+
 export const createBookingCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context;
+
+    assertSafeReturnUrl(data.returnUrl);
 
     // Load deal
     const { data: deal, error: dErr } = await supabaseAdmin
