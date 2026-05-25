@@ -214,6 +214,10 @@ function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>>
   const Icon = tier.tier === "founding" ? Crown : tier.tier === "power" ? Lock : Sparkles;
   const showProgress = tier.tier !== "founding" && tier.tier !== "power";
   const pct = Math.min(100, Math.round((tier.rolling12moGbvCents / tier.powerThresholdCents) * 100));
+  const videoBarMet = tier.videosLast30d >= tier.videosRequiredPer30d;
+  const gbvBarMet = tier.rolling12moGbvCents >= tier.powerThresholdCents;
+  const onGrace = tier.tier === "power" && (!videoBarMet || !gbvBarMet);
+  const gbpFmt = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
       <div className="flex items-start justify-between gap-3">
@@ -227,7 +231,10 @@ function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>>
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             You keep <span className="font-semibold text-foreground">{tier.creatorPct}%</span> of the net commission pool (11% gross − Stripe fees) on every booking.
-            {tier.tier === "founding" || tier.tier === "power" ? " Locked for life." : ""}
+            {tier.tier === "founding" && tier.foundingLockEndsAt
+              ? ` Founding rate locked until ${new Date(tier.foundingLockEndsAt).toLocaleDateString()}.`
+              : ""}
+            {tier.tier === "power" ? " Locked while you stay active." : ""}
           </p>
         </div>
         <div className="rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-bold text-primary">
@@ -235,18 +242,51 @@ function TierCard({ tier }: { tier: Awaited<ReturnType<typeof getMyCreatorTier>>
         </div>
       </div>
 
+      {/* Power Tier activity status — visible to power creators OR anyone with progress toward unlock */}
+      {(tier.tier === "power" || tier.tier === "founding") && (
+        <div className="mt-3 rounded-xl border border-border bg-background/40 p-3 text-xs">
+          <p className="mb-2 font-semibold text-foreground">
+            {tier.tier === "power" ? "Keep Power Creator: stay above both bars" : "Power Creator rules (kick in after founding lock)"}
+          </p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Videos in last 30 days</span>
+              <span className={videoBarMet ? "font-semibold text-emerald-600" : "font-semibold text-amber-600"}>
+                {tier.videosLast30d} / {tier.videosRequiredPer30d}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Rolling 12-mo bookings</span>
+              <span className={gbvBarMet ? "font-semibold text-emerald-600" : "font-semibold text-amber-600"}>
+                {gbpFmt.format(tier.rolling12moGbvCents / 100)} / {gbpFmt.format(tier.powerThresholdCents / 100)}
+              </span>
+            </div>
+          </div>
+          {onGrace && tier.gracePeriodEndsAt && (
+            <p className="mt-2 text-[11px] font-semibold text-amber-600">
+              Below the bar — Power Tier reverts on{" "}
+              {new Date(tier.gracePeriodEndsAt).toLocaleDateString()} ({Math.max(0, Math.ceil((new Date(tier.gracePeriodEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days grace remaining).
+            </p>
+          )}
+        </div>
+      )}
+
       {showProgress && (
         <div className="mt-3">
           <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
-            <span>Rolling 12-mo GBV: {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.rolling12moGbvCents / 100)}</span>
+            <span>Rolling 12-mo GBV: {gbpFmt.format(tier.rolling12moGbvCents / 100)}</span>
             <span>£{Math.round(tier.powerThresholdCents / 100).toLocaleString()} to lock 50% forever</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Power Creator also requires ≥ {tier.videosRequiredPer30d} published video every 30 days
+            (you have <span className="font-semibold text-foreground">{tier.videosLast30d}</span> in the last 30).
+          </p>
           {tier.centsToPowerTier > 0 && tier.centsToPowerTier < 500000 && (
             <p className="mt-2 text-xs font-semibold text-primary">
-              Only {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(tier.centsToPowerTier / 100)} more in bookings to lock 50% forever.
+              Only {gbpFmt.format(tier.centsToPowerTier / 100)} more in bookings to unlock Power Creator.
             </p>
           )}
         </div>
