@@ -58,6 +58,12 @@ function TopBar() {
         </Link>
         <div className="flex items-center gap-2">
           <Link
+            to="/download"
+            className="hidden rounded-full px-4 py-2 text-sm font-semibold text-foreground/80 hover:text-foreground sm:inline-flex"
+          >
+            Get the app
+          </Link>
+          <Link
             to="/login"
             className="rounded-full px-4 py-2 text-sm font-semibold text-foreground/80 hover:text-foreground"
           >
@@ -340,6 +346,7 @@ function Footer() {
         <div className="font-display text-lg font-black text-foreground">travidz</div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2">
           <Link to="/login">Log in</Link>
+          <Link to="/download">Get the app</Link>
           <Link to="/business">For businesses</Link>
           <a href="mailto:support@travidz.com">support@travidz.com</a>
           <Link to="/legal/terms">Terms</Link>

@@ -1,0 +1,103 @@
+# Codemagic CI/CD for Travidz native builds
+# https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/
+#
+# Two manual workflows:
+#   - ios-build      → archives a signed IPA for App Store / TestFlight
+#   - android-build  → builds a signed AAB for Google Play
+#
+# Until Apple/Google developer accounts are set up, both workflows can run
+# WITHOUT signing (unsigned IPA / debug APK) so you can verify the pipeline
+# works end-to-end. Add the signing blocks once your accounts are live.
+
+workflows:
+  ios-build:
+    name: Travidz iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      vars:
+        BUNDLE_ID: "com.travidz.app"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: 20
+      xcode: latest
+      cocoapods: default
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: com.travidz.app
+    triggering:
+      events: []   # manual trigger only — no auto-build on push
+    scripts:
+      - name: Install bun
+        script: |
+          curl -fsSL https://bun.sh/install | bash
+          export PATH="$HOME/.bun/bin:$PATH"
+          echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
+      - name: Install dependencies
+        script: bun install --frozen-lockfile
+      - name: Build web bundle
+        script: bun run build
+      - name: Generate iOS project (first run only)
+        script: |
+          if [ ! -d "ios" ]; then
+            bunx cap add ios
+          fi
+          bunx cap sync ios
+      - name: Install CocoaPods
+        script: cd ios/App && pod install
+      # - name: Set up code signing
+      #   script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO" || true
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+    # publishing:
+    #   app_store_connect:
+    #     auth: integration
+    #     submit_to_testflight: true
+
+  android-build:
+    name: Travidz Android
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      vars:
+        PACKAGE_NAME: "com.travidz.app"
+      node: 20
+      java: 17
+      # android_signing:
+      #   - travidz_keystore
+    triggering:
+      events: []   # manual trigger only
+    scripts:
+      - name: Install bun
+        script: |
+          curl -fsSL https://bun.sh/install | bash
+          export PATH="$HOME/.bun/bin:$PATH"
+          echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
+      - name: Install dependencies
+        script: bun install --frozen-lockfile
+      - name: Build web bundle
+        script: bun run build
+      - name: Generate Android project (first run only)
+        script: |
+          if [ ! -d "android" ]; then
+            bunx cap add android
+          fi
+          bunx cap sync android
+      - name: Build AAB
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal

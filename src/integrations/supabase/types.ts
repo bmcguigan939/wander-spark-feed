@@ -2074,6 +2074,30 @@ export type Database = {
           },
         ]
       }
+      launch_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          platform: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          platform: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          platform?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -2713,6 +2737,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          onesignal_player_id: string
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          onesignal_player_id: string
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          onesignal_player_id?: string
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       rate_limit_hits: {
         Row: {
