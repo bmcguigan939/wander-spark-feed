@@ -2210,6 +2210,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          notify_deal_expiring: boolean
+          notify_followers: boolean
+          notify_replies: boolean
+          notify_weekly_digest: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          notify_deal_expiring?: boolean
+          notify_followers?: boolean
+          notify_replies?: boolean
+          notify_weekly_digest?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          notify_deal_expiring?: boolean
+          notify_followers?: boolean
+          notify_replies?: boolean
+          notify_weekly_digest?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           actor_id: string
