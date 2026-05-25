@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isSelfHost } from "@/lib/url-guards";
 
 const Role = z.enum(["traveller", "creator", "business", "admin"]);
 
@@ -186,7 +187,7 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("profiles")
-      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at,is_founding_creator,founding_creator_number,power_tier_locked_at,rolling_12mo_gbv_cents,creator_joined_at")
+      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at,is_founding_creator,founding_creator_number,power_tier_locked_at,rolling_12mo_gbv_cents,creator_joined_at,business_name,business_website_url")
       .order("created_at", { ascending: false })
       .limit(50);
     if (data.q) q = q.or(`username.ilike.%${data.q}%,display_name.ilike.%${data.q}%`);
@@ -205,6 +206,45 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     return {
       users: (profiles ?? []).map((p) => ({ ...p, roles: byUser.get(p.id) ?? [] })),
     };
+  });
+
+export const setBusinessWebsite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      businessName: z.string().trim().max(160).nullable().optional(),
+      websiteUrl: z.string().trim().max(500).nullable().optional(),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const patch: { business_name?: string | null; business_website_url?: string | null } = {};
+    if (data.businessName !== undefined) {
+      patch.business_name = data.businessName && data.businessName.length > 0 ? data.businessName : null;
+    }
+    if (data.websiteUrl !== undefined) {
+      const raw = (data.websiteUrl ?? "").trim();
+      if (raw.length === 0) {
+        patch.business_website_url = null;
+      } else {
+        const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        try {
+          new URL(normalized);
+        } catch {
+          throw new Error("Invalid URL");
+        }
+        if (isSelfHost(normalized)) {
+          throw new Error("Enter the business's own booking website, not a travidz.com URL.");
+        }
+        patch.business_website_url = normalized;
+      }
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await supabaseAdmin.from("profiles").update(patch).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await logAction(context.userId, "set_business_website", "profile", data.userId, JSON.stringify(patch));
+    return { ok: true };
   });
 
 export const setVideoModeration = createServerFn({ method: "POST" })
