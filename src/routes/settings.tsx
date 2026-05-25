@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { exportMyData, deleteMyAccount } from "@/lib/account.functions";
 import { getEmailPreferences, updateEmailPreferences, type EmailPreferences } from "@/lib/email-preferences.functions";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  type NotificationPreferences,
+} from "@/lib/notification-preferences.functions";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/settings")({
@@ -31,19 +36,26 @@ function SettingsPage() {
   const deleteFn = useServerFn(deleteMyAccount);
   const getPrefs = useServerFn(getEmailPreferences);
   const updatePrefs = useServerFn(updateEmailPreferences);
+  const getPushPrefs = useServerFn(getNotificationPreferences);
+  const updatePushPrefs = useServerFn(updateNotificationPreferences);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [prefs, setPrefs] = useState<EmailPreferences | null>(null);
   const [savingPref, setSavingPref] = useState<keyof EmailPreferences | null>(null);
+  const [pushPrefs, setPushPrefs] = useState<NotificationPreferences | null>(null);
+  const [savingPushPref, setSavingPushPref] = useState<keyof NotificationPreferences | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getPrefs({ data: undefined as any })
       .then((r) => { if (!cancelled) setPrefs(r.preferences); })
       .catch(() => { /* silent */ });
+    getPushPrefs({ data: undefined as any })
+      .then((r) => { if (!cancelled) setPushPrefs(r.preferences); })
+      .catch(() => { /* silent */ });
     return () => { cancelled = true; };
-  }, [getPrefs]);
+  }, [getPrefs, getPushPrefs]);
 
   async function togglePref(key: keyof EmailPreferences) {
     if (!prefs) return;
@@ -57,6 +69,21 @@ function SettingsPage() {
       toast.error("Couldn't save preference");
     } finally {
       setSavingPref(null);
+    }
+  }
+
+  async function togglePushPref(key: keyof NotificationPreferences) {
+    if (!pushPrefs) return;
+    const next = { ...pushPrefs, [key]: !pushPrefs[key] } as NotificationPreferences;
+    setPushPrefs(next);
+    setSavingPushPref(key);
+    try {
+      await updatePushPrefs({ data: { [key]: next[key] } as any });
+    } catch (e) {
+      setPushPrefs(pushPrefs);
+      toast.error("Couldn't save preference");
+    } finally {
+      setSavingPushPref(null);
     }
   }
 
@@ -180,11 +207,47 @@ function SettingsPage() {
         </section>
 
         <section>
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Push notifications</h2>
+          <div className="mt-3 divide-y divide-border/40 rounded-2xl border border-border/40 bg-card/40">
+            {([
+              { key: "notify_followers", label: "New followers", desc: "When someone follows you" },
+              { key: "notify_replies", label: "Replies & comments", desc: "Activity on videos you posted" },
+              { key: "notify_deal_expiring", label: "Deals expiring soon", desc: "Saved deals about to end" },
+              { key: "notify_weekly_digest", label: "Weekly digest", desc: "A roundup of new deals and creators" },
+            ] as { key: keyof NotificationPreferences; label: string; desc: string }[]).map((p) => (
+              <div key={p.key} className="flex items-center justify-between gap-3 px-5 py-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{p.label}</p>
+                  <p className="text-xs text-muted-foreground">{p.desc}</p>
+                </div>
+                <button
+                  onClick={() => togglePushPref(p.key)}
+                  disabled={!pushPrefs || savingPushPref === p.key}
+                  aria-pressed={!!pushPrefs?.[p.key]}
+                  className={`relative h-6 w-11 flex-shrink-0 rounded-full transition ${pushPrefs?.[p.key] ? "bg-primary" : "bg-muted"} disabled:opacity-50`}
+                >
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${pushPrefs?.[p.key] ? "translate-x-5" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Push notifications are only delivered to the Travidz mobile app on iOS and Android.
+          </p>
+        </section>
+
+        <section>
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-destructive">Danger zone</h2>
           <div className="mt-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
             <p className="text-sm text-foreground/90">
               Permanently delete your Travidz account and all associated content. This cannot be undone.
             </p>
+            <Link
+              to="/account/delete"
+              className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Open dedicated delete page
+            </Link>
             <label className="mt-4 block text-xs text-muted-foreground">
               Type <span className="font-mono font-semibold text-destructive">DELETE</span> to confirm
             </label>

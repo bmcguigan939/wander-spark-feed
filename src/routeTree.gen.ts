@@ -76,6 +76,7 @@ import { Route as AdminErrorsRouteImport } from './routes/admin.errors'
 import { Route as AdminDisputesRouteImport } from './routes/admin.disputes'
 import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
+import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
 import { Route as StudioThreadsIdRouteImport } from './routes/studio.threads.$id'
@@ -445,6 +446,11 @@ const AdminDealsRoute = AdminDealsRouteImport.update({
   path: '/deals',
   getParentRoute: () => AdminRoute,
 } as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account/delete',
+  path: '/account/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DestinationsCountryIndexRoute =
   DestinationsCountryIndexRouteImport.update({
     id: '/destinations/$country/',
@@ -642,6 +648,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRouteWithChildren
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -742,6 +749,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -844,6 +852,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRouteWithChildren
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -948,6 +957,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/support'
     | '/welcome'
+    | '/account/delete'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1048,6 +1058,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/support'
     | '/welcome'
+    | '/account/delete'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1149,6 +1160,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/support'
     | '/welcome'
+    | '/account/delete'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1252,6 +1264,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRouteWithChildren
   SupportRoute: typeof SupportRoute
   WelcomeRoute: typeof WelcomeRoute
+  AccountDeleteRoute: typeof AccountDeleteRoute
   BookDealIdRoute: typeof BookDealIdRoute
   BookReturnRoute: typeof BookReturnRoute
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
@@ -1784,6 +1797,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDealsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/account/delete': {
+      id: '/account/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/destinations/$country/': {
       id: '/destinations/$country/'
       path: '/destinations/$country'
@@ -2160,6 +2180,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRouteWithChildren,
   SupportRoute: SupportRoute,
   WelcomeRoute: WelcomeRoute,
+  AccountDeleteRoute: AccountDeleteRoute,
   BookDealIdRoute: BookDealIdRoute,
   BookReturnRoute: BookReturnRoute,
   BusinessApplicationsRoute: BusinessApplicationsRoute,
@@ -2225,13 +2246,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
