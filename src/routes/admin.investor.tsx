@@ -526,6 +526,7 @@ function ScenariosPane({
               <div className="mt-4 space-y-1.5 text-sm">
                 <KV k="Y5 GBV" v={fmtGBP(revenue[4].gbv, { compact: true })} />
                 <KV k="Y5 Travidz net" v={fmtGBP(revenue[4].travidzNet, { compact: true })} />
+                <KV k="Y5 contribution margin" v={fmtGBP(revenue[4].contributionMargin, { compact: true })} />
                 <KV k="Y5 take-rate" v={fmtPct(revenue[4].blendedTakeRatePct, 2)} />
               </div>
             )}
