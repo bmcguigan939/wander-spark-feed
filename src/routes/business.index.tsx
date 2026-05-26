@@ -12,6 +12,7 @@ import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
+import { useAccountKind } from "@/lib/useAccountKind";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -23,6 +24,8 @@ function BusinessDashboard() {
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
+  const accountKind = useAccountKind();
+  const photosKind: "stay" | "activity" = accountKind === "activity" ? "activity" : "stay";
 
   useEffect(() => {
     if (loading) return;
@@ -58,7 +61,7 @@ function BusinessDashboard() {
           <PayoutMethodCard />
         </div>
         <div className="mb-4">
-          <BusinessPhotosEditor businessId={user.id} />
+          <BusinessPhotosEditor businessId={user.id} kind={photosKind} />
         </div>
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -139,16 +142,25 @@ function BusinessDashboard() {
               <Briefcase className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">No deals yet</h2>
+              <h2 className="text-sm font-semibold">
+                {accountKind === "activity"
+                  ? "No activities yet"
+                  : accountKind === "stay"
+                  ? "No stays yet"
+                  : "No deals yet"}
+              </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Publish your first offer so creators can promote it and viewers can book.
+                {accountKind === "activity"
+                  ? "Publish your first activity so creators can promote it and travellers can book."
+                  : "Publish your first offer so creators can promote it and viewers can book."}
               </p>
             </div>
             <Link
               to="/business/deals/new"
               className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
             >
-              <Plus className="h-3.5 w-3.5" /> Create a deal
+              <Plus className="h-3.5 w-3.5" />{" "}
+              {accountKind === "activity" ? "Create an activity" : "Create a deal"}
             </Link>
           </div>
         )}

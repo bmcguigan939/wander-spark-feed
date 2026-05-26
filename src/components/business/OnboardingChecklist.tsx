@@ -5,10 +5,11 @@ import { Check, Circle, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
-import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate, type AccountKind } from "@/lib/bookable.functions";
+import { getBookableStatus, GATE_LABELS, gateLinkFor, type BookableGate, type AccountKind } from "@/lib/bookable.functions";
 import { COMMISSION } from "@/lib/commission";
 import { getMyCollabDefaults } from "@/lib/collabs.functions";
 import { getMyOperatorSite } from "@/lib/operator-site.functions";
+import { listMyDeals } from "@/lib/deals.functions";
 
 type Step = {
   id: string;
@@ -79,6 +80,7 @@ export function OnboardingChecklist() {
   const bookableFn = useServerFn(getBookableStatus);
   const defaultsFn = useServerFn(getMyCollabDefaults);
   const operatorSiteFn = useServerFn(getMyOperatorSite);
+  const dealsFn = useServerFn(listMyDeals);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
@@ -99,6 +101,12 @@ export function OnboardingChecklist() {
     queryFn: () => operatorSiteFn(),
     enabled: !!user?.id,
   });
+  const { data: myDeals } = useQuery({
+    queryKey: ["my-deals"],
+    queryFn: () => dealsFn(),
+    enabled: !!user?.id,
+  });
+  const firstDealId: string | null = (myDeals?.deals ?? [])[0]?.id ?? null;
 
   const ALL_GATES: BookableGate[] = ["photos", "items", "rates", "calendar", "payouts"];
   const missing = new Set(bookable?.missing ?? ALL_GATES);
@@ -119,7 +127,7 @@ export function OnboardingChecklist() {
         title: copy.title,
         desc: copy.desc,
         done: !missing.has(gate),
-        to: GATE_LINKS[gate],
+        to: gateLinkFor(gate, firstDealId),
       };
     }),
     {

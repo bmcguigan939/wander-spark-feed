@@ -217,3 +217,32 @@ export const GATE_LINKS: Record<BookableGate, string> = {
   calendar: "/business",
   payouts: "/business/onboarding/payout",
 };
+
+/**
+ * Lightweight lookup used by the dashboard checklist to deep-link each gate
+ * to the most useful page + scroll anchor. Defaults gracefully when no deal
+ * exists yet (operator hasn't created their first listing).
+ */
+export function gateLinkFor(
+  gate: BookableGate,
+  firstDealId: string | null,
+): string {
+  switch (gate) {
+    case "photos":
+      return "/business#photos";
+    case "items":
+      return firstDealId
+        ? `/business/deals/${firstDealId}/edit#rooms`
+        : "/business/deals/new";
+    case "rates":
+      return firstDealId
+        ? `/business/deals/${firstDealId}/edit#rates`
+        : "/business/deals/new";
+    case "calendar":
+      return firstDealId
+        ? `/business/deals/${firstDealId}/edit#calendar`
+        : "/business/deals/new";
+    case "payouts":
+      return "/business/onboarding/payout";
+  }
+}
