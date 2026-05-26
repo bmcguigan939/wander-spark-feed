@@ -70,7 +70,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -292,7 +292,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
       )
       .in("id", data.ids)
       .eq("status", "ready")
@@ -461,7 +461,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const [freshRes, bumpedRes] = await Promise.all([
       supabaseAdmin
@@ -569,7 +569,7 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)"
         )
         .eq("status", "ready")
         .eq("is_draft", false)
@@ -664,7 +664,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           let kw = supabaseAdmin
             .from("videos")
             .select(
-              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
             )
             .eq("status", "ready")
             .eq("is_draft", false)
@@ -698,7 +698,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         let extra = supabaseAdmin
           .from("videos")
           .select(
-            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
           )
           .in("id", newIds)
           .eq("status", "ready")
@@ -737,7 +737,7 @@ export const searchVideos = createServerFn({ method: "GET" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
       )
       .eq("status", "ready")
       .eq("is_draft", false)
