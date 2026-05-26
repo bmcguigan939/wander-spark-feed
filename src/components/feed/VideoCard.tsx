@@ -454,6 +454,17 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
               <div className="truncate text-sm font-semibold">
                 {video.matchedDeal.title}
               </div>
+              {video.matchedDeal.rating_count ? (
+                <div className="mt-0.5 flex items-center gap-1 text-[11px] text-white/85">
+                  <span className="text-amber-300">★</span>
+                  <span className="font-semibold">
+                    {Number(video.matchedDeal.rating_avg ?? 0).toFixed(1)}
+                  </span>
+                  <span className="text-white/60">
+                    ({video.matchedDeal.rating_count.toLocaleString()})
+                  </span>
+                </div>
+              ) : null}
             </div>
             {video.matchedDeal.discount_label && (
               <span className="flex-shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
@@ -494,6 +505,17 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
                   <div className="truncate text-[11px] text-white/70">
                     {[d.city, d.country].filter(Boolean).join(", ")}
                   </div>
+                  {d.deal_rating_count ? (
+                    <div className="mt-0.5 flex items-center gap-1 text-[11px] text-white/85">
+                      <span className="text-amber-300">★</span>
+                      <span className="font-semibold">
+                        {Number(d.deal_rating_avg ?? 0).toFixed(1)}
+                      </span>
+                      <span className="text-white/60">
+                        ({Number(d.deal_rating_count).toLocaleString()})
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
                 <span className="flex-shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
                   Book →
