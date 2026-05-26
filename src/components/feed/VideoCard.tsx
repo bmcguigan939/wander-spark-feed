@@ -475,11 +475,11 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           <div className="mt-3 space-y-1.5">
             <div className="text-[10px] uppercase tracking-[0.12em] text-white/70">Book this trip</div>
             {attachedDeals.slice(0, 3).map((d: any) => (
-              <a
+              <Link
                 key={d.id}
-                href={`/api/public/d/${d.id}?v=${video.id}`}
-                target="_blank"
-                rel="noopener sponsored"
+                to="/deals/$id"
+                params={{ id: d.id }}
+                search={{ v: video.id }}
                 className="flex items-center gap-2 rounded-2xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur-md transition hover:bg-black/55"
               >
                 {d.image_url ? (
@@ -493,15 +493,14 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
                   <div className="truncate text-sm font-semibold">{d.title}</div>
                   <div className="truncate text-[11px] text-white/70">
                     {[d.city, d.country].filter(Boolean).join(", ")}
-                    {d.affiliate_network ? ` · via ${d.affiliate_network}` : ""}
                   </div>
                 </div>
                 <span className="flex-shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
                   Book →
                 </span>
-              </a>
+              </Link>
             ))}
-            <div className="text-[9px] text-white/50">Sponsored · Travidz may earn a commission</div>
+            <div className="text-[9px] text-white/50">Book on Travidz · best-price guaranteed</div>
           </div>
         )}
 
