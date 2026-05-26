@@ -250,6 +250,8 @@ function RoomCard({
         Save room
       </Button>
 
+      <RoomPhotosUploader room={room} dealId={dealId} onChange={onChange} />
+
       <div className="mt-4 border-t border-border pt-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Rates for this room
