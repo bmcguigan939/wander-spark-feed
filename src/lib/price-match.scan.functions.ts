@@ -22,7 +22,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: deal } = await supabaseAdmin
       .from("deals")
-      .select("id,title,city,country,destination,price_cents,currency,is_active,status,business_id")
+      .select("id,title,city,country,destination,price_cents,currency,is_active,status,business_id,category")
       .eq("id", data.dealId)
       .maybeSingle();
     if (!deal || !deal.is_active || deal.status !== "approved") {
@@ -40,10 +40,12 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
       };
     }
     // Look up the operator's own website so the scanner never matches
-    // against their own site (we'd double-count Travidz's price as a
-    // competitor otherwise).
+    // against their own site. Only relevant for ACTIVITY operators —
+    // stays/hotels don't supply a site URL and aren't gated on it.
     let operator_site_host: string | null = null;
-    if ((deal as any).business_id) {
+    const isActivity =
+      (deal as any).category === "do" || (deal as any).category === "tour";
+    if (isActivity && (deal as any).business_id) {
       const { data: biz } = await supabaseAdmin
         .from("profiles")
         .select("business_website_url")
