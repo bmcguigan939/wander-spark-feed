@@ -309,8 +309,6 @@ function ProfilePage() {
             <Shield className="h-4 w-4" /> Admin dashboard
           </Link>
         )}
-        <div className="mt-6 flex gap-1 rounded-full bg-card p-1">
-        </div>
         {pendingReviewsQ.data?.pending && pendingReviewsQ.data.pending.length > 0 && (
           <div className="mt-4 rounded-2xl border border-amber-300/50 bg-amber-50/60 p-4 dark:bg-amber-950/20">
             <div className="flex items-center gap-2">
