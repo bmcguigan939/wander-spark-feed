@@ -215,6 +215,36 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_identities: {
+        Row: {
+          blocked_at: string
+          blocked_by: string | null
+          id: string
+          kind: string
+          original_user_id: string | null
+          reason: string | null
+          value_hash: string
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_by?: string | null
+          id?: string
+          kind: string
+          original_user_id?: string | null
+          reason?: string | null
+          value_hash: string
+        }
+        Update: {
+          blocked_at?: string
+          blocked_by?: string | null
+          id?: string
+          kind?: string
+          original_user_id?: string | null
+          reason?: string | null
+          value_hash?: string
+        }
+        Relationships: []
+      }
       booking_refunds: {
         Row: {
           amount_cents: number
@@ -3080,6 +3110,9 @@ export type Database = {
           address: string | null
           avatar_url: string | null
           bio: string | null
+          block_reason: string | null
+          blocked_at: string | null
+          blocked_by: string | null
           business_agreement_accepted_at: string | null
           business_city: string | null
           business_country: string | null
@@ -3099,6 +3132,7 @@ export type Database = {
           display_name: string | null
           founding_creator_number: number | null
           id: string
+          is_blocked: boolean
           is_founding_creator: boolean
           is_restaurant: boolean
           is_verified: boolean
@@ -3108,9 +3142,12 @@ export type Database = {
           operator_site_url: string | null
           payout_bank_details_encrypted: string | null
           payout_method: string
+          pending_admin_review: boolean
           place_name: string | null
           power_tier_last_qualified_at: string | null
           power_tier_locked_at: string | null
+          review_match_details: Json | null
+          review_reason: string | null
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
           stripe_connect_account_id: string | null
@@ -3131,6 +3168,9 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           bio?: string | null
+          block_reason?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
           business_agreement_accepted_at?: string | null
           business_city?: string | null
           business_country?: string | null
@@ -3150,6 +3190,7 @@ export type Database = {
           display_name?: string | null
           founding_creator_number?: number | null
           id: string
+          is_blocked?: boolean
           is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
@@ -3159,9 +3200,12 @@ export type Database = {
           operator_site_url?: string | null
           payout_bank_details_encrypted?: string | null
           payout_method?: string
+          pending_admin_review?: boolean
           place_name?: string | null
           power_tier_last_qualified_at?: string | null
           power_tier_locked_at?: string | null
+          review_match_details?: Json | null
+          review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
           stripe_connect_account_id?: string | null
@@ -3182,6 +3226,9 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           bio?: string | null
+          block_reason?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
           business_agreement_accepted_at?: string | null
           business_city?: string | null
           business_country?: string | null
@@ -3201,6 +3248,7 @@ export type Database = {
           display_name?: string | null
           founding_creator_number?: number | null
           id?: string
+          is_blocked?: boolean
           is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
@@ -3210,9 +3258,12 @@ export type Database = {
           operator_site_url?: string | null
           payout_bank_details_encrypted?: string | null
           payout_method?: string
+          pending_admin_review?: boolean
           place_name?: string | null
           power_tier_last_qualified_at?: string | null
           power_tier_locked_at?: string | null
+          review_match_details?: Json | null
+          review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
           stripe_connect_account_id?: string | null
@@ -3438,6 +3489,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_signals: {
+        Row: {
+          id: string
+          kind: string
+          raw_value: string | null
+          seen_at: string
+          user_id: string
+          value_hash: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          raw_value?: string | null
+          seen_at?: string
+          user_id: string
+          value_hash: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          raw_value?: string | null
+          seen_at?: string
+          user_id?: string
+          value_hash?: string
         }
         Relationships: []
       }

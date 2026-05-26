@@ -1,44 +1,77 @@
-## Two legal/onboarding fixes
 
-### 1. Section 7(c) — keep it, but tighten the language
+## Goal
 
-You asked whether we can actually screenshot, save and report. Yes — and that's already wired up:
+Give admins the ability to block, unblock, and permanently delete user accounts from the Users tab — plus a smart "blocklist" that prevents banned users from sneaking back in under a new account, and a review queue for flagged signups so admins always have the final say.
 
-- `src/lib/price-compare.server.ts` calls the scraper with `formats: ["screenshot"]`, grabs the returned screenshot URL, and stores it as `evidence_url` on every `parity_checks` row.
-- It also computes a SHA-256 hash over `{url, network, price, currency, fetched_at, screenshot}` and stores it as `evidence_hash` for tamper-detection.
-- The business sees every entry on `/business/price-audit` with the screenshot link and dispute button.
+## What changes
 
-So the clause is truthful. I'll leave the substance but make two small edits in `src/routes/legal.business-agreement.tsx` so it's tighter and less marketing-y:
+### 1. Block / unblock / delete actions on each user card
 
-- "real time" → "promptly" (scans run on click, but "real time" sounds like a promise we'd have to defend)
-- "removed from settlement" → "the match is voided" (clearer, no separate "settlement" concept exists)
+On `/admin/users`, every user row gets three new actions in a small menu:
 
-If you'd rather change something else in (c) — shorter dispute window, drop the 14-day clause, etc. — tell me and I'll adjust.
+- **Block** — instantly signs them out, freezes their account, hides their videos and deactivates their deals. Reversible.
+- **Unblock** — lifts the block.
+- **Delete account** — permanent removal of the auth user and their profile (with confirm dialog). Their content is either hard-deleted or anonymised (we'll anonymise videos/deals so historical bookings stay intact).
 
-### 2. Remove the website URL field from the business invite/claim flow
+A blocked user attempting to log in sees a clear "Your account has been suspended" message. All their server functions reject with 403.
 
-In `src/routes/business.invite.$token.tsx`:
+### 2. Smart blocklist (re-signup prevention)
 
-- Remove the "Your website (where customers book)" `<Input>` and its helper text.
-- Remove the `website` state, validation, and from the submit payload.
-- Replace the offer copy to reflect the new model:
-  - "Your direct website stays the destination — no rebranding" → "Your store lives on Travidz — no website needed; we host the booking page."
-- The "Accept & claim your listing" button stays; the agreement checkbox stays.
+When an account is blocked or deleted, we capture identifying fingerprints into a new `blocked_identities` table:
 
-In the backend (`src/lib/business-invites.functions.ts` accept handler):
-- Make the `website` / direct URL field optional (don't insert into `affiliate_links` if not provided).
-- On accept, ensure the business profile is flagged as Travidz-hosted so the booking CTA points to the Travidz deal page / Stripe checkout instead of an external URL.
+- Email (normalised: lowercased, gmail dots stripped, `+tag` removed)
+- Phone number (if collected)
+- Stripe Connect payout account ID / last4 of bank account
+- IP address(es) seen on the account
+- Device fingerprint hash (if available from existing client signals)
+- Business name + website URL
 
-In `src/routes/legal.business-agreement.tsx`:
-- Update §5a / wherever it implies the business must have their own website. The operator-markup paragraph already works for Travidz-hosted stores since it routes through Stripe Connect — just remove the "we deliberately exclude your own website from the comparison set" line for businesses with no external site, or qualify it ("where you have one").
+On every new signup, business claim, and Stripe Connect onboarding, we check incoming details against `blocked_identities`. Three outcomes:
 
-### Out of scope
-- Building a richer Travidz-hosted storefront editor (rooms/rates editor already exists at `RoomsAndRatesEditor.tsx`).
-- Migrating existing accepted invites that already have a `website` recorded — they keep theirs.
+- **Hard match** (same email/phone/bank) → signup blocked outright with "This account cannot be created. Contact support."
+- **Soft match** (same IP, device, business name, or website) → account is created but flagged `pending_admin_review`, hidden from public feeds until cleared.
+- **No match** → normal flow.
 
-### Files touched
-- `src/routes/legal.business-agreement.tsx`
-- `src/routes/business.invite.$token.tsx`
-- `src/lib/business-invites.functions.ts`
+### 3. Admin review queue (flagged signups)
 
-No DB migration needed — `affiliate_links.url` stays nullable for Travidz-hosted businesses (or we point it at the Travidz deal page URL).
+New filter chip on Users: **Flagged**. Lists every account with `pending_admin_review = true`, showing why they were flagged (which fingerprint matched which blocked account). Admin has two buttons:
+
+- **Approve** — clears the flag, account becomes fully active.
+- **Reject** — blocks the new account and adds its fingerprints to the blocklist.
+
+### 4. Nice-to-haves admins will benefit from
+
+I'd recommend also adding (small additions, same screen):
+
+- **Impersonate / View as user** (read-only session) for support investigations.
+- **Send admin note / message to user** that surfaces as an in-app banner.
+- **Force password reset** button.
+- **Recent activity panel** per user (last login IP, last 10 actions, signup IP) to help judge flagged cases.
+- **Audit log export** of all admin actions (we already log to `admin_actions` — just a download button).
+
+## Technical notes
+
+**New tables (one migration):**
+- `blocked_identities` — `kind` (email|phone|bank|ip|device|business_name|website), `value_hash`, `original_user_id`, `reason`, `blocked_at`, `blocked_by`.
+- Add to `profiles`: `is_blocked boolean`, `blocked_at`, `blocked_by`, `block_reason`, `pending_admin_review boolean`, `review_reason text`, `signup_ip inet`, `last_login_ip inet`.
+- `user_signals` (lightweight) — `user_id`, `ip`, `device_hash`, `seen_at` for IP/device history.
+
+**New server fns in `src/lib/admin.functions.ts`:**
+- `blockUser`, `unblockUser`, `deleteUserAccount` (uses `supabaseAdmin.auth.admin.deleteUser`).
+- `approveFlaggedUser`, `rejectFlaggedUser`.
+- `getUserAuditDetail` for the activity panel.
+
+**New helper `src/lib/blocklist.server.ts`:**
+- `fingerprintEmail`, `fingerprintPhone`, normalisers.
+- `checkBlocklist(signals)` → `{ hardMatch, softMatches }`.
+- Called from signup hook, business invite accept, and Stripe Connect onboarding.
+
+**Auth enforcement:** add `assertNotBlocked(userId)` to `requireSupabaseAuth` middleware so every server fn rejects blocked users. Client `onAuthStateChange` checks `is_blocked` and signs them out.
+
+**UI:** extend the existing user card with a "⋯" menu (Block / Unblock / Delete / Force reset / Impersonate). Add **Flagged** filter chip next to All/Trusted/Untrusted. Flagged cards show match reason inline with Approve / Reject buttons.
+
+## Out of scope (flag for later)
+
+- True device fingerprinting library (FingerprintJS) — we'll use a simple hash of UA + screen + tz for now.
+- Cross-account graph analysis ("show me all accounts sharing this IP").
+- Automated risk scoring / ML.

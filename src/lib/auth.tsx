@@ -25,8 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadRoles(uid: string | undefined) {
     if (!uid) return setRoles([]);
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-    setRoles((data ?? []).map((r) => r.role as AppRole));
+    const [{ data: roleRows }, { data: profile }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.from("profiles").select("is_blocked").eq("id", uid).maybeSingle(),
+    ]);
+    if ((profile as any)?.is_blocked) {
+      // Account suspended — sign them out immediately.
+      try { await supabase.auth.signOut(); } catch {}
+      if (typeof window !== "undefined") {
+        window.alert("Your account has been suspended. Contact support@travidz.com.");
+      }
+      setRoles([]);
+      return;
+    }
+    setRoles((roleRows ?? []).map((r) => r.role as AppRole));
   }
 
   useEffect(() => {
