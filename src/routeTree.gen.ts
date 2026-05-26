@@ -40,6 +40,7 @@ import { Route as StudioThreadsRouteImport } from './routes/studio.threads'
 import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
+import { Route as ReviewBookingIdRouteImport } from './routes/review.$bookingId'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
@@ -267,6 +268,11 @@ const StudioLinksRoute = StudioLinksRouteImport.update({
 const SoundsIdRoute = SoundsIdRouteImport.update({
   id: '/sounds/$id',
   path: '/sounds/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewBookingIdRoute = ReviewBookingIdRouteImport.update({
+  id: '/review/$bookingId',
+  path: '/review/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
@@ -706,6 +712,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -810,6 +817,7 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -916,6 +924,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRoute
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -1024,6 +1033,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1128,6 +1138,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1233,6 +1244,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1328,6 +1340,7 @@ export interface RootRouteChildren {
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
+  ReviewBookingIdRoute: typeof ReviewBookingIdRoute
   SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -1581,6 +1594,13 @@ declare module '@tanstack/react-router' {
       path: '/sounds/$id'
       fullPath: '/sounds/$id'
       preLoaderRoute: typeof SoundsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/$bookingId': {
+      id: '/review/$bookingId'
+      path: '/review/$bookingId'
+      fullPath: '/review/$bookingId'
+      preLoaderRoute: typeof ReviewBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$code': {
@@ -2269,6 +2289,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
+  ReviewBookingIdRoute: ReviewBookingIdRoute,
   SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
