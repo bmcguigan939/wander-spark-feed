@@ -1,39 +1,51 @@
-## Commission model — confirmed rules
+## What these two notes actually mean
 
-Two booking types, both already wired through Stripe Connect with split capture. Operator/hotel always receives their entitled amount in full; **Stripe processing fee always comes out of Travidz's cut**, never the partner's.
+### 1. Operator payout method check — the `manual_bank` proxy
 
-### Hotel bookings (commission model)
-- Customer pays listed price (e.g. £100)
-- Hotel receives **89%** via `transfer_data.destination` (£89.00)
-- Travidz application fee: **11% gross** (£11.00)
-- Stripe processing fee (~2.9% + £0.20) deducted from Travidz's £11 → Travidz net ~£7.90
-- Net pool flows into `commission.ts` tier split (creator vs platform per tier)
+**What the code does today** (`src/lib/bookable.functions.ts:105`, `:179`, `src/lib/deals.functions.ts:102`):
+A deal is only allowed to go `bookable=true` if the owner profile passes a payout gate. That gate accepts **either** of two things:
 
-### Operator bookings (markup model)
-- Operator sets base rate (e.g. £80); deal listed at customer price (e.g. £100)
-- Operator receives **base rate** via `transfer_data.destination` (£80.00 — their advertised rate)
-- Travidz application fee: **full uplift** = listed − base (£20.00)
-- Stripe processing fee deducted from Travidz's £20 → Travidz net ~£16.90
-- Net pool flows into `commission.ts` tier split
+```ts
+p.stripe_connect_payouts_enabled === true   // proper Stripe Connect
+|| p.payout_method === 'manual_bank'         // legacy escape hatch
+```
 
-### Code changes
+The `'manual_bank'` branch is a leftover from before Stripe Connect existed — it lets a business flip a flag on their profile and be treated as "ready for payouts" even though no real bank account, no KYC, and no automated payout path is wired up. If a booking happens against such a profile, Travidz collects the money in its own Stripe balance and there is **no automated transfer** to the partner — it would have to be paid out by hand.
 
-1. **`src/lib/booking.functions.ts`**
-   - `COMMISSION_PCT = 8` → `COMMISSION_PCT = 11` (hotel path only).
-   - Operator markup path already uses `price − operator_base_price`; no change.
-   - Both paths continue to use `application_fee_amount` + `transfer_data.destination` so Stripe deducts processing fees from the platform fee, leaving the partner's payout untouched.
+**Why this is a launch blocker:** you said all payouts must be automatic via Stripe Connect. As long as the `manual_bank` fallback is in the gate, an operator/hotel can sit at "bookable" without ever finishing Connect onboarding, and customer money will land in Travidz's account with no automated path out.
 
-2. **No change needed**
-   - `src/lib/commission.ts` — already `totalPct: 11` with Stripe-fees-absorbed model.
-   - `legal.creator-agreement.tsx`, `legal.business-agreement.tsx` — already state 11%.
-   - Webhook + `connect_payouts` recording — unaffected.
+**Fix:**
+- Remove the `|| p.payout_method === 'manual_bank'` clause from the bookable gate in both `bookable.functions.ts` (two sites) and `deals.functions.ts`. Gate becomes Stripe Connect only: `stripe_connect_payouts_enabled === true` AND `charges_enabled === true`.
+- Update the DB validation trigger `deals_validate_operator_markup` the same way — drop the `manual_bank` branch so a deal cannot be saved as bookable without active Connect.
+- Migrate any existing rows: for every profile currently sitting on `payout_method='manual_bank'` with no Connect account, auto-unpublish their bookable deals and notify them via `PayoutMethodCard` that they need to complete Connect onboarding before re-publishing.
+- Update `PayoutMethodCard` copy to remove "manual bank" as a presented option; Stripe Connect Express becomes the only path.
+- Leave the `profiles.payout_method` column in place (don't drop it) so historic audit data is preserved, but stop reading it for gating.
 
-### Smoke check after the change
-- £100 hotel booking: Checkout Session shows `application_fee_amount=1100`, destination = hotel's Connect account, hotel payout = £89.
-- £100 operator deal (base £80): `application_fee_amount=2000`, destination = operator's Connect account, operator payout = £80.
-- `deal_redemptions` fee snapshot reflects the same numbers.
+### 2. iframe embed fallback for operator booking-page preview
 
-### Out of scope
-- No DB migration, no new secrets.
-- No change to refund reversal flow.
-- Creator tier math is already correct in `commission.ts` and stamped per redemption.
+**What the code does today** (`src/routes/business.signup.tsx:237-255`):
+During operator signup we ask for their existing booking page URL and try to render it in an `<iframe sandbox="allow-scripts allow-same-origin allow-forms">`. If the page sends `X-Frame-Options: DENY` / `frame-ancestors 'none'` (most modern booking engines do), the iframe stays blank. The current fallback is just a muted text message "Couldn't embed a preview — that's fine, we'll still save the URL," and signup proceeds with the URL stored as-is.
+
+**Why this came up as a concern:** it doesn't break payments — the URL is still saved and the price-match scanner can still scrape it server-side. The risk is purely **operator trust at signup**: the operator sees a blank box and may abandon. It's also not great UX — `onError` on iframes is unreliable, so the "Couldn't embed" message often never appears; the user just sees an empty frame.
+
+**Fix (UI-only, no business-logic change):**
+- Replace the iframe with a server-side reachability + screenshot check:
+  - Add a small server fn `checkOperatorSiteUrl({ url })` that does a HEAD/GET, returns `{ reachable, title, finalUrl, frameable }`.
+  - If reachable, render a card preview (favicon + site title + final URL) — no iframe needed. This always works regardless of X-Frame-Options.
+  - If unreachable / non-200, surface a clear inline error and block the optional URL field from saving until corrected (still lets them skip the optional section entirely).
+- Drop the `onError` handler and the `embedFailed` state — replaced by the deterministic server-side check.
+- Optional follow-up (not in this plan): generate a real thumbnail via a screenshot service. Out of scope until launch is stable.
+
+### Files touched
+
+- Edit: `src/lib/bookable.functions.ts`, `src/lib/deals.functions.ts`, `src/components/business/PayoutMethodCard.tsx`, `src/routes/business.signup.tsx`
+- New: `src/lib/operator-site-check.functions.ts` (server fn for URL reachability)
+- New migration: update `deals_validate_operator_markup` trigger; one-time `UPDATE deals SET is_active=false WHERE …` for legacy manual_bank owners without active Connect
+- No new secrets
+
+### Smoke checks after the change
+
+1. Profile with `payout_method='manual_bank'` and no Connect → cannot set `bookable=true` (UI + trigger both reject).
+2. Profile with active Connect → bookable allowed; Checkout split fires as before.
+3. Operator signup with a `X-Frame-Options: DENY` URL → preview card renders (no blank iframe), URL saves.
+4. Operator signup with an unreachable URL → inline error, URL not saved unless corrected or section skipped.
