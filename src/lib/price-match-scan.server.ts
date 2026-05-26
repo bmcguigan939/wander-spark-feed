@@ -29,13 +29,41 @@ export type ScanResult = {
   match_expires_at: string | null;
 };
 
-const NETWORKS: { network: string; site: string }[] = [
+const NETWORKS_COMMISSION: { network: string; site: string }[] = [
   { network: "booking.com", site: "booking.com" },
   { network: "expedia", site: "expedia.com" },
   { network: "agoda", site: "agoda.com" },
   { network: "getyourguide", site: "getyourguide.com" },
   { network: "viator", site: "viator.com" },
 ];
+
+// Activity operators sell direct on their own site, so we compare ONLY against
+// third-party resellers (never against the operator's own host). Hotel-only OTAs
+// are excluded because they don't typically list activities/tours.
+const NETWORKS_OPERATOR_MARKUP: { network: string; site: string }[] = [
+  { network: "getyourguide", site: "getyourguide.com" },
+  { network: "viator", site: "viator.com" },
+  { network: "klook", site: "klook.com" },
+  { network: "tiqets", site: "tiqets.com" },
+  { network: "musement", site: "musement.com" },
+];
+
+function normaliseHost(input: string | null | undefined): string | null {
+  if (!input) return null;
+  try {
+    const host = new URL(input.startsWith("http") ? input : `https://${input}`).hostname.toLowerCase();
+    return host.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+function urlMatchesExcludedHost(url: string, excluded: string[]): boolean {
+  if (!excluded.length) return false;
+  const host = normaliseHost(url);
+  if (!host) return false;
+  return excluded.some((h) => host === h || host.endsWith(`.${h}`));
+}
 
 const CACHE_SECONDS = 6 * 60 * 60; // 6h
 const MATCH_CODE_TTL_HOURS = 24;
@@ -133,12 +161,22 @@ async function ensureMatchCode(args: {
   return { code, expires_at };
 }
 
-async function findUrl(query: string, site: string): Promise<string | null> {
+async function findUrl(
+  query: string,
+  site: string,
+  excludeHosts: string[] = [],
+): Promise<string | null> {
   const r = await fc("/v2/search", { query: `${query} site:${site}`, limit: 1 }, 5000);
   const result = r?.data ?? r;
   const items = result?.web ?? result?.data ?? [];
-  const first = Array.isArray(items) ? items[0] : null;
-  return first?.url ?? null;
+  const list = Array.isArray(items) ? items : [];
+  for (const it of list) {
+    const u = it?.url as string | undefined;
+    if (!u) continue;
+    if (urlMatchesExcludedHost(u, excludeHosts)) continue;
+    return u;
+  }
+  return null;
 }
 
 async function scrape(network: string, url: string): Promise<ScanQuote | null> {
@@ -208,6 +246,8 @@ export async function runDealPriceMatch(args: {
   check_in?: string | null;
   check_out?: string | null;
   guests?: number | null;
+  pricing_model?: "commission" | "operator_markup";
+  operator_site_host?: string | null;
 }): Promise<ScanResult> {
   const cached = await readCached({
     dealId: args.dealId,
@@ -255,10 +295,20 @@ export async function runDealPriceMatch(args: {
     };
   }
 
-  // Scrape all networks in parallel
+  const networks =
+    args.pricing_model === "operator_markup"
+      ? NETWORKS_OPERATOR_MARKUP
+      : NETWORKS_COMMISSION;
+  const excludeHosts = [normaliseHost(args.operator_site_host ?? null)].filter(
+    (h): h is string => !!h,
+  );
+
+  // Scrape all networks in parallel — never include the operator's own site.
   const found = await Promise.all(
-    NETWORKS.map(async ({ network, site }) => {
-      const url = await findUrl(args.query, site);
+    networks
+      .filter(({ site }) => !excludeHosts.includes(normaliseHost(site) ?? ""))
+      .map(async ({ network, site }) => {
+        const url = await findUrl(args.query, site, excludeHosts);
       if (!url) return null;
       return scrape(network, url);
     }),
