@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { refreshConnectAccountById } from "@/lib/stripe-connect.functions";
 
 async function sendConfirmationEmail(opts: {
   to: string;
@@ -149,9 +150,64 @@ async function handleWebhook(req: Request, env: StripeEnv) {
       }
       break;
     }
+    case "account.updated": {
+      const acct = event.data.object as any;
+      await refreshConnectAccountById(acct.id, env).catch((e) =>
+        console.error("[webhook] account.updated refresh failed", e),
+      );
+      break;
+    }
+    case "payout.created":
+    case "payout.updated":
+    case "payout.paid":
+    case "payout.failed":
+    case "payout.canceled": {
+      await recordConnectPayout(event.data.object, env);
+      break;
+    }
     default:
       console.log("[webhook] unhandled event", event.type);
   }
+}
+
+async function recordConnectPayout(payout: any, _env: StripeEnv) {
+  // Connect events carry the connected account id on event.account, but the
+  // payout object also includes destination/account when sent via Connect.
+  const accountId =
+    (payout?.metadata?.connect_account_id as string | undefined) ||
+    (payout?.account as string | undefined) ||
+    null;
+  if (!accountId) {
+    console.log("[webhook] payout event without account id");
+    return;
+  }
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("stripe_connect_account_id", accountId)
+    .maybeSingle();
+  if (!profile?.id) {
+    console.log("[webhook] payout for unknown connect account", accountId);
+    return;
+  }
+  await supabaseAdmin
+    .from("connect_payouts")
+    .upsert(
+      {
+        business_id: profile.id,
+        stripe_payout_id: payout.id,
+        stripe_account_id: accountId,
+        amount_cents: payout.amount ?? 0,
+        currency: (payout.currency ?? "gbp").toUpperCase(),
+        status: payout.status ?? "unknown",
+        arrival_date: payout.arrival_date
+          ? new Date(payout.arrival_date * 1000).toISOString()
+          : null,
+        failure_message: payout.failure_message ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_payout_id" },
+    );
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({

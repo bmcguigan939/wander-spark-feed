@@ -70,6 +70,25 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     if (!deal.is_active || deal.status !== "approved") throw new Error("Deal is not available");
     if (!deal.business_id) throw new Error("This deal has no business owner");
 
+    // Load pricing model + business Connect account for the split.
+    const { data: dealMeta } = await supabaseAdmin
+      .from("deals")
+      .select("pricing_model, operator_base_price_cents, connect_account_id")
+      .eq("id", deal.id)
+      .maybeSingle();
+    const { data: bizProfile } = await supabaseAdmin
+      .from("profiles")
+      .select(
+        "stripe_connect_account_id,stripe_connect_payouts_enabled,payout_method",
+      )
+      .eq("id", deal.business_id)
+      .maybeSingle();
+    const connectAccountId =
+      (dealMeta as any)?.connect_account_id ||
+      (bizProfile as any)?.stripe_connect_account_id ||
+      null;
+    const connectActive = !!(bizProfile as any)?.stripe_connect_payouts_enabled;
+
     // Resolve rate plan — either explicit, or fall back to the cheapest active one for back-compat
     let ratePlan: {
       id: string;
@@ -244,7 +263,23 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         },
       ],
       ...(customerEmail && { customer_email: customerEmail }),
-      payment_intent_data: { description: productName },
+      payment_intent_data: {
+        description: productName,
+        // Split the charge: business gets paid automatically into their
+        // Stripe Connect bank, Travidz keeps the application fee.
+        ...(connectActive && connectAccountId
+          ? {
+              application_fee_amount: computeApplicationFee({
+                chargeNow,
+                pricingModel: (dealMeta as any)?.pricing_model ?? "commission",
+                operatorBasePriceCents: (dealMeta as any)?.operator_base_price_cents ?? null,
+                guests: data.guests,
+                commissionPct: COMMISSION_PCT,
+              }),
+              transfer_data: { destination: connectAccountId },
+            }
+          : {}),
+      },
       metadata: {
         bookingId: booking.id,
         dealId: deal.id,
@@ -252,8 +287,19 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         businessId: deal.business_id ?? "",
         ratePlanId: ratePlan?.id ?? "",
         paymentTiming,
+        connectAccountId: connectAccountId ?? "",
+        pricingModel: (dealMeta as any)?.pricing_model ?? "commission",
       },
     });
+
+    // Snapshot the Connect account on the booking + deal for reconciliation.
+    if (connectAccountId) {
+      await supabaseAdmin
+        .from("deals")
+        .update({ connect_account_id: connectAccountId })
+        .eq("id", deal.id)
+        .is("connect_account_id", null);
+    }
 
     // Save the session id on the booking so the webhook can resolve it.
     await supabaseAdmin
@@ -264,6 +310,29 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     if (!session.client_secret) throw new Error("Stripe did not return a client secret");
     return { clientSecret: session.client_secret, bookingId: booking.id };
   });
+
+/**
+ * Application fee = the slice Travidz keeps from the charge.
+ * - commission model: COMMISSION_PCT of the amount charged now.
+ * - operator_markup model: the uplift (price − operator base) × guests,
+ *   clamped to the amount charged now.
+ */
+function computeApplicationFee(opts: {
+  chargeNow: number;
+  pricingModel: string;
+  operatorBasePriceCents: number | null;
+  guests: number;
+  commissionPct: number;
+}): number {
+  if (opts.pricingModel === "operator_markup" && opts.operatorBasePriceCents != null) {
+    // chargeNow already accounts for guests + deposit
+    const subtotal = opts.chargeNow;
+    const baseSubtotal = (opts.operatorBasePriceCents ?? 0) * opts.guests;
+    const uplift = Math.max(0, subtotal - baseSubtotal);
+    return Math.min(subtotal, uplift);
+  }
+  return Math.round((opts.chargeNow * opts.commissionPct) / 100);
+}
 
 export const getMyBooking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

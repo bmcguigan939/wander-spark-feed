@@ -49,7 +49,7 @@ export const getBookableStatus = createServerFn({ method: "GET" })
         .eq("status", "approved"),
       supabaseAdmin
         .from("profiles")
-        .select("payout_method")
+        .select("payout_method,stripe_connect_payouts_enabled")
         .eq("id", businessId)
         .maybeSingle(),
     ]);
@@ -99,10 +99,11 @@ export const getBookableStatus = createServerFn({ method: "GET" })
       }
     }
 
-    // 5) Payouts
-    if ((payoutRes.data as any)?.payout_method !== "manual_bank") {
-      missing.push("payouts");
-    }
+    // 5) Payouts — Stripe Connect (preferred) OR legacy manual_bank.
+    const p = payoutRes.data as any;
+    const payoutsReady =
+      p?.stripe_connect_payouts_enabled === true || p?.payout_method === "manual_bank";
+    if (!payoutsReady) missing.push("payouts");
 
     return { bookable: missing.length === 0, missing };
   });
@@ -130,7 +131,7 @@ export async function computeBookableStatus(
       .eq("status", "approved"),
     supabaseAdmin
       .from("profiles")
-      .select("payout_method")
+      .select("payout_method,stripe_connect_payouts_enabled")
       .eq("id", businessId)
       .maybeSingle(),
   ]);
@@ -172,8 +173,11 @@ export async function computeBookableStatus(
     }
   }
 
-  if ((payoutRes.data as any)?.payout_method !== "manual_bank") {
-    missing.push("payouts");
+  {
+    const p = payoutRes.data as any;
+    const payoutsReady =
+      p?.stripe_connect_payouts_enabled === true || p?.payout_method === "manual_bank";
+    if (!payoutsReady) missing.push("payouts");
   }
 
   return { bookable: missing.length === 0, missing };
