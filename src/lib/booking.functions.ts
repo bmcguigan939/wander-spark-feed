@@ -316,18 +316,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
  */
 function computeApplicationFee(opts: {
   chargeNow: number;
-  pricingModel: string;
-  operatorBasePriceCents: number | null;
   guests: number;
   commissionPct: number;
 }): number {
-  if (opts.pricingModel === "operator_markup" && opts.operatorBasePriceCents != null) {
-    // chargeNow already accounts for guests + deposit
-    const subtotal = opts.chargeNow;
-    const baseSubtotal = (opts.operatorBasePriceCents ?? 0) * opts.guests;
-    const uplift = Math.max(0, subtotal - baseSubtotal);
-    return Math.min(subtotal, uplift);
-  }
   return Math.round((opts.chargeNow * opts.commissionPct) / 100);
 }
 
