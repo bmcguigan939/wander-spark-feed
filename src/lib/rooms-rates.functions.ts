@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const roomSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(1000).optional().nullable(),
-  photos: z.array(z.string().url().max(500)).max(10).optional(),
+  photos: z.array(z.string().url().max(500)).max(20).optional(),
   bed_config: z
     .array(
       z.object({
