@@ -9,21 +9,38 @@ import {
   startConnectOnboarding,
   createConnectDashboardLink,
 } from "@/lib/stripe-connect.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export function PayoutMethodCard({ compact = false }: { compact?: boolean }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getMyConnectStatus);
   const startFn = useServerFn(startConnectOnboarding);
   const dashFn = useServerFn(createConnectDashboardLink);
+  const { user } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["connect-status"],
     queryFn: () => getFn(),
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile-country", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("business_country")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+  const country = (profile?.business_country || "GB").toUpperCase();
+
   const startMut = useMutation({
     mutationFn: () =>
-      startFn({ data: { environment: getStripeEnvironment(), country: "GB", returnPath: "/business/onboarding/payout" } }),
+      startFn({ data: { environment: getStripeEnvironment(), country, returnPath: "/business/onboarding/payout" } }),
     onSuccess: (r: any) => {
       if (r?.url) window.location.href = r.url;
       else toast.error("Could not start Stripe onboarding");
@@ -63,6 +80,12 @@ export function PayoutMethodCard({ compact = false }: { compact?: boolean }) {
               Stripe routes your share straight to your bank — we keep our 11% fee.
               You'll verify your business and bank in 2–3 minutes on Stripe.
             </p>
+            <ul className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+              <li>· Business legal name & address</li>
+              <li>· ID for the account owner</li>
+              <li>· Bank account (IBAN or sort code + account number)</li>
+              <li>· Takes ~2 minutes — country: <span className="font-medium text-foreground">{country}</span></li>
+            </ul>
             <button
               onClick={() => startMut.mutate()}
               disabled={startMut.isPending}
