@@ -203,11 +203,13 @@ export const flagReview = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ reviewId: z.string().uuid(), reason: z.string().min(2).max(500) }).parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
     const { error } = await supabaseAdmin
-      .from("booking_reviews")
-      .update({ status: "flagged" })
-      .eq("id", data.reviewId);
-    if (error) throw new Error(error.message);
+      .from("review_flags")
+      .insert({ review_id: data.reviewId, reporter_id: userId, reason: data.reason });
+    if (error && !/duplicate key/i.test(error.message)) {
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
