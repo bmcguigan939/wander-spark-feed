@@ -1844,8 +1844,10 @@ export type Database = {
           is_active: boolean
           item_kind: string
           languages: string[] | null
+          max_group_size: number | null
           max_guests: number
           meeting_point: string | null
+          min_group_size: number | null
           name: string
           photos: Json
           room_size_sqm: number | null
@@ -1866,8 +1868,10 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           languages?: string[] | null
+          max_group_size?: number | null
           max_guests?: number
           meeting_point?: string | null
+          min_group_size?: number | null
           name: string
           photos?: Json
           room_size_sqm?: number | null
@@ -1888,8 +1892,10 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           languages?: string[] | null
+          max_group_size?: number | null
           max_guests?: number
           meeting_point?: string | null
+          min_group_size?: number | null
           name?: string
           photos?: Json
           room_size_sqm?: number | null
