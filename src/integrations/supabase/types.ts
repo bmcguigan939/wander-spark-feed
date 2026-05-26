@@ -694,6 +694,42 @@ export type Database = {
         }
         Relationships: []
       }
+      business_photos: {
+        Row: {
+          business_id: string
+          caption: string | null
+          category: string
+          created_at: string
+          id: string
+          is_cover: boolean
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          business_id: string
+          caption?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          business_id?: string
+          caption?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       business_thread_messages: {
         Row: {
           body: string
@@ -1630,11 +1666,17 @@ export type Database = {
           created_at: string
           deal_id: string
           description: string | null
+          duration_minutes: number | null
+          excludes: string[] | null
           id: string
+          includes: string[] | null
           inventory_remaining: number | null
           inventory_total: number | null
           is_active: boolean
+          item_kind: string
+          languages: string[] | null
           max_guests: number
+          meeting_point: string | null
           name: string
           photos: Json
           room_size_sqm: number | null
@@ -1646,11 +1688,17 @@ export type Database = {
           created_at?: string
           deal_id: string
           description?: string | null
+          duration_minutes?: number | null
+          excludes?: string[] | null
           id?: string
+          includes?: string[] | null
           inventory_remaining?: number | null
           inventory_total?: number | null
           is_active?: boolean
+          item_kind?: string
+          languages?: string[] | null
           max_guests?: number
+          meeting_point?: string | null
           name: string
           photos?: Json
           room_size_sqm?: number | null
@@ -1662,11 +1710,17 @@ export type Database = {
           created_at?: string
           deal_id?: string
           description?: string | null
+          duration_minutes?: number | null
+          excludes?: string[] | null
           id?: string
+          includes?: string[] | null
           inventory_remaining?: number | null
           inventory_total?: number | null
           is_active?: boolean
+          item_kind?: string
+          languages?: string[] | null
           max_guests?: number
+          meeting_point?: string | null
           name?: string
           photos?: Json
           room_size_sqm?: number | null
@@ -1682,6 +1736,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      deal_time_slots: {
+        Row: {
+          booked: number
+          capacity: number
+          created_at: string
+          deal_id: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          room_id: string | null
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          booked?: number
+          capacity?: number
+          created_at?: string
+          deal_id: string
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          room_id?: string | null
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          booked?: number
+          capacity?: number
+          created_at?: string
+          deal_id?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          room_id?: string | null
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       deals: {
         Row: {
@@ -2318,42 +2411,66 @@ export type Database = {
       parity_checks: {
         Row: {
           action: string
+          cheapest_competitor_cents: number | null
+          cheapest_competitor_network: string | null
+          cheapest_competitor_url: string | null
           cheapest_network: string | null
           cheapest_price_cents: number | null
+          check_in: string | null
+          check_out: string | null
+          deal_id: string | null
           direct_price_cents: number | null
           fx_quote_currency: string | null
           fx_rate_used: number | null
+          guests: number | null
           id: string
-          link_id: string
+          link_id: string | null
           normalised_competitor_price_cents: number | null
           providers_checked: string[]
           ran_at: string
+          scanned_urls: Json
         }
         Insert: {
           action: string
+          cheapest_competitor_cents?: number | null
+          cheapest_competitor_network?: string | null
+          cheapest_competitor_url?: string | null
           cheapest_network?: string | null
           cheapest_price_cents?: number | null
+          check_in?: string | null
+          check_out?: string | null
+          deal_id?: string | null
           direct_price_cents?: number | null
           fx_quote_currency?: string | null
           fx_rate_used?: number | null
+          guests?: number | null
           id?: string
-          link_id: string
+          link_id?: string | null
           normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
+          scanned_urls?: Json
         }
         Update: {
           action?: string
+          cheapest_competitor_cents?: number | null
+          cheapest_competitor_network?: string | null
+          cheapest_competitor_url?: string | null
           cheapest_network?: string | null
           cheapest_price_cents?: number | null
+          check_in?: string | null
+          check_out?: string | null
+          deal_id?: string | null
           direct_price_cents?: number | null
           fx_quote_currency?: string | null
           fx_rate_used?: number | null
+          guests?: number | null
           id?: string
-          link_id?: string
+          link_id?: string | null
           normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
+          scanned_urls?: Json
         }
         Relationships: []
       }

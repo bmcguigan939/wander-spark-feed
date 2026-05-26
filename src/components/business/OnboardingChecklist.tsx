@@ -3,10 +3,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Check, Circle, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
-import { listMyDeals } from "@/lib/deals.functions";
-import { listBusinessRedemptions } from "@/lib/redemptions.functions";
-import { getMyPayoutMethod } from "@/lib/payout.functions";
+import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate } from "@/lib/bookable.functions";
+import { COMMISSION } from "@/lib/commission";
 
 type Step = {
   id: string;
@@ -16,65 +16,55 @@ type Step = {
   to: string;
 };
 
+function gateDescription(gate: BookableGate): string {
+  switch (gate) {
+    case "photos":
+      return "At least 3 photos of your property/operation.";
+    case "items":
+      return "Add rooms (stays) or activity options, each with a photo.";
+    case "rates":
+      return "Price each room/option with a cancellation policy.";
+    case "calendar":
+      return "Connect an iCal feed (Booking.com, Airbnb, Lodgify) to prevent double-bookings.";
+    case "payouts":
+      return "Add a bank account so we can pay you for confirmed bookings.";
+  }
+}
+
 export function OnboardingChecklist() {
   const [dismissed, setDismissed] = useState(false);
+  const { user } = useAuth();
   const agreementFn = useServerFn(getMyAgreementStatus);
-  const dealsFn = useServerFn(listMyDeals);
-  const redemptionsFn = useServerFn(listBusinessRedemptions);
-  const payoutFn = useServerFn(getMyPayoutMethod);
+  const bookableFn = useServerFn(getBookableStatus);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
     queryFn: () => agreementFn(),
   });
-  const { data: dealsRes } = useQuery({
-    queryKey: ["my-deals"],
-    queryFn: () => dealsFn(),
-  });
-  const { data: redemptionsRes } = useQuery({
-    queryKey: ["business-redemptions"],
-    queryFn: () =>
-      redemptionsFn({ data: { limit: 50, offset: 0 } as any }).catch(
-        () => ({ redemptions: [] as any[] }) as any,
-      ),
-  });
-  const { data: payout } = useQuery({
-    queryKey: ["payout-method"],
-    queryFn: () => payoutFn(),
+  const { data: bookable } = useQuery({
+    queryKey: ["bookable-status", user?.id],
+    queryFn: () => bookableFn({ data: { businessId: user!.id } }),
+    enabled: !!user?.id,
   });
 
-  const deals = (dealsRes?.deals ?? []) as any[];
-  const redemptions = ((redemptionsRes as any)?.redemptions ?? []) as any[];
+  const ALL_GATES: BookableGate[] = ["photos", "items", "rates", "calendar", "payouts"];
+  const missing = new Set(bookable?.missing ?? ALL_GATES);
 
   const steps: Step[] = [
     {
       id: "agreement",
       title: "Accept business agreement",
-      desc: "Confirms you've reviewed the latest terms.",
+      desc: `Confirms our ${COMMISSION.totalPct}% commission terms.`,
       done: !!agreement?.business_accepted,
       to: "/legal/business-agreement",
     },
-    {
-      id: "first-deal",
-      title: "Publish your first deal",
-      desc: "Add an offer so creators can promote it.",
-      done: deals.some((d) => d.is_active),
-      to: "/business/deals/new",
-    },
-    {
-      id: "payout",
-      title: "Set up payouts",
-      desc: "Add a bank account so Travidz can pay you for bookings.",
-      done: payout?.payout_method === "manual_bank",
-      to: "/business/onboarding/payout",
-    },
-    {
-      id: "first-redemption",
-      title: "Confirm a booking",
-      desc: "Approve a creator-led booking to start the commission flow.",
-      done: redemptions.some((r) => r.status === "confirmed"),
-      to: "/business/redemptions",
-    },
+    ...ALL_GATES.map<Step>((gate) => ({
+      id: gate,
+      title: GATE_LABELS[gate],
+      desc: gateDescription(gate),
+      done: !missing.has(gate),
+      to: GATE_LINKS[gate],
+    })),
   ];
 
   const completed = steps.filter((s) => s.done).length;
@@ -89,7 +79,9 @@ export function OnboardingChecklist() {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">Getting started</h2>
+          <h2 className="text-sm font-semibold">
+            {bookable?.bookable ? "You're bookable on Travidz" : "Enable bookings on Travidz"}
+          </h2>
         </div>
         <button
           onClick={() => setDismissed(true)}
@@ -106,7 +98,7 @@ export function OnboardingChecklist() {
           />
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          {completed} of {steps.length} complete
+          {completed} of {steps.length} complete · Travidz takes {COMMISSION.totalPct}% on confirmed bookings only
         </p>
       </div>
       <ul className="space-y-1.5">
