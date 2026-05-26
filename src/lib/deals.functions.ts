@@ -97,13 +97,9 @@ export const createDeal = createServerFn({ method: "POST" })
         .eq("id", userId)
         .maybeSingle();
       if (pErr) throw new Error(pErr.message);
-      const ready =
-        (profile as any)?.stripe_connect_payouts_enabled === true ||
-        false;
       const fullyReady =
         (profile as any)?.stripe_connect_payouts_enabled === true &&
         (profile as any)?.stripe_connect_charges_enabled === true;
-      void ready;
       if (!fullyReady) {
         throw new Error(
           "Complete Stripe Connect onboarding (charges + payouts) before listing a bookable deal. Visit /business/onboarding/payout",
