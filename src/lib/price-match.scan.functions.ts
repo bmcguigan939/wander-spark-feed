@@ -44,6 +44,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
       query,
       direct_price_cents: deal.price_cents ?? null,
       direct_currency: deal.currency ?? "GBP",
+      business_id: (deal as any).business_id ?? null,
       check_in: data.check_in ?? null,
       check_out: data.check_out ?? null,
       guests: data.guests ?? null,

@@ -23,6 +23,10 @@ export type ScanResult = {
   cheapest_competitor_url: string | null;
   scanned_urls: ScanQuote[];
   ran_at: string;
+  /** Auto-issued match code when Travidz is pricier than the cheapest
+   *  competitor — null otherwise. */
+  match_code: string | null;
+  match_expires_at: string | null;
 };
 
 const NETWORKS: { network: string; site: string }[] = [
@@ -34,6 +38,7 @@ const NETWORKS: { network: string; site: string }[] = [
 ];
 
 const CACHE_SECONDS = 6 * 60 * 60; // 6h
+const MATCH_CODE_TTL_HOURS = 24;
 
 const PRICE_SCHEMA = {
   type: "object",
@@ -72,6 +77,60 @@ async function fc(path: string, body: unknown, timeoutMs: number): Promise<any> 
 
 function toCents(price: number) {
   return Math.round(price * 100);
+}
+
+function genMatchCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "MATCH-";
+  for (let i = 0; i < 8; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return out;
+}
+
+/** Reuse a still-valid issued code for this deal or mint a new one. */
+async function ensureMatchCode(args: {
+  dealId: string;
+  businessId: string | null;
+  direct_price_cents: number;
+  cheapest: ScanQuote;
+}): Promise<{ code: string; expires_at: string } | null> {
+  const { data: existing } = await supabaseAdmin
+    .from("price_match_codes")
+    .select("code,expires_at")
+    .eq("deal_id", args.dealId)
+    .eq("status", "issued")
+    .gt("expires_at", new Date().toISOString())
+    .order("issued_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existing?.code) {
+    return { code: existing.code, expires_at: existing.expires_at };
+  }
+
+  const code = genMatchCode();
+  const expires_at = new Date(Date.now() + MATCH_CODE_TTL_HOURS * 3600 * 1000).toISOString();
+  const { error } = await supabaseAdmin.from("price_match_codes").insert({
+    code,
+    deal_id: args.dealId,
+    business_id: args.businessId,
+    original_price_cents: args.direct_price_cents,
+    matched_price_cents: args.cheapest.price_cents,
+    currency: args.cheapest.currency,
+    competitor_network: args.cheapest.network,
+    competitor_url: args.cheapest.url,
+    evidence_hash: createHash("sha256")
+      .update(
+        JSON.stringify({
+          dealId: args.dealId,
+          network: args.cheapest.network,
+          url: args.cheapest.url,
+          price: args.cheapest.price_cents,
+        }),
+      )
+      .digest("hex"),
+    expires_at,
+  });
+  if (error) return null;
+  return { code, expires_at };
 }
 
 async function findUrl(query: string, site: string): Promise<string | null> {
@@ -130,6 +189,8 @@ async function readCached(args: {
     cheapest_competitor_url: data.cheapest_competitor_url ?? null,
     scanned_urls: (data.scanned_urls as ScanQuote[]) ?? [],
     ran_at: data.ran_at,
+    match_code: null,
+    match_expires_at: null,
   };
 }
 
@@ -143,6 +204,7 @@ export async function runDealPriceMatch(args: {
   query: string;
   direct_price_cents: number | null;
   direct_currency: string | null;
+  business_id?: string | null;
   check_in?: string | null;
   check_out?: string | null;
   guests?: number | null;
@@ -153,7 +215,32 @@ export async function runDealPriceMatch(args: {
     check_out: args.check_out ?? null,
     guests: args.guests ?? null,
   });
-  if (cached) return cached;
+  if (cached) {
+    if (
+      args.direct_price_cents != null &&
+      cached.cheapest_competitor_cents != null &&
+      args.direct_price_cents > cached.cheapest_competitor_cents &&
+      cached.cheapest_competitor_network &&
+      cached.cheapest_competitor_url
+    ) {
+      const m = await ensureMatchCode({
+        dealId: args.dealId,
+        businessId: args.business_id ?? null,
+        direct_price_cents: args.direct_price_cents,
+        cheapest: {
+          network: cached.cheapest_competitor_network,
+          url: cached.cheapest_competitor_url,
+          price_cents: cached.cheapest_competitor_cents,
+          currency: args.direct_currency || "GBP",
+        },
+      });
+      if (m) {
+        cached.match_code = m.code;
+        cached.match_expires_at = m.expires_at;
+      }
+    }
+    return cached;
+  }
 
   if (!fcKey()) {
     return {
@@ -163,6 +250,8 @@ export async function runDealPriceMatch(args: {
       cheapest_competitor_url: null,
       scanned_urls: [],
       ran_at: new Date().toISOString(),
+      match_code: null,
+      match_expires_at: null,
     };
   }
 
@@ -199,6 +288,25 @@ export async function runDealPriceMatch(args: {
     action: cheapest ? "no_breach" : "no_data",
   });
 
+  let match_code: string | null = null;
+  let match_expires_at: string | null = null;
+  if (
+    cheapest &&
+    args.direct_price_cents != null &&
+    args.direct_price_cents > cheapest.price_cents
+  ) {
+    const m = await ensureMatchCode({
+      dealId: args.dealId,
+      businessId: args.business_id ?? null,
+      direct_price_cents: args.direct_price_cents,
+      cheapest,
+    });
+    if (m) {
+      match_code = m.code;
+      match_expires_at = m.expires_at;
+    }
+  }
+
   return {
     scanned: true,
     cheapest_competitor_cents: cheapest?.price_cents ?? null,
@@ -206,6 +314,8 @@ export async function runDealPriceMatch(args: {
     cheapest_competitor_url: cheapest?.url ?? null,
     scanned_urls: quotes,
     ran_at,
+    match_code,
+    match_expires_at,
   };
 }
 
