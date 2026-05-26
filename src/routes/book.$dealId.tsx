@@ -11,6 +11,7 @@ import { createBookingCheckout } from "@/lib/booking.functions";
 import { getBlockedDates } from "@/lib/calendar.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
+import { PriceMatchBadge } from "@/components/PriceMatchBadge";
 
 export const Route = createFileRoute("/book/$dealId")({
   head: () => ({ meta: [{ title: "Book — Travidz" }] }),
@@ -192,6 +193,14 @@ function BookPage() {
                 </p>
               )}
             </div>
+
+            {deal.bookable && (
+              <PriceMatchBadge
+                dealId={dealId}
+                checkIn={travelDate || null}
+                guests={guests}
+              />
+            )}
 
             {err && <p className="text-sm text-destructive">{err}</p>}
 
