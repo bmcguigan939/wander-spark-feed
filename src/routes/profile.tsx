@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
+import { listMyPendingReviews } from "@/lib/reviews.functions";
+import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
@@ -35,6 +37,12 @@ function ProfilePage() {
   const syncTikTokFn = useServerFn(syncTikTokOfficial);
   const bulkImportFn = useServerFn(importExternalVideosBulk);
   const setThumbFn = useServerFn(setImportedThumbnail);
+  const pendingReviewsFn = useServerFn(listMyPendingReviews);
+  const pendingReviewsQ = useQuery({
+    queryKey: ["my-pending-reviews"],
+    queryFn: () => pendingReviewsFn(),
+    enabled: !loading && !!user,
+  });
   const rerunM = useMutation({
     mutationFn: (videoId: string) => rerunFn({ data: { videoId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Re-tagged with AI"); },
