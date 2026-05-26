@@ -35,6 +35,7 @@ export type FeedVideo = {
     username: string;
     display_name: string | null;
     avatar_url: string | null;
+    creator_quality_score?: number | null;
   };
   matchedDeal?: {
     id: string;
@@ -380,9 +381,19 @@ function scoreVideo(
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
   const newUploadBoost = isFreshUpload(v) ? 18 : 0;
   const jitter = Math.random() * 0.4; // small variety
-  return (
-    freshness * 4 + engagement * 0.7 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
-  );
+  const base =
+    freshness * 4 + engagement * 0.7 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter;
+  // Creator quality multiplier: well-reviewed creators get surfaced more,
+  // poorly-reviewed creators get suppressed. Null = cold-start (no penalty).
+  const q = (v.creator as any)?.creator_quality_score as number | null | undefined;
+  let qualityMult = 1;
+  if (q != null) {
+    if (q >= 80) qualityMult = 1.25;
+    else if (q >= 60) qualityMult = 1.0;
+    else if (q >= 40) qualityMult = 0.75;
+    else qualityMult = 0.4;
+  }
+  return base * qualityMult;
 }
 
 async function buildAffinity(userId: string) {
