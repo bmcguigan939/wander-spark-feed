@@ -595,17 +595,19 @@ function RatePlanRow({
             />
           </div>
         )}
-        <div>
-          <Label className="text-xs">Breakfast</Label>
-          <Select value={local.breakfast} onValueChange={(v) => setLocal({ ...local, breakfast: v as any })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Not included</SelectItem>
-              <SelectItem value="included">Included</SelectItem>
-              <SelectItem value="available_paid">Available for extra fee</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {showBreakfast && (
+          <div>
+            <Label className="text-xs">Breakfast</Label>
+            <Select value={local.breakfast} onValueChange={(v) => setLocal({ ...local, breakfast: v as any })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not included</SelectItem>
+                <SelectItem value="included">Included</SelectItem>
+                <SelectItem value="available_paid">Available for extra fee</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="col-span-2">
           <Label className="text-xs">Perks (comma-separated)</Label>
           <Input
