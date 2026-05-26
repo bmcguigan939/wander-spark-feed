@@ -70,35 +70,8 @@ export async function stampRedemptionSplit(redemptionId: string): Promise<void> 
 
   const gbvCents = r.order_value_cents ?? 0;
 
-  // For activity operators on the operator_markup model, the commission
-  // pool IS the uplift (price_cents − operator_base_price_cents), not
-  // 11% of GBV. This keeps the operator's net equal to their own website
-  // price and ensures Travidz only takes what was added on top.
-  let netPoolCents: number;
-  if (r.deal_id) {
-    const { data: deal } = await supabaseAdmin
-      .from("deals")
-      .select("pricing_model,operator_base_price_cents,price_cents")
-      .eq("id", r.deal_id)
-      .maybeSingle();
-    if (
-      deal &&
-      (deal as any).pricing_model === "operator_markup" &&
-      (deal as any).operator_base_price_cents != null
-    ) {
-      const uplift = Math.max(
-        0,
-        ((deal as any).price_cents ?? gbvCents) -
-          (deal as any).operator_base_price_cents,
-      );
-      // Subtract Stripe fee (computed on full GBV the customer paid)
-      netPoolCents = Math.max(0, uplift - stripeFeeCents(gbvCents));
-    } else {
-      netPoolCents = netCommissionPoolCents(gbvCents);
-    }
-  } else {
-    netPoolCents = netCommissionPoolCents(gbvCents);
-  }
+  // Every Travidz shop is on the commission model now.
+  const netPoolCents = netCommissionPoolCents(gbvCents);
   const { creatorCents, platformCents } = splitCommissionCents(netPoolCents, split);
 
   await supabaseAdmin
