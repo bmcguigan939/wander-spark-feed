@@ -4,6 +4,7 @@ import {
   netCommissionPoolCents,
   resolveSplit,
   splitCommissionCents,
+  stripeFeeCents,
   type CreatorSplit,
 } from "./commission";
 import {
@@ -91,11 +92,7 @@ export async function stampRedemptionSplit(redemptionId: string): Promise<void> 
           (deal as any).operator_base_price_cents,
       );
       // Subtract Stripe fee (computed on full GBV the customer paid)
-      netPoolCents = Math.max(
-        0,
-        uplift -
-          (await import("./commission")).stripeFeeCents(gbvCents),
-      );
+      netPoolCents = Math.max(0, uplift - stripeFeeCents(gbvCents));
     } else {
       netPoolCents = netCommissionPoolCents(gbvCents);
     }
