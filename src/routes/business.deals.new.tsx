@@ -23,6 +23,7 @@ function NewDealPage() {
   const payoutFn = useServerFn(getMyConnectStatus);
   const [busy, setBusy] = useState(false);
   const [bookable, setBookable] = useState(false);
+  const accountKind = useAccountKind();
   const [policy, setPolicy] = useState<
     "travidz_standard" | "free_cancel_until_start" | "non_refundable" | "custom_24h" | "custom_7d"
   >("travidz_standard");
@@ -102,6 +103,7 @@ function NewDealPage() {
         <DealForm
           submitLabel="Create deal"
           busy={busy}
+          accountKind={accountKind}
           onSubmit={async (values) => {
             // operator_markup deals must be bookable — Travidz collects the 11% uplift
             const forcedBookable =
