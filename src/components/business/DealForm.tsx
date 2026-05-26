@@ -6,6 +6,7 @@ import { toast } from "sonner";
 export type DealFormValues = {
   title: string;
   description?: string;
+  url?: string;
   image_url?: string;
   destination?: string;
   country?: string;
