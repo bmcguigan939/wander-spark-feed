@@ -40,6 +40,7 @@ import { Route as StudioThreadsRouteImport } from './routes/studio.threads'
 import { Route as StudioScheduleRouteImport } from './routes/studio.schedule'
 import { Route as StudioLinksRouteImport } from './routes/studio.links'
 import { Route as SoundsIdRouteImport } from './routes/sounds.$id'
+import { Route as ReviewBookingIdRouteImport } from './routes/review.$bookingId'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
@@ -83,6 +84,7 @@ import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
 import { Route as StudioThreadsIdRouteImport } from './routes/studio.threads.$id'
+import { Route as ReviewBookingIdThanksRouteImport } from './routes/review.$bookingId.thanks'
 import { Route as LovableEmailUnsubscribeRouteImport } from './routes/lovable/email/unsubscribe'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessThreadsIdRouteImport } from './routes/business.threads.$id'
@@ -267,6 +269,11 @@ const StudioLinksRoute = StudioLinksRouteImport.update({
 const SoundsIdRoute = SoundsIdRouteImport.update({
   id: '/sounds/$id',
   path: '/sounds/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewBookingIdRoute = ReviewBookingIdRouteImport.update({
+  id: '/review/$bookingId',
+  path: '/review/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
@@ -484,6 +491,11 @@ const StudioThreadsIdRoute = StudioThreadsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => StudioThreadsRoute,
+} as any)
+const ReviewBookingIdThanksRoute = ReviewBookingIdThanksRouteImport.update({
+  id: '/thanks',
+  path: '/thanks',
+  getParentRoute: () => ReviewBookingIdRoute,
 } as any)
 const LovableEmailUnsubscribeRoute = LovableEmailUnsubscribeRouteImport.update({
   id: '/lovable/email/unsubscribe',
@@ -706,6 +718,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRouteWithChildren
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -729,6 +742,7 @@ export interface FileRoutesByFullPath {
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
+  '/review/$bookingId/thanks': typeof ReviewBookingIdThanksRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -810,6 +824,7 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRouteWithChildren
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -832,6 +847,7 @@ export interface FileRoutesByTo {
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
+  '/review/$bookingId/thanks': typeof ReviewBookingIdThanksRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country': typeof DestinationsCountryIndexRoute
@@ -916,6 +932,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/r/$code': typeof RCodeRoute
+  '/review/$bookingId': typeof ReviewBookingIdRouteWithChildren
   '/sounds/$id': typeof SoundsIdRoute
   '/studio/links': typeof StudioLinksRoute
   '/studio/schedule': typeof StudioScheduleRoute
@@ -939,6 +956,7 @@ export interface FileRoutesById {
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
+  '/review/$bookingId/thanks': typeof ReviewBookingIdThanksRoute
   '/studio/threads/$id': typeof StudioThreadsIdRoute
   '/studio/videos/$id': typeof StudioVideosIdRoute
   '/destinations/$country/': typeof DestinationsCountryIndexRoute
@@ -1024,6 +1042,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1047,6 +1066,7 @@ export interface FileRouteTypes {
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
+    | '/review/$bookingId/thanks'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -1128,6 +1148,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1150,6 +1171,7 @@ export interface FileRouteTypes {
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
+    | '/review/$bookingId/thanks'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country'
@@ -1233,6 +1255,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/r/$code'
+    | '/review/$bookingId'
     | '/sounds/$id'
     | '/studio/links'
     | '/studio/schedule'
@@ -1256,6 +1279,7 @@ export interface FileRouteTypes {
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
+    | '/review/$bookingId/thanks'
     | '/studio/threads/$id'
     | '/studio/videos/$id'
     | '/destinations/$country/'
@@ -1328,6 +1352,7 @@ export interface RootRouteChildren {
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   RCodeRoute: typeof RCodeRoute
+  ReviewBookingIdRoute: typeof ReviewBookingIdRouteWithChildren
   SoundsIdRoute: typeof SoundsIdRoute
   UUsernameRoute: typeof UUsernameRoute
   BusinessIndexRoute: typeof BusinessIndexRoute
@@ -1581,6 +1606,13 @@ declare module '@tanstack/react-router' {
       path: '/sounds/$id'
       fullPath: '/sounds/$id'
       preLoaderRoute: typeof SoundsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/$bookingId': {
+      id: '/review/$bookingId'
+      path: '/review/$bookingId'
+      fullPath: '/review/$bookingId'
+      preLoaderRoute: typeof ReviewBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$code': {
@@ -1883,6 +1915,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/studio/threads/$id'
       preLoaderRoute: typeof StudioThreadsIdRouteImport
       parentRoute: typeof StudioThreadsRoute
+    }
+    '/review/$bookingId/thanks': {
+      id: '/review/$bookingId/thanks'
+      path: '/thanks'
+      fullPath: '/review/$bookingId/thanks'
+      preLoaderRoute: typeof ReviewBookingIdThanksRouteImport
+      parentRoute: typeof ReviewBookingIdRoute
     }
     '/lovable/email/unsubscribe': {
       id: '/lovable/email/unsubscribe'
@@ -2196,6 +2235,18 @@ const BusinessThreadsRouteWithChildren = BusinessThreadsRoute._addFileChildren(
   BusinessThreadsRouteChildren,
 )
 
+interface ReviewBookingIdRouteChildren {
+  ReviewBookingIdThanksRoute: typeof ReviewBookingIdThanksRoute
+}
+
+const ReviewBookingIdRouteChildren: ReviewBookingIdRouteChildren = {
+  ReviewBookingIdThanksRoute: ReviewBookingIdThanksRoute,
+}
+
+const ReviewBookingIdRouteWithChildren = ReviewBookingIdRoute._addFileChildren(
+  ReviewBookingIdRouteChildren,
+)
+
 interface BookMatchCodeRouteChildren {
   BookMatchCodeThanksRoute: typeof BookMatchCodeThanksRoute
 }
@@ -2269,6 +2320,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   RCodeRoute: RCodeRoute,
+  ReviewBookingIdRoute: ReviewBookingIdRouteWithChildren,
   SoundsIdRoute: SoundsIdRoute,
   UUsernameRoute: UUsernameRoute,
   BusinessIndexRoute: BusinessIndexRoute,
@@ -2309,13 +2361,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
