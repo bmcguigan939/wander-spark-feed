@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Bed, Tag, Upload, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Bed, Tag, Upload, Loader2, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getDealRoomsAndRates,
@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const LODGING_CATEGORIES = new Set(["stay"]);
+const ACTIVITY_CATEGORIES = new Set(["do", "tour"]);
 
 type Room = {
   id: string;
@@ -30,6 +31,12 @@ type Room = {
   room_size_sqm: number | null;
   is_active: boolean;
   photos?: string[] | null;
+  duration_minutes?: number | null;
+  min_group_size?: number | null;
+  max_group_size?: number | null;
+  includes?: string[] | null;
+  excludes?: string[] | null;
+  meeting_point?: string | null;
 };
 
 type RatePlan = {
@@ -60,6 +67,7 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["rooms-rates", dealId] });
   const isLodging = !category || LODGING_CATEGORIES.has(category);
+  const isActivity = !!category && ACTIVITY_CATEGORIES.has(category);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading rooms & rates…</p>;
 
@@ -68,12 +76,16 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
   const flatRates = rates.filter((r) => !r.room_id);
 
   return (
-    <div className="mt-8 space-y-6">
+    <div id="rooms" className="mt-8 scroll-mt-20 space-y-6">
       <div>
-        <h2 className="text-base font-semibold">{isLodging ? "Rooms & rates" : "Rate plans"}</h2>
+        <h2 className="text-base font-semibold">
+          {isLodging ? "Rooms & rates" : isActivity ? "Packages & rates" : "Rate plans"}
+        </h2>
         <p className="text-xs text-muted-foreground">
           {isLodging
             ? "Add the room types you sell, each with one or more rate options (refundable, non-refundable, breakfast included, etc.)."
+            : isActivity
+            ? "Add each package you sell (e.g. Half-day, Full-day, Private). Each package needs at least one photo and one rate."
             : "Add one or more rate options travellers can pick at checkout."}
         </p>
       </div>
@@ -93,13 +105,28 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
         </>
       )}
 
-      {!isLodging && (
+      {isActivity && (
+        <div id="rates" className="scroll-mt-20">
+          {rooms.map((room) => (
+            <PackageCard
+              key={room.id}
+              room={room}
+              rates={rates.filter((r) => r.room_id === room.id)}
+              dealId={dealId}
+              onChange={invalidate}
+            />
+          ))}
+          <AddPackageButton dealId={dealId} onAdded={invalidate} />
+        </div>
+      )}
+
+      {!isLodging && !isActivity && (
         <div className="rounded-2xl border border-border bg-card/40 p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <Tag className="h-4 w-4" /> Rate plans
           </div>
           {flatRates.map((rp) => (
-            <RatePlanRow key={rp.id} rate={rp} dealId={dealId} onChange={invalidate} />
+            <RatePlanRow key={rp.id} rate={rp} dealId={dealId} onChange={invalidate} showBreakfast={false} />
           ))}
           <AddRateButton dealId={dealId} roomId={null} onAdded={invalidate} />
         </div>
