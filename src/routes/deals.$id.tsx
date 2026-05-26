@@ -14,6 +14,8 @@ import { useAuth } from "@/lib/auth";
 import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck, CreditCard } from "lucide-react";
 import { claimRedemption } from "@/lib/redemptions.functions";
 import { RateSelector } from "@/components/deals/RateSelector";
+import { PhotoGallery } from "@/components/PhotoGallery";
+import { listBusinessPhotos } from "@/lib/business-photos.functions";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ function DealDetail() {
   const { user, isCreator } = useAuth();
   const fetchDeal = useServerFn(getDeal);
   const logClick = useServerFn(logDealClick);
+  const fetchPhotos = useServerFn(listBusinessPhotos);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["deal", id],
@@ -47,6 +50,13 @@ function DealDetail() {
     retry: false,
   });
   const deal = data?.deal as any;
+
+  const { data: photosData } = useQuery({
+    queryKey: ["business-photos", deal?.business_id],
+    queryFn: () => fetchPhotos({ data: { businessId: deal!.business_id } }),
+    enabled: !!deal?.business_id,
+  });
+  const galleryPhotos = (photosData?.photos ?? []) as Array<{ id: string; url: string; caption: string | null }>;
 
   const onView = async () => {
     try {
@@ -65,8 +75,12 @@ function DealDetail() {
         {error && <p className="mt-6 text-sm text-destructive">Deal not found.</p>}
         {deal && (
           <div className="mt-4">
-            {deal.image_url && (
-              <img src={deal.image_url} alt={deal.title} className="aspect-video w-full rounded-2xl object-cover" />
+            {galleryPhotos.length > 0 ? (
+              <PhotoGallery photos={galleryPhotos} />
+            ) : (
+              deal.image_url && (
+                <img src={deal.image_url} alt={deal.title} className="aspect-video w-full rounded-2xl object-cover" />
+              )
             )}
             <div className="mt-4 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />

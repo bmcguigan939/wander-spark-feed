@@ -11,6 +11,7 @@ import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
+import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -55,6 +56,9 @@ function BusinessDashboard() {
         <OnboardingChecklist />
         <div className="mb-4">
           <PayoutMethodCard />
+        </div>
+        <div className="mb-4">
+          <BusinessPhotosEditor businessId={user.id} />
         </div>
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">

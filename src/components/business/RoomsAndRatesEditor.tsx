@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Bed, Tag } from "lucide-react";
+import { Plus, Trash2, Bed, Tag, Upload, Loader2, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getDealRoomsAndRates,
   upsertRoom,
@@ -28,6 +29,7 @@ type Room = {
   inventory_remaining: number | null;
   room_size_sqm: number | null;
   is_active: boolean;
+  photos?: string[] | null;
 };
 
 type RatePlan = {
@@ -248,6 +250,8 @@ function RoomCard({
         Save room
       </Button>
 
+      <RoomPhotosUploader room={room} dealId={dealId} onChange={onChange} />
+
       <div className="mt-4 border-t border-border pt-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Rates for this room
@@ -303,6 +307,122 @@ function AddRateButton({
     >
       <Plus className="h-3.5 w-3.5" /> Add a rate plan
     </button>
+  );
+}
+
+function RoomPhotosUploader({
+  room,
+  dealId,
+  onChange,
+}: {
+  room: Room;
+  dealId: string;
+  onChange: () => void;
+}) {
+  const upsert = useServerFn(upsertRoom);
+  const [uploading, setUploading] = useState(false);
+  const photos = (room.photos as string[] | null) ?? [];
+
+  const persist = async (next: string[]) => {
+    await upsert({
+      data: { id: room.id, dealId, patch: { name: room.name, photos: next } },
+    });
+    onChange();
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (photos.length + files.length > 20) {
+      toast.error("Max 20 photos per room");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const businessId = auth.user?.id;
+      if (!businessId) throw new Error("Not signed in");
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        if (file.size > 8 * 1024 * 1024) {
+          toast.error(`${file.name}: too large (max 8MB)`);
+          continue;
+        }
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${businessId}/rooms/${room.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("business-photos")
+          .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+        if (upErr) {
+          toast.error(upErr.message);
+          continue;
+        }
+        const { data: pub } = supabase.storage.from("business-photos").getPublicUrl(path);
+        uploaded.push(pub.publicUrl);
+      }
+      if (uploaded.length) {
+        await persist([...photos, ...uploaded]);
+        toast.success(`${uploaded.length} photo${uploaded.length > 1 ? "s" : ""} added`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAt = async (idx: number) => {
+    const next = photos.filter((_, i) => i !== idx);
+    try {
+      await persist(next);
+      toast.success("Photo removed");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    }
+  };
+
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <span>Photos ({photos.length}/20)</span>
+      </p>
+      {photos.length > 0 && (
+        <div className="mb-2 grid grid-cols-3 gap-2">
+          {photos.map((url, i) => (
+            <div key={i} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-destructive"
+                aria-label="Remove photo"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+        {uploading ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+          </>
+        ) : (
+          <>
+            <Upload className="h-3.5 w-3.5" /> Add photos
+          </>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          disabled={uploading || photos.length >= 20}
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+      </label>
+    </div>
   );
 }
 
