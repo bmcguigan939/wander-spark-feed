@@ -19,7 +19,7 @@ const inputSchema = z.object({
   referrerVideoId: z.string().uuid().optional(),
 });
 
-const COMMISSION_PCT = 8;
+const COMMISSION_PCT = 11;
 
 const ALLOWED_RETURN_HOSTS = new Set([
   "travidz.com",
