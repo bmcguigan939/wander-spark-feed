@@ -310,6 +310,35 @@ function ProfilePage() {
           </Link>
         )}
         <div className="mt-6 flex gap-1 rounded-full bg-card p-1">
+        </div>
+        {pendingReviewsQ.data?.pending && pendingReviewsQ.data.pending.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-amber-300/50 bg-amber-50/60 p-4 dark:bg-amber-950/20">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <p className="text-sm font-semibold">Rate your recent trip{pendingReviewsQ.data.pending.length > 1 ? "s" : ""}</p>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {pendingReviewsQ.data.pending.slice(0, 3).map((b: any) => (
+                <li key={b.id}>
+                  <Link
+                    to="/review/$bookingId"
+                    params={{ bookingId: b.id }}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-card px-3 py-2 text-sm"
+                  >
+                    <span className="truncate">
+                      <span className="font-medium">{b.deal?.title ?? "Your trip"}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {b.business?.business_name || b.business?.display_name || `@${b.business?.username ?? ""}`}
+                      </span>
+                    </span>
+                    <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Rate</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-4 flex gap-1 rounded-full bg-card p-1">
           {([["videos", Video, "Videos"], ["collections", Bookmark, "Saved"], ["liked", Heart, "Liked"]] as const).map(([k, Icon, label]) => (
             <button key={k} onClick={() => setTab(k)}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
