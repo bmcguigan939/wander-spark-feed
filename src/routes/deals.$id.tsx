@@ -100,6 +100,27 @@ function DealDetail() {
             {deal.bookable && deal.price_cents > 0 && (
               <PriceMatchBadge dealId={id} />
             )}
+            {deal.pricing_model === "operator_markup" && deal.bookable && (
+              <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs leading-snug">
+                <div className="font-semibold text-foreground">
+                  Booked through Travidz with{" "}
+                  {deal.business?.business_name ||
+                    deal.business?.display_name ||
+                    `@${deal.business?.username ?? "the operator"}`}
+                </div>
+                <p className="mt-1 text-muted-foreground">
+                  Travidz adds an 11% booking fee on top of the operator's price for
+                  secure checkout, support, and creator rewards.{" "}
+                  <Link
+                    to="/legal/terms"
+                    hash="activity-pricing"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    How we price activities
+                  </Link>
+                </p>
+              </div>
+            )}
             {deal.bookable && deal.price_cents > 0 && (
               <Link
                 to="/book/$dealId"
