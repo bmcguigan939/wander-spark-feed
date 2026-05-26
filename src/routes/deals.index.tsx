@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listDeals } from "@/lib/deals.functions";
 import { Tag, MapPin } from "lucide-react";
+import { RatingSummary } from "@/components/reviews/RatingSummary";
 
 export const Route = createFileRoute("/deals/")({
   head: () => ({
@@ -74,11 +75,16 @@ function DealsIndex() {
                     <span>{[d.city, d.country].filter(Boolean).join(", ") || d.destination || "Anywhere"}</span>
                   </div>
                   <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold">{d.title}</h2>
-                  {d.discount_label && (
-                    <span className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
-                      {d.discount_label}
-                    </span>
-                  )}
+                  <div className="mt-1 flex items-center gap-2">
+                    {d.discount_label && (
+                      <span className="inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {d.discount_label}
+                      </span>
+                    )}
+                    {(d.deal_rating_count ?? 0) > 0 && (
+                      <RatingSummary avg={d.deal_rating_avg} count={d.deal_rating_count} size="sm" />
+                    )}
+                  </div>
                 </div>
               </Link>
             </li>
