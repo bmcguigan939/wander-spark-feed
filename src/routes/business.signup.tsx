@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Building2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import {
   checkInviteAccountState,
 } from "@/lib/business-invites.functions";
 import { updateMyOperatorSite } from "@/lib/operator-site.functions";
+import { checkOperatorSiteUrl, type OperatorSiteCheck } from "@/lib/operator-site-check.functions";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { scorePassword } from "@/lib/password-strength";
 
@@ -29,6 +30,7 @@ function BusinessSignupPage() {
   const checkFn = useServerFn(checkInviteAccountState);
   const acceptFn = useServerFn(acceptInvite);
   const saveOperatorSite = useServerFn(updateMyOperatorSite);
+  const checkSiteFn = useServerFn(checkOperatorSiteUrl);
 
   const stateQ = useQuery({
     queryKey: ["invite-account-state", invite],
@@ -40,9 +42,37 @@ function BusinessSignupPage() {
   const [confirm, setConfirm] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [operatorSiteUrl, setOperatorSiteUrl] = useState("");
-  const [embedFailed, setEmbedFailed] = useState(false);
+  const [siteCheck, setSiteCheck] = useState<OperatorSiteCheck | null>(null);
+  const [checkingSite, setCheckingSite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Debounced server-side reachability check — iframes don't work because
+  // most booking engines send X-Frame-Options: DENY, so we render a card.
+  useEffect(() => {
+    const url = operatorSiteUrl.trim();
+    if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(url)) {
+      setSiteCheck(null);
+      setCheckingSite(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingSite(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await checkSiteFn({ data: { url } });
+        if (!cancelled) setSiteCheck(r);
+      } catch {
+        if (!cancelled) setSiteCheck({ ok: false, error: "Could not reach that URL" });
+      } finally {
+        if (!cancelled) setCheckingSite(false);
+      }
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [operatorSiteUrl, checkSiteFn]);
 
   if (!invite) {
     return (
@@ -230,26 +260,41 @@ function BusinessSignupPage() {
             value={operatorSiteUrl}
             onChange={(e) => {
               setOperatorSiteUrl(e.target.value);
-              setEmbedFailed(false);
             }}
             className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
           {operatorSiteUrl.trim() && /^https?:\/\//.test(operatorSiteUrl.trim()) && (
             <div className="mt-3">
-              {embedFailed ? (
-                <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  Couldn't embed a preview of that page — that's fine, we'll still save
-                  the URL.
+              {checkingSite && (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Checking that URL…
                 </div>
-              ) : (
-                <iframe
-                  src={operatorSiteUrl.trim()}
-                  title="Your booking page preview"
-                  sandbox="allow-scripts allow-same-origin allow-forms"
-                  referrerPolicy="no-referrer"
-                  onError={() => setEmbedFailed(true)}
-                  className="h-64 w-full rounded-lg border border-border bg-background"
-                />
+              )}
+              {!checkingSite && siteCheck?.ok && (
+                <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+                  {siteCheck.faviconUrl ? (
+                    <img
+                      src={siteCheck.faviconUrl}
+                      alt=""
+                      className="h-5 w-5 rounded-sm"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {siteCheck.title ?? siteCheck.finalUrl}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {siteCheck.finalUrl}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!checkingSite && siteCheck && !siteCheck.ok && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  Couldn't reach that URL{siteCheck.error ? ` — ${siteCheck.error}` : ""}. Double-check the address, or leave this blank.
+                </div>
               )}
             </div>
           )}
