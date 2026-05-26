@@ -12,6 +12,7 @@ import { getBlockedDates } from "@/lib/calendar.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
 import { PriceMatchBadge } from "@/components/PriceMatchBadge";
+import { RatingSummary } from "@/components/reviews/RatingSummary";
 
 export const Route = createFileRoute("/book/$dealId")({
   head: () => ({ meta: [{ title: "Book — Travidz" }] }),
@@ -128,6 +129,22 @@ function BookPage() {
               <p className="text-xs text-muted-foreground">
                 {[deal.city, deal.country].filter(Boolean).join(", ") || "Anywhere"}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <RatingSummary
+                  avg={deal.deal_rating_avg}
+                  count={deal.deal_rating_count}
+                  size="sm"
+                />
+                {deal.business?.business_rating_count > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Host:{" "}
+                    <span className="font-semibold text-foreground">
+                      {Number(deal.business.business_rating_avg).toFixed(1)}★
+                    </span>{" "}
+                    ({deal.business.business_rating_count.toLocaleString()})
+                  </span>
+                )}
+              </div>
             </div>
 
             {!deal.bookable && (
