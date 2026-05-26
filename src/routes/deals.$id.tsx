@@ -199,6 +199,83 @@ function DealDetail() {
 }
 
 function CreatorApplyBlock({ dealId }: { dealId: string }) {
+  return <CreatorApplyBlockImpl dealId={dealId} />;
+}
+
+function ReviewItem({ review, canFlag }: { review: any; canFlag: boolean }) {
+  const r = review;
+  const flag = useServerFn(flagReview);
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const mut = useMutation({
+    mutationFn: () => flag({ data: { reviewId: r.id, reason: reason.trim() } }),
+    onSuccess: () => {
+      toast.success("Thanks — our team will review this.");
+      setOpen(false);
+      setReason("");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Couldn't submit report"),
+  });
+  return (
+    <li className="rounded-2xl border border-border bg-card/40 p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {r.user?.avatar_url ? (
+            <img src={r.user.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+          ) : (
+            <div className="h-7 w-7 rounded-full bg-muted" />
+          )}
+          <span className="text-xs font-medium">
+            {r.user?.display_name ?? `@${r.user?.username ?? "traveller"}`}
+          </span>
+          <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600">
+            Verified booking
+          </span>
+        </div>
+        <StarRow value={r.rating} />
+      </div>
+      {r.comment && (
+        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">{r.comment}</p>
+      )}
+      {canFlag && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <button className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
+              <Flag className="h-3 w-3" /> Report
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Report this review</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="reason">What's wrong with this review?</Label>
+              <Textarea
+                id="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Spam, abuse, fake review, off-topic…"
+                rows={4}
+                maxLength={500}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => mut.mutate()}
+                disabled={reason.trim().length < 2 || mut.isPending}
+              >
+                {mut.isPending ? "Submitting…" : "Submit report"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </li>
+  );
+}
+
+function CreatorApplyBlockImpl({ dealId }: { dealId: string }) {
   const qc = useQueryClient();
   const fetchApp = useServerFn(getMyApplicationForDeal);
   const apply = useServerFn(applyForDeal);
