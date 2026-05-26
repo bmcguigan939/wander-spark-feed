@@ -9,8 +9,6 @@ import {
   acceptInvite,
   checkInviteAccountState,
 } from "@/lib/business-invites.functions";
-import { updateMyOperatorSite } from "@/lib/operator-site.functions";
-import { checkOperatorSiteUrl, type OperatorSiteCheck } from "@/lib/operator-site-check.functions";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { scorePassword } from "@/lib/password-strength";
 
@@ -29,8 +27,6 @@ function BusinessSignupPage() {
   const navigate = useNavigate();
   const checkFn = useServerFn(checkInviteAccountState);
   const acceptFn = useServerFn(acceptInvite);
-  const saveOperatorSite = useServerFn(updateMyOperatorSite);
-  const checkSiteFn = useServerFn(checkOperatorSiteUrl);
 
   const stateQ = useQuery({
     queryKey: ["invite-account-state", invite],
@@ -41,38 +37,8 @@ function BusinessSignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [operatorSiteUrl, setOperatorSiteUrl] = useState("");
-  const [siteCheck, setSiteCheck] = useState<OperatorSiteCheck | null>(null);
-  const [checkingSite, setCheckingSite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Debounced server-side reachability check — iframes don't work because
-  // most booking engines send X-Frame-Options: DENY, so we render a card.
-  useEffect(() => {
-    const url = operatorSiteUrl.trim();
-    if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(url)) {
-      setSiteCheck(null);
-      setCheckingSite(false);
-      return;
-    }
-    let cancelled = false;
-    setCheckingSite(true);
-    const t = setTimeout(async () => {
-      try {
-        const r = await checkSiteFn({ data: { url } });
-        if (!cancelled) setSiteCheck(r);
-      } catch {
-        if (!cancelled) setSiteCheck({ ok: false, error: "Could not reach that URL" });
-      } finally {
-        if (!cancelled) setCheckingSite(false);
-      }
-    }, 600);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [operatorSiteUrl, checkSiteFn]);
 
   if (!invite) {
     return (
@@ -154,15 +120,6 @@ function BusinessSignupPage() {
     if (data.session) {
       try {
         await acceptFn({ data: { token: invite!, agreementVersion: "v1" } });
-        if (operatorSiteUrl.trim() && siteCheck?.ok) {
-          try {
-            await saveOperatorSite({
-              data: { operator_site_url: operatorSiteUrl.trim() },
-            });
-          } catch {
-            // non-fatal — operator can add it later from the dashboard
-          }
-        }
       } catch (e: any) {
         setLoading(false);
         setError(e?.message ?? "Couldn't accept the invite. Try again from the invite page.");
