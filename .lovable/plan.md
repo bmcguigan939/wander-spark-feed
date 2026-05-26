@@ -1,96 +1,59 @@
+## Remaining work (Steps 4–6 of 6)
 
-# Automatic payouts to businesses via Stripe Connect
+Steps 1–3 are done: DB migration, `stripe-connect.functions.ts`, checkout split with `application_fee_amount` + `transfer_data.destination`, webhooks for `account.updated` / `payout.*`, and Connect-gated onboarding UI.
 
-Goal: when a customer books on Travidz, Stripe automatically splits the payment — operator/hotel's share goes straight to their bank, Travidz keeps its fee — with zero manual admin.
+### Step 4 — Legal copy updates
 
-Today we collect into Travidz's Stripe account and only store bank details as text (`profiles.payout_bank_details_encrypted`) to pay out manually. That blocks launch per your requirement. We need **Stripe Connect** with **destination charges + application_fee_amount** (or `transfer_data`), which is Stripe's built-in way to do exactly this.
+Update two pages to disclose Stripe Connect / KYC and the payout model:
 
----
+- `src/routes/legal.business-agreement.tsx`
+  - Add "Payouts via Stripe Connect" section: operators/hotels onboard to Stripe Express, complete KYC with Stripe, and receive payouts directly from Stripe to their linked bank account.
+  - Clarify Travidz never holds operator funds long-term; Stripe splits each charge at capture (`application_fee_amount` to Travidz, remainder to connected account).
+  - Document the 11% platform fee for commission deals and "uplift = price − operator base price" for markup deals.
+  - Note that Stripe (not Travidz) handles bank verification, payout scheduling, and tax forms (1099-K where applicable).
 
-## 1. Connect account model
+- `src/routes/legal.terms.tsx`
+  - Short customer-facing note: payments processed by Stripe; for bookings of third-party hotels/operators, funds settle to the provider via Stripe Connect.
 
-- Use **Stripe Connect Express accounts** (Stripe-hosted onboarding, KYC, bank capture, tax forms, payout schedule — all handled by Stripe).
-- One Connect account per `profiles` row where `account_type in ('hotel','operator')`.
-- Same model works for both hotels (commission) and operators (operator_markup) — only the fee math differs.
+### Step 5 — Admin payouts dashboard rewrite
 
-## 2. Database changes (migration)
+Replace the existing "manual bank details" admin view with a read-only Connect status table.
 
-Add to `profiles`:
-- `stripe_connect_account_id text` (acct_...)
-- `stripe_connect_status text` — `none | pending | restricted | active`
-- `stripe_connect_charges_enabled boolean`
-- `stripe_connect_payouts_enabled boolean`
-- `stripe_connect_requirements jsonb` (snapshot of Stripe's `requirements` object for UI)
-- `stripe_connect_updated_at timestamptz`
+- New server fn `listConnectAccounts` in `src/lib/admin.functions.ts` (admin-only middleware): returns one row per hotel/operator profile with `stripe_connect_account_id`, `stripe_connect_status`, `charges_enabled`, `payouts_enabled`, `requirements.currently_due` count, last `connect_payouts` entry (amount, status, arrival_date).
+- New server fn `getConnectDashboardLinkForProfile` (admin-only): wraps `createConnectDashboardLink` for a target profile so admins can open Stripe Express dashboard on behalf of an operator for support.
+- Update `src/routes/admin.payouts.tsx` (or create if absent):
+  - Table columns: Business, Type, Connect status badge, Charges, Payouts, Outstanding requirements, Last payout, Actions (Open Stripe dashboard, Refresh status).
+  - Remove all references to `payout_bank_details_encrypted` and the manual approval flow.
+  - "Refresh status" calls `refreshConnectStatus` for the selected profile.
 
-Add to `deals`:
-- `connect_account_id text` (snapshot at booking time so payouts survive operator profile edits)
+### Step 6 — End-to-end smoke test (sandbox)
 
-Deprecate (keep column, stop writing): `payout_bank_details_encrypted`, `payout_method='manual_bank'`. Migrate the existing `PayoutMethodCard` UI to launch Connect onboarding instead.
+Run a scripted sandbox test and capture results in chat:
 
-Update `has_role`-style guards: a deal can only be set `bookable=true` if `stripe_connect_payouts_enabled=true` on the owner's profile. Enforce via trigger (mirrors the existing `trg_deals_validate_operator_markup`).
+1. Create test operator + hotel profiles, call `startConnectOnboarding`, complete Express onboarding with Stripe test data (`000-00-0000`, routing `110000000`, account `000123456789`).
+2. Verify `account.updated` webhook fires → DB columns `stripe_connect_status='active'`, `charges_enabled=true`, `payouts_enabled=true`.
+3. Confirm `bookable=true` is now allowed on a deal owned by that profile; confirm it is rejected for a profile without active Connect (trigger error).
+4. Run a test commission booking ($100 deal):
+   - Expect Checkout Session created with `application_fee_amount=1100` (11%) and `transfer_data.destination=<acct_...>`.
+   - Complete payment with test card `4242 4242 4242 4242`.
+   - Verify `checkout.session.completed` webhook stores fee snapshot on `deal_redemptions`.
+5. Run a test operator markup booking (operator base $80, listed $100):
+   - Expect `application_fee_amount=2000` (uplift), destination = operator's Connect account.
+6. Trigger a Stripe sandbox payout, verify `payout.paid` webhook writes to `connect_payouts`.
+7. Confirm admin dashboard shows both accounts as active with correct last-payout row.
 
-## 3. Server functions (new `src/lib/stripe-connect.functions.ts` + `.server.ts`)
+Output: a pass/fail checklist in chat plus any bugs found and fixed inline.
 
-- `createConnectOnboardingLink` — calls `stripe.accounts.create({ type:'express', country, email, business_type, capabilities:{ card_payments, transfers } })`, then `stripe.accountLinks.create` for the hosted onboarding URL. Persists `stripe_connect_account_id`.
-- `refreshConnectStatus` — `stripe.accounts.retrieve`, writes `charges_enabled` / `payouts_enabled` / `requirements` to the profile.
-- `createDashboardLoginLink` — `stripe.accounts.createLoginLink` so business users can update bank/KYC later.
+### Files touched
 
-All use the existing gateway pattern in `src/lib/stripe.server.ts` (no direct SDK key).
+- Edit: `src/routes/legal.business-agreement.tsx`, `src/routes/legal.terms.tsx`, `src/routes/admin.payouts.tsx`
+- Create: `src/lib/admin.functions.ts` additions (or new `admin-connect.functions.ts` if cleaner)
+- No new migrations, no new secrets
 
-## 4. Checkout split (modify `src/routes/book.$dealId.tsx` flow + `booking.functions.ts`)
+### Out of scope (intentionally)
 
-When creating the Checkout Session:
-- Look up the deal's `connect_account_id` + pricing model.
-- Compute `application_fee_amount` in cents:
-  - **Hotel / commission deals:** `application_fee_amount = round(price * 0.11)` (Travidz keeps 11% pool, hotel receives 89% minus Stripe fees).
-  - **Operator markup deals:** `application_fee_amount = price − operator_base_price` (uplift goes to Travidz pool; operator nets exactly their own site price minus Stripe fee).
-- Pass `payment_intent_data: { application_fee_amount, transfer_data: { destination: connect_account_id } }` on the session.
-- Stripe automatically: charges card → routes operator's share to their connected account → routes Travidz's fee to platform → triggers payout to operator's bank on their Stripe payout schedule.
+- 1099-K generation UI (Stripe handles directly)
+- Multi-currency payouts (USD only for launch)
+- Connect Standard accounts (Express only)
 
-## 5. Webhook updates (`/api/public/payments/webhook`)
-
-Add handlers for:
-- `account.updated` → call `refreshConnectStatus` (keeps `charges_enabled` / `payouts_enabled` in sync, surfaces KYC blockers).
-- `payout.paid` / `payout.failed` → store on a new `connect_payouts` table for the business dashboard ("Last payout: £X on date").
-- Existing `checkout.session.completed` handler: persist `application_fee_amount` and `transfer_data.destination` on `deal_redemptions` for reconciliation.
-
-## 6. UI changes
-
-- **`src/routes/business.onboarding.payout.tsx`** — replace bank-details form with single "Connect bank with Stripe" button → opens Stripe-hosted onboarding → returns to a success page that calls `refreshConnectStatus`.
-- **`src/components/business/PayoutMethodCard.tsx`** — show Connect status badge (Active / Action required / Not started), requirements list if any, "Update bank or details" button (→ login link), "Payout schedule: daily/weekly".
-- **`OnboardingChecklist.tsx`** — add "Connect payouts" step; block "Go live with deals" until `stripe_connect_payouts_enabled=true`.
-- **`DealForm.tsx`** — disable `bookable` toggle with tooltip "Finish payout setup first" when Connect isn't active.
-- **`business.signup.tsx`** (operator) — add Stripe Connect step right after operator-site URL.
-- **Admin `/admin.payouts.tsx`** — switch from manual bank list to read-only Connect status table + link to each account's Stripe dashboard.
-
-## 7. Secrets
-
-Connect uses the **same `STRIPE_SANDBOX_API_KEY` / `STRIPE_LIVE_API_KEY` + gateway** — no new secrets. Webhook secret already configured. We just need to confirm the Stripe account has **Connect Express enabled** in both sandbox + live (one-click in Stripe dashboard during go-live; flagged as a launch checklist item, not blocking dev work).
-
-## 8. Go-live checklist additions
-
-- Stripe Connect platform enabled (sandbox ✅ + live).
-- Platform branding for Connect onboarding (logo, support email) set in Stripe dashboard.
-- At least one test operator + one test hotel completed Express onboarding in sandbox and received a test payout end-to-end.
-- `business_agreement` and `legal.terms` updated to disclose: payouts processed by Stripe Connect; KYC required; Stripe is the money transmitter.
-
----
-
-## Build order (single PR per step, each ships independently)
-
-1. Migration: Connect columns on `profiles` + `deals` + `connect_payouts` table + bookable trigger.
-2. `stripe-connect.functions.ts` + `.server.ts` (create account, account link, refresh, login link).
-3. Onboarding UI: `business.onboarding.payout.tsx` + `PayoutMethodCard` rewrite + checklist gating.
-4. Checkout split in `booking.functions.ts` (destination charges + application_fee_amount).
-5. Webhook handlers for `account.updated` + `payout.*` + redemption fee snapshot.
-6. Admin dashboard rewrite + legal copy updates + smoke test in sandbox (create acct → onboard → book → verify split + payout).
-
-Estimated scope: ~6 focused build turns. After step 6 both hotel and operator payouts are fully automatic — Stripe pulls from the customer's card, splits the money at charge time, and pays out to each business's bank on Stripe's schedule with zero Travidz intervention.
-
-## Risk / call-outs
-
-- **Existing bookings** before this ships keep using manual payout. We won't backfill — they're handled out-of-band.
-- **Express vs Standard:** Express keeps the user inside Travidz branding and lets us control payout schedule. Standard would give operators a full Stripe dashboard but worse UX. Recommend Express; easy to switch later.
-- **Country coverage:** Stripe Connect Express supports 46 countries. UK + EU + US + AU/NZ covered. Flag at signup if operator is outside supported set.
-- **`book.match.$code` (price-match flow):** uses same `booking.functions.ts` path, so it inherits the split automatically.
+Approve to proceed with Step 4 first, then 5, then 6 in sequence.
