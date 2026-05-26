@@ -5,6 +5,8 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { getProfileByUsername } from "@/lib/feed.functions";
 import { toggleFollow } from "@/lib/interactions.functions";
 import { getPublicSocials } from "@/lib/social.functions";
+import { getReviewsForBusiness } from "@/lib/reviews.functions";
+import { RatingSummary, StarRow } from "@/components/reviews/RatingSummary";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -35,6 +37,13 @@ function ProfilePage() {
     queryKey: ["public-socials", data?.profile?.id],
     queryFn: () => getPublicSocials({ data: { userId: data!.profile!.id } }),
     enabled: !!data?.profile?.id,
+  });
+  const isBusiness = !!(data?.profile as any)?.business_name;
+  const fetchBizReviews = useServerFn(getReviewsForBusiness);
+  const reviewsQ = useQuery({
+    queryKey: ["business-reviews", data?.profile?.id],
+    queryFn: () => fetchBizReviews({ data: { businessId: data!.profile!.id, limit: 10 } }),
+    enabled: !!data?.profile?.id && isBusiness,
   });
   const followM = useMutation({
     mutationFn: () => followFn({ data: { creatorId: data!.profile!.id } }),
@@ -74,6 +83,24 @@ function ProfilePage() {
             </div>
             {data.profile.bio && <p className="mt-4 text-sm">{data.profile.bio}</p>}
             <SocialLinks s={socialsQ.data ?? null} />
+            {isBusiness && (
+              <div className="mt-4">
+                <RatingSummary
+                  avg={(data.profile as any).business_rating_avg}
+                  count={(data.profile as any).business_rating_count}
+                  size="md"
+                />
+              </div>
+            )}
+            {!isBusiness && (data.profile as any).creator_rating_count > 0 && (
+              <div className="mt-4">
+                <RatingSummary
+                  avg={(data.profile as any).creator_rating_avg}
+                  count={(data.profile as any).creator_rating_count}
+                  size="sm"
+                />
+              </div>
+            )}
             <div className="mt-5 flex gap-6 text-sm">
               <span><b>{data.followerCount}</b> <span className="text-muted-foreground">followers</span></span>
               <span><b>{data.followingCount}</b> <span className="text-muted-foreground">following</span></span>
@@ -112,10 +139,74 @@ function ProfilePage() {
                 </Link>
               ))}
             </div>
+            {isBusiness && (
+              <BusinessReviewsBlock data={reviewsQ.data} />
+            )}
           </>
         )}
       </div>
     </MobileShell>
+  );
+}
+
+function BusinessReviewsBlock({ data }: { data: any }) {
+  if (!data) return null;
+  const { reviews, avg, count, distribution } = data;
+  if (!count) {
+    return (
+      <div className="mt-10 border-t border-border pt-6">
+        <h2 className="text-base font-semibold">Reviews</h2>
+        <p className="mt-2 text-sm text-muted-foreground">No reviews yet — be the first after your trip.</p>
+      </div>
+    );
+  }
+  const total = distribution.reduce((a: number, b: number) => a + b, 0) || 1;
+  return (
+    <div className="mt-10 border-t border-border pt-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Reviews</h2>
+        <RatingSummary avg={avg} count={count} size="sm" />
+      </div>
+      <div className="mt-4 space-y-1.5">
+        {[5, 4, 3, 2, 1].map((star, i) => {
+          const c = distribution[i];
+          const pct = Math.round((c / total) * 100);
+          return (
+            <div key={star} className="flex items-center gap-2 text-xs">
+              <span className="w-3 text-muted-foreground">{star}</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="w-8 text-right text-muted-foreground">{c}</span>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="mt-6 space-y-5">
+        {reviews.map((r: any) => (
+          <li key={r.id} className="border-b border-border/60 pb-4 last:border-0">
+            <div className="flex items-center gap-2">
+              <img
+                src={r.user?.avatar_url ?? `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(r.user?.username ?? "u")}`}
+                alt=""
+                className="h-7 w-7 rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <p className="text-xs font-medium">{r.user?.display_name || `@${r.user?.username ?? "traveller"}`}</p>
+                <div className="flex items-center gap-2">
+                  <StarRow value={r.rating} />
+                  <span className="text-[11px] text-muted-foreground">
+                    {new Date(r.created_at).toLocaleDateString()}
+                    {r.deal?.title ? ` · ${r.deal.title}` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {r.comment && <p className="mt-2 text-sm">{r.comment}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
