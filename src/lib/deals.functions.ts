@@ -93,16 +93,20 @@ export const createDeal = createServerFn({ method: "POST" })
     if (data.bookable) {
       const { data: profile, error: pErr } = await supabaseAdmin
         .from("profiles")
-        .select("payout_method,stripe_connect_payouts_enabled")
+        .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
         .eq("id", userId)
         .maybeSingle();
       if (pErr) throw new Error(pErr.message);
       const ready =
         (profile as any)?.stripe_connect_payouts_enabled === true ||
-        profile?.payout_method === "manual_bank";
-      if (!ready) {
+        false;
+      const fullyReady =
+        (profile as any)?.stripe_connect_payouts_enabled === true &&
+        (profile as any)?.stripe_connect_charges_enabled === true;
+      void ready;
+      if (!fullyReady) {
         throw new Error(
-          "Connect your bank with Stripe before listing a bookable deal. Visit /business/onboarding/payout",
+          "Complete Stripe Connect onboarding (charges + payouts) before listing a bookable deal. Visit /business/onboarding/payout",
         );
       }
     }

@@ -18,7 +18,7 @@ export type BookableStatus = {
  *              attached to an active approved deal owned by the business
  *   - rates:   ≥1 active rate plan attached to one of those items
  *   - calendar: iCal sync row OR ≥1 native time-slot for activities
- *   - payouts: profile.payout_method = 'manual_bank' (or Stripe Connect, future)
+ *   - payouts: Stripe Connect onboarded — charges AND payouts enabled
  *
  * Used by feed, profile, deal page, search, map, admin — anything that
  * decides whether to show a Book CTA or any outbound link to the business.
@@ -49,7 +49,7 @@ export const getBookableStatus = createServerFn({ method: "GET" })
         .eq("status", "approved"),
       supabaseAdmin
         .from("profiles")
-        .select("payout_method,stripe_connect_payouts_enabled")
+        .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
         .eq("id", businessId)
         .maybeSingle(),
     ]);
@@ -99,10 +99,11 @@ export const getBookableStatus = createServerFn({ method: "GET" })
       }
     }
 
-    // 5) Payouts — Stripe Connect (preferred) OR legacy manual_bank.
+    // 5) Payouts — Stripe Connect onboarding must be complete.
     const p = payoutRes.data as any;
     const payoutsReady =
-      p?.stripe_connect_payouts_enabled === true || p?.payout_method === "manual_bank";
+      p?.stripe_connect_payouts_enabled === true &&
+      p?.stripe_connect_charges_enabled === true;
     if (!payoutsReady) missing.push("payouts");
 
     return { bookable: missing.length === 0, missing };
@@ -131,7 +132,7 @@ export async function computeBookableStatus(
       .eq("status", "approved"),
     supabaseAdmin
       .from("profiles")
-      .select("payout_method,stripe_connect_payouts_enabled")
+      .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
       .eq("id", businessId)
       .maybeSingle(),
   ]);
@@ -176,7 +177,8 @@ export async function computeBookableStatus(
   {
     const p = payoutRes.data as any;
     const payoutsReady =
-      p?.stripe_connect_payouts_enabled === true || p?.payout_method === "manual_bank";
+      p?.stripe_connect_payouts_enabled === true &&
+      p?.stripe_connect_charges_enabled === true;
     if (!payoutsReady) missing.push("payouts");
   }
 
