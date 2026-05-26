@@ -1,44 +1,44 @@
-## Add ratings to feed booking tiles + wire creator quality into ranking
+## Two legal/onboarding fixes
 
-Two small follow-ups to finish the review rollout.
+### 1. Section 7(c) — keep it, but tighten the language
 
-### 1. Ratings on every booking link in the feed
+You asked whether we can actually screenshot, save and report. Yes — and that's already wired up:
 
-Add `deal_rating_avg` and `deal_rating_count` to the two data paths that drive the booking tiles:
+- `src/lib/price-compare.server.ts` calls the scraper with `formats: ["screenshot"]`, grabs the returned screenshot URL, and stores it as `evidence_url` on every `parity_checks` row.
+- It also computes a SHA-256 hash over `{url, network, price, currency, fetched_at, screenshot}` and stores it as `evidence_hash` for tamper-detection.
+- The business sees every entry on `/business/price-audit` with the screenshot link and dispute button.
 
-- `src/lib/feed.functions.ts` — extend the `matchedDeal` projection to include the two rating columns.
-- `src/lib/video-deals.functions.ts` — `listVideoDeals` select adds the same two columns (plus the business's `business_rating_avg` for the host chip).
+So the clause is truthful. I'll leave the substance but make two small edits in `src/routes/legal.business-agreement.tsx` so it's tighter and less marketing-y:
 
-Then update `src/components/feed/VideoCard.tsx`:
+- "real time" → "promptly" (scans run on click, but "real time" sounds like a promise we'd have to defend)
+- "removed from settlement" → "the match is voided" (clearer, no separate "settlement" concept exists)
 
-- Under the `matchedDeal` tile (the "Deal nearby" link, line ~431), add a compact star + count line under the title — e.g. `★ 4.8 (1,204)`. Hidden when `deal_rating_count = 0`.
-- Same compact star line under each entry in the `attachedDeals` "Book this trip" list (line ~474).
-- Style: white-on-dark to fit the existing video-overlay theme, using the existing `RatingSummary` component with a `size="sm"` variant tweaked for dark backgrounds, or an inline span if `RatingSummary` doesn't read well over video.
+If you'd rather change something else in (c) — shorter dispute window, drop the 14-day clause, etc. — tell me and I'll adjust.
 
-### 2. Apply `creator_quality_score` to feed ranking
+### 2. Remove the website URL field from the business invite/claim flow
 
-Already computed, not yet used. In `src/lib/feed.functions.ts` (the main feed query), after the existing ordering pass, multiply each video's rank score by a `quality_multiplier` derived from the video's creator:
+In `src/routes/business.invite.$token.tsx`:
 
-```text
-≥80  → 1.25×
-60–79 → 1.00×
-40–59 → 0.75×
-<40   → 0.40×
-null  → 1.00× (cold start: no penalty)
-```
+- Remove the "Your website (where customers book)" `<Input>` and its helper text.
+- Remove the `website` state, validation, and from the submit payload.
+- Replace the offer copy to reflect the new model:
+  - "Your direct website stays the destination — no rebranding" → "Your store lives on Travidz — no website needed; we host the booking page."
+- The "Accept & claim your listing" button stays; the agreement checkbox stays.
 
-Implementation: pull `creator_quality_score` from the joined creator profile, compute the multiplier in JS after the SQL fetch, re-sort. Keep this purely in the ranking layer — don't change recall.
+In the backend (`src/lib/business-invites.functions.ts` accept handler):
+- Make the `website` / direct URL field optional (don't insert into `affiliate_links` if not provided).
+- On accept, ensure the business profile is flagged as Travidz-hosted so the booking CTA points to the Travidz deal page / Stripe checkout instead of an external URL.
+
+In `src/routes/legal.business-agreement.tsx`:
+- Update §5a / wherever it implies the business must have their own website. The operator-markup paragraph already works for Travidz-hosted stores since it routes through Stripe Connect — just remove the "we deliberately exclude your own website from the comparison set" line for businesses with no external site, or qualify it ("where you have one").
 
 ### Out of scope
-
-- Multi-night / activity completion timing rules (still uses `travel_date < today`).
-- Business reply-to-review.
-- Verified-purchase badge wording change.
-- Admin moderation dashboard for `review_flags` (auto-hide at 3 flags is already live).
+- Building a richer Travidz-hosted storefront editor (rooms/rates editor already exists at `RoomsAndRatesEditor.tsx`).
+- Migrating existing accepted invites that already have a `website` recorded — they keep theirs.
 
 ### Files touched
+- `src/routes/legal.business-agreement.tsx`
+- `src/routes/business.invite.$token.tsx`
+- `src/lib/business-invites.functions.ts`
 
-- `src/lib/feed.functions.ts`
-- `src/lib/video-deals.functions.ts`
-- `src/components/feed/VideoCard.tsx`
-- (Optional) `src/components/reviews/RatingSummary.tsx` — add a `tone="dark"` prop for video overlays.
+No DB migration needed — `affiliate_links.url` stays nullable for Travidz-hosted businesses (or we point it at the Travidz deal page URL).

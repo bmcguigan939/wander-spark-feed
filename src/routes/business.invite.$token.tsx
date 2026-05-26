@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Building2, CheckCircle2, ExternalLink, Loader2, MessageSquare, PlayCircle, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, Loader2, MessageSquare, PlayCircle, XCircle } from "lucide-react";
 import {
   acceptInvite,
   checkInviteAccountState,
@@ -49,15 +49,6 @@ function InvitePage() {
   });
 
   const [agreed, setAgreed] = useState(false);
-  const [websiteUrl, setWebsiteUrl] = useState<string>("");
-
-  // Prefill the website field when the invite loads (only if user hasn't typed).
-  useEffect(() => {
-    const prefill = data?.invite?.website_url;
-    if (prefill) {
-      setWebsiteUrl((cur) => (cur ? cur : prefill));
-    }
-  }, [data?.invite?.website_url]);
 
   const threadQ = useQuery({
     queryKey: ["invite-thread", token],
@@ -80,14 +71,10 @@ function InvitePage() {
   const [showDecline, setShowDecline] = useState(false);
 
   const acceptM = useMutation({
-    mutationFn: () =>
-      acceptFn({ data: { token, websiteUrl: websiteUrl.trim() || undefined } }),
+    mutationFn: () => acceptFn({ data: { token } }),
     onMutate: () => {
       // eslint-disable-next-line no-console
-      console.info("[acceptInvite] POST starting", {
-        token,
-        websiteUrl: websiteUrl.trim(),
-      });
+      console.info("[acceptInvite] POST starting", { token });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invite", token] });
@@ -136,31 +123,13 @@ function InvitePage() {
   const { invite, creator, video } = data;
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
-  const trimmedWebsite = websiteUrl.trim();
-  let websiteValid = false;
-  try {
-    const u = new URL(trimmedWebsite);
-    websiteValid = u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    websiteValid = false;
-  }
-  const canAccept = agreed && websiteValid;
+  const canAccept = agreed;
 
   const handleAcceptClick = () => {
     // eslint-disable-next-line no-console
-    console.info("[acceptInvite] click", {
-      canAccept,
-      agreed,
-      websiteValid,
-      websiteUrl: trimmedWebsite,
-      hasUser: !!user,
-    });
+    console.info("[acceptInvite] click", { canAccept, agreed, hasUser: !!user });
     if (!agreed) {
       toast.error("Please tick the agreement box to continue.");
-      return;
-    }
-    if (!websiteValid) {
-      toast.error("Please enter a valid website URL (starting with https://).");
       return;
     }
     acceptM.mutate();
@@ -197,7 +166,7 @@ function InvitePage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {invite.business_name} is now featured. Customers booking through{" "}
-            {creatorName}'s videos will be sent to your direct website.
+            {creatorName}'s videos check out on your Travidz-hosted store.
           </p>
         </div>
         <div className="mt-5 space-y-2">
@@ -279,30 +248,12 @@ function InvitePage() {
         <ul className="mt-3 space-y-1.5 text-[13px] text-muted-foreground">
           <li>✓ No setup fee, no monthly cost</li>
           <li>✓ You only pay when we send you a paying customer</li>
-          <li>✓ Your direct website stays the destination — no rebranding</li>
+          <li>✓ Your store lives on Travidz — no website needed; we host the booking page</li>
           <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
         </ul>
       </div>
 
       <div className="mt-6 space-y-2">
-        <div className="rounded-2xl border border-border bg-card p-3">
-          <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <ExternalLink className="h-3 w-3" /> Your website (where customers book)
-          </label>
-          <input
-            type="url"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="https://yourbusiness.com"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-          />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            This is the URL we'll send paying customers to. You can change it later.
-          </p>
-        </div>
-
         <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-[13px] leading-snug">
           <input
             type="checkbox"
