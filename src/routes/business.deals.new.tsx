@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { DealForm } from "@/components/business/DealForm";
+import { useAccountKind } from "@/lib/useAccountKind";
 import { createDeal } from "@/lib/deals.functions";
 import { getMyConnectStatus } from "@/lib/stripe-connect.functions";
 import { useAuth } from "@/lib/auth";
