@@ -34,7 +34,7 @@ export const adminListConnectAccounts = createServerFn({ method: "GET" })
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
       .select(
-        "id,display_name,username,business_name,operator_site_url,stripe_connect_account_id,stripe_connect_status,stripe_connect_charges_enabled,stripe_connect_payouts_enabled,stripe_connect_requirements,stripe_connect_country,stripe_connect_default_currency,stripe_connect_updated_at,payout_method",
+        "id,display_name,username,business_name,stripe_connect_account_id,stripe_connect_status,stripe_connect_charges_enabled,stripe_connect_payouts_enabled,stripe_connect_requirements,stripe_connect_country,stripe_connect_default_currency,stripe_connect_updated_at,payout_method",
       )
       .in("id", bizIds)
       .order("stripe_connect_updated_at", { ascending: false, nullsFirst: false });
@@ -62,7 +62,7 @@ export const adminListConnectAccounts = createServerFn({ method: "GET" })
         return {
           id: p.id,
           display_name: p.business_name || p.display_name || p.username || p.id.slice(0, 8),
-          account_type: p.operator_site_url ? "operator" : "hotel",
+          account_type: "hotel",
           connect_account_id: p.stripe_connect_account_id,
           status: p.stripe_connect_status,
           charges_enabled: p.stripe_connect_charges_enabled,
