@@ -1137,6 +1137,56 @@ export type Database = {
           },
         ]
       }
+      connect_payouts: {
+        Row: {
+          amount_cents: number
+          arrival_date: string | null
+          business_id: string
+          created_at: string
+          currency: string
+          failure_message: string | null
+          id: string
+          status: string
+          stripe_account_id: string
+          stripe_payout_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          arrival_date?: string | null
+          business_id: string
+          created_at?: string
+          currency: string
+          failure_message?: string | null
+          id?: string
+          status: string
+          stripe_account_id: string
+          stripe_payout_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          arrival_date?: string | null
+          business_id?: string
+          created_at?: string
+          currency?: string
+          failure_message?: string | null
+          id?: string
+          status?: string
+          stripe_account_id?: string
+          stripe_payout_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connect_payouts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_business_signings: {
         Row: {
           accepted_at: string
@@ -1906,6 +1956,7 @@ export type Database = {
           category: Database["public"]["Enums"]["deal_category"]
           city: string | null
           click_count: number
+          connect_account_id: string | null
           country: string | null
           created_at: string
           currency: string | null
@@ -1952,6 +2003,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
+          connect_account_id?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
@@ -1998,6 +2050,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["deal_category"]
           city?: string | null
           click_count?: number
+          connect_account_id?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
@@ -2943,7 +2996,13 @@ export type Database = {
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
           stripe_connect_account_id: string | null
+          stripe_connect_charges_enabled: boolean
+          stripe_connect_country: string | null
+          stripe_connect_default_currency: string | null
+          stripe_connect_payouts_enabled: boolean
+          stripe_connect_requirements: Json | null
           stripe_connect_status: string
+          stripe_connect_updated_at: string | null
           thefork_url: string | null
           username: string
           verification_notes: string | null
@@ -2981,7 +3040,13 @@ export type Database = {
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
           stripe_connect_account_id?: string | null
+          stripe_connect_charges_enabled?: boolean
+          stripe_connect_country?: string | null
+          stripe_connect_default_currency?: string | null
+          stripe_connect_payouts_enabled?: boolean
+          stripe_connect_requirements?: Json | null
           stripe_connect_status?: string
+          stripe_connect_updated_at?: string | null
           thefork_url?: string | null
           username: string
           verification_notes?: string | null
@@ -3019,7 +3084,13 @@ export type Database = {
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
           stripe_connect_account_id?: string | null
+          stripe_connect_charges_enabled?: boolean
+          stripe_connect_country?: string | null
+          stripe_connect_default_currency?: string | null
+          stripe_connect_payouts_enabled?: boolean
+          stripe_connect_requirements?: Json | null
           stripe_connect_status?: string
+          stripe_connect_updated_at?: string | null
           thefork_url?: string | null
           username?: string
           verification_notes?: string | null
