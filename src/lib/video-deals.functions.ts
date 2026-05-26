@@ -228,7 +228,7 @@ export const listVideoDeals = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("video_deals")
-      .select("deal_id,position,deal:deals(id,title,price_cents,currency,image_url,affiliate_network,city,country)")
+      .select("deal_id,position,deal:deals(id,title,price_cents,currency,image_url,affiliate_network,city,country,deal_rating_avg,deal_rating_count)")
       .eq("video_id", data.videoId)
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);

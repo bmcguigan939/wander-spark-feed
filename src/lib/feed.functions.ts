@@ -161,7 +161,7 @@ async function attachMatchedBusiness(videos: FeedVideo[]) {
   );
   const { data: bizProfiles } = await supabaseAdmin
     .from("profiles")
-    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country")
+    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country,business_rating_avg,business_rating_count")
     .in("id", businessIds);
   const bizById = new Map<string, any>(
     (bizProfiles ?? []).map((b: any) => [b.id, b]),
@@ -203,6 +203,8 @@ async function attachMatchedBusiness(videos: FeedVideo[]) {
       logo_url: pick.business_logo_url ?? null,
       city: pick.business_city ?? null,
       country: pick.business_country ?? null,
+      rating_avg: pick.business_rating_avg ?? null,
+      rating_count: pick.business_rating_count ?? null,
     };
   }
 }
@@ -218,7 +220,7 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
 
   const { data: apps } = await supabaseAdmin
     .from("deal_applications")
-    .select("creator_id,deal:deals!inner(id,title,discount_label,image_url,country,city,is_active,starts_at,ends_at,status)")
+    .select("creator_id,deal:deals!inner(id,title,discount_label,image_url,country,city,is_active,starts_at,ends_at,status,deal_rating_avg,deal_rating_count)")
     .eq("status", "approved")
     .in("creator_id", creatorIds);
   if (!apps?.length) return;
@@ -261,6 +263,8 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
         title: match.title,
         discount_label: match.discount_label,
         image_url: match.image_url,
+        rating_avg: match.deal_rating_avg ?? null,
+        rating_count: match.deal_rating_count ?? null,
       };
     }
   }
