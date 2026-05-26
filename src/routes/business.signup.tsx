@@ -154,7 +154,7 @@ function BusinessSignupPage() {
     if (data.session) {
       try {
         await acceptFn({ data: { token: invite!, agreementVersion: "v1" } });
-        if (operatorSiteUrl.trim()) {
+        if (operatorSiteUrl.trim() && siteCheck?.ok) {
           try {
             await saveOperatorSite({
               data: { operator_site_url: operatorSiteUrl.trim() },
