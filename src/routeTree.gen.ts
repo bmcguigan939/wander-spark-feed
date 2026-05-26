@@ -57,6 +57,7 @@ import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculat
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as CollabCodeRouteImport } from './routes/collab.$code'
 import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
@@ -351,6 +352,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
+} as any)
+const CollabCodeRoute = CollabCodeRouteImport.update({
+  id: '/collab/$code',
+  path: '/collab/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessThreadsRoute = BusinessThreadsRouteImport.update({
   id: '/business/threads',
@@ -675,6 +681,7 @@ export interface FileRoutesByFullPath {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -777,6 +784,7 @@ export interface FileRoutesByTo {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -881,6 +889,7 @@ export interface FileRoutesById {
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -987,6 +996,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1089,6 +1099,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1192,6 +1203,7 @@ export interface FileRouteTypes {
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1287,6 +1299,7 @@ export interface RootRouteChildren {
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
   BusinessThreadsRoute: typeof BusinessThreadsRouteWithChildren
+  CollabCodeRoute: typeof CollabCodeRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
@@ -1676,6 +1689,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/collections/$id'
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
+    }
+    '/collab/$code': {
+      id: '/collab/$code'
+      path: '/collab/$code'
+      fullPath: '/collab/$code'
+      preLoaderRoute: typeof CollabCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/business/threads': {
       id: '/business/threads'
@@ -2211,6 +2231,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   BusinessSignupRoute: BusinessSignupRoute,
   BusinessThreadsRoute: BusinessThreadsRouteWithChildren,
+  CollabCodeRoute: CollabCodeRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   CreatorCalculatorRoute: CreatorCalculatorRoute,
