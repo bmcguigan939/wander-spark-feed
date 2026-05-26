@@ -11,7 +11,7 @@ import { setResponseHeaders } from "@tanstack/react-start/server";
 const PUBLIC_READ_CACHE = "public, s-maxage=60, stale-while-revalidate=600";
 
 const dealSelect =
-  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
+  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,pricing_model,operator_base_price_cents,operator_site_url,operator_site_host,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
 
 const filterSchema = z
   .object({
@@ -79,6 +79,9 @@ const upsertSchema = z.object({
   cancellation_policy_code: z
     .enum(["travidz_standard", "free_cancel_until_start", "non_refundable", "custom_24h", "custom_7d"]) 
     .optional(),
+  pricing_model: z.enum(["commission", "operator_markup"]).optional(),
+  operator_base_price_cents: z.number().int().min(0).max(10_000_000).optional().nullable(),
+  operator_site_url: z.string().url().max(500).optional().nullable(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })

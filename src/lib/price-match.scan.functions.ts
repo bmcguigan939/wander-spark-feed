@@ -22,7 +22,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: deal } = await supabaseAdmin
       .from("deals")
-      .select("id,title,city,country,destination,price_cents,currency,is_active,status,business_id")
+      .select("id,title,city,country,destination,price_cents,currency,is_active,status,business_id,pricing_model,operator_site_host")
       .eq("id", data.dealId)
       .maybeSingle();
     if (!deal || !deal.is_active || deal.status !== "approved") {
@@ -37,6 +37,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
         match_expires_at: null,
         direct_price_cents: null as number | null,
         currency: "GBP",
+        pricing_model: "commission" as "commission" | "operator_markup",
       };
     }
     const locality = [deal.city, deal.country].filter(Boolean).join(" ") || deal.destination || "";
@@ -50,10 +51,17 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
       check_in: data.check_in ?? null,
       check_out: data.check_out ?? null,
       guests: data.guests ?? null,
+      pricing_model: ((deal as any).pricing_model ?? "commission") as
+        | "commission"
+        | "operator_markup",
+      operator_site_host: (deal as any).operator_site_host ?? null,
     });
     return {
       ...result,
       direct_price_cents: deal.price_cents ?? null,
       currency: deal.currency ?? "GBP",
+      pricing_model: ((deal as any).pricing_model ?? "commission") as
+        | "commission"
+        | "operator_markup",
     };
   });

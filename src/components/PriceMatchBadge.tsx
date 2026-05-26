@@ -56,10 +56,11 @@ export function PriceMatchBadge({
   });
 
   if (isLoading) {
+    // We don't know pricing_model until the scan returns, so use neutral copy.
     return (
       <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card/40 px-3 py-2 text-xs text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Checking Booking.com, Expedia, Agoda…
+        Checking third-party resellers…
       </div>
     );
   }
@@ -71,6 +72,8 @@ export function PriceMatchBadge({
 
   if (!competitor || !direct) return null;
 
+  const isOperator = (data as any).pricing_model === "operator_markup";
+
   const tone =
     direct < competitor
       ? "cheaper"
@@ -79,6 +82,25 @@ export function PriceMatchBadge({
         : "higher";
 
   if (tone === "cheaper") {
+    if (isOperator) {
+      return (
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+          <TrendingDown className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <div className="font-semibold">Cheaper than other resellers</div>
+            <div className="text-emerald-200/80">
+              {formatMoney(competitor - direct, data.currency)} less than {data.cheapest_competitor_network}
+              {count > 1 ? ` and ${count - 1} other reseller${count - 1 === 1 ? "" : "s"}` : ""}.
+            </div>
+            <div className="mt-1 text-[10px] leading-snug text-emerald-200/60">
+              Compared against major third-party resale platforms. The operator may sell
+              direct on their own website. Travidz adds an 11% booking fee on top of the
+              operator's price for secure checkout, support and creator rewards.
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
         <TrendingDown className="mt-0.5 h-4 w-4 shrink-0" />
@@ -94,6 +116,24 @@ export function PriceMatchBadge({
   }
 
   if (tone === "match") {
+    if (isOperator) {
+      return (
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <div className="font-semibold">Matches other resellers</div>
+            <div className="text-sky-200/80">
+              Same price as {data.cheapest_competitor_network}
+              {count > 1 ? ` +${count - 1} other reseller${count - 1 === 1 ? "" : "s"}` : ""}.
+            </div>
+            <div className="mt-1 text-[10px] leading-snug text-sky-200/60">
+              Compared against third-party resale platforms. The operator may sell direct.
+              Travidz adds an 11% booking fee on top of the operator's price.
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="mt-3 flex items-start gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
@@ -108,7 +148,9 @@ export function PriceMatchBadge({
     );
   }
 
-  // higher
+  // higher — for operator deals, never offer to "match", since the operator may
+  // sell direct on their own site at any price.
+  if (isOperator) return null;
   return (
     <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
       <Equal className="mt-0.5 h-4 w-4 shrink-0" />
