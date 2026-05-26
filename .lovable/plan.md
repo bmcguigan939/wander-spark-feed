@@ -1,60 +1,96 @@
-## Complete operator-pricing items A–F
 
-### A. Operator site embed at signup
-- Migration: add `profiles.operator_site_url text` + `profiles.operator_site_host text` (trigger normalises host like the deals trigger).
-- `business.signup.tsx`: add a final optional step "Are you an activity operator? Paste your booking page" with a URL input and live `<iframe>` preview (sandbox=`allow-scripts allow-same-origin allow-forms`, `referrerPolicy="no-referrer"`, with a graceful "couldn't embed — that's fine" fallback if the iframe fails to load within 4s using `onError`/`onLoad`).
-- Save via existing `upsertBusinessProfile` server fn (extend its Zod schema).
-- Prefill `operator_site_url` in `DealForm` for any new `do`/`tour` deal.
+# Automatic payouts to businesses via Stripe Connect
 
-### B. Operator deals must be bookable
-- `DealForm.tsx`: when `pricing_model === 'operator_markup'`:
-  - Force `bookable = true` (hide/disable the toggle, show "Bookable through Travidz — required for the 11% model").
-  - Require `cancellation_policy_code`.
-  - Block submit if the business has no payout method (`creator_payout_details` or Stripe Connect equivalent).
-- Server-side: `upsertDeal` validator rejects `pricing_model='operator_markup' && (!bookable || !operator_base_price_cents)` with a clear error.
-- DB CHECK trigger on `deals`: raise if `pricing_model='operator_markup'` and (`bookable IS NOT TRUE` OR `operator_base_price_cents IS NULL`).
+Goal: when a customer books on Travidz, Stripe automatically splits the payment — operator/hotel's share goes straight to their bank, Travidz keeps its fee — with zero manual admin.
 
-### C. Public deal page disclosure
-- `deals.$id.tsx`: above the price block, when `pricing_model='operator_markup'`, render:
-  - "**£X** — booked through Travidz with [Operator Name]"
-  - Small line: "Travidz adds an 11% booking fee on top of the operator's price for secure checkout, support, and creator rewards."
-  - Tooltip/link "How we price activities" → `/legal/terms#activity-pricing`.
-- Hide the generic "lowest price" microcopy on these deals; `PriceMatchBadge` operator variant already handles the comparison line.
+Today we collect into Travidz's Stripe account and only store bank details as text (`profiles.payout_bank_details_encrypted`) to pay out manually. That blocks launch per your requirement. We need **Stripe Connect** with **destination charges + application_fee_amount** (or `transfer_data`), which is Stripe's built-in way to do exactly this.
 
-### D. Operator onboarding card
-- `OnboardingChecklist.tsx`: add a new card visible when business has `profiles.operator_site_url` set **or** any `do`/`tour` deal. Three checks:
-  1. Booking site URL saved on profile.
-  2. At least one deal with `pricing_model='operator_markup'` and `operator_base_price_cents` set.
-  3. Collab defaults saved (`business_collab_defaults` row exists).
-- Each row links to the relevant page (`/business/signup`, `/business/deals/new`, `/business/collabs`).
+---
 
-### E. Legal copy
-- `legal.terms.tsx`: add a new sub-section with anchor `id="activity-pricing"`:
-  - Defines "third-party resellers" (GetYourGuide, Viator, Klook, Tiqets, Musement, and similar).
-  - Discloses 11% Travidz booking fee on operator-markup activities.
-  - States we never compare against the operator's own website; price comparisons are scoped to third-party resellers only.
-  - Notes the operator may sell direct on their own site.
-- `legal.business-agreement.tsx`: add a short paragraph confirming the 11% uplift, that Travidz collects it on top of the operator's base price, and remittance terms.
+## 1. Connect account model
 
-### F. Operator-correct payout split
-- `commission.server.ts` / `stampRedemptionSplit`: branch on `deal.pricing_model`:
-  - `commission` (today): unchanged.
-  - `operator_markup`: `gross_cents = price_cents`, `commission_cents = price_cents - operator_base_price_cents` (the 11% uplift), `net_cents = operator_base_price_cents`. Creator commission: paid out of the 11% pool only (configurable `default_commission_pct`, default 10% of the uplift to keep creator economics neutral — confirm split before merge).
-- `business_payout_lines` insert uses the new values.
-- Add a unit-style guard: in dev, log a console error if `pricing_model='operator_markup'` and `operator_base_price_cents` is null at split time (should be prevented by B but defensive).
-- Backfill: not needed — no operator-markup bookings exist yet.
+- Use **Stripe Connect Express accounts** (Stripe-hosted onboarding, KYC, bank capture, tax forms, payout schedule — all handled by Stripe).
+- One Connect account per `profiles` row where `account_type in ('hotel','operator')`.
+- Same model works for both hotels (commission) and operators (operator_markup) — only the fee math differs.
 
-### Verification before sign-off
-1. Run `supabase--linter` after the new migration — expect no new warnings.
-2. Manually create an operator deal in preview, confirm:
-   - Trigger sets `price_cents = base × 1.11`.
-   - Public deal page shows operator copy + parity badge with the reseller-only comparison.
-   - Form blocks save when `bookable` is unchecked.
-3. Insert a synthetic redemption with `pricing_model='operator_markup'` and inspect the resulting `business_payout_lines` row via `read_query`.
-4. Confirm `/legal/terms#activity-pricing` scrolls to the new section and the deal-page tooltip deep-links correctly.
+## 2. Database changes (migration)
 
-### Out of scope (flagged, not changed)
-- Real Stripe payment-method check for B currently uses `creator_payout_details` presence as a proxy; full Stripe Connect onboarding for operators is a separate task.
-- Iframe embed will fail for sites that send `X-Frame-Options: DENY` — we surface a fallback message rather than trying to proxy.
+Add to `profiles`:
+- `stripe_connect_account_id text` (acct_...)
+- `stripe_connect_status text` — `none | pending | restricted | active`
+- `stripe_connect_charges_enabled boolean`
+- `stripe_connect_payouts_enabled boolean`
+- `stripe_connect_requirements jsonb` (snapshot of Stripe's `requirements` object for UI)
+- `stripe_connect_updated_at timestamptz`
 
-Ready to switch to build mode and implement A–F in order, with the migration first (B + F + new profiles columns combined), then UI, then legal copy.
+Add to `deals`:
+- `connect_account_id text` (snapshot at booking time so payouts survive operator profile edits)
+
+Deprecate (keep column, stop writing): `payout_bank_details_encrypted`, `payout_method='manual_bank'`. Migrate the existing `PayoutMethodCard` UI to launch Connect onboarding instead.
+
+Update `has_role`-style guards: a deal can only be set `bookable=true` if `stripe_connect_payouts_enabled=true` on the owner's profile. Enforce via trigger (mirrors the existing `trg_deals_validate_operator_markup`).
+
+## 3. Server functions (new `src/lib/stripe-connect.functions.ts` + `.server.ts`)
+
+- `createConnectOnboardingLink` — calls `stripe.accounts.create({ type:'express', country, email, business_type, capabilities:{ card_payments, transfers } })`, then `stripe.accountLinks.create` for the hosted onboarding URL. Persists `stripe_connect_account_id`.
+- `refreshConnectStatus` — `stripe.accounts.retrieve`, writes `charges_enabled` / `payouts_enabled` / `requirements` to the profile.
+- `createDashboardLoginLink` — `stripe.accounts.createLoginLink` so business users can update bank/KYC later.
+
+All use the existing gateway pattern in `src/lib/stripe.server.ts` (no direct SDK key).
+
+## 4. Checkout split (modify `src/routes/book.$dealId.tsx` flow + `booking.functions.ts`)
+
+When creating the Checkout Session:
+- Look up the deal's `connect_account_id` + pricing model.
+- Compute `application_fee_amount` in cents:
+  - **Hotel / commission deals:** `application_fee_amount = round(price * 0.11)` (Travidz keeps 11% pool, hotel receives 89% minus Stripe fees).
+  - **Operator markup deals:** `application_fee_amount = price − operator_base_price` (uplift goes to Travidz pool; operator nets exactly their own site price minus Stripe fee).
+- Pass `payment_intent_data: { application_fee_amount, transfer_data: { destination: connect_account_id } }` on the session.
+- Stripe automatically: charges card → routes operator's share to their connected account → routes Travidz's fee to platform → triggers payout to operator's bank on their Stripe payout schedule.
+
+## 5. Webhook updates (`/api/public/payments/webhook`)
+
+Add handlers for:
+- `account.updated` → call `refreshConnectStatus` (keeps `charges_enabled` / `payouts_enabled` in sync, surfaces KYC blockers).
+- `payout.paid` / `payout.failed` → store on a new `connect_payouts` table for the business dashboard ("Last payout: £X on date").
+- Existing `checkout.session.completed` handler: persist `application_fee_amount` and `transfer_data.destination` on `deal_redemptions` for reconciliation.
+
+## 6. UI changes
+
+- **`src/routes/business.onboarding.payout.tsx`** — replace bank-details form with single "Connect bank with Stripe" button → opens Stripe-hosted onboarding → returns to a success page that calls `refreshConnectStatus`.
+- **`src/components/business/PayoutMethodCard.tsx`** — show Connect status badge (Active / Action required / Not started), requirements list if any, "Update bank or details" button (→ login link), "Payout schedule: daily/weekly".
+- **`OnboardingChecklist.tsx`** — add "Connect payouts" step; block "Go live with deals" until `stripe_connect_payouts_enabled=true`.
+- **`DealForm.tsx`** — disable `bookable` toggle with tooltip "Finish payout setup first" when Connect isn't active.
+- **`business.signup.tsx`** (operator) — add Stripe Connect step right after operator-site URL.
+- **Admin `/admin.payouts.tsx`** — switch from manual bank list to read-only Connect status table + link to each account's Stripe dashboard.
+
+## 7. Secrets
+
+Connect uses the **same `STRIPE_SANDBOX_API_KEY` / `STRIPE_LIVE_API_KEY` + gateway** — no new secrets. Webhook secret already configured. We just need to confirm the Stripe account has **Connect Express enabled** in both sandbox + live (one-click in Stripe dashboard during go-live; flagged as a launch checklist item, not blocking dev work).
+
+## 8. Go-live checklist additions
+
+- Stripe Connect platform enabled (sandbox ✅ + live).
+- Platform branding for Connect onboarding (logo, support email) set in Stripe dashboard.
+- At least one test operator + one test hotel completed Express onboarding in sandbox and received a test payout end-to-end.
+- `business_agreement` and `legal.terms` updated to disclose: payouts processed by Stripe Connect; KYC required; Stripe is the money transmitter.
+
+---
+
+## Build order (single PR per step, each ships independently)
+
+1. Migration: Connect columns on `profiles` + `deals` + `connect_payouts` table + bookable trigger.
+2. `stripe-connect.functions.ts` + `.server.ts` (create account, account link, refresh, login link).
+3. Onboarding UI: `business.onboarding.payout.tsx` + `PayoutMethodCard` rewrite + checklist gating.
+4. Checkout split in `booking.functions.ts` (destination charges + application_fee_amount).
+5. Webhook handlers for `account.updated` + `payout.*` + redemption fee snapshot.
+6. Admin dashboard rewrite + legal copy updates + smoke test in sandbox (create acct → onboard → book → verify split + payout).
+
+Estimated scope: ~6 focused build turns. After step 6 both hotel and operator payouts are fully automatic — Stripe pulls from the customer's card, splits the money at charge time, and pays out to each business's bank on Stripe's schedule with zero Travidz intervention.
+
+## Risk / call-outs
+
+- **Existing bookings** before this ships keep using manual payout. We won't backfill — they're handled out-of-band.
+- **Express vs Standard:** Express keeps the user inside Travidz branding and lets us control payout schedule. Standard would give operators a full Stripe dashboard but worse UX. Recommend Express; easy to switch later.
+- **Country coverage:** Stripe Connect Express supports 46 countries. UK + EU + US + AU/NZ covered. Flag at signup if operator is outside supported set.
+- **`book.match.$code` (price-match flow):** uses same `booking.functions.ts` path, so it inherits the split automatically.
