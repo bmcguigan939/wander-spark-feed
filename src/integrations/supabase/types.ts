@@ -262,6 +262,96 @@ export type Database = {
           },
         ]
       }
+      booking_reviews: {
+        Row: {
+          booking_id: string
+          business_id: string
+          comment: string | null
+          created_at: string
+          creator_id: string | null
+          deal_id: string
+          id: string
+          matched_video: boolean | null
+          photos: string[]
+          rating: number
+          referrer_video_id: string | null
+          status: string
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          business_id: string
+          comment?: string | null
+          created_at?: string
+          creator_id?: string | null
+          deal_id: string
+          id?: string
+          matched_video?: boolean | null
+          photos?: string[]
+          rating: number
+          referrer_video_id?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          business_id?: string
+          comment?: string | null
+          created_at?: string
+          creator_id?: string | null
+          deal_id?: string
+          id?: string
+          matched_video?: boolean | null
+          photos?: string[]
+          rating?: number
+          referrer_video_id?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reviews_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reviews_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           balance_due_at_property_cents: number
@@ -270,6 +360,7 @@ export type Database = {
           cancelled_at: string | null
           commission_cents: number
           commission_pct: number
+          completed_at: string | null
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
@@ -286,6 +377,8 @@ export type Database = {
           rate_plan_id: string | null
           referrer_video_id: string | null
           refunded_at: string | null
+          review_prompt_sent_at: string | null
+          review_token: string | null
           room_id: string | null
           status: string
           stripe_checkout_session_id: string | null
@@ -305,6 +398,7 @@ export type Database = {
           cancelled_at?: string | null
           commission_cents?: number
           commission_pct?: number
+          completed_at?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
@@ -321,6 +415,8 @@ export type Database = {
           rate_plan_id?: string | null
           referrer_video_id?: string | null
           refunded_at?: string | null
+          review_prompt_sent_at?: string | null
+          review_token?: string | null
           room_id?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
@@ -340,6 +436,7 @@ export type Database = {
           cancelled_at?: string | null
           commission_cents?: number
           commission_pct?: number
+          completed_at?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
@@ -356,6 +453,8 @@ export type Database = {
           rate_plan_id?: string | null
           referrer_video_id?: string | null
           refunded_at?: string | null
+          review_prompt_sent_at?: string | null
+          review_token?: string | null
           room_id?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
@@ -1966,6 +2065,8 @@ export type Database = {
           country: string | null
           created_at: string
           currency: string | null
+          deal_rating_avg: number | null
+          deal_rating_count: number
           description: string | null
           destination: string | null
           discount_label: string | null
@@ -2013,6 +2114,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string | null
+          deal_rating_avg?: number | null
+          deal_rating_count?: number
           description?: string | null
           destination?: string | null
           discount_label?: string | null
@@ -2060,6 +2163,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string | null
+          deal_rating_avg?: number | null
+          deal_rating_count?: number
           description?: string | null
           destination?: string | null
           discount_label?: string | null
@@ -2980,10 +3085,17 @@ export type Database = {
           business_country: string | null
           business_logo_url: string | null
           business_name: string | null
+          business_rating_avg: number | null
+          business_rating_count: number
+          business_rating_refreshed_at: string | null
           business_website_url: string | null
           created_at: string
           creator_agreement_accepted_at: string | null
           creator_joined_at: string | null
+          creator_quality_refreshed_at: string | null
+          creator_quality_score: number | null
+          creator_rating_avg: number | null
+          creator_rating_count: number
           display_name: string | null
           founding_creator_number: number | null
           id: string
@@ -3024,10 +3136,17 @@ export type Database = {
           business_country?: string | null
           business_logo_url?: string | null
           business_name?: string | null
+          business_rating_avg?: number | null
+          business_rating_count?: number
+          business_rating_refreshed_at?: string | null
           business_website_url?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
+          creator_quality_refreshed_at?: string | null
+          creator_quality_score?: number | null
+          creator_rating_avg?: number | null
+          creator_rating_count?: number
           display_name?: string | null
           founding_creator_number?: number | null
           id: string
@@ -3068,10 +3187,17 @@ export type Database = {
           business_country?: string | null
           business_logo_url?: string | null
           business_name?: string | null
+          business_rating_avg?: number | null
+          business_rating_count?: number
+          business_rating_refreshed_at?: string | null
           business_website_url?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
+          creator_quality_refreshed_at?: string | null
+          creator_quality_score?: number | null
+          creator_rating_avg?: number | null
+          creator_rating_count?: number
           display_name?: string | null
           founding_creator_number?: number | null
           id?: string
@@ -3729,6 +3855,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_creator_quality: { Args: never; Returns: number }
       refresh_creator_tiers: { Args: never; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
