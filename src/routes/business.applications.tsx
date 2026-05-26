@@ -8,9 +8,10 @@ import {
   listApplicationsForBusiness,
   decideApplication,
 } from "@/lib/deal-applications.functions";
+import { oneTapAcceptApplication } from "@/lib/collabs.functions";
 import { draftApplicationReply } from "@/lib/outreach.functions";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle, Sparkles, Copy } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle, Sparkles, Copy, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ function BusinessApplications() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const fetch = useServerFn(listApplicationsForBusiness);
+  const [filter, setFilter] = useState<"all" | "pending" | "auto">("all");
 
   useEffect(() => {
     if (loading) return;
@@ -44,6 +46,11 @@ function BusinessApplications() {
     enabled: !!user && isBusiness,
   });
   const apps = (data?.applications ?? []) as any[];
+  const visible = apps.filter((a) => {
+    if (filter === "pending") return a.status === "pending";
+    if (filter === "auto") return a.auto_decided === true;
+    return true;
+  });
 
   if (!user || !isBusiness) return null;
 
@@ -54,6 +61,27 @@ function BusinessApplications() {
           <ArrowLeft className="h-4 w-4" /> Dashboard
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Creator Applications</h1>
+        <div className="mt-3 flex gap-2 text-xs">
+          {(["all", "pending", "auto"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3 py-1 border ${
+                filter === f
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {f === "auto" ? "✨ Auto-accepted" : f === "pending" ? "Pending" : "All"}
+            </button>
+          ))}
+          <Link
+            to="/business/collabs"
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-muted-foreground"
+          >
+            <Zap className="h-3 w-3" /> Defaults & rules
+          </Link>
+        </div>
 
         {isLoading && (
           <div className="mt-6 space-y-3">
@@ -63,14 +91,14 @@ function BusinessApplications() {
           </div>
         )}
 
-        {!isLoading && apps.length === 0 && (
+        {!isLoading && visible.length === 0 && (
           <div className="mt-10 rounded-xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground">No applications yet.</p>
+            <p className="text-sm text-muted-foreground">No applications to show.</p>
           </div>
         )}
 
         <ul className="mt-4 space-y-3 pb-24">
-          {apps.map((a) => (
+          {visible.map((a) => (
             <ApplicationCard key={a.id} app={a} />
           ))}
         </ul>
