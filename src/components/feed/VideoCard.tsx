@@ -463,38 +463,13 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
           </Link>
         )}
 
-        {!video.matchedDeal && video.matchedBusiness && (
-          <a
-            href={`/api/public/b/${video.matchedBusiness.id}?v=${video.id}`}
-            target="_blank"
-            rel="noopener sponsored"
-            onClick={(e) => e.stopPropagation()}
-            className="mt-3 flex items-center gap-2 rounded-2xl border border-white/20 bg-black/40 px-3 py-2 backdrop-blur-md transition hover:bg-black/55"
-          >
-            {video.matchedBusiness.logo_url ? (
-              <img
-                src={video.matchedBusiness.logo_url}
-                alt=""
-                className="h-9 w-9 flex-shrink-0 rounded-lg object-cover"
-              />
-            ) : (
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                <Tag className="h-4 w-4" />
-              </span>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[11px] uppercase tracking-wide text-white/70">
-                Book direct
-              </div>
-              <div className="truncate text-sm font-semibold">
-                {video.matchedBusiness.name}
-              </div>
-            </div>
-            <span className="flex-shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
-              Book →
-            </span>
-          </a>
-        )}
+        {/* "Book direct" outbound tile removed: Travidz is a closed-loop
+            OTA — bookings and payment must happen on Travidz. When a video
+            is matched only to a business (no approved deal), no CTA is
+            shown. Once the business completes the bookable checklist
+            (photos, rooms/options, rates, calendar, payouts) and publishes
+            a deal, the matchedDeal branch above renders the proper
+            "Book on Travidz" CTA. */}
 
         {attachedDeals.length > 0 && (
           <div className="mt-3 space-y-1.5">
