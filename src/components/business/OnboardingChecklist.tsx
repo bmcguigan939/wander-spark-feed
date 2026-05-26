@@ -5,7 +5,7 @@ import { Check, Circle, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
-import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate } from "@/lib/bookable.functions";
+import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate, type AccountKind } from "@/lib/bookable.functions";
 import { COMMISSION } from "@/lib/commission";
 import { getMyCollabDefaults } from "@/lib/collabs.functions";
 import { getMyOperatorSite } from "@/lib/operator-site.functions";
@@ -18,18 +18,57 @@ type Step = {
   to: string;
 };
 
-function gateDescription(gate: BookableGate): string {
+function gateCopy(
+  gate: BookableGate,
+  kind: AccountKind,
+): { title: string; desc: string } {
+  const isActivity = kind === "activity";
   switch (gate) {
     case "photos":
-      return "At least 3 photos of your property/operation.";
+      return isActivity
+        ? {
+            title: "Add photos of your activity",
+            desc: "At least 3 photos of your activity or meeting location.",
+          }
+        : {
+            title: GATE_LABELS.photos,
+            desc: "At least 3 photos of your property.",
+          };
     case "items":
-      return "Add rooms (stays) or activity options, each with a photo.";
+      return isActivity
+        ? {
+            title: "Add your activity packages",
+            desc: "Add each package you sell (half-day, full-day, private, etc.), with a photo.",
+          }
+        : {
+            title: GATE_LABELS.items,
+            desc: "Add rooms or activity options, each with a photo.",
+          };
     case "rates":
-      return "Price each room/option with a cancellation policy.";
+      return isActivity
+        ? {
+            title: "Price each package",
+            desc: "Price each package and pick a cancellation policy.",
+          }
+        : {
+            title: GATE_LABELS.rates,
+            desc: "Price each room/option with a cancellation policy.",
+          };
     case "calendar":
-      return "Connect an iCal feed (Booking.com, Airbnb, Lodgify) to prevent double-bookings.";
+      return isActivity
+        ? {
+            title: "Connect availability",
+            desc: "Connect an iCal feed or add native time-slots so we never overbook you.",
+          }
+        : {
+            title: GATE_LABELS.calendar,
+            desc: "Connect an iCal feed (Booking.com, Airbnb, Lodgify) to prevent double-bookings.",
+          };
     case "payouts":
-      return "Add a bank account so we can pay you for confirmed bookings.";
+      return {
+        title: GATE_LABELS.payouts,
+        desc: "Add a bank account so we can pay you for confirmed bookings.",
+      };
   }
 }
 
@@ -63,6 +102,7 @@ export function OnboardingChecklist() {
 
   const ALL_GATES: BookableGate[] = ["photos", "items", "rates", "calendar", "payouts"];
   const missing = new Set(bookable?.missing ?? ALL_GATES);
+  const accountKind: AccountKind = bookable?.accountKind ?? "unknown";
 
   const steps: Step[] = [
     {
@@ -72,13 +112,16 @@ export function OnboardingChecklist() {
       done: !!agreement?.business_accepted,
       to: "/legal/business-agreement",
     },
-    ...ALL_GATES.map<Step>((gate) => ({
-      id: gate,
-      title: GATE_LABELS[gate],
-      desc: gateDescription(gate),
-      done: !missing.has(gate),
-      to: GATE_LINKS[gate],
-    })),
+    ...ALL_GATES.map<Step>((gate) => {
+      const copy = gateCopy(gate, accountKind);
+      return {
+        id: gate,
+        title: copy.title,
+        desc: copy.desc,
+        done: !missing.has(gate),
+        to: GATE_LINKS[gate],
+      };
+    }),
     {
       id: "collab-defaults",
       title: "Set your collab defaults",
