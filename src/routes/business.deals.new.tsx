@@ -102,7 +102,10 @@ function NewDealPage() {
           submitLabel="Create deal"
           busy={busy}
           onSubmit={async (values) => {
-            if (bookable && !hasPayout) {
+            // operator_markup deals must be bookable — Travidz collects the 11% uplift
+            const forcedBookable =
+              values.pricing_model === "operator_markup" ? true : bookable;
+            if (forcedBookable && !hasPayout) {
               toast.error("Add a payout method first");
               return;
             }
@@ -111,8 +114,8 @@ function NewDealPage() {
               const cleaned = Object.fromEntries(
                 Object.entries(values).filter(([, v]) => v !== "" && v !== undefined)
               ) as any;
-              cleaned.bookable = bookable;
-              if (bookable) cleaned.cancellation_policy_code = policy;
+              cleaned.bookable = forcedBookable;
+              if (forcedBookable) cleaned.cancellation_policy_code = policy;
               const { id } = await createFn({ data: cleaned });
               toast.success("Deal created");
               navigate({ to: "/business/deals/$id/edit", params: { id } });
