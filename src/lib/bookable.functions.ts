@@ -4,10 +4,23 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type BookableGate = "photos" | "items" | "rates" | "calendar" | "payouts";
 
+export type AccountKind = "stay" | "activity" | "unknown";
+
 export type BookableStatus = {
   bookable: boolean;
   missing: BookableGate[];
+  accountKind: AccountKind;
 };
+
+function deriveAccountKind(
+  deals: Array<{ category: string | null }>,
+): AccountKind {
+  if (deals.some((d) => d.category === "stay")) return "stay";
+  if (deals.some((d) => d.category === "do" || d.category === "tour")) {
+    return "activity";
+  }
+  return "unknown";
+}
 
 /**
  * Single source of truth for "is this business bookable on Travidz?".
@@ -43,7 +56,7 @@ export const getBookableStatus = createServerFn({ method: "GET" })
         .eq("business_id", businessId),
       supabaseAdmin
         .from("deals")
-        .select("id")
+        .select("id,category")
         .eq("business_id", businessId)
         .eq("is_active", true)
         .eq("status", "approved"),
@@ -57,7 +70,9 @@ export const getBookableStatus = createServerFn({ method: "GET" })
     // 1) Photos
     if ((photosRes.count ?? 0) < 3) missing.push("photos");
 
-    const dealIds = (dealsRes.data ?? []).map((d: any) => d.id);
+    const dealRows = (dealsRes.data ?? []) as Array<{ id: string; category: string | null }>;
+    const dealIds = dealRows.map((d) => d.id);
+    const accountKind = deriveAccountKind(dealRows);
 
     if (dealIds.length === 0) {
       // No active deal → no items, no rates, no calendar
@@ -106,7 +121,7 @@ export const getBookableStatus = createServerFn({ method: "GET" })
       p?.stripe_connect_charges_enabled === true;
     if (!payoutsReady) missing.push("payouts");
 
-    return { bookable: missing.length === 0, missing };
+    return { bookable: missing.length === 0, missing, accountKind };
   });
 
 /**
@@ -126,7 +141,7 @@ export async function computeBookableStatus(
       .eq("business_id", businessId),
     supabaseAdmin
       .from("deals")
-      .select("id")
+      .select("id,category")
       .eq("business_id", businessId)
       .eq("is_active", true)
       .eq("status", "approved"),
@@ -139,7 +154,9 @@ export async function computeBookableStatus(
 
   if ((photosRes.count ?? 0) < 3) missing.push("photos");
 
-  const dealIds = (dealsRes.data ?? []).map((d: any) => d.id);
+  const dealRows = (dealsRes.data ?? []) as Array<{ id: string; category: string | null }>;
+  const dealIds = dealRows.map((d) => d.id);
+  const accountKind = deriveAccountKind(dealRows);
   if (dealIds.length === 0) {
     missing.push("items", "rates", "calendar");
   } else {
@@ -182,7 +199,7 @@ export async function computeBookableStatus(
     if (!payoutsReady) missing.push("payouts");
   }
 
-  return { bookable: missing.length === 0, missing };
+  return { bookable: missing.length === 0, missing, accountKind };
 }
 
 export const GATE_LABELS: Record<BookableGate, string> = {
