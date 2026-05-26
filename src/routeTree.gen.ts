@@ -61,6 +61,7 @@ import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
+import { Route as BusinessCollabsRouteImport } from './routes/business.collabs'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
@@ -371,6 +372,11 @@ const BusinessPriceAuditRoute = BusinessPriceAuditRouteImport.update({
   path: '/business/price-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BusinessCollabsRoute = BusinessCollabsRouteImport.update({
+  id: '/business/collabs',
+  path: '/business/collabs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessCalculatorRoute = BusinessCalculatorRouteImport.update({
   id: '/business/calculator',
   path: '/business/calculator',
@@ -664,6 +670,7 @@ export interface FileRoutesByFullPath {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -765,6 +772,7 @@ export interface FileRoutesByTo {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -868,6 +876,7 @@ export interface FileRoutesById {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -973,6 +982,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1074,6 +1084,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1176,6 +1187,7 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1270,6 +1282,7 @@ export interface RootRouteChildren {
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
+  BusinessCollabsRoute: typeof BusinessCollabsRoute
   BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
@@ -1690,6 +1703,13 @@ declare module '@tanstack/react-router' {
       path: '/business/price-audit'
       fullPath: '/business/price-audit'
       preLoaderRoute: typeof BusinessPriceAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/collabs': {
+      id: '/business/collabs'
+      path: '/business/collabs'
+      fullPath: '/business/collabs'
+      preLoaderRoute: typeof BusinessCollabsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/calculator': {
@@ -2186,6 +2206,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
+  BusinessCollabsRoute: BusinessCollabsRoute,
   BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   BusinessSignupRoute: BusinessSignupRoute,
