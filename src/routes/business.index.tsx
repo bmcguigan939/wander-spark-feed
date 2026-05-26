@@ -142,16 +142,25 @@ function BusinessDashboard() {
               <Briefcase className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">No deals yet</h2>
+              <h2 className="text-sm font-semibold">
+                {accountKind === "activity"
+                  ? "No activities yet"
+                  : accountKind === "stay"
+                  ? "No stays yet"
+                  : "No deals yet"}
+              </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Publish your first offer so creators can promote it and viewers can book.
+                {accountKind === "activity"
+                  ? "Publish your first activity so creators can promote it and travellers can book."
+                  : "Publish your first offer so creators can promote it and viewers can book."}
               </p>
             </div>
             <Link
               to="/business/deals/new"
               className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
             >
-              <Plus className="h-3.5 w-3.5" /> Create a deal
+              <Plus className="h-3.5 w-3.5" />{" "}
+              {accountKind === "activity" ? "Create an activity" : "Create a deal"}
             </Link>
           </div>
         )}
