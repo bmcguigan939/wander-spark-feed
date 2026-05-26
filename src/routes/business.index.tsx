@@ -12,6 +12,7 @@ import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
+import { useAccountKind } from "@/lib/useAccountKind";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -23,6 +24,8 @@ function BusinessDashboard() {
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
+  const accountKind = useAccountKind();
+  const photosKind: "stay" | "activity" = accountKind === "activity" ? "activity" : "stay";
 
   useEffect(() => {
     if (loading) return;
@@ -58,7 +61,7 @@ function BusinessDashboard() {
           <PayoutMethodCard />
         </div>
         <div className="mb-4">
-          <BusinessPhotosEditor businessId={user.id} />
+          <BusinessPhotosEditor businessId={user.id} kind={photosKind} />
         </div>
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
