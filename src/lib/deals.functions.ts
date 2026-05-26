@@ -11,7 +11,7 @@ import { setResponseHeaders } from "@tanstack/react-start/server";
 const PUBLIC_READ_CACHE = "public, s-maxage=60, stale-while-revalidate=600";
 
 const dealSelect =
-  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,pricing_model,operator_base_price_cents,operator_site_url,operator_site_host,deal_rating_avg,deal_rating_count,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url,business_name,business_rating_avg,business_rating_count)";
+  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,bookable,status,deal_rating_avg,deal_rating_count,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url,business_name,business_rating_avg,business_rating_count)";
 
 const filterSchema = z
   .object({
@@ -59,7 +59,7 @@ export const getDeal = createServerFn({ method: "GET" })
 const upsertSchema = z.object({
   title: z.string().min(2).max(160),
   description: z.string().max(2000).optional(),
-  url: z.string().url().max(500),
+  url: z.string().url().max(500).optional().nullable(),
   image_url: z.string().url().max(500).optional(),
   destination: z.string().max(160).optional(),
   country: z.string().max(100).optional(),
@@ -75,13 +75,10 @@ const upsertSchema = z.object({
   parity_exempt: z.boolean().optional(),
   parity_exempt_reason: z.string().max(500).optional().nullable(),
   category: z.enum(["stay", "eat", "do", "tour", "transport", "other"]).optional(),
-  bookable: z.boolean().optional(),
+  status: z.enum(["draft", "approved"]).optional(),
   cancellation_policy_code: z
     .enum(["travidz_standard", "free_cancel_until_start", "non_refundable", "custom_24h", "custom_7d"]) 
     .optional(),
-  pricing_model: z.enum(["commission", "operator_markup"]).optional(),
-  operator_base_price_cents: z.number().int().min(0).max(10_000_000).optional().nullable(),
-  operator_site_url: z.string().url().max(500).optional().nullable(),
 });
 
 export const createDeal = createServerFn({ method: "POST" })
@@ -89,30 +86,33 @@ export const createDeal = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => upsertSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    // Gate: bookable deals require a payout method on the business profile.
-    if (data.bookable) {
-      const { data: profile, error: pErr } = await supabaseAdmin
-        .from("profiles")
-        .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
-        .eq("id", userId)
-        .maybeSingle();
-      if (pErr) throw new Error(pErr.message);
-      const fullyReady =
-        (profile as any)?.stripe_connect_payouts_enabled === true &&
-        (profile as any)?.stripe_connect_charges_enabled === true;
-      if (!fullyReady) {
-        throw new Error(
-          "Complete Stripe Connect onboarding (charges + payouts) before listing a bookable deal. Visit /business/onboarding/payout",
-        );
-      }
-    }
+    // Every Travidz shop is bookable through Travidz. If the business hasn't
+    // finished Stripe Connect onboarding we save as a DRAFT so the user
+    // doesn't lose work — they can publish from /business after connecting.
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
+      .eq("id", userId)
+      .maybeSingle();
+    const payoutReady =
+      (profile as any)?.stripe_connect_payouts_enabled === true &&
+      (profile as any)?.stripe_connect_charges_enabled === true;
+    const status = payoutReady ? (data.status ?? "approved") : "draft";
+    const insertRow = {
+      ...data,
+      business_id: userId,
+      bookable: true,
+      status,
+      // url is legacy; default to a Travidz-hosted placeholder
+      url: data.url ?? `https://travidz.com/`,
+    };
     const { data: row, error } = await supabase
       .from("deals")
-      .insert({ ...data, business_id: userId })
+      .insert(insertRow as any)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return { id: row.id };
+    return { id: row.id, status };
   });
 
 export const updateDeal = createServerFn({ method: "POST" })
@@ -122,9 +122,10 @@ export const updateDeal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const patch: any = { ...data.patch, bookable: true };
     const { error } = await supabase
       .from("deals")
-      .update(data.patch)
+      .update(patch)
       .eq("id", data.id)
       .eq("business_id", userId);
     if (error) throw new Error(error.message);
