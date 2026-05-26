@@ -16,6 +16,7 @@ import { claimRedemption } from "@/lib/redemptions.functions";
 import { RateSelector } from "@/components/deals/RateSelector";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { listBusinessPhotos } from "@/lib/business-photos.functions";
+import { PriceMatchBadge } from "@/components/PriceMatchBadge";
 import {
   Dialog,
   DialogContent,
@@ -94,6 +95,9 @@ function DealDetail() {
             )}
             {deal.description && (
               <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/90">{deal.description}</p>
+            )}
+            {deal.bookable && deal.price_cents > 0 && (
+              <PriceMatchBadge dealId={id} />
             )}
             <button
               onClick={onView}
