@@ -1,77 +1,41 @@
+## Problems
+1. **"Book through Travidz" tick is pointless** — every shop books through Travidz. Operators (activities, tours, experiences) build their storefront on Travidz the same way hotels do: photos, prices, packages. Customers never leave for an operator's own site.
+2. **Deal-builder loses work** when "Create deal" is hit without Stripe payout connected: the form gets wiped.
+3. **No guided order** on the business home — users can start step 4 before step 2, which triggers problem 2.
 
-## Goal
+## Fix
 
-Give admins the ability to block, unblock, and permanently delete user accounts from the Users tab — plus a smart "blocklist" that prevents banned users from sneaking back in under a new account, and a review queue for flagged signups so admins always have the final say.
+### A. Travidz is the only checkout path (remove operator-markup entirely)
+- Delete the "Book through Travidz" toggle from `DealForm.tsx`.
+- Delete the external **Link URL / Booking URL** field from the deal form for every business type.
+- Server-side: force `book_via='travidz'` on insert/update in `src/lib/deals.functions.ts`; reject any incoming `external_url`.
+- Public deal page: remove the "Book on operator site" CTA — only the Travidz checkout button remains.
+- Copy: operator shop setup framed like a hotel ("Add your activities and packages, set prices, upload photos — customers book directly on Travidz").
+- **Migration:** drop `deals.external_url` and `deals.book_via` columns (plus any unused index/policy referencing them). Same migration sweeps `null`/legacy values first. Audit `src/lib/operator-site*`, `price-compare.server.ts`, `price-match*`, public deal route, and admin views for references and remove them.
 
-## What changes
+### B. Don't lose work when payout isn't ready
+- **Save as draft instead of blocking.** On "Create deal" with no Stripe payout: save with `status='draft'`, show inline banner *"Saved as draft. Connect your bank to publish."* + **Connect bank** button. On return, one tap to publish. **Unlimited drafts.**
+- **Autosave to localStorage** (debounced 1s) keyed by user + draft id. Restore on form mount.
+- Files: `src/components/business/DealForm.tsx`, `src/lib/deals.functions.ts`, `src/routes/business.deals.new.tsx`.
 
-### 1. Block / unblock / delete actions on each user card
+### C. Guided setup order on `/business`
+Reorder `OnboardingChecklist` and gate steps:
 
-On `/admin/users`, every user row gets three new actions in a small menu:
+```text
+1. Verify your business        (legal name, address)
+2. Connect your bank           (Stripe Connect)        ← unlocks step 4
+3. Add property/venue photos   (3+ recommended)
+4. Add your first listing      ← fully greyed-out until 1+2 done
+```
 
-- **Block** — instantly signs them out, freezes their account, hides their videos and deactivates their deals. Reversible.
-- **Unblock** — lifts the block.
-- **Delete account** — permanent removal of the auth user and their profile (with confirm dialog). Their content is either hard-deleted or anonymised (we'll anonymise videos/deals so historical bookings stay intact).
+- Step 4 is **fully disabled** (greyed card, lock icon, not clickable) with tooltip *"Finish bank setup to publish your first listing"* until steps 1 and 2 are complete.
+- Step 5 (share/invite creator) **removed** — creators reach out to businesses directly through Travidz once the shop is live.
+- Empty business home gets a single **Start setup** CTA dropping the user into step 1.
+- Files: `src/components/business/OnboardingChecklist.tsx`, `src/routes/business.index.tsx`.
 
-A blocked user attempting to log in sees a clear "Your account has been suspended" message. All their server functions reject with 403.
+### D. Smooth Stripe return
+- On `/business/onboarding/payout` success, auto-route to the next incomplete step (drafts page if drafts exist, otherwise the listing builder). File: `src/routes/business.onboarding.payout.tsx`.
 
-### 2. Smart blocklist (re-signup prevention)
-
-When an account is blocked or deleted, we capture identifying fingerprints into a new `blocked_identities` table:
-
-- Email (normalised: lowercased, gmail dots stripped, `+tag` removed)
-- Phone number (if collected)
-- Stripe Connect payout account ID / last4 of bank account
-- IP address(es) seen on the account
-- Device fingerprint hash (if available from existing client signals)
-- Business name + website URL
-
-On every new signup, business claim, and Stripe Connect onboarding, we check incoming details against `blocked_identities`. Three outcomes:
-
-- **Hard match** (same email/phone/bank) → signup blocked outright with "This account cannot be created. Contact support."
-- **Soft match** (same IP, device, business name, or website) → account is created but flagged `pending_admin_review`, hidden from public feeds until cleared.
-- **No match** → normal flow.
-
-### 3. Admin review queue (flagged signups)
-
-New filter chip on Users: **Flagged**. Lists every account with `pending_admin_review = true`, showing why they were flagged (which fingerprint matched which blocked account). Admin has two buttons:
-
-- **Approve** — clears the flag, account becomes fully active.
-- **Reject** — blocks the new account and adds its fingerprints to the blocklist.
-
-### 4. Nice-to-haves admins will benefit from
-
-I'd recommend also adding (small additions, same screen):
-
-- **Impersonate / View as user** (read-only session) for support investigations.
-- **Send admin note / message to user** that surfaces as an in-app banner.
-- **Force password reset** button.
-- **Recent activity panel** per user (last login IP, last 10 actions, signup IP) to help judge flagged cases.
-- **Audit log export** of all admin actions (we already log to `admin_actions` — just a download button).
-
-## Technical notes
-
-**New tables (one migration):**
-- `blocked_identities` — `kind` (email|phone|bank|ip|device|business_name|website), `value_hash`, `original_user_id`, `reason`, `blocked_at`, `blocked_by`.
-- Add to `profiles`: `is_blocked boolean`, `blocked_at`, `blocked_by`, `block_reason`, `pending_admin_review boolean`, `review_reason text`, `signup_ip inet`, `last_login_ip inet`.
-- `user_signals` (lightweight) — `user_id`, `ip`, `device_hash`, `seen_at` for IP/device history.
-
-**New server fns in `src/lib/admin.functions.ts`:**
-- `blockUser`, `unblockUser`, `deleteUserAccount` (uses `supabaseAdmin.auth.admin.deleteUser`).
-- `approveFlaggedUser`, `rejectFlaggedUser`.
-- `getUserAuditDetail` for the activity panel.
-
-**New helper `src/lib/blocklist.server.ts`:**
-- `fingerprintEmail`, `fingerprintPhone`, normalisers.
-- `checkBlocklist(signals)` → `{ hardMatch, softMatches }`.
-- Called from signup hook, business invite accept, and Stripe Connect onboarding.
-
-**Auth enforcement:** add `assertNotBlocked(userId)` to `requireSupabaseAuth` middleware so every server fn rejects blocked users. Client `onAuthStateChange` checks `is_blocked` and signs them out.
-
-**UI:** extend the existing user card with a "⋯" menu (Block / Unblock / Delete / Force reset / Impersonate). Add **Flagged** filter chip next to All/Trusted/Untrusted. Flagged cards show match reason inline with Approve / Reject buttons.
-
-## Out of scope (flag for later)
-
-- True device fingerprinting library (FingerprintJS) — we'll use a simple hash of UA + screen + tz for now.
-- Cross-account graph analysis ("show me all accounts sharing this IP").
-- Automated risk scoring / ML.
+## Out of scope
+- Deal-form Essentials/Advanced split (covered in prior plan).
+- Changes to Stripe Connect itself.
