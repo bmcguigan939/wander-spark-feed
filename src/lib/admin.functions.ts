@@ -353,3 +353,229 @@ export const revokeRole = createServerFn({ method: "POST" })
     await logAction(context.userId, `revoke_${data.role}`, "user", data.userId);
     return { ok: true };
   });
+
+// ============================================================
+// Account blocking, deletion, and flagged-signup review
+// ============================================================
+
+async function collectSignalsForUser(userId: string): Promise<Signal[]> {
+  const signals: Signal[] = [];
+
+  // Auth identity (email / phone)
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (authUser?.user?.email) signals.push({ kind: "email", value: authUser.user.email });
+  if (authUser?.user?.phone) signals.push({ kind: "phone", value: authUser.user.phone });
+
+  // Profile (business name / website) + Stripe account
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("business_name,business_website_url,stripe_connect_account_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.business_name) signals.push({ kind: "business_name", value: profile.business_name });
+  if (profile?.business_website_url) signals.push({ kind: "website", value: profile.business_website_url });
+  if ((profile as any)?.stripe_connect_account_id) {
+    signals.push({ kind: "stripe_account", value: (profile as any).stripe_connect_account_id });
+  }
+
+  // IP / device signals
+  const { data: sigs } = await supabaseAdmin
+    .from("user_signals")
+    .select("kind,raw_value")
+    .eq("user_id", userId)
+    .limit(50);
+  for (const s of sigs ?? []) {
+    if (!s.raw_value) continue;
+    if (s.kind === "ip" || s.kind === "signup_ip") signals.push({ kind: "ip", value: s.raw_value });
+    if (s.kind === "device") signals.push({ kind: "device", value: s.raw_value });
+  }
+  return signals;
+}
+
+async function ensureNotSelfOrLastAdmin(adminId: string, targetId: string) {
+  if (adminId === targetId) throw new Error("You cannot block or delete your own account here.");
+  const { data: isTargetAdmin } = await supabaseAdmin
+    .from("user_roles")
+    .select("user_id")
+    .eq("user_id", targetId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (isTargetAdmin) {
+    const { count } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id", { count: "exact", head: true })
+      .eq("role", "admin");
+    if ((count ?? 0) <= 1) throw new Error("Cannot block or delete the last admin.");
+  }
+}
+
+export const blockUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      reason: z.string().min(1).max(500),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    await ensureNotSelfOrLastAdmin(context.userId, data.userId);
+
+    // 1. Mark profile blocked
+    const { error } = await (supabaseAdmin.from("profiles") as any).update({
+      is_blocked: true,
+      blocked_at: new Date().toISOString(),
+      blocked_by: context.userId,
+      block_reason: data.reason,
+      pending_admin_review: false,
+    }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+
+    // 2. Hide their content + deactivate their deals
+    await supabaseAdmin.from("videos").update({ is_hidden: true }).eq("creator_id", data.userId);
+    await supabaseAdmin.from("deals").update({ is_active: false }).eq("business_id", data.userId);
+
+    // 3. Capture fingerprints to the blocklist
+    const signals = await collectSignalsForUser(data.userId);
+    await addBlockedIdentities(signals, data.userId, data.reason, context.userId);
+
+    // 4. Revoke active sessions so the next request signs them out
+    try {
+      await supabaseAdmin.auth.admin.signOut(data.userId, "global" as any);
+    } catch (e) {
+      console.error("[blockUser] signOut failed", e);
+    }
+
+    await logAction(context.userId, "block_user", "user", data.userId, data.reason);
+    return { ok: true };
+  });
+
+export const unblockUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { error } = await (supabaseAdmin.from("profiles") as any).update({
+      is_blocked: false,
+      blocked_at: null,
+      blocked_by: null,
+      block_reason: null,
+    }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await logAction(context.userId, "unblock_user", "user", data.userId);
+    return { ok: true };
+  });
+
+export const deleteUserAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      reason: z.string().min(1).max(500),
+      addToBlocklist: z.boolean().default(true),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    await ensureNotSelfOrLastAdmin(context.userId, data.userId);
+
+    // Capture fingerprints BEFORE deletion (auth row goes away)
+    if (data.addToBlocklist) {
+      const signals = await collectSignalsForUser(data.userId);
+      await addBlockedIdentities(signals, data.userId, `Deleted: ${data.reason}`, context.userId);
+    }
+
+    // Hide content (anonymise rather than hard-delete to keep historical bookings intact)
+    await supabaseAdmin.from("videos").update({ is_hidden: true }).eq("creator_id", data.userId);
+    await supabaseAdmin.from("deals").update({ is_active: false }).eq("business_id", data.userId);
+
+    // Delete the auth user — profiles row should cascade if FK is set; otherwise fall back.
+    const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (authErr) {
+      // If auth deletion fails, mark as blocked instead so admin still has control
+      await (supabaseAdmin.from("profiles") as any).update({
+        is_blocked: true,
+        blocked_at: new Date().toISOString(),
+        blocked_by: context.userId,
+        block_reason: `Delete failed, blocked instead: ${data.reason}`,
+      }).eq("id", data.userId);
+      throw new Error(`Auth deletion failed: ${authErr.message}. Account blocked instead.`);
+    }
+    // Best-effort cleanup of profile row (no-op if cascade already handled it)
+    await supabaseAdmin.from("profiles").delete().eq("id", data.userId);
+
+    await logAction(context.userId, "delete_user", "user", data.userId, data.reason);
+    return { ok: true };
+  });
+
+export const approveFlaggedUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { error } = await (supabaseAdmin.from("profiles") as any).update({
+      pending_admin_review: false,
+      review_reason: null,
+      review_match_details: null,
+    }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    await logAction(context.userId, "approve_flagged_user", "user", data.userId);
+    return { ok: true };
+  });
+
+export const rejectFlaggedUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      reason: z.string().min(1).max(500),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    // Same effect as block, but logged as a rejection of a flagged signup
+    await ensureNotSelfOrLastAdmin(context.userId, data.userId);
+    await (supabaseAdmin.from("profiles") as any).update({
+      is_blocked: true,
+      blocked_at: new Date().toISOString(),
+      blocked_by: context.userId,
+      block_reason: data.reason,
+      pending_admin_review: false,
+    }).eq("id", data.userId);
+    await supabaseAdmin.from("videos").update({ is_hidden: true }).eq("creator_id", data.userId);
+    await supabaseAdmin.from("deals").update({ is_active: false }).eq("business_id", data.userId);
+    const signals = await collectSignalsForUser(data.userId);
+    await addBlockedIdentities(signals, data.userId, `Rejected at review: ${data.reason}`, context.userId);
+    try { await supabaseAdmin.auth.admin.signOut(data.userId, "global" as any); } catch {}
+    await logAction(context.userId, "reject_flagged_user", "user", data.userId, data.reason);
+    return { ok: true };
+  });
+
+export const getUserAuditDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const [{ data: signals }, { data: actions }, { data: authUser }] = await Promise.all([
+      supabaseAdmin
+        .from("user_signals")
+        .select("kind,raw_value,seen_at")
+        .eq("user_id", data.userId)
+        .order("seen_at", { ascending: false })
+        .limit(20),
+      supabaseAdmin
+        .from("admin_actions")
+        .select("action,notes,created_at,admin_id")
+        .eq("target_id", data.userId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabaseAdmin.auth.admin.getUserById(data.userId),
+    ]);
+    return {
+      email: authUser?.user?.email ?? null,
+      phone: authUser?.user?.phone ?? null,
+      lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
+      signals: signals ?? [],
+      actions: actions ?? [],
+    };
+  });
