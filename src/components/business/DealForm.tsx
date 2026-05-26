@@ -184,6 +184,13 @@ export function DealForm({
             </span>
           </label>
           {isOperatorMarkup && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+              Operator listings must be bookable through Travidz so we can collect the
+              11% fee on top of your price. We'll force <em>Book through Travidz</em>{" "}
+              on when you save.
+            </div>
+          )}
+          {isOperatorMarkup && (
             <div className="space-y-2 pt-1">
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">
