@@ -41,6 +41,8 @@ export type FeedVideo = {
     title: string;
     discount_label: string | null;
     image_url: string | null;
+    rating_avg: number | null;
+    rating_count: number | null;
   } | null;
   matchedBusiness?: {
     id: string;
@@ -49,6 +51,8 @@ export type FeedVideo = {
     logo_url: string | null;
     city: string | null;
     country: string | null;
+    rating_avg: number | null;
+    rating_count: number | null;
   } | null;
   music?: {
     id: string;
