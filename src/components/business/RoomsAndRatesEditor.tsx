@@ -453,7 +453,17 @@ function RoomPhotosUploader({
   );
 }
 
-function RatePlanRow({ rate, dealId, onChange }: { rate: RatePlan; dealId: string; onChange: () => void }) {
+function RatePlanRow({
+  rate,
+  dealId,
+  onChange,
+  showBreakfast = true,
+}: {
+  rate: RatePlan;
+  dealId: string;
+  onChange: () => void;
+  showBreakfast?: boolean;
+}) {
   const upsert = useServerFn(upsertRatePlan);
   const del = useServerFn(deleteRatePlan);
   const [local, setLocal] = useState({
