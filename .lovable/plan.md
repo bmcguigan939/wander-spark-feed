@@ -1,59 +1,39 @@
-## Remaining work (Steps 4–6 of 6)
+## Commission model — confirmed rules
 
-Steps 1–3 are done: DB migration, `stripe-connect.functions.ts`, checkout split with `application_fee_amount` + `transfer_data.destination`, webhooks for `account.updated` / `payout.*`, and Connect-gated onboarding UI.
+Two booking types, both already wired through Stripe Connect with split capture. Operator/hotel always receives their entitled amount in full; **Stripe processing fee always comes out of Travidz's cut**, never the partner's.
 
-### Step 4 — Legal copy updates
+### Hotel bookings (commission model)
+- Customer pays listed price (e.g. £100)
+- Hotel receives **89%** via `transfer_data.destination` (£89.00)
+- Travidz application fee: **11% gross** (£11.00)
+- Stripe processing fee (~2.9% + £0.20) deducted from Travidz's £11 → Travidz net ~£7.90
+- Net pool flows into `commission.ts` tier split (creator vs platform per tier)
 
-Update two pages to disclose Stripe Connect / KYC and the payout model:
+### Operator bookings (markup model)
+- Operator sets base rate (e.g. £80); deal listed at customer price (e.g. £100)
+- Operator receives **base rate** via `transfer_data.destination` (£80.00 — their advertised rate)
+- Travidz application fee: **full uplift** = listed − base (£20.00)
+- Stripe processing fee deducted from Travidz's £20 → Travidz net ~£16.90
+- Net pool flows into `commission.ts` tier split
 
-- `src/routes/legal.business-agreement.tsx`
-  - Add "Payouts via Stripe Connect" section: operators/hotels onboard to Stripe Express, complete KYC with Stripe, and receive payouts directly from Stripe to their linked bank account.
-  - Clarify Travidz never holds operator funds long-term; Stripe splits each charge at capture (`application_fee_amount` to Travidz, remainder to connected account).
-  - Document the 11% platform fee for commission deals and "uplift = price − operator base price" for markup deals.
-  - Note that Stripe (not Travidz) handles bank verification, payout scheduling, and tax forms (1099-K where applicable).
+### Code changes
 
-- `src/routes/legal.terms.tsx`
-  - Short customer-facing note: payments processed by Stripe; for bookings of third-party hotels/operators, funds settle to the provider via Stripe Connect.
+1. **`src/lib/booking.functions.ts`**
+   - `COMMISSION_PCT = 8` → `COMMISSION_PCT = 11` (hotel path only).
+   - Operator markup path already uses `price − operator_base_price`; no change.
+   - Both paths continue to use `application_fee_amount` + `transfer_data.destination` so Stripe deducts processing fees from the platform fee, leaving the partner's payout untouched.
 
-### Step 5 — Admin payouts dashboard rewrite
+2. **No change needed**
+   - `src/lib/commission.ts` — already `totalPct: 11` with Stripe-fees-absorbed model.
+   - `legal.creator-agreement.tsx`, `legal.business-agreement.tsx` — already state 11%.
+   - Webhook + `connect_payouts` recording — unaffected.
 
-Replace the existing "manual bank details" admin view with a read-only Connect status table.
+### Smoke check after the change
+- £100 hotel booking: Checkout Session shows `application_fee_amount=1100`, destination = hotel's Connect account, hotel payout = £89.
+- £100 operator deal (base £80): `application_fee_amount=2000`, destination = operator's Connect account, operator payout = £80.
+- `deal_redemptions` fee snapshot reflects the same numbers.
 
-- New server fn `listConnectAccounts` in `src/lib/admin.functions.ts` (admin-only middleware): returns one row per hotel/operator profile with `stripe_connect_account_id`, `stripe_connect_status`, `charges_enabled`, `payouts_enabled`, `requirements.currently_due` count, last `connect_payouts` entry (amount, status, arrival_date).
-- New server fn `getConnectDashboardLinkForProfile` (admin-only): wraps `createConnectDashboardLink` for a target profile so admins can open Stripe Express dashboard on behalf of an operator for support.
-- Update `src/routes/admin.payouts.tsx` (or create if absent):
-  - Table columns: Business, Type, Connect status badge, Charges, Payouts, Outstanding requirements, Last payout, Actions (Open Stripe dashboard, Refresh status).
-  - Remove all references to `payout_bank_details_encrypted` and the manual approval flow.
-  - "Refresh status" calls `refreshConnectStatus` for the selected profile.
-
-### Step 6 — End-to-end smoke test (sandbox)
-
-Run a scripted sandbox test and capture results in chat:
-
-1. Create test operator + hotel profiles, call `startConnectOnboarding`, complete Express onboarding with Stripe test data (`000-00-0000`, routing `110000000`, account `000123456789`).
-2. Verify `account.updated` webhook fires → DB columns `stripe_connect_status='active'`, `charges_enabled=true`, `payouts_enabled=true`.
-3. Confirm `bookable=true` is now allowed on a deal owned by that profile; confirm it is rejected for a profile without active Connect (trigger error).
-4. Run a test commission booking ($100 deal):
-   - Expect Checkout Session created with `application_fee_amount=1100` (11%) and `transfer_data.destination=<acct_...>`.
-   - Complete payment with test card `4242 4242 4242 4242`.
-   - Verify `checkout.session.completed` webhook stores fee snapshot on `deal_redemptions`.
-5. Run a test operator markup booking (operator base $80, listed $100):
-   - Expect `application_fee_amount=2000` (uplift), destination = operator's Connect account.
-6. Trigger a Stripe sandbox payout, verify `payout.paid` webhook writes to `connect_payouts`.
-7. Confirm admin dashboard shows both accounts as active with correct last-payout row.
-
-Output: a pass/fail checklist in chat plus any bugs found and fixed inline.
-
-### Files touched
-
-- Edit: `src/routes/legal.business-agreement.tsx`, `src/routes/legal.terms.tsx`, `src/routes/admin.payouts.tsx`
-- Create: `src/lib/admin.functions.ts` additions (or new `admin-connect.functions.ts` if cleaner)
-- No new migrations, no new secrets
-
-### Out of scope (intentionally)
-
-- 1099-K generation UI (Stripe handles directly)
-- Multi-currency payouts (USD only for launch)
-- Connect Standard accounts (Express only)
-
-Approve to proceed with Step 4 first, then 5, then 6 in sequence.
+### Out of scope
+- No DB migration, no new secrets.
+- No change to refund reversal flow.
+- Creator tier math is already correct in `commission.ts` and stamped per redemption.
