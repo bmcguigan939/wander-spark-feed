@@ -1,51 +1,42 @@
-## What these two notes actually mean
+## Goal
+Make the onboarding checklist read correctly for activity operators. Today the wording is hotel-biased ("Add property photos", "Add rooms / activity options", "Set prices") even when the operator only sells activities. Branch the copy by what the operator actually lists — without changing any gate logic, schema, trigger, or the `bookable` rule.
 
-### 1. Operator payout method check — the `manual_bank` proxy
+## Changes
 
-**What the code does today** (`src/lib/bookable.functions.ts:105`, `:179`, `src/lib/deals.functions.ts:102`):
-A deal is only allowed to go `bookable=true` if the owner profile passes a payout gate. That gate accepts **either** of two things:
+### 1. `src/lib/bookable.functions.ts` (additive return field only)
+- Add `accountKind: "stay" | "activity" | "unknown"` to `BookableStatus`.
+- Derive inside the existing query path (no extra round-trip): from the same `deals` rows already fetched, look at `category`:
+  - any deal with `category = "stay"` → `"stay"`
+  - else if any deal with `category in ("do","tour")` → `"activity"`
+  - else (no deals yet, or only eat/transport/other) → `"unknown"`
+- Apply to both `getBookableStatus` (server fn) and `computeBookableStatus` (server-internal helper). Need to extend the `select("id")` to `select("id,category")`.
+- Gate computation is untouched. The trigger and `bookable` boolean don't change.
 
-```ts
-p.stripe_connect_payouts_enabled === true   // proper Stripe Connect
-|| p.payout_method === 'manual_bank'         // legacy escape hatch
-```
+### 2. `src/components/business/OnboardingChecklist.tsx` (copy only)
+- Read `accountKind` from `bookable`.
+- Replace the static `GATE_LABELS` import usage and `gateDescription` with local, kind-aware variants:
 
-The `'manual_bank'` branch is a leftover from before Stripe Connect existed — it lets a business flip a flag on their profile and be treated as "ready for payouts" even though no real bank account, no KYC, and no automated payout path is wired up. If a booking happens against such a profile, Travidz collects the money in its own Stripe balance and there is **no automated transfer** to the partner — it would have to be paid out by hand.
+| Gate | stay / unknown (today) | activity |
+|---|---|---|
+| photos title | Add property photos | Add photos of your activity |
+| photos desc | At least 3 photos of your property. | At least 3 photos of your activity or meeting location. |
+| items title | Add rooms / activity options | Add your activity packages |
+| items desc | Add rooms or activity options, each with a photo. | Add each package you sell (half-day, full-day, private, etc.), with a photo. |
+| rates title | Set prices | Price each package |
+| rates desc | Price each room/option with a cancellation policy. | Price each package and pick a cancellation policy. |
+| calendar title | Connect your calendar | Connect availability |
+| calendar desc | Connect an iCal feed (Booking.com, Airbnb, Lodgify) to prevent double-bookings. | Connect an iCal feed or add native time-slots so we never overbook you. |
+| payouts | (unchanged) | (unchanged) |
 
-**Why this is a launch blocker:** you said all payouts must be automatic via Stripe Connect. As long as the `manual_bank` fallback is in the gate, an operator/hotel can sit at "bookable" without ever finishing Connect onboarding, and customer money will land in Travidz's account with no automated path out.
+- For `"unknown"` use the current (stay) copy so existing hotels see no change and brand-new accounts see neutral wording until their first deal sets the kind.
 
-**Fix:**
-- Remove the `|| p.payout_method === 'manual_bank'` clause from the bookable gate in both `bookable.functions.ts` (two sites) and `deals.functions.ts`. Gate becomes Stripe Connect only: `stripe_connect_payouts_enabled === true` AND `charges_enabled === true`.
-- Update the DB validation trigger `deals_validate_operator_markup` the same way — drop the `manual_bank` branch so a deal cannot be saved as bookable without active Connect.
-- Migrate any existing rows: for every profile currently sitting on `payout_method='manual_bank'` with no Connect account, auto-unpublish their bookable deals and notify them via `PayoutMethodCard` that they need to complete Connect onboarding before re-publishing.
-- Update `PayoutMethodCard` copy to remove "manual bank" as a presented option; Stripe Connect Express becomes the only path.
-- Leave the `profiles.payout_method` column in place (don't drop it) so historic audit data is preserved, but stop reading it for gating.
+### 3. Out of scope
+- `GATE_LABELS` / `GATE_LINKS` exported constants remain as-is (other callers may rely on them). The branching lives only in the checklist.
+- `RoomsAndRatesEditor`, `BusinessPhotosEditor`, `PayoutMethodCard`, `DealForm` — not touched in this pass. `BusinessPhotosEditor` already accepts a `kind` prop; rewording the rooms/rates editor is a separate, larger UX pass.
+- Gate logic, Stripe Connect requirements, commission math, schema, triggers — unchanged.
 
-### 2. iframe embed fallback for operator booking-page preview
-
-**What the code does today** (`src/routes/business.signup.tsx:237-255`):
-During operator signup we ask for their existing booking page URL and try to render it in an `<iframe sandbox="allow-scripts allow-same-origin allow-forms">`. If the page sends `X-Frame-Options: DENY` / `frame-ancestors 'none'` (most modern booking engines do), the iframe stays blank. The current fallback is just a muted text message "Couldn't embed a preview — that's fine, we'll still save the URL," and signup proceeds with the URL stored as-is.
-
-**Why this came up as a concern:** it doesn't break payments — the URL is still saved and the price-match scanner can still scrape it server-side. The risk is purely **operator trust at signup**: the operator sees a blank box and may abandon. It's also not great UX — `onError` on iframes is unreliable, so the "Couldn't embed" message often never appears; the user just sees an empty frame.
-
-**Fix (UI-only, no business-logic change):**
-- Replace the iframe with a server-side reachability + screenshot check:
-  - Add a small server fn `checkOperatorSiteUrl({ url })` that does a HEAD/GET, returns `{ reachable, title, finalUrl, frameable }`.
-  - If reachable, render a card preview (favicon + site title + final URL) — no iframe needed. This always works regardless of X-Frame-Options.
-  - If unreachable / non-200, surface a clear inline error and block the optional URL field from saving until corrected (still lets them skip the optional section entirely).
-- Drop the `onError` handler and the `embedFailed` state — replaced by the deterministic server-side check.
-- Optional follow-up (not in this plan): generate a real thumbnail via a screenshot service. Out of scope until launch is stable.
-
-### Files touched
-
-- Edit: `src/lib/bookable.functions.ts`, `src/lib/deals.functions.ts`, `src/components/business/PayoutMethodCard.tsx`, `src/routes/business.signup.tsx`
-- New: `src/lib/operator-site-check.functions.ts` (server fn for URL reachability)
-- New migration: update `deals_validate_operator_markup` trigger; one-time `UPDATE deals SET is_active=false WHERE …` for legacy manual_bank owners without active Connect
-- No new secrets
-
-### Smoke checks after the change
-
-1. Profile with `payout_method='manual_bank'` and no Connect → cannot set `bookable=true` (UI + trigger both reject).
-2. Profile with active Connect → bookable allowed; Checkout split fires as before.
-3. Operator signup with a `X-Frame-Options: DENY` URL → preview card renders (no blank iframe), URL saves.
-4. Operator signup with an unreachable URL → inline error, URL not saved unless corrected or section skipped.
+## Verification
+- Operator with only `do`/`tour` deals → checklist shows activity wording.
+- Hotel with any `stay` deal → checklist shows existing wording (regression-safe).
+- Brand-new account with no deals → existing (stay-flavored) wording.
+- `bookable === true` still hides the checklist; gate completion check still works because gate ids didn't change.
