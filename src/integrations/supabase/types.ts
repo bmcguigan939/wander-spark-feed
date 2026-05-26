@@ -2612,6 +2612,7 @@ export type Database = {
           competitor_network: string
           competitor_url: string
           currency: string
+          deal_id: string | null
           dispute_evidence_url: string | null
           dispute_reason: string | null
           dispute_resolved_at: string | null
@@ -2620,7 +2621,7 @@ export type Database = {
           evidence_url: string | null
           expires_at: string
           issued_at: string
-          link_id: string
+          link_id: string | null
           matched_price_cents: number
           original_price_cents: number
           redeemed_at: string | null
@@ -2633,6 +2634,7 @@ export type Database = {
           competitor_network: string
           competitor_url: string
           currency?: string
+          deal_id?: string | null
           dispute_evidence_url?: string | null
           dispute_reason?: string | null
           dispute_resolved_at?: string | null
@@ -2641,7 +2643,7 @@ export type Database = {
           evidence_url?: string | null
           expires_at: string
           issued_at?: string
-          link_id: string
+          link_id?: string | null
           matched_price_cents: number
           original_price_cents: number
           redeemed_at?: string | null
@@ -2654,6 +2656,7 @@ export type Database = {
           competitor_network?: string
           competitor_url?: string
           currency?: string
+          deal_id?: string | null
           dispute_evidence_url?: string | null
           dispute_reason?: string | null
           dispute_resolved_at?: string | null
@@ -2662,14 +2665,22 @@ export type Database = {
           evidence_url?: string | null
           expires_at?: string
           issued_at?: string
-          link_id?: string
+          link_id?: string | null
           matched_price_cents?: number
           original_price_cents?: number
           redeemed_at?: string | null
           status?: Database["public"]["Enums"]["price_match_status"]
           traveller_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "price_match_codes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       price_quotes: {
         Row: {

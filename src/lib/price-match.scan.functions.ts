@@ -22,7 +22,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: deal } = await supabaseAdmin
       .from("deals")
-      .select("id,title,city,country,destination,price_cents,currency,is_active,status")
+      .select("id,title,city,country,destination,price_cents,currency,is_active,status,business_id")
       .eq("id", data.dealId)
       .maybeSingle();
     if (!deal || !deal.is_active || deal.status !== "approved") {
@@ -33,6 +33,8 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
         cheapest_competitor_url: null,
         scanned_urls: [],
         ran_at: new Date().toISOString(),
+        match_code: null,
+        match_expires_at: null,
         direct_price_cents: null as number | null,
         currency: "GBP",
       };
@@ -44,6 +46,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
       query,
       direct_price_cents: deal.price_cents ?? null,
       direct_currency: deal.currency ?? "GBP",
+      business_id: (deal as any).business_id ?? null,
       check_in: data.check_in ?? null,
       check_out: data.check_out ?? null,
       guests: data.guests ?? null,

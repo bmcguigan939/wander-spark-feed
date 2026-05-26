@@ -11,7 +11,7 @@ import {
   withdrawApplication,
 } from "@/lib/deal-applications.functions";
 import { useAuth } from "@/lib/auth";
-import { MapPin, ExternalLink, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck, CreditCard } from "lucide-react";
+import { MapPin, ArrowLeft, Send, CheckCircle2, XCircle, Clock, BadgeCheck, CreditCard } from "lucide-react";
 import { claimRedemption } from "@/lib/redemptions.functions";
 import { RateSelector } from "@/components/deals/RateSelector";
 import { PhotoGallery } from "@/components/PhotoGallery";
@@ -59,11 +59,12 @@ function DealDetail() {
   });
   const galleryPhotos = (photosData?.photos ?? []) as Array<{ id: string; url: string; caption: string | null }>;
 
-  const onView = async () => {
+  // Travidz is closed-loop: outbound clicks to partner URLs are removed.
+  // We still log impressions/clicks for analytics from inside the page.
+  const logImpression = async () => {
     try {
       await logClick({ data: { dealId: id, referrerVideoId } });
     } catch {}
-    if (deal?.url) window.open(deal.url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -99,21 +100,21 @@ function DealDetail() {
             {deal.bookable && deal.price_cents > 0 && (
               <PriceMatchBadge dealId={id} />
             )}
-            <button
-              onClick={onView}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30"
-            >
-              <ExternalLink className="h-4 w-4" /> View deal
-            </button>
             {deal.bookable && deal.price_cents > 0 && (
               <Link
                 to="/book/$dealId"
                 params={{ dealId: id }}
                 search={{ v: referrerVideoId }}
+                onClick={logImpression}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary"
               >
                 <CreditCard className="h-4 w-4" /> Book now
               </Link>
+            )}
+            {!deal.bookable && (
+              <p className="mt-6 rounded-xl border border-border bg-card/40 px-4 py-3 text-center text-xs text-muted-foreground">
+                This stay isn't bookable on Travidz yet — check back soon.
+              </p>
             )}
             {deal.bookable && (
               <RateSelector
