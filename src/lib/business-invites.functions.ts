@@ -323,17 +323,19 @@ export const acceptInvite = createServerFn({ method: "POST" })
 
     // Resolve the website URL: prefer the business-provided value at accept
     // time, otherwise fall back to whatever the creator entered on the invite.
-    const resolvedWebsiteUrl = data.websiteUrl ?? invite.website_url ?? null;
-    if (!resolvedWebsiteUrl) {
-      throw new Error("Please enter your website URL to continue.");
-    }
-    // Block self-referential URLs (e.g. https://travidz.com) — they create
-    // a redirect loop on the "Book direct" CTA in the feed.
-    if (isSelfHost(resolvedWebsiteUrl)) {
+    // If neither is provided, the business runs a Travidz-hosted store and
+    // bookings flow through the on-platform checkout (no external URL).
+    const providedUrl = data.websiteUrl ?? invite.website_url ?? null;
+    const travidzHosted = !providedUrl;
+    if (providedUrl && isSelfHost(providedUrl)) {
       throw new Error(
         "Please enter your own booking website (not a travidz.com URL).",
       );
     }
+    // Use a Travidz sentinel URL when there's no external site; the deal
+    // page treats self-host URLs as on-platform booking and routes to
+    // /book/$dealId instead of opening an external link.
+    const resolvedWebsiteUrl = providedUrl ?? "https://travidz.com";
 
     // If the business overrode the URL, persist it on the invite so the audit
     // trail and any follow-up emails reflect the final destination.
@@ -353,7 +355,9 @@ export const acceptInvite = createServerFn({ method: "POST" })
         .insert({
           business_id: userId,
           title: invite.business_name,
-          description: `Direct website — featured by @${invite.creator_id.slice(0, 6)} on Travidz`,
+          description: travidzHosted
+            ? `Travidz-hosted store — featured by @${invite.creator_id.slice(0, 6)} on Travidz`
+            : `Direct website — featured by @${invite.creator_id.slice(0, 6)} on Travidz`,
           url: resolvedWebsiteUrl,
           city: invite.city,
           source: "invite",
