@@ -70,10 +70,10 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     if (!deal.is_active || deal.status !== "approved") throw new Error("Deal is not available");
     if (!deal.business_id) throw new Error("This deal has no business owner");
 
-    // Load pricing model + business Connect account for the split.
+    // Load business Connect account for the split.
     const { data: dealMeta } = await supabaseAdmin
       .from("deals")
-      .select("pricing_model, operator_base_price_cents, connect_account_id")
+      .select("connect_account_id")
       .eq("id", deal.id)
       .maybeSingle();
     const { data: bizProfile } = await supabaseAdmin
@@ -271,8 +271,6 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
           ? {
               application_fee_amount: computeApplicationFee({
                 chargeNow,
-                pricingModel: (dealMeta as any)?.pricing_model ?? "commission",
-                operatorBasePriceCents: (dealMeta as any)?.operator_base_price_cents ?? null,
                 guests: data.guests,
                 commissionPct: COMMISSION_PCT,
               }),
@@ -288,7 +286,6 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         ratePlanId: ratePlan?.id ?? "",
         paymentTiming,
         connectAccountId: connectAccountId ?? "",
-        pricingModel: (dealMeta as any)?.pricing_model ?? "commission",
       },
     });
 
