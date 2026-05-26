@@ -67,7 +67,12 @@ export function BusinessPhotosEditor({ businessId, kind = "stay" }: { businessId
           continue;
         }
         const { data: pub } = supabase.storage.from("business-photos").getPublicUrl(path);
-        await addFn({ data: { url: pub.publicUrl, category: "other" } });
+        await addFn({
+          data: {
+            url: pub.publicUrl,
+            category: kind === "activity" ? "location" : "exterior",
+          },
+        });
       }
       invalidate();
       toast.success("Photos uploaded");
