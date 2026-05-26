@@ -76,11 +76,13 @@ export const getMatchCode = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!row) return { code: null };
 
-    const { data: link } = await supabaseAdmin
-      .from("affiliate_links")
-      .select("url,label")
-      .eq("id", row.link_id)
-      .maybeSingle();
+    const { data: link } = row.link_id
+      ? await supabaseAdmin
+          .from("affiliate_links")
+          .select("url,label")
+          .eq("id", row.link_id)
+          .maybeSingle()
+      : { data: null as { url: string; label: string } | null };
 
     return {
       code: row,

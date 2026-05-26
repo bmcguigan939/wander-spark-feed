@@ -48,12 +48,14 @@ export const Route = createFileRoute("/api/public/attribute")({
           ? Math.max(0, Math.min(10_000_000, parseInt(orderValueRaw, 10) || 0))
           : codeRow.matched_price_cents;
 
-        // Resolve deal + creator via the affiliate link
-        const { data: link } = await supabaseAdmin
-          .from("affiliate_links")
-          .select("creator_id,video_id,business_id")
-          .eq("id", codeRow.link_id)
-          .maybeSingle();
+        // Resolve deal + creator via the affiliate link (legacy path only).
+        const { data: link } = codeRow.link_id
+          ? await supabaseAdmin
+              .from("affiliate_links")
+              .select("creator_id,video_id,business_id")
+              .eq("id", codeRow.link_id)
+              .maybeSingle()
+          : { data: null as { creator_id: string | null; video_id: string | null; business_id: string | null } | null };
 
         // Need a deal_id for deal_redemptions; pick the cheapest active deal
         // owned by this business (same heuristic as parity check).
