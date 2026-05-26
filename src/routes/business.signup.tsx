@@ -203,60 +203,6 @@ function BusinessSignupPage() {
           </span>
         </label>
 
-        <details className="rounded-2xl border border-border bg-card p-3 text-[13px]">
-          <summary className="cursor-pointer font-medium text-foreground">
-            Activity operator? Add your booking page (optional)
-          </summary>
-          <p className="mt-2 text-xs text-muted-foreground">
-            We use your website price as the base and add an 11% booking fee on top.
-            We never compare against your own site — only third-party resellers.
-          </p>
-          <input
-            type="url"
-            placeholder="https://your-activity.com"
-            value={operatorSiteUrl}
-            onChange={(e) => {
-              setOperatorSiteUrl(e.target.value);
-            }}
-            className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-          {operatorSiteUrl.trim() && /^https?:\/\//.test(operatorSiteUrl.trim()) && (
-            <div className="mt-3">
-              {checkingSite && (
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Checking that URL…
-                </div>
-              )}
-              {!checkingSite && siteCheck?.ok && (
-                <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-                  {siteCheck.faviconUrl ? (
-                    <img
-                      src={siteCheck.faviconUrl}
-                      alt=""
-                      className="h-5 w-5 rounded-sm"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-foreground">
-                      {siteCheck.title ?? siteCheck.finalUrl}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {siteCheck.finalUrl}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {!checkingSite && siteCheck && !siteCheck.ok && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  Couldn't reach that URL{siteCheck.error ? ` — ${siteCheck.error}` : ""}. Double-check the address, or leave this blank.
-                </div>
-              )}
-            </div>
-          )}
-        </details>
-
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         <button
