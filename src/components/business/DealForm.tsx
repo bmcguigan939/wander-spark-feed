@@ -28,11 +28,13 @@ export function DealForm({
   submitLabel,
   onSubmit,
   busy,
+  accountKind,
 }: {
   initial?: Partial<DealFormValues>;
   submitLabel: string;
   onSubmit: (values: DealFormValues) => Promise<void> | void;
   busy?: boolean;
+  accountKind?: "stay" | "activity" | "unknown";
 }) {
   const [v, setV] = useState<DealFormValues>({
     title: initial?.title ?? "",
@@ -48,7 +50,9 @@ export function DealForm({
     lng: initial?.lng ?? null,
     parity_exempt: initial?.parity_exempt ?? false,
     parity_exempt_reason: initial?.parity_exempt_reason ?? "",
-    category: initial?.category ?? "other",
+    category:
+      initial?.category ??
+      (accountKind === "activity" ? "do" : accountKind === "stay" ? "stay" : "other"),
     pricing_model: initial?.pricing_model ?? "commission",
     operator_base_price_cents: initial?.operator_base_price_cents ?? null,
     operator_site_url: initial?.operator_site_url ?? "",
