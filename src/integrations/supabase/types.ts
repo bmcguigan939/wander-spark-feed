@@ -460,6 +460,119 @@ export type Database = {
         }
         Relationships: []
       }
+      business_collab_defaults: {
+        Row: {
+          brand_donts: string | null
+          brand_dos: string | null
+          business_id: string
+          created_at: string
+          default_commission_pct: number
+          default_comp_room_id: string | null
+          default_deliverables: Json
+          default_nights: number | null
+          default_usage_rights_days: number
+          required_hashtags: string[]
+          required_mentions: string[]
+          updated_at: string
+        }
+        Insert: {
+          brand_donts?: string | null
+          brand_dos?: string | null
+          business_id: string
+          created_at?: string
+          default_commission_pct?: number
+          default_comp_room_id?: string | null
+          default_deliverables?: Json
+          default_nights?: number | null
+          default_usage_rights_days?: number
+          required_hashtags?: string[]
+          required_mentions?: string[]
+          updated_at?: string
+        }
+        Update: {
+          brand_donts?: string | null
+          brand_dos?: string | null
+          business_id?: string
+          created_at?: string
+          default_commission_pct?: number
+          default_comp_room_id?: string | null
+          default_deliverables?: Json
+          default_nights?: number | null
+          default_usage_rights_days?: number
+          required_hashtags?: string[]
+          required_mentions?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_collab_defaults_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_collab_defaults_default_comp_room_id_fkey"
+            columns: ["default_comp_room_id"]
+            isOneToOne: false
+            referencedRelation: "deal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_collab_rules: {
+        Row: {
+          auto_accept_enabled: boolean
+          blackout_dates: Json
+          business_id: string
+          created_at: string
+          manual_review_above_followers: number | null
+          max_accepts_per_month: number | null
+          max_concurrent_active: number | null
+          min_followers: number
+          min_rolling_gbv_cents: number
+          require_power_tier: boolean
+          require_verified: boolean
+          updated_at: string
+        }
+        Insert: {
+          auto_accept_enabled?: boolean
+          blackout_dates?: Json
+          business_id: string
+          created_at?: string
+          manual_review_above_followers?: number | null
+          max_accepts_per_month?: number | null
+          max_concurrent_active?: number | null
+          min_followers?: number
+          min_rolling_gbv_cents?: number
+          require_power_tier?: boolean
+          require_verified?: boolean
+          updated_at?: string
+        }
+        Update: {
+          auto_accept_enabled?: boolean
+          blackout_dates?: Json
+          business_id?: string
+          created_at?: string
+          manual_review_above_followers?: number | null
+          max_accepts_per_month?: number | null
+          max_concurrent_active?: number | null
+          min_followers?: number
+          min_rolling_gbv_cents?: number
+          require_power_tier?: boolean
+          require_verified?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_collab_rules_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_invites: {
         Row: {
           accepted_business_id: string | null
@@ -1117,6 +1230,8 @@ export type Database = {
       deal_applications: {
         Row: {
           approved_code: string | null
+          auto_decided: boolean
+          auto_decision_reason: string | null
           business_id: string
           commission_pct: number | null
           created_at: string
@@ -1132,6 +1247,8 @@ export type Database = {
         }
         Insert: {
           approved_code?: string | null
+          auto_decided?: boolean
+          auto_decision_reason?: string | null
           business_id: string
           commission_pct?: number | null
           created_at?: string
@@ -1147,6 +1264,8 @@ export type Database = {
         }
         Update: {
           approved_code?: string | null
+          auto_decided?: boolean
+          auto_decision_reason?: string | null
           business_id?: string
           commission_pct?: number | null
           created_at?: string
