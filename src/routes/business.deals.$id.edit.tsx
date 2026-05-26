@@ -72,6 +72,11 @@ function EditDealPage() {
                   const cleaned = Object.fromEntries(
                     Object.entries(values).filter(([, v]) => v !== "" && v !== undefined)
                   ) as any;
+                  // Operator-markup deals must remain bookable so Travidz can
+                  // collect the 11% uplift at checkout.
+                  if (cleaned.pricing_model === "operator_markup") {
+                    cleaned.bookable = true;
+                  }
                   await updateFn({ data: { id, patch: cleaned } });
                   toast.success("Saved");
                 } catch (e: any) {
