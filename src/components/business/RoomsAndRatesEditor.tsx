@@ -631,3 +631,218 @@ function RatePlanRow({
     </div>
   );
 }
+
+// ============ Activity packages ============
+
+function AddPackageButton({ dealId, onAdded }: { dealId: string; onAdded: () => void }) {
+  const upsert = useServerFn(upsertRoom);
+  const mut = useMutation({
+    mutationFn: () =>
+      upsert({
+        data: {
+          dealId,
+          patch: {
+            name: "New package",
+            max_guests: 10,
+            inventory_total: 10,
+            duration_minutes: 120,
+            min_group_size: 1,
+            max_group_size: 10,
+          },
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Package added");
+      onAdded();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+  return (
+    <button
+      type="button"
+      onClick={() => mut.mutate()}
+      disabled={mut.isPending}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/20 px-4 py-3 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <Plus className="h-4 w-4" /> Add a package
+    </button>
+  );
+}
+
+function PackageCard({
+  room,
+  rates,
+  dealId,
+  onChange,
+}: {
+  room: Room;
+  rates: RatePlan[];
+  dealId: string;
+  onChange: () => void;
+}) {
+  const upsert = useServerFn(upsertRoom);
+  const del = useServerFn(deleteRoom);
+  const [local, setLocal] = useState({
+    name: room.name,
+    description: room.description ?? "",
+    duration_minutes: room.duration_minutes ?? 120,
+    min_group_size: room.min_group_size ?? 1,
+    max_group_size: room.max_group_size ?? (room.max_guests || 10),
+    inventory_total: room.inventory_total ?? 10,
+    meeting_point: room.meeting_point ?? "",
+    includes: (room.includes ?? []).join(", "),
+    excludes: (room.excludes ?? []).join(", "),
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsert({
+        data: {
+          id: room.id,
+          dealId,
+          patch: {
+            name: local.name,
+            description: local.description || null,
+            max_guests: Number(local.max_group_size) || 10,
+            inventory_total: Number(local.inventory_total),
+            duration_minutes: Number(local.duration_minutes) || null,
+            min_group_size: Number(local.min_group_size) || null,
+            max_group_size: Number(local.max_group_size) || null,
+            meeting_point: local.meeting_point || null,
+            includes: local.includes
+              ? local.includes.split(",").map((s) => s.trim()).filter(Boolean)
+              : [],
+            excludes: local.excludes
+              ? local.excludes.split(",").map((s) => s.trim()).filter(Boolean)
+              : [],
+          },
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Saved");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => del({ data: { id: room.id, dealId } }),
+    onSuccess: () => {
+      toast.success("Package deleted");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  return (
+    <div className="mb-4 rounded-2xl border border-border bg-card/40 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Sparkles className="h-4 w-4" /> {room.name}
+        </div>
+        <button
+          type="button"
+          onClick={() => remove.mutate()}
+          className="text-muted-foreground hover:text-destructive"
+          aria-label="Delete package"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2">
+          <Label className="text-xs">Package name</Label>
+          <Input
+            value={local.name}
+            onChange={(e) => setLocal({ ...local, name: e.target.value })}
+            placeholder="e.g. Half-day group dive"
+          />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-xs">Description</Label>
+          <Textarea
+            rows={2}
+            value={local.description}
+            onChange={(e) => setLocal({ ...local, description: e.target.value })}
+            placeholder="What travellers get, skill level, age range…"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Duration (minutes)</Label>
+          <Input
+            type="number"
+            min={0}
+            value={local.duration_minutes}
+            onChange={(e) => setLocal({ ...local, duration_minutes: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Spots per slot</Label>
+          <Input
+            type="number"
+            min={1}
+            value={local.inventory_total}
+            onChange={(e) => setLocal({ ...local, inventory_total: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Min group size</Label>
+          <Input
+            type="number"
+            min={1}
+            value={local.min_group_size}
+            onChange={(e) => setLocal({ ...local, min_group_size: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Max group size</Label>
+          <Input
+            type="number"
+            min={1}
+            value={local.max_group_size}
+            onChange={(e) => setLocal({ ...local, max_group_size: Number(e.target.value) })}
+          />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-xs">Meeting point</Label>
+          <Input
+            value={local.meeting_point}
+            onChange={(e) => setLocal({ ...local, meeting_point: e.target.value })}
+            placeholder="e.g. Marina pier B, 9am"
+          />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-xs">What's included (comma-separated)</Label>
+          <Input
+            value={local.includes}
+            onChange={(e) => setLocal({ ...local, includes: e.target.value })}
+            placeholder="Equipment, Guide, Hotel pickup"
+          />
+        </div>
+        <div className="col-span-2">
+          <Label className="text-xs">What's not included (comma-separated)</Label>
+          <Input
+            value={local.excludes}
+            onChange={(e) => setLocal({ ...local, excludes: e.target.value })}
+            placeholder="Lunch, Gratuities"
+          />
+        </div>
+      </div>
+      <Button size="sm" className="mt-3" onClick={() => save.mutate()} disabled={save.isPending}>
+        Save package
+      </Button>
+
+      <RoomPhotosUploader room={room} dealId={dealId} onChange={onChange} />
+
+      <div className="mt-4 border-t border-border pt-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Rates for this package
+        </p>
+        {rates.map((rp) => (
+          <RatePlanRow key={rp.id} rate={rp} dealId={dealId} onChange={onChange} showBreakfast={false} />
+        ))}
+        <AddRateButton dealId={dealId} roomId={room.id} onAdded={onChange} />
+      </div>
+    </div>
+  );
+}
