@@ -16,6 +16,21 @@ type Step = {
   to: string;
 };
 
+function gateDescription(gate: BookableGate): string {
+  switch (gate) {
+    case "photos":
+      return "At least 3 photos of your property/operation.";
+    case "items":
+      return "Add rooms (stays) or activity options, each with a photo.";
+    case "rates":
+      return "Price each room/option with a cancellation policy.";
+    case "calendar":
+      return "Connect an iCal feed (Booking.com, Airbnb, Lodgify) to prevent double-bookings.";
+    case "payouts":
+      return "Add a bank account so we can pay you for confirmed bookings.";
+  }
+}
+
 export function OnboardingChecklist() {
   const [dismissed, setDismissed] = useState(false);
   const { user } = useAuth();
