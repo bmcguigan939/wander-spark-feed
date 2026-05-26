@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { evaluateCollabApplication } from "@/lib/collabs.functions";
 
 const applicationSelect =
   "id,deal_id,creator_id,business_id,status,pitch,requested_code,approved_code,commission_pct,decided_at,created_at,updated_at," +
@@ -48,7 +49,12 @@ export const applyForDeal = createServerFn({ method: "POST" })
       if ((error as any).code === "23505") throw new Error("You have already applied for this deal");
       throw new Error(error.message);
     }
-    return { id: row.id };
+    const verdict = await evaluateCollabApplication({
+      applicationId: row.id,
+      businessId: deal.business_id,
+      creatorId: userId,
+    });
+    return { id: row.id, autoAccepted: verdict.accepted };
   });
 
 export const withdrawApplication = createServerFn({ method: "POST" })
