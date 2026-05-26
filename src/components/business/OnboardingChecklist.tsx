@@ -8,6 +8,7 @@ import { getMyAgreementStatus } from "@/lib/verification.functions";
 import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate } from "@/lib/bookable.functions";
 import { COMMISSION } from "@/lib/commission";
 import { getMyCollabDefaults } from "@/lib/collabs.functions";
+import { getMyOperatorSite } from "@/lib/operator-site.functions";
 
 type Step = {
   id: string;
@@ -38,6 +39,7 @@ export function OnboardingChecklist() {
   const agreementFn = useServerFn(getMyAgreementStatus);
   const bookableFn = useServerFn(getBookableStatus);
   const defaultsFn = useServerFn(getMyCollabDefaults);
+  const operatorSiteFn = useServerFn(getMyOperatorSite);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
@@ -51,6 +53,11 @@ export function OnboardingChecklist() {
   const { data: collabDefaults } = useQuery({
     queryKey: ["collab-defaults"],
     queryFn: () => defaultsFn(),
+    enabled: !!user?.id,
+  });
+  const { data: operatorSite } = useQuery({
+    queryKey: ["my-operator-site"],
+    queryFn: () => operatorSiteFn(),
     enabled: !!user?.id,
   });
 
@@ -79,6 +86,17 @@ export function OnboardingChecklist() {
       done: !!collabDefaults?.defaults,
       to: "/business/collabs",
     },
+    ...(operatorSite?.operator_site_url
+      ? [
+          {
+            id: "operator-site",
+            title: "Operator booking page saved",
+            desc: "We use this as the base price and exclude it from third-party reseller checks.",
+            done: true,
+            to: "/business",
+          } satisfies Step,
+        ]
+      : []),
   ];
 
   const completed = steps.filter((s) => s.done).length;
