@@ -111,17 +111,20 @@ export function BusinessPhotosEditor({ businessId, kind = "stay" }: { businessId
   });
 
   return (
-    <section id="photos" className="rounded-2xl border border-border bg-card/40 p-4">
+    <section id="photos" className="scroll-mt-20 rounded-2xl border border-border bg-card/40 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Camera className="h-4 w-4" />
-          <h2 className="text-base font-semibold">Property photos</h2>
+          <h2 className="text-base font-semibold">
+            {kind === "activity" ? "Activity photos" : "Property photos"}
+          </h2>
         </div>
         <span className="text-xs text-muted-foreground">{photos.length}/50</span>
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
-        Add at least 3 photos showing your {kind === "activity" ? "operation" : "property"} so travellers can preview before booking.
-        Tap the star to choose your cover photo.
+        {kind === "activity"
+          ? "Add at least 3 photos of your activity in action — group shots, equipment, the location — so travellers know what they're booking. Tap the star to set your cover photo."
+          : "Add at least 3 photos showing your property so travellers can preview before booking. Tap the star to choose your cover photo."}
       </p>
 
       <label className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background/40 px-4 py-6 text-sm text-muted-foreground hover:text-foreground">
