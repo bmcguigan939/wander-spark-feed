@@ -140,7 +140,7 @@ function CollabBrief() {
                 Once your content is live, share the links in your business thread so they can confirm and your commissions start tracking.
               </p>
               <Link
-                to="/threads"
+                to="/studio/threads"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
               >
                 Open thread
