@@ -274,14 +274,6 @@ function AddRateButton({
   roomId: string | null;
   onAdded: () => void;
 }) {
-  dealId,
-  roomId,
-  onAdded,
-}: {
-  dealId: string;
-  roomId: string | null;
-  onAdded: () => void;
-}) {
   const upsert = useServerFn(upsertRatePlan);
   const mut = useMutation({
     mutationFn: () =>
