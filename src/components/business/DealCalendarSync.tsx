@@ -86,7 +86,7 @@ export function DealCalendarSync({ dealId }: { dealId: string }) {
   }
 
   return (
-    <section className="mt-6 rounded-2xl border border-border bg-card p-4">
+    <section id="calendar" className="mt-6 scroll-mt-20 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-2">
         <CalendarSync className="h-4 w-4 text-primary" />
         <h2 className="text-sm font-semibold">Calendar sync</h2>
