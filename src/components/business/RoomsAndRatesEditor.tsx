@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Bed, Tag } from "lucide-react";
+import { Plus, Trash2, Bed, Tag, Upload, Loader2, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getDealRoomsAndRates,
   upsertRoom,
@@ -28,6 +29,7 @@ type Room = {
   inventory_remaining: number | null;
   room_size_sqm: number | null;
   is_active: boolean;
+  photos?: string[] | null;
 };
 
 type RatePlan = {
