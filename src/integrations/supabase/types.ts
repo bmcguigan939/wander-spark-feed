@@ -1925,10 +1925,14 @@ export type Database = {
           last_seen_at: string | null
           lat: number | null
           lng: number | null
+          operator_base_price_cents: number | null
+          operator_site_host: string | null
+          operator_site_url: string | null
           original_url: string | null
           parity_exempt: boolean
           parity_exempt_reason: string | null
           price_cents: number | null
+          pricing_model: Database["public"]["Enums"]["deal_pricing_model"]
           quality_reasons: Json | null
           quality_score: number | null
           source: string
@@ -1967,10 +1971,14 @@ export type Database = {
           last_seen_at?: string | null
           lat?: number | null
           lng?: number | null
+          operator_base_price_cents?: number | null
+          operator_site_host?: string | null
+          operator_site_url?: string | null
           original_url?: string | null
           parity_exempt?: boolean
           parity_exempt_reason?: string | null
           price_cents?: number | null
+          pricing_model?: Database["public"]["Enums"]["deal_pricing_model"]
           quality_reasons?: Json | null
           quality_score?: number | null
           source?: string
@@ -2009,10 +2017,14 @@ export type Database = {
           last_seen_at?: string | null
           lat?: number | null
           lng?: number | null
+          operator_base_price_cents?: number | null
+          operator_site_host?: string | null
+          operator_site_url?: string | null
           original_url?: string | null
           parity_exempt?: boolean
           parity_exempt_reason?: string | null
           price_cents?: number | null
+          pricing_model?: Database["public"]["Enums"]["deal_pricing_model"]
           quality_reasons?: Json | null
           quality_score?: number | null
           source?: string
@@ -3646,6 +3658,7 @@ export type Database = {
       app_role: "traveller" | "creator" | "business" | "admin"
       deal_application_status: "pending" | "approved" | "declined" | "withdrawn"
       deal_category: "stay" | "eat" | "do" | "tour" | "transport" | "other"
+      deal_pricing_model: "commission" | "operator_markup"
       deal_redemption_status: "pending" | "confirmed" | "rejected"
       notification_type:
         | "like"
@@ -3809,6 +3822,7 @@ export const Constants = {
       app_role: ["traveller", "creator", "business", "admin"],
       deal_application_status: ["pending", "approved", "declined", "withdrawn"],
       deal_category: ["stay", "eat", "do", "tour", "transport", "other"],
+      deal_pricing_model: ["commission", "operator_markup"],
       deal_redemption_status: ["pending", "confirmed", "rejected"],
       notification_type: [
         "like",
