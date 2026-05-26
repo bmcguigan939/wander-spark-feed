@@ -24,6 +24,11 @@ function gateCopy(
 ): { title: string; desc: string } {
   const isActivity = kind === "activity";
   switch (gate) {
+    case "website":
+      return {
+        title: "Add your business website",
+        desc: "Required — so our price-match scanner can exclude your own site from competitor scans.",
+      };
     case "photos":
       return isActivity
         ? {
