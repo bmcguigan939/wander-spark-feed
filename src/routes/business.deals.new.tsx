@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { DealForm } from "@/components/business/DealForm";
 import { createDeal } from "@/lib/deals.functions";
-import { getMyPayoutMethod } from "@/lib/payout.functions";
+import { getMyConnectStatus } from "@/lib/stripe-connect.functions";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Banknote, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ function NewDealPage() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const createFn = useServerFn(createDeal);
-  const payoutFn = useServerFn(getMyPayoutMethod);
+  const payoutFn = useServerFn(getMyConnectStatus);
   const [busy, setBusy] = useState(false);
   const [bookable, setBookable] = useState(false);
   const [policy, setPolicy] = useState<
@@ -27,11 +27,11 @@ function NewDealPage() {
   >("travidz_standard");
 
   const { data: payout } = useQuery({
-    queryKey: ["payout-method"],
+    queryKey: ["connect-status"],
     queryFn: () => payoutFn(),
     enabled: !!user && isBusiness,
   });
-  const hasPayout = payout?.payout_method === "manual_bank";
+  const hasPayout = !!(payout as any)?.stripe_connect_payouts_enabled;
 
   useEffect(() => {
     if (loading) return;
