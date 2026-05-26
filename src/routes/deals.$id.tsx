@@ -17,6 +17,8 @@ import { RateSelector } from "@/components/deals/RateSelector";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { listBusinessPhotos } from "@/lib/business-photos.functions";
 import { PriceMatchBadge } from "@/components/PriceMatchBadge";
+import { RatingSummary, StarRow } from "@/components/reviews/RatingSummary";
+import { getReviewsForDeal } from "@/lib/reviews.functions";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,7 @@ function DealDetail() {
   const fetchDeal = useServerFn(getDeal);
   const logClick = useServerFn(logDealClick);
   const fetchPhotos = useServerFn(listBusinessPhotos);
+  const fetchReviews = useServerFn(getReviewsForDeal);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["deal", id],
@@ -58,6 +61,12 @@ function DealDetail() {
     enabled: !!deal?.business_id,
   });
   const galleryPhotos = (photosData?.photos ?? []) as Array<{ id: string; url: string; caption: string | null }>;
+
+  const { data: reviewsData } = useQuery({
+    queryKey: ["deal-reviews", id],
+    queryFn: () => fetchReviews({ data: { dealId: id, limit: 5 } }),
+  });
+  const reviews = (reviewsData?.reviews ?? []) as any[];
 
   // Travidz is closed-loop: outbound clicks to partner URLs are removed.
   // We still log impressions/clicks for analytics from inside the page.
@@ -89,6 +98,12 @@ function DealDetail() {
               <span>{[deal.city, deal.country].filter(Boolean).join(", ") || deal.destination || "Anywhere"}</span>
             </div>
             <h1 className="mt-1 text-xl font-semibold">{deal.title}</h1>
+            <div className="mt-2">
+              <RatingSummary
+                avg={reviewsData?.avg ?? deal.deal_rating_avg}
+                count={reviewsData?.count ?? deal.deal_rating_count}
+              />
+            </div>
             {deal.discount_label && (
               <span className="mt-2 inline-block rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary">
                 {deal.discount_label}
@@ -156,6 +171,44 @@ function DealDetail() {
                   @{deal.business.username}
                 </Link>
               </p>
+            )}
+
+            {reviews.length > 0 && (
+              <section className="mt-8">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold">Recent reviews</h2>
+                  <RatingSummary
+                    avg={reviewsData?.avg}
+                    count={reviewsData?.count}
+                    size="sm"
+                  />
+                </div>
+                <ul className="space-y-3">
+                  {reviews.map((r) => (
+                    <li key={r.id} className="rounded-2xl border border-border bg-card/40 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {r.user?.avatar_url ? (
+                            <img src={r.user.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                          ) : (
+                            <div className="h-7 w-7 rounded-full bg-muted" />
+                          )}
+                          <span className="text-xs font-medium">
+                            {r.user?.display_name ?? `@${r.user?.username ?? "traveller"}`}
+                          </span>
+                          <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600">
+                            Verified booking
+                          </span>
+                        </div>
+                        <StarRow value={r.rating} />
+                      </div>
+                      {r.comment && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">{r.comment}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
           </div>
         )}
