@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isSelfHost } from "@/lib/url-guards";
+import { addBlockedIdentities, type Signal } from "@/lib/blocklist.server";
 
 const Role = z.enum(["traveller", "creator", "business", "admin"]);
 
@@ -181,16 +182,19 @@ export const listAdminUsers = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({
       q: z.string().max(120).optional(),
+      filter: z.enum(["all", "blocked", "flagged"]).optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("profiles")
-      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at,is_founding_creator,founding_creator_number,power_tier_locked_at,rolling_12mo_gbv_cents,creator_joined_at,business_name,business_website_url")
+      .select("id,username,display_name,avatar_url,created_at,is_verified,verified_at,is_founding_creator,founding_creator_number,power_tier_locked_at,rolling_12mo_gbv_cents,creator_joined_at,business_name,business_website_url,is_blocked,blocked_at,block_reason,pending_admin_review,review_reason,review_match_details")
       .order("created_at", { ascending: false })
       .limit(50);
     if (data.q) q = q.or(`username.ilike.%${data.q}%,display_name.ilike.%${data.q}%`);
+    if (data.filter === "blocked") q = q.eq("is_blocked", true);
+    if (data.filter === "flagged") q = q.eq("pending_admin_review", true);
     const { data: profiles, error } = await q;
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
