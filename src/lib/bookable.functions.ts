@@ -67,19 +67,20 @@ export const getBookableStatus = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
 
-    // 0) Website URL — required so the price-match scanner excludes the
-    //    operator's own site from competitor scrapes.
-    {
-      const p = payoutRes.data as any;
-      if (!p?.business_website_url) missing.push("website");
-    }
-
     // 1) Photos
     if ((photosRes.count ?? 0) < 3) missing.push("photos");
 
     const dealRows = (dealsRes.data ?? []) as Array<{ id: string; category: string | null }>;
     const dealIds = dealRows.map((d) => d.id);
     const accountKind = deriveAccountKind(dealRows);
+
+    // 0) Website URL — required ONLY for activity operators, so the
+    //    price-match scanner can exclude their own site from competitor
+    //    scrapes. Stays/hotels don't need this and never see the gate.
+    if (accountKind === "activity") {
+      const p = payoutRes.data as any;
+      if (!p?.business_website_url) missing.push("website");
+    }
 
     if (dealIds.length === 0) {
       // No active deal → no items, no rates, no calendar
@@ -159,15 +160,18 @@ export async function computeBookableStatus(
       .maybeSingle(),
   ]);
 
-  {
-    const p = payoutRes.data as any;
-    if (!p?.business_website_url) missing.push("website");
-  }
   if ((photosRes.count ?? 0) < 3) missing.push("photos");
 
   const dealRows = (dealsRes.data ?? []) as Array<{ id: string; category: string | null }>;
   const dealIds = dealRows.map((d) => d.id);
   const accountKind = deriveAccountKind(dealRows);
+
+  // Website URL required only for activity operators.
+  if (accountKind === "activity") {
+    const p = payoutRes.data as any;
+    if (!p?.business_website_url) missing.push("website");
+  }
+
   if (dealIds.length === 0) {
     missing.push("items", "rates", "calendar");
   } else {

@@ -1,41 +1,23 @@
-## Problems
-1. **"Book through Travidz" tick is pointless** — every shop books through Travidz. Operators (activities, tours, experiences) build their storefront on Travidz the same way hotels do: photos, prices, packages. Customers never leave for an operator's own site.
-2. **Deal-builder loses work** when "Create deal" is hit without Stripe payout connected: the form gets wiped.
-3. **No guided order** on the business home — users can start step 4 before step 2, which triggers problem 2.
+Scope the website-URL requirement to **activity operators only**. Stays/hotels never see it, never get blocked by it, and the price scanner skips host exclusion for them.
 
-## Fix
+### Changes
 
-### A. Travidz is the only checkout path (remove operator-markup entirely)
-- Delete the "Book through Travidz" toggle from `DealForm.tsx`.
-- Delete the external **Link URL / Booking URL** field from the deal form for every business type.
-- Server-side: force `book_via='travidz'` on insert/update in `src/lib/deals.functions.ts`; reject any incoming `external_url`.
-- Public deal page: remove the "Book on operator site" CTA — only the Travidz checkout button remains.
-- Copy: operator shop setup framed like a hotel ("Add your activities and packages, set prices, upload photos — customers book directly on Travidz").
-- **Migration:** drop `deals.external_url` and `deals.book_via` columns (plus any unused index/policy referencing them). Same migration sweeps `null`/legacy values first. Audit `src/lib/operator-site*`, `price-compare.server.ts`, `price-match*`, public deal route, and admin views for references and remove them.
+**1. `src/lib/bookable.functions.ts`**
+- In both `getBookableStatus` and `computeBookableStatus`: only push `"website"` into `missing` when `accountKind === "activity"`. Stays and `unknown` skip the gate entirely.
+- Keep `business_website_url` in the profiles select (still needed to evaluate the gate when activity).
+- `GATE_LABELS` / `GATE_LINKS` / `gateLinkFor` stay as-is (the gate type still exists; we just don't emit it for stays).
 
-### B. Don't lose work when payout isn't ready
-- **Save as draft instead of blocking.** On "Create deal" with no Stripe payout: save with `status='draft'`, show inline banner *"Saved as draft. Connect your bank to publish."* + **Connect bank** button. On return, one tap to publish. **Unlimited drafts.**
-- **Autosave to localStorage** (debounced 1s) keyed by user + draft id. Restore on form mount.
-- Files: `src/components/business/DealForm.tsx`, `src/lib/deals.functions.ts`, `src/routes/business.deals.new.tsx`.
+**2. `src/components/business/OnboardingChecklist.tsx`**
+- `ALL_GATES` currently always lists `website`. Build the gates list dynamically: include `"website"` only when `accountKind === "activity"`. Stays see the original 5-step checklist; activity operators see 6.
+- Leave the `gateCopy` `"website"` case in place.
 
-### C. Guided setup order on `/business`
-Reorder `OnboardingChecklist` and gate steps:
+**3. `src/lib/price-match.scan.functions.ts`**
+- Only look up `business_website_url` and derive `operator_site_host` when the deal's category is an activity (`do` or `tour`). For stays, pass `operator_site_host: null` (the field is already optional in `runDealPriceMatch`).
+- Tiny optimization: also lets us skip the extra profile query for stays.
 
-```text
-1. Verify your business        (legal name, address)
-2. Connect your bank           (Stripe Connect)        ← unlocks step 4
-3. Add property/venue photos   (3+ recommended)
-4. Add your first listing      ← fully greyed-out until 1+2 done
-```
+**4. `/business/onboarding/website` route**
+- No changes. Page remains reachable by direct link, but it'll never be surfaced for stays because the gate won't appear in the checklist for them.
 
-- Step 4 is **fully disabled** (greyed card, lock icon, not clickable) with tooltip *"Finish bank setup to publish your first listing"* until steps 1 and 2 are complete.
-- Step 5 (share/invite creator) **removed** — creators reach out to businesses directly through Travidz once the shop is live.
-- Empty business home gets a single **Start setup** CTA dropping the user into step 1.
-- Files: `src/components/business/OnboardingChecklist.tsx`, `src/routes/business.index.tsx`.
-
-### D. Smooth Stripe return
-- On `/business/onboarding/payout` success, auto-route to the next incomplete step (drafts page if drafts exist, otherwise the listing builder). File: `src/routes/business.onboarding.payout.tsx`.
-
-## Out of scope
-- Deal-form Essentials/Advanced split (covered in prior plan).
-- Changes to Stripe Connect itself.
+### Out of scope
+- No DB migration. `business_website_url` column stays; it's just not enforced for stays.
+- No copy changes on the website page itself (still accurate for activity operators who land there).
