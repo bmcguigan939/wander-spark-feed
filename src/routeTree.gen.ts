@@ -78,6 +78,7 @@ import { Route as AdminErrorsRouteImport } from './routes/admin.errors'
 import { Route as AdminDisputesRouteImport } from './routes/admin.disputes'
 import { Route as AdminDiscoveriesRouteImport } from './routes/admin.discoveries'
 import { Route as AdminDealsRouteImport } from './routes/admin.deals'
+import { Route as AdminConnectRouteImport } from './routes/admin.connect'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
 import { Route as DestinationsCountryIndexRouteImport } from './routes/destinations.$country.index'
 import { Route as StudioVideosIdRouteImport } from './routes/studio.videos.$id'
@@ -458,6 +459,11 @@ const AdminDealsRoute = AdminDealsRouteImport.update({
   path: '/deals',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminConnectRoute = AdminConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AccountDeleteRoute = AccountDeleteRouteImport.update({
   id: '/account/delete',
   path: '/account/delete',
@@ -661,6 +667,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/admin/connect': typeof AdminConnectRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -764,6 +771,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/admin/connect': typeof AdminConnectRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -869,6 +877,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/welcome': typeof WelcomeRoute
   '/account/delete': typeof AccountDeleteRoute
+  '/admin/connect': typeof AdminConnectRoute
   '/admin/deals': typeof AdminDealsRoute
   '/admin/discoveries': typeof AdminDiscoveriesRoute
   '/admin/disputes': typeof AdminDisputesRoute
@@ -976,6 +985,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/welcome'
     | '/account/delete'
+    | '/admin/connect'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1079,6 +1089,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/welcome'
     | '/account/delete'
+    | '/admin/connect'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1183,6 +1194,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/welcome'
     | '/account/delete'
+    | '/admin/connect'
     | '/admin/deals'
     | '/admin/discoveries'
     | '/admin/disputes'
@@ -1837,6 +1849,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDealsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/connect': {
+      id: '/admin/connect'
+      path: '/connect'
+      fullPath: '/admin/connect'
+      preLoaderRoute: typeof AdminConnectRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/account/delete': {
       id: '/account/delete'
       path: '/account/delete'
@@ -2079,6 +2098,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminConnectRoute: typeof AdminConnectRoute
   AdminDealsRoute: typeof AdminDealsRoute
   AdminDiscoveriesRoute: typeof AdminDiscoveriesRoute
   AdminDisputesRoute: typeof AdminDisputesRoute
@@ -2093,6 +2113,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminConnectRoute: AdminConnectRoute,
   AdminDealsRoute: AdminDealsRoute,
   AdminDiscoveriesRoute: AdminDiscoveriesRoute,
   AdminDisputesRoute: AdminDisputesRoute,
