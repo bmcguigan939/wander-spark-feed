@@ -21,6 +21,13 @@ const roomSchema = z.object({
   inventory_total: z.number().int().min(0).max(10000).optional().nullable(),
   sort_order: z.number().int().min(0).max(100).optional(),
   is_active: z.boolean().optional(),
+  // Activity-package fields (nullable; ignored for stays)
+  duration_minutes: z.number().int().min(0).max(60 * 24 * 30).optional().nullable(),
+  min_group_size: z.number().int().min(1).max(500).optional().nullable(),
+  max_group_size: z.number().int().min(1).max(500).optional().nullable(),
+  includes: z.array(z.string().min(1).max(120)).max(30).optional(),
+  excludes: z.array(z.string().min(1).max(120)).max(30).optional(),
+  meeting_point: z.string().max(500).optional().nullable(),
 });
 
 const ratePlanSchema = z.object({
