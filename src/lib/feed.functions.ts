@@ -804,7 +804,7 @@ export const getProfileByUsername = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id,username,display_name,bio,avatar_url,created_at,is_verified,verified_at")
+      .select("id,username,display_name,bio,avatar_url,created_at,is_verified,verified_at,business_name,business_rating_avg,business_rating_count,creator_rating_avg,creator_rating_count,creator_quality_score")
       .eq("username", data.username)
       .maybeSingle();
     if (!profile) return { profile: null, videos: [], followerCount: 0, followingCount: 0, isFollowing: false };
