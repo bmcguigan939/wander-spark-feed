@@ -2933,6 +2933,8 @@ export type Database = {
           is_verified: boolean
           lat: number | null
           lng: number | null
+          operator_site_host: string | null
+          operator_site_url: string | null
           payout_bank_details_encrypted: string | null
           payout_method: string
           place_name: string | null
@@ -2969,6 +2971,8 @@ export type Database = {
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
+          operator_site_host?: string | null
+          operator_site_url?: string | null
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           place_name?: string | null
@@ -3005,6 +3009,8 @@ export type Database = {
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
+          operator_site_host?: string | null
+          operator_site_url?: string | null
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           place_name?: string | null

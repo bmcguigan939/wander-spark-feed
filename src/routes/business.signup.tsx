@@ -9,6 +9,7 @@ import {
   acceptInvite,
   checkInviteAccountState,
 } from "@/lib/business-invites.functions";
+import { updateMyOperatorSite } from "@/lib/operator-site.functions";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { scorePassword } from "@/lib/password-strength";
 
@@ -27,6 +28,7 @@ function BusinessSignupPage() {
   const navigate = useNavigate();
   const checkFn = useServerFn(checkInviteAccountState);
   const acceptFn = useServerFn(acceptInvite);
+  const saveOperatorSite = useServerFn(updateMyOperatorSite);
 
   const stateQ = useQuery({
     queryKey: ["invite-account-state", invite],
@@ -37,6 +39,8 @@ function BusinessSignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [operatorSiteUrl, setOperatorSiteUrl] = useState("");
+  const [embedFailed, setEmbedFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -120,6 +124,15 @@ function BusinessSignupPage() {
     if (data.session) {
       try {
         await acceptFn({ data: { token: invite!, agreementVersion: "v1" } });
+        if (operatorSiteUrl.trim()) {
+          try {
+            await saveOperatorSite({
+              data: { operator_site_url: operatorSiteUrl.trim() },
+            });
+          } catch {
+            // non-fatal — operator can add it later from the dashboard
+          }
+        }
       } catch (e: any) {
         setLoading(false);
         setError(e?.message ?? "Couldn't accept the invite. Try again from the invite page.");
@@ -202,6 +215,45 @@ function BusinessSignupPage() {
             .
           </span>
         </label>
+
+        <details className="rounded-2xl border border-border bg-card p-3 text-[13px]">
+          <summary className="cursor-pointer font-medium text-foreground">
+            Activity operator? Add your booking page (optional)
+          </summary>
+          <p className="mt-2 text-xs text-muted-foreground">
+            We use your website price as the base and add an 11% booking fee on top.
+            We never compare against your own site — only third-party resellers.
+          </p>
+          <input
+            type="url"
+            placeholder="https://your-activity.com"
+            value={operatorSiteUrl}
+            onChange={(e) => {
+              setOperatorSiteUrl(e.target.value);
+              setEmbedFailed(false);
+            }}
+            className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          {operatorSiteUrl.trim() && /^https?:\/\//.test(operatorSiteUrl.trim()) && (
+            <div className="mt-3">
+              {embedFailed ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  Couldn't embed a preview of that page — that's fine, we'll still save
+                  the URL.
+                </div>
+              ) : (
+                <iframe
+                  src={operatorSiteUrl.trim()}
+                  title="Your booking page preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms"
+                  referrerPolicy="no-referrer"
+                  onError={() => setEmbedFailed(true)}
+                  className="h-64 w-full rounded-lg border border-border bg-background"
+                />
+              )}
+            </div>
+          )}
+        </details>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 

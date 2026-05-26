@@ -1,46 +1,60 @@
+## Complete operator-pricing items A–F
 
-# Finish closed-loop OTA (gates, auto price-match, sweep)
+### A. Operator site embed at signup
+- Migration: add `profiles.operator_site_url text` + `profiles.operator_site_host text` (trigger normalises host like the deals trigger).
+- `business.signup.tsx`: add a final optional step "Are you an activity operator? Paste your booking page" with a URL input and live `<iframe>` preview (sandbox=`allow-scripts allow-same-origin allow-forms`, `referrerPolicy="no-referrer"`, with a graceful "couldn't embed — that's fine" fallback if the iframe fails to load within 4s using `onError`/`onLoad`).
+- Save via existing `upsertBusinessProfile` server fn (extend its Zod schema).
+- Prefill `operator_site_url` in `DealForm` for any new `do`/`tour` deal.
 
-Three workstreams, scoped tight. Activities-specific onboarding UI is deferred to a separate pass.
+### B. Operator deals must be bookable
+- `DealForm.tsx`: when `pricing_model === 'operator_markup'`:
+  - Force `bookable = true` (hide/disable the toggle, show "Bookable through Travidz — required for the 11% model").
+  - Require `cancellation_policy_code`.
+  - Block submit if the business has no payout method (`creator_payout_details` or Stripe Connect equivalent).
+- Server-side: `upsertDeal` validator rejects `pricing_model='operator_markup' && (!bookable || !operator_base_price_cents)` with a clear error.
+- DB CHECK trigger on `deals`: raise if `pricing_model='operator_markup'` and (`bookable IS NOT TRUE` OR `operator_base_price_cents IS NULL`).
 
-## 1. Gate-enforce every CTA / outbound surface
+### C. Public deal page disclosure
+- `deals.$id.tsx`: above the price block, when `pricing_model='operator_markup'`, render:
+  - "**£X** — booked through Travidz with [Operator Name]"
+  - Small line: "Travidz adds an 11% booking fee on top of the operator's price for secure checkout, support, and creator rewards."
+  - Tooltip/link "How we price activities" → `/legal/terms#activity-pricing`.
+- Hide the generic "lowest price" microcopy on these deals; `PriceMatchBadge` operator variant already handles the comparison line.
 
-Goal: a non-bookable business has **zero** Book CTA, zero outbound link, and zero `/api/public/b/$id` / `/api/public/d/$id` redirect anywhere in the app.
+### D. Operator onboarding card
+- `OnboardingChecklist.tsx`: add a new card visible when business has `profiles.operator_site_url` set **or** any `do`/`tour` deal. Three checks:
+  1. Booking site URL saved on profile.
+  2. At least one deal with `pricing_model='operator_markup'` and `operator_base_price_cents` set.
+  3. Collab defaults saved (`business_collab_defaults` row exists).
+- Each row links to the relevant page (`/business/signup`, `/business/deals/new`, `/business/collabs`).
 
-Add a small batched helper `getBookableStatusBatch(businessIds[])` in `bookable.functions.ts` so list views don't N+1.
+### E. Legal copy
+- `legal.terms.tsx`: add a new sub-section with anchor `id="activity-pricing"`:
+  - Defines "third-party resellers" (GetYourGuide, Viator, Klook, Tiqets, Musement, and similar).
+  - Discloses 11% Travidz booking fee on operator-markup activities.
+  - States we never compare against the operator's own website; price comparisons are scoped to third-party resellers only.
+  - Notes the operator may sell direct on their own site.
+- `legal.business-agreement.tsx`: add a short paragraph confirming the 11% uplift, that Travidz collects it on top of the operator's base price, and remittance terms.
 
-Audit + enforce on:
-- `src/components/feed/VideoCard.tsx` — hide Book/Price tile when business is not bookable; show neutral "Coming soon to Travidz" chip instead.
-- `src/routes/u.$username.tsx` (business profiles) — hide all booking CTAs, hide any `business_website_url` rendering, show onboarding-incomplete notice only to the owner.
-- `src/routes/search.tsx`, `src/routes/map.tsx`, `src/components/map/ClusteredSheet.tsx` — filter out / grey out non-bookable businesses' Book buttons.
-- `src/routes/deals.$id.tsx` — already mostly gated; double-check the "View deal" outbound `window.open(deal.url)` is removed (we are closed-loop now).
-- `src/routes/api/public/d.$id.ts` — return 404 (mirror what we did for `b.$id.ts`) so cached deal-redirect links die cleanly instead of pushing to a partner URL.
-- `src/routes/api/public/go.$id.ts` and `src/routes/r.$code.ts` — audit; if they push to a partner site, kill them.
+### F. Operator-correct payout split
+- `commission.server.ts` / `stampRedemptionSplit`: branch on `deal.pricing_model`:
+  - `commission` (today): unchanged.
+  - `operator_markup`: `gross_cents = price_cents`, `commission_cents = price_cents - operator_base_price_cents` (the 11% uplift), `net_cents = operator_base_price_cents`. Creator commission: paid out of the 11% pool only (configurable `default_commission_pct`, default 10% of the uplift to keep creator economics neutral — confirm split before merge).
+- `business_payout_lines` insert uses the new values.
+- Add a unit-style guard: in dev, log a console error if `pricing_model='operator_markup'` and `operator_base_price_cents` is null at split time (should be prevented by B but defensive).
+- Backfill: not needed — no operator-markup bookings exist yet.
 
-## 2. Auto-mint price-match code when Travidz is more expensive
+### Verification before sign-off
+1. Run `supabase--linter` after the new migration — expect no new warnings.
+2. Manually create an operator deal in preview, confirm:
+   - Trigger sets `price_cents = base × 1.11`.
+   - Public deal page shows operator copy + parity badge with the reseller-only comparison.
+   - Form blocks save when `bookable` is unchecked.
+3. Insert a synthetic redemption with `pricing_model='operator_markup'` and inspect the resulting `business_payout_lines` row via `read_query`.
+4. Confirm `/legal/terms#activity-pricing` scrolls to the new section and the deal-page tooltip deep-links correctly.
 
-Today `PriceMatchBadge` just says "we'll match at checkout" — no actual code is issued.
+### Out of scope (flagged, not changed)
+- Real Stripe payment-method check for B currently uses `creator_payout_details` presence as a proxy; full Stripe Connect onboarding for operators is a separate task.
+- Iframe embed will fail for sites that send `X-Frame-Options: DENY` — we surface a fallback message rather than trying to proxy.
 
-- Extend `runDealPriceMatch` (in `price-match-scan.server.ts`) so that when `direct_price_cents > cheapest_competitor_cents`, it inserts a `price_match_codes` row (linked to the deal, not just `affiliate_links`).
-- Migration: add nullable `deal_id uuid references deals(id)` to `price_match_codes` + index; keep existing `link_id` path for the legacy affiliate flow.
-- The scan endpoint returns the new `match_code` so `PriceMatchBadge` can show "Use code XYZ at checkout — saves £N".
-- Checkout (`createBookingCheckout` in `booking.functions.ts`) accepts an optional `matchCode`, validates it against `price_match_codes` for that deal, and reduces the Stripe line-item to the competitor's price.
-
-Cache the issued code in `parity_checks.cheapest_competitor_url`'s row context (already cached 6h) so repeat scans don't mint duplicates — reuse the existing code if the cached scan already has one and it hasn't expired.
-
-## 3. Stale-copy sweep
-
-Grep + replace across the project:
-- `8%` / "eight percent" / "8 percent" → 11% — only in commission / commercial copy contexts (skip unrelated `8%` widths, opacities, etc.).
-- Any rendering of `profile.business_website_url` outside the dashboard editor → remove. The field can stay in the DB but never reach the traveller UI.
-- "Book direct" / "Visit website" / "View on partner" copy → remove or replace with "Book on Travidz".
-
-Files to check first (high signal): `email-templates/business-invite.tsx`, `email-templates/business-digest.tsx`, `business.calculator.tsx`, `business.apply.tsx`, `business.signup.tsx`, `landing/LandingPage.tsx`, `legal.business-agreement.tsx`, `OnboardingChecklist.tsx`.
-
-## Out of scope this pass
-- Activity-specific onboarding UI (time-slot editor, meeting point / languages / includes-excludes inputs, "rooms" → "rooms or options" relabel). Tackled in a follow-up.
-
-## Verification
-- Manually load `/deals/$id` for one bookable + one non-bookable deal in preview and confirm the CTA/badge behaviour.
-- Hit `/api/public/d.$id` and `/api/public/b.$id` via `invoke-server-function` — both 404.
-- Trigger a price-match scan on a deal that's deliberately overpriced and confirm a `price_match_codes` row is minted and surfaced.
+Ready to switch to build mode and implement A–F in order, with the migration first (B + F + new profiles columns combined), then UI, then legal copy.

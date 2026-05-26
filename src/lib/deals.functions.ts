@@ -11,7 +11,7 @@ import { setResponseHeaders } from "@tanstack/react-start/server";
 const PUBLIC_READ_CACHE = "public, s-maxage=60, stale-while-revalidate=600";
 
 const dealSelect =
-  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,pricing_model,operator_base_price_cents,operator_site_url,operator_site_host,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url)";
+  "id,title,description,destination,country,city,discount_label,price_cents,currency,url,image_url,starts_at,ends_at,is_active,click_count,business_id,parity_exempt,parity_exempt_reason,category,pricing_model,operator_base_price_cents,operator_site_url,operator_site_host,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url,business_name)";
 
 const filterSchema = z
   .object({
