@@ -57,10 +57,12 @@ import { Route as CreatorCalculatorRouteImport } from './routes/creator.calculat
 import { Route as CreatorApplicationsRouteImport } from './routes/creator.applications'
 import { Route as CreatorAnalyticsRouteImport } from './routes/creator.analytics'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as CollabCodeRouteImport } from './routes/collab.$code'
 import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
+import { Route as BusinessCollabsRouteImport } from './routes/business.collabs'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
 import { Route as BusinessApplicationsRouteImport } from './routes/business.applications'
@@ -351,6 +353,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => CollectionsRoute,
 } as any)
+const CollabCodeRoute = CollabCodeRouteImport.update({
+  id: '/collab/$code',
+  path: '/collab/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessThreadsRoute = BusinessThreadsRouteImport.update({
   id: '/business/threads',
   path: '/business/threads',
@@ -369,6 +376,11 @@ const BusinessRedemptionsRoute = BusinessRedemptionsRouteImport.update({
 const BusinessPriceAuditRoute = BusinessPriceAuditRouteImport.update({
   id: '/business/price-audit',
   path: '/business/price-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessCollabsRoute = BusinessCollabsRouteImport.update({
+  id: '/business/collabs',
+  path: '/business/collabs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessCalculatorRoute = BusinessCalculatorRouteImport.update({
@@ -664,10 +676,12 @@ export interface FileRoutesByFullPath {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -765,10 +779,12 @@ export interface FileRoutesByTo {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -868,10 +884,12 @@ export interface FileRoutesById {
   '/business/applications': typeof BusinessApplicationsRoute
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
+  '/business/collabs': typeof BusinessCollabsRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
+  '/collab/$code': typeof CollabCodeRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/creator/analytics': typeof CreatorAnalyticsRoute
   '/creator/applications': typeof CreatorApplicationsRoute
@@ -973,10 +991,12 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1074,10 +1094,12 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1176,10 +1198,12 @@ export interface FileRouteTypes {
     | '/business/applications'
     | '/business/apply'
     | '/business/calculator'
+    | '/business/collabs'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
     | '/business/threads'
+    | '/collab/$code'
     | '/collections/$id'
     | '/creator/analytics'
     | '/creator/applications'
@@ -1270,10 +1294,12 @@ export interface RootRouteChildren {
   BusinessApplicationsRoute: typeof BusinessApplicationsRoute
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
+  BusinessCollabsRoute: typeof BusinessCollabsRoute
   BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
   BusinessThreadsRoute: typeof BusinessThreadsRouteWithChildren
+  CollabCodeRoute: typeof CollabCodeRoute
   CreatorAnalyticsRoute: typeof CreatorAnalyticsRoute
   CreatorApplicationsRoute: typeof CreatorApplicationsRoute
   CreatorCalculatorRoute: typeof CreatorCalculatorRoute
@@ -1664,6 +1690,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsIdRouteImport
       parentRoute: typeof CollectionsRoute
     }
+    '/collab/$code': {
+      id: '/collab/$code'
+      path: '/collab/$code'
+      fullPath: '/collab/$code'
+      preLoaderRoute: typeof CollabCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/threads': {
       id: '/business/threads'
       path: '/business/threads'
@@ -1690,6 +1723,13 @@ declare module '@tanstack/react-router' {
       path: '/business/price-audit'
       fullPath: '/business/price-audit'
       preLoaderRoute: typeof BusinessPriceAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/collabs': {
+      id: '/business/collabs'
+      path: '/business/collabs'
+      fullPath: '/business/collabs'
+      preLoaderRoute: typeof BusinessCollabsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/calculator': {
@@ -2186,10 +2226,12 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessApplicationsRoute: BusinessApplicationsRoute,
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
+  BusinessCollabsRoute: BusinessCollabsRoute,
   BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   BusinessSignupRoute: BusinessSignupRoute,
   BusinessThreadsRoute: BusinessThreadsRouteWithChildren,
+  CollabCodeRoute: CollabCodeRoute,
   CreatorAnalyticsRoute: CreatorAnalyticsRoute,
   CreatorApplicationsRoute: CreatorApplicationsRoute,
   CreatorCalculatorRoute: CreatorCalculatorRoute,
@@ -2246,13 +2288,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
 import { getBookableStatus, GATE_LABELS, GATE_LINKS, type BookableGate } from "@/lib/bookable.functions";
 import { COMMISSION } from "@/lib/commission";
+import { getMyCollabDefaults } from "@/lib/collabs.functions";
 
 type Step = {
   id: string;
@@ -36,6 +37,7 @@ export function OnboardingChecklist() {
   const { user } = useAuth();
   const agreementFn = useServerFn(getMyAgreementStatus);
   const bookableFn = useServerFn(getBookableStatus);
+  const defaultsFn = useServerFn(getMyCollabDefaults);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
@@ -44,6 +46,11 @@ export function OnboardingChecklist() {
   const { data: bookable } = useQuery({
     queryKey: ["bookable-status", user?.id],
     queryFn: () => bookableFn({ data: { businessId: user!.id } }),
+    enabled: !!user?.id,
+  });
+  const { data: collabDefaults } = useQuery({
+    queryKey: ["collab-defaults"],
+    queryFn: () => defaultsFn(),
     enabled: !!user?.id,
   });
 
@@ -65,6 +72,13 @@ export function OnboardingChecklist() {
       done: !missing.has(gate),
       to: GATE_LINKS[gate],
     })),
+    {
+      id: "collab-defaults",
+      title: "Set your collab defaults",
+      desc: "30s with recommended settings — every creator you accept inherits these terms.",
+      done: !!collabDefaults?.defaults,
+      to: "/business/collabs",
+    },
   ];
 
   const completed = steps.filter((s) => s.done).length;

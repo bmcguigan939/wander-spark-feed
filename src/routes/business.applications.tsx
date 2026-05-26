@@ -8,9 +8,10 @@ import {
   listApplicationsForBusiness,
   decideApplication,
 } from "@/lib/deal-applications.functions";
+import { oneTapAcceptApplication } from "@/lib/collabs.functions";
 import { draftApplicationReply } from "@/lib/outreach.functions";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle, Sparkles, Copy } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, CheckCircle2, XCircle, Sparkles, Copy, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ function BusinessApplications() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const fetch = useServerFn(listApplicationsForBusiness);
+  const [filter, setFilter] = useState<"all" | "pending" | "auto">("all");
 
   useEffect(() => {
     if (loading) return;
@@ -44,6 +46,11 @@ function BusinessApplications() {
     enabled: !!user && isBusiness,
   });
   const apps = (data?.applications ?? []) as any[];
+  const visible = apps.filter((a) => {
+    if (filter === "pending") return a.status === "pending";
+    if (filter === "auto") return a.auto_decided === true;
+    return true;
+  });
 
   if (!user || !isBusiness) return null;
 
@@ -54,6 +61,27 @@ function BusinessApplications() {
           <ArrowLeft className="h-4 w-4" /> Dashboard
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Creator Applications</h1>
+        <div className="mt-3 flex gap-2 text-xs">
+          {(["all", "pending", "auto"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3 py-1 border ${
+                filter === f
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {f === "auto" ? "✨ Auto-accepted" : f === "pending" ? "Pending" : "All"}
+            </button>
+          ))}
+          <Link
+            to="/business/collabs"
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-muted-foreground"
+          >
+            <Zap className="h-3 w-3" /> Defaults & rules
+          </Link>
+        </div>
 
         {isLoading && (
           <div className="mt-6 space-y-3">
@@ -63,14 +91,14 @@ function BusinessApplications() {
           </div>
         )}
 
-        {!isLoading && apps.length === 0 && (
+        {!isLoading && visible.length === 0 && (
           <div className="mt-10 rounded-xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground">No applications yet.</p>
+            <p className="text-sm text-muted-foreground">No applications to show.</p>
           </div>
         )}
 
         <ul className="mt-4 space-y-3 pb-24">
-          {apps.map((a) => (
+          {visible.map((a) => (
             <ApplicationCard key={a.id} app={a} />
           ))}
         </ul>
@@ -82,6 +110,7 @@ function BusinessApplications() {
 function ApplicationCard({ app }: { app: any }) {
   const qc = useQueryClient();
   const decide = useServerFn(decideApplication);
+  const oneTap = useServerFn(oneTapAcceptApplication);
   const draftFn = useServerFn(draftApplicationReply);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(app.requested_code ?? "");
@@ -122,6 +151,15 @@ function ApplicationCard({ app }: { app: any }) {
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
+  const oneTapMut = useMutation({
+    mutationFn: () => oneTap({ data: { applicationId: app.id } }),
+    onSuccess: () => {
+      toast.success("Approved — code minted & brief sent");
+      qc.invalidateQueries({ queryKey: ["business-applications"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
   return (
     <li className="rounded-xl border border-border bg-card/40 p-3">
       <div className="flex items-center gap-3">
@@ -146,7 +184,14 @@ function ApplicationCard({ app }: { app: any }) {
             for {app.deal?.title}
           </Link>
         </div>
-        <StatusBadge status={app.status} />
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge status={app.status} />
+          {app.auto_decided && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+              <Sparkles className="h-3 w-3" /> Auto
+            </span>
+          )}
+        </div>
       </div>
       {app.pitch && (
         <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/85">{app.pitch}</p>
@@ -164,8 +209,12 @@ function ApplicationCard({ app }: { app: any }) {
       )}
       {app.status === "pending" && (
         <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="default" onClick={() => setOpen(true)}>
-            <Check className="mr-1 h-3.5 w-3.5" /> Approve
+          <Button size="sm" variant="default" onClick={() => oneTapMut.mutate()} disabled={oneTapMut.isPending}>
+            <Zap className="mr-1 h-3.5 w-3.5" />
+            {oneTapMut.isPending ? "Accepting…" : "Accept"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+            Custom…
           </Button>
           <Button
             size="sm"
@@ -185,6 +234,13 @@ function ApplicationCard({ app }: { app: any }) {
             <Sparkles className="mr-1 h-3.5 w-3.5" />
             {draftMut.isPending ? "Drafting…" : "Draft reply"}
           </Button>
+        </div>
+      )}
+      {app.status === "approved" && app.approved_code && (
+        <div className="mt-2 text-[11px]">
+          <Link to="/collab/$code" params={{ code: app.approved_code }} className="text-primary underline-offset-4 hover:underline">
+            View collab brief →
+          </Link>
         </div>
       )}
       {app.status !== "pending" && app.creator?.username && (
