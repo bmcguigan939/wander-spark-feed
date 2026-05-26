@@ -39,6 +39,27 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
         currency: "GBP",
       };
     }
+    // Look up the operator's own website so the scanner never matches
+    // against their own site (we'd double-count Travidz's price as a
+    // competitor otherwise).
+    let operator_site_host: string | null = null;
+    if ((deal as any).business_id) {
+      const { data: biz } = await supabaseAdmin
+        .from("profiles")
+        .select("business_website_url")
+        .eq("id", (deal as any).business_id)
+        .maybeSingle();
+      const url = (biz as any)?.business_website_url as string | null | undefined;
+      if (url) {
+        try {
+          operator_site_host = new URL(
+            /^https?:\/\//i.test(url) ? url : `https://${url}`,
+          ).hostname.replace(/^www\./i, "").toLowerCase() || null;
+        } catch {
+          operator_site_host = null;
+        }
+      }
+    }
     const locality = [deal.city, deal.country].filter(Boolean).join(" ") || deal.destination || "";
     const query = `${deal.title} ${locality}`.trim();
     const result = await runDealPriceMatch({
@@ -50,6 +71,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
       check_in: data.check_in ?? null,
       check_out: data.check_out ?? null,
       guests: data.guests ?? null,
+      operator_site_host,
     });
     return {
       ...result,

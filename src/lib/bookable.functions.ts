@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type BookableGate = "photos" | "items" | "rates" | "calendar" | "payouts";
+export type BookableGate = "website" | "photos" | "items" | "rates" | "calendar" | "payouts";
 
 export type AccountKind = "stay" | "activity" | "unknown";
 
@@ -62,10 +62,17 @@ export const getBookableStatus = createServerFn({ method: "GET" })
         .eq("status", "approved"),
       supabaseAdmin
         .from("profiles")
-        .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
+        .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled,business_website_url")
         .eq("id", businessId)
         .maybeSingle(),
     ]);
+
+    // 0) Website URL — required so the price-match scanner excludes the
+    //    operator's own site from competitor scrapes.
+    {
+      const p = payoutRes.data as any;
+      if (!p?.business_website_url) missing.push("website");
+    }
 
     // 1) Photos
     if ((photosRes.count ?? 0) < 3) missing.push("photos");
@@ -147,11 +154,15 @@ export async function computeBookableStatus(
       .eq("status", "approved"),
     supabaseAdmin
       .from("profiles")
-      .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled")
+      .select("stripe_connect_payouts_enabled,stripe_connect_charges_enabled,business_website_url")
       .eq("id", businessId)
       .maybeSingle(),
   ]);
 
+  {
+    const p = payoutRes.data as any;
+    if (!p?.business_website_url) missing.push("website");
+  }
   if ((photosRes.count ?? 0) < 3) missing.push("photos");
 
   const dealRows = (dealsRes.data ?? []) as Array<{ id: string; category: string | null }>;
@@ -203,6 +214,7 @@ export async function computeBookableStatus(
 }
 
 export const GATE_LABELS: Record<BookableGate, string> = {
+  website: "Add your business website",
   photos: "Add property photos",
   items: "Add rooms / activity options",
   rates: "Set prices",
@@ -211,6 +223,7 @@ export const GATE_LABELS: Record<BookableGate, string> = {
 };
 
 export const GATE_LINKS: Record<BookableGate, string> = {
+  website: "/business/onboarding/website",
   photos: "/business",
   items: "/business",
   rates: "/business",
@@ -228,6 +241,8 @@ export function gateLinkFor(
   firstDealId: string | null,
 ): string {
   switch (gate) {
+    case "website":
+      return "/business/onboarding/website";
     case "photos":
       return "/business#photos";
     case "items":

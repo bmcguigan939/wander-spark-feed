@@ -88,6 +88,7 @@ import { Route as ReviewBookingIdThanksRouteImport } from './routes/review.$book
 import { Route as LovableEmailUnsubscribeRouteImport } from './routes/lovable/email/unsubscribe'
 import { Route as DestinationsCountryCityRouteImport } from './routes/destinations.$country.$city'
 import { Route as BusinessThreadsIdRouteImport } from './routes/business.threads.$id'
+import { Route as BusinessOnboardingWebsiteRouteImport } from './routes/business.onboarding.website'
 import { Route as BusinessOnboardingPayoutRouteImport } from './routes/business.onboarding.payout'
 import { Route as BusinessInviteTokenRouteImport } from './routes/business.invite.$token'
 import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
@@ -513,6 +514,12 @@ const BusinessThreadsIdRoute = BusinessThreadsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => BusinessThreadsRoute,
 } as any)
+const BusinessOnboardingWebsiteRoute =
+  BusinessOnboardingWebsiteRouteImport.update({
+    id: '/business/onboarding/website',
+    path: '/business/onboarding/website',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BusinessOnboardingPayoutRoute =
   BusinessOnboardingPayoutRouteImport.update({
     id: '/business/onboarding/payout',
@@ -746,6 +753,7 @@ export interface FileRoutesByFullPath {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
+  '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
@@ -852,6 +860,7 @@ export interface FileRoutesByTo {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
+  '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
@@ -962,6 +971,7 @@ export interface FileRoutesById {
   '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
+  '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
   '/business/threads/$id': typeof BusinessThreadsIdRoute
   '/destinations/$country/$city': typeof DestinationsCountryCityRoute
   '/lovable/email/unsubscribe': typeof LovableEmailUnsubscribeRoute
@@ -1073,6 +1083,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
+    | '/business/onboarding/website'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
@@ -1179,6 +1190,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
+    | '/business/onboarding/website'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
@@ -1288,6 +1300,7 @@ export interface FileRouteTypes {
     | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
+    | '/business/onboarding/website'
     | '/business/threads/$id'
     | '/destinations/$country/$city'
     | '/lovable/email/unsubscribe'
@@ -1380,6 +1393,7 @@ export interface RootRouteChildren {
   BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
   BusinessOnboardingPayoutRoute: typeof BusinessOnboardingPayoutRoute
+  BusinessOnboardingWebsiteRoute: typeof BusinessOnboardingWebsiteRoute
   DestinationsCountryCityRoute: typeof DestinationsCountryCityRoute
   LovableEmailUnsubscribeRoute: typeof LovableEmailUnsubscribeRoute
   DestinationsCountryIndexRoute: typeof DestinationsCountryIndexRoute
@@ -1958,6 +1972,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessThreadsIdRouteImport
       parentRoute: typeof BusinessThreadsRoute
     }
+    '/business/onboarding/website': {
+      id: '/business/onboarding/website'
+      path: '/business/onboarding/website'
+      fullPath: '/business/onboarding/website'
+      preLoaderRoute: typeof BusinessOnboardingWebsiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/business/onboarding/payout': {
       id: '/business/onboarding/payout'
       path: '/business/onboarding/payout'
@@ -2356,6 +2377,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessDealsNewRoute: BusinessDealsNewRoute,
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
   BusinessOnboardingPayoutRoute: BusinessOnboardingPayoutRoute,
+  BusinessOnboardingWebsiteRoute: BusinessOnboardingWebsiteRoute,
   DestinationsCountryCityRoute: DestinationsCountryCityRoute,
   LovableEmailUnsubscribeRoute: LovableEmailUnsubscribeRoute,
   DestinationsCountryIndexRoute: DestinationsCountryIndexRoute,
