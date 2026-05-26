@@ -102,7 +102,7 @@ function AdminDiscoveries() {
             {d.ai_summary && <p className="mt-1.5 line-clamp-3 text-xs text-muted-foreground">{d.ai_summary}</p>}
             <div className="mt-2 flex items-center gap-1.5">
               <a
-                href={d.url}
+                href={d.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"

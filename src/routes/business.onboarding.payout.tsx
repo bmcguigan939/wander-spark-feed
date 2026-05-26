@@ -7,6 +7,7 @@ import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { refreshConnectStatus } from "@/lib/stripe-connect.functions";
+import { listMyDeals } from "@/lib/deals.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/business/onboarding/payout")({
@@ -22,6 +23,7 @@ function PayoutSetupPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const refreshFn = useServerFn(refreshConnectStatus);
+  const dealsFn = useServerFn(listMyDeals);
   const { connect } = useSearch({ from: "/business/onboarding/payout" });
 
   useEffect(() => {
@@ -35,14 +37,26 @@ function PayoutSetupPage() {
     if (!user || !isBusiness || !connect) return;
     (async () => {
       try {
-        await refreshFn({ data: { environment: getStripeEnvironment() } });
+        const status = await refreshFn({ data: { environment: getStripeEnvironment() } });
         qc.invalidateQueries({ queryKey: ["connect-status"] });
         qc.invalidateQueries({ queryKey: ["bookable-status"] });
+        if ((status as any)?.stripe_connect_payouts_enabled) {
+          // Auto-route to next step: a draft to publish, or the new-listing flow.
+          try {
+            const { deals } = await dealsFn();
+            const draft = (deals ?? []).find((d: any) => d.status === "draft");
+            if (draft) {
+              navigate({ to: "/business/deals/$id/edit", params: { id: draft.id } });
+              return;
+            }
+          } catch { /* ignore */ }
+          navigate({ to: "/business" });
+        }
       } catch {
         /* ignore — user can retry from the card */
       }
     })();
-  }, [connect, user, isBusiness, refreshFn, qc]);
+  }, [connect, user, isBusiness, refreshFn, qc, dealsFn, navigate]);
 
   if (!user || !isBusiness) return null;
 

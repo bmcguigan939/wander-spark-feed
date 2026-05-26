@@ -9,8 +9,6 @@ import {
   acceptInvite,
   checkInviteAccountState,
 } from "@/lib/business-invites.functions";
-import { updateMyOperatorSite } from "@/lib/operator-site.functions";
-import { checkOperatorSiteUrl, type OperatorSiteCheck } from "@/lib/operator-site-check.functions";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { scorePassword } from "@/lib/password-strength";
 
@@ -29,8 +27,6 @@ function BusinessSignupPage() {
   const navigate = useNavigate();
   const checkFn = useServerFn(checkInviteAccountState);
   const acceptFn = useServerFn(acceptInvite);
-  const saveOperatorSite = useServerFn(updateMyOperatorSite);
-  const checkSiteFn = useServerFn(checkOperatorSiteUrl);
 
   const stateQ = useQuery({
     queryKey: ["invite-account-state", invite],
@@ -41,38 +37,8 @@ function BusinessSignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [operatorSiteUrl, setOperatorSiteUrl] = useState("");
-  const [siteCheck, setSiteCheck] = useState<OperatorSiteCheck | null>(null);
-  const [checkingSite, setCheckingSite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Debounced server-side reachability check — iframes don't work because
-  // most booking engines send X-Frame-Options: DENY, so we render a card.
-  useEffect(() => {
-    const url = operatorSiteUrl.trim();
-    if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(url)) {
-      setSiteCheck(null);
-      setCheckingSite(false);
-      return;
-    }
-    let cancelled = false;
-    setCheckingSite(true);
-    const t = setTimeout(async () => {
-      try {
-        const r = await checkSiteFn({ data: { url } });
-        if (!cancelled) setSiteCheck(r);
-      } catch {
-        if (!cancelled) setSiteCheck({ ok: false, error: "Could not reach that URL" });
-      } finally {
-        if (!cancelled) setCheckingSite(false);
-      }
-    }, 600);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [operatorSiteUrl, checkSiteFn]);
 
   if (!invite) {
     return (
@@ -154,15 +120,6 @@ function BusinessSignupPage() {
     if (data.session) {
       try {
         await acceptFn({ data: { token: invite!, agreementVersion: "v1" } });
-        if (operatorSiteUrl.trim() && siteCheck?.ok) {
-          try {
-            await saveOperatorSite({
-              data: { operator_site_url: operatorSiteUrl.trim() },
-            });
-          } catch {
-            // non-fatal — operator can add it later from the dashboard
-          }
-        }
       } catch (e: any) {
         setLoading(false);
         setError(e?.message ?? "Couldn't accept the invite. Try again from the invite page.");
@@ -245,60 +202,6 @@ function BusinessSignupPage() {
             .
           </span>
         </label>
-
-        <details className="rounded-2xl border border-border bg-card p-3 text-[13px]">
-          <summary className="cursor-pointer font-medium text-foreground">
-            Activity operator? Add your booking page (optional)
-          </summary>
-          <p className="mt-2 text-xs text-muted-foreground">
-            We use your website price as the base and add an 11% booking fee on top.
-            We never compare against your own site — only third-party resellers.
-          </p>
-          <input
-            type="url"
-            placeholder="https://your-activity.com"
-            value={operatorSiteUrl}
-            onChange={(e) => {
-              setOperatorSiteUrl(e.target.value);
-            }}
-            className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-          {operatorSiteUrl.trim() && /^https?:\/\//.test(operatorSiteUrl.trim()) && (
-            <div className="mt-3">
-              {checkingSite && (
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Checking that URL…
-                </div>
-              )}
-              {!checkingSite && siteCheck?.ok && (
-                <div className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-                  {siteCheck.faviconUrl ? (
-                    <img
-                      src={siteCheck.faviconUrl}
-                      alt=""
-                      className="h-5 w-5 rounded-sm"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-foreground">
-                      {siteCheck.title ?? siteCheck.finalUrl}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {siteCheck.finalUrl}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {!checkingSite && siteCheck && !siteCheck.ok && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  Couldn't reach that URL{siteCheck.error ? ` — ${siteCheck.error}` : ""}. Double-check the address, or leave this blank.
-                </div>
-              )}
-            </div>
-          )}
-        </details>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 export type DealFormValues = {
   title: string;
   description?: string;
-  url: string;
+  url?: string;
   image_url?: string;
   destination?: string;
   country?: string;
@@ -18,9 +18,6 @@ export type DealFormValues = {
   parity_exempt?: boolean;
   parity_exempt_reason?: string | null;
   category?: "stay" | "eat" | "do" | "tour" | "transport" | "other";
-  pricing_model?: "commission" | "operator_markup";
-  operator_base_price_cents?: number | null;
-  operator_site_url?: string | null;
 };
 
 export function DealForm({
@@ -39,7 +36,6 @@ export function DealForm({
   const [v, setV] = useState<DealFormValues>({
     title: initial?.title ?? "",
     description: initial?.description ?? "",
-    url: initial?.url ?? "",
     image_url: initial?.image_url ?? "",
     destination: initial?.destination ?? "",
     country: initial?.country ?? "",
@@ -53,19 +49,8 @@ export function DealForm({
     category:
       initial?.category ??
       (accountKind === "activity" ? "do" : accountKind === "stay" ? "stay" : "other"),
-    pricing_model: initial?.pricing_model ?? "commission",
-    operator_base_price_cents: initial?.operator_base_price_cents ?? null,
-    operator_site_url: initial?.operator_site_url ?? "",
   });
   const [uploading, setUploading] = useState(false);
-
-  const isActivity = v.category === "do" || v.category === "tour";
-  const isOperatorMarkup = isActivity && v.pricing_model === "operator_markup";
-  const baseGbp =
-    v.operator_base_price_cents != null && v.operator_base_price_cents > 0
-      ? v.operator_base_price_cents / 100
-      : null;
-  const travidzPriceGbp = baseGbp != null ? Math.round(baseGbp * 1.11 * 100) / 100 : null;
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
@@ -161,93 +146,6 @@ export function DealForm({
         />
       </label>
       {field("Link URL", "url", "url", true)}
-      {isActivity && (
-        <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">Activity pricing</span>
-          </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={v.pricing_model === "operator_markup"}
-              onChange={(e) =>
-                setV({
-                  ...v,
-                  pricing_model: e.target.checked ? "operator_markup" : "commission",
-                })
-              }
-            />
-            <span>
-              <span className="font-medium">I'm the operator — list my own activity</span>
-              <span className="block text-xs text-muted-foreground">
-                Travidz uses your website price as the base and adds an 11% booking fee on
-                top. We never compare against your own site — only third-party resellers
-                like GetYourGuide and Viator.
-              </span>
-            </span>
-          </label>
-          {isOperatorMarkup && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
-              Operator listings must be bookable through Travidz so we can collect the
-              11% fee on top of your price. We'll force <em>Book through Travidz</em>{" "}
-              on when you save.
-            </div>
-          )}
-          {isOperatorMarkup && (
-            <div className="space-y-2 pt-1">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Your website (will be embedded at signup)
-                </span>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://your-activity.com"
-                  value={v.operator_site_url ?? ""}
-                  onChange={(e) => setV({ ...v, operator_site_url: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Your website price (GBP, per person)
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step="1"
-                  required
-                  placeholder="e.g. 120"
-                  value={baseGbp ?? ""}
-                  onChange={(e) =>
-                    setV({
-                      ...v,
-                      operator_base_price_cents:
-                        e.target.value === "" ? null : Math.round(Number(e.target.value) * 100),
-                    })
-                  }
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
-              <div className="rounded-lg border border-primary/30 bg-primary/10 p-2.5 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Travidz price (base + 11%)</span>
-                  <span className="font-semibold text-foreground">
-                    {travidzPriceGbp != null
-                      ? `£${travidzPriceGbp.toFixed(2)}`
-                      : "—"}
-                  </span>
-                </div>
-                <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                  The 11% covers secure checkout, customer support, and the creator
-                  commission pool. Other resellers typically charge 25–40% on top.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
       <div>
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Cover image</span>
         {v.image_url ? (

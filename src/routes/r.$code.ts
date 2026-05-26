@@ -57,7 +57,7 @@ export const Route = createFileRoute("/r/$code")({
           })
           .then(() => {}, () => {});
 
-        const finalUrl = await wrapWithAffiliate(deal.url, deal.affiliate_network);
+        const finalUrl = await wrapWithAffiliate(deal.url ?? "https://travidz.com/", deal.affiliate_network);
 
         return new Response(null, {
           status: 302,
