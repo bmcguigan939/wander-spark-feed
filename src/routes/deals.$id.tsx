@@ -18,7 +18,8 @@ import { PhotoGallery } from "@/components/PhotoGallery";
 import { listBusinessPhotos } from "@/lib/business-photos.functions";
 import { PriceMatchBadge } from "@/components/PriceMatchBadge";
 import { RatingSummary, StarRow } from "@/components/reviews/RatingSummary";
-import { getReviewsForDeal } from "@/lib/reviews.functions";
+import { getReviewsForDeal, flagReview } from "@/lib/reviews.functions";
+import { Flag } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -185,27 +186,7 @@ function DealDetail() {
                 </div>
                 <ul className="space-y-3">
                   {reviews.map((r) => (
-                    <li key={r.id} className="rounded-2xl border border-border bg-card/40 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {r.user?.avatar_url ? (
-                            <img src={r.user.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
-                          ) : (
-                            <div className="h-7 w-7 rounded-full bg-muted" />
-                          )}
-                          <span className="text-xs font-medium">
-                            {r.user?.display_name ?? `@${r.user?.username ?? "traveller"}`}
-                          </span>
-                          <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600">
-                            Verified booking
-                          </span>
-                        </div>
-                        <StarRow value={r.rating} />
-                      </div>
-                      {r.comment && (
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">{r.comment}</p>
-                      )}
-                    </li>
+                    <ReviewItem key={r.id} review={r} canFlag={!!user} />
                   ))}
                 </ul>
               </section>
