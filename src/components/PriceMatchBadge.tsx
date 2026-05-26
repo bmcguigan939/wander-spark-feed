@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ShieldCheck, TrendingDown, Equal, Loader2 } from "lucide-react";
+import { ShieldCheck, TrendingDown, Equal, Loader2, Tag } from "lucide-react";
 import { scanDealPriceMatch } from "@/lib/price-match.scan.functions";
 
 function formatMoney(cents: number, currency = "GBP") {
@@ -117,6 +117,11 @@ export function PriceMatchBadge({
         <div className="text-amber-200/80">
           They're showing {formatMoney(competitor, data.currency)} — we'll honour the lower price at checkout.
         </div>
+        {data.match_code && (
+          <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-amber-500/20 px-2 py-1 font-mono text-[11px] font-semibold text-amber-100">
+            <Tag className="h-3 w-3" /> {data.match_code}
+          </div>
+        )}
       </div>
     </div>
   );
