@@ -106,9 +106,12 @@ export function OnboardingChecklist() {
   });
   const firstDealId: string | null = (myDeals?.deals ?? [])[0]?.id ?? null;
 
-  const ALL_GATES: BookableGate[] = ["photos", "items", "rates", "calendar", "payouts"];
-  const missing = new Set(bookable?.missing ?? ALL_GATES);
   const accountKind: AccountKind = bookable?.accountKind ?? "unknown";
+  const ALL_GATES: BookableGate[] =
+    accountKind === "activity"
+      ? ["website", "photos", "items", "rates", "calendar", "payouts"]
+      : ["photos", "items", "rates", "calendar", "payouts"];
+  const missing = new Set(bookable?.missing ?? ALL_GATES);
 
   const steps: Step[] = [
     {
