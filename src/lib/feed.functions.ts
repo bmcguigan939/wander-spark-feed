@@ -35,12 +35,15 @@ export type FeedVideo = {
     username: string;
     display_name: string | null;
     avatar_url: string | null;
+    creator_quality_score?: number | null;
   };
   matchedDeal?: {
     id: string;
     title: string;
     discount_label: string | null;
     image_url: string | null;
+    rating_avg: number | null;
+    rating_count: number | null;
   } | null;
   matchedBusiness?: {
     id: string;
@@ -49,6 +52,8 @@ export type FeedVideo = {
     logo_url: string | null;
     city: string | null;
     country: string | null;
+    rating_avg: number | null;
+    rating_count: number | null;
   } | null;
   music?: {
     id: string;
@@ -66,7 +71,7 @@ async function fetchFeedRows(
   let q = supabaseAdmin
     .from("videos")
     .select(
-      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+      "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     )
     .eq("status", "ready")
     .eq("is_draft", false)
@@ -157,7 +162,7 @@ async function attachMatchedBusiness(videos: FeedVideo[]) {
   );
   const { data: bizProfiles } = await supabaseAdmin
     .from("profiles")
-    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country")
+    .select("id,business_name,business_website_url,business_logo_url,business_city,business_country,business_rating_avg,business_rating_count")
     .in("id", businessIds);
   const bizById = new Map<string, any>(
     (bizProfiles ?? []).map((b: any) => [b.id, b]),
@@ -199,6 +204,8 @@ async function attachMatchedBusiness(videos: FeedVideo[]) {
       logo_url: pick.business_logo_url ?? null,
       city: pick.business_city ?? null,
       country: pick.business_country ?? null,
+      rating_avg: pick.business_rating_avg ?? null,
+      rating_count: pick.business_rating_count ?? null,
     };
   }
 }
@@ -214,7 +221,7 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
 
   const { data: apps } = await supabaseAdmin
     .from("deal_applications")
-    .select("creator_id,deal:deals!inner(id,title,discount_label,image_url,country,city,is_active,starts_at,ends_at,status)")
+    .select("creator_id,deal:deals!inner(id,title,discount_label,image_url,country,city,is_active,starts_at,ends_at,status,deal_rating_avg,deal_rating_count)")
     .eq("status", "approved")
     .in("creator_id", creatorIds);
   if (!apps?.length) return;
@@ -257,6 +264,8 @@ async function _attachMatchedDealsImpl(videos: FeedVideo[]) {
         title: match.title,
         discount_label: match.discount_label,
         image_url: match.image_url,
+        rating_avg: match.deal_rating_avg ?? null,
+        rating_count: match.deal_rating_count ?? null,
       };
     }
   }
@@ -284,7 +293,7 @@ export const getVideosByIds = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin
       .from("videos")
       .select(
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
       )
       .in("id", data.ids)
       .eq("status", "ready")
@@ -372,9 +381,19 @@ function scoreVideo(
   const semantic = ctx.semanticAffinity.get(v.id) ?? 0;
   const newUploadBoost = isFreshUpload(v) ? 18 : 0;
   const jitter = Math.random() * 0.4; // small variety
-  return (
-    freshness * 4 + engagement * 0.7 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter
-  );
+  const base =
+    freshness * 4 + engagement * 0.7 + creatorBoost + tagBoost * 1.5 + countryBoost + semantic * 5 + newUploadBoost + jitter;
+  // Creator quality multiplier: well-reviewed creators get surfaced more,
+  // poorly-reviewed creators get suppressed. Null = cold-start (no penalty).
+  const q = (v.creator as any)?.creator_quality_score as number | null | undefined;
+  let qualityMult = 1;
+  if (q != null) {
+    if (q >= 80) qualityMult = 1.25;
+    else if (q >= 60) qualityMult = 1.0;
+    else if (q >= 40) qualityMult = 0.75;
+    else qualityMult = 0.4;
+  }
+  return base * qualityMult;
 }
 
 async function buildAffinity(userId: string) {
@@ -453,7 +472,7 @@ export const getForYouFeed = createServerFn({ method: "GET" })
     // Candidate pool: most recent ready, non-hidden videos
     const POOL = 150;
     const baseSelect =
-        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
+        "id,creator_id,title,description,mux_playback_id,thumbnail_url,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,save_count,view_count,comment_count,created_at,bumped_at,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score),music:music_tracks!videos_music_track_id_fkey(id,title,artist,cover_url)"
     ;
     const [freshRes, bumpedRes] = await Promise.all([
       supabaseAdmin
@@ -561,7 +580,7 @@ export const searchAll = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("videos")
         .select(
-          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)"
+          "id,title,mux_playback_id,thumbnail_url,destination,country,activity_tags,like_count,source_platform,source_url,embed_mode,cross_links,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)"
         )
         .eq("status", "ready")
         .eq("is_draft", false)
@@ -656,7 +675,7 @@ export const searchVideos = createServerFn({ method: "GET" })
           let kw = supabaseAdmin
             .from("videos")
             .select(
-              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+              "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
             )
             .eq("status", "ready")
             .eq("is_draft", false)
@@ -690,7 +709,7 @@ export const searchVideos = createServerFn({ method: "GET" })
         let extra = supabaseAdmin
           .from("videos")
           .select(
-            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+            "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
           )
           .in("id", newIds)
           .eq("status", "ready")
@@ -729,7 +748,7 @@ export const searchVideos = createServerFn({ method: "GET" })
     let q = supabaseAdmin
       .from("videos")
       .select(
-        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url)",
+        "id,title,thumbnail_url,mux_playback_id,source_platform,source_url,embed_mode,cross_links,destination,country,city,lat,lng,activity_tags,budget_tag,like_count,view_count,created_at,creator:profiles!videos_creator_id_fkey(id,username,display_name,avatar_url,creator_quality_score)",
       )
       .eq("status", "ready")
       .eq("is_draft", false)
