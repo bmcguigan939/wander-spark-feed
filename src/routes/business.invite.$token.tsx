@@ -30,6 +30,7 @@ function InvitePage() {
   const { token } = Route.useParams();
   const qc = useQueryClient();
   const { user, loading } = useAuth();
+  const { signOut, refreshRoles } = useAuth();
 
   const getFn = useServerFn(getInviteByToken);
   const acceptFn = useServerFn(acceptInvite);
@@ -76,12 +77,13 @@ function InvitePage() {
       // eslint-disable-next-line no-console
       console.info("[acceptInvite] POST starting", { token });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ["invite", token] });
       qc.invalidateQueries({ queryKey: ["feed"] });
       if (data?.video?.id) {
         qc.invalidateQueries({ queryKey: ["video", data.video.id] });
       }
+      await refreshRoles();
       toast.success("Welcome to Travidz — your listing is live");
     },
     onError: (e: any) => {
@@ -124,6 +126,10 @@ function InvitePage() {
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
   const canAccept = agreed;
+
+  const inviteEmail = accountQ.data?.email?.toLowerCase() ?? "";
+  const currentEmail = (user?.email ?? "").toLowerCase();
+  const wrongAccount = !!user && !!inviteEmail && currentEmail !== inviteEmail;
 
   const handleAcceptClick = () => {
     // eslint-disable-next-line no-console
@@ -276,6 +282,25 @@ function InvitePage() {
         </label>
 
         {user ? (
+          wrongAccount ? (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-3 text-[13px] leading-snug">
+              <p className="font-semibold text-destructive">Wrong account</p>
+              <p className="mt-1 text-muted-foreground">
+                This invite was sent to{" "}
+                <span className="font-medium text-foreground">{inviteEmail}</span>,
+                but you're signed in as{" "}
+                <span className="font-medium text-foreground">{currentEmail}</span>.
+                Sign out and sign in with the invited email to claim your
+                business listing.
+              </p>
+              <button
+                onClick={async () => { await signOut(); }}
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
           <button
             onClick={handleAcceptClick}
             disabled={acceptM.isPending}
@@ -284,6 +309,7 @@ function InvitePage() {
             {acceptM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Accept & claim your listing
           </button>
+          )
         ) : accountQ.data?.accountExists ? (
           <>
             <Link
