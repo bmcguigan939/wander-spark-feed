@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getPinnedCompetitorUrls } from "@/lib/business-competitor-urls.functions";
 
 /**
  * Deal-level price-match scan. Scrapes a handful of major OTA networks
@@ -14,6 +15,8 @@ export type ScanQuote = {
   url: string;
   price_cents: number;
   currency: string;
+  confidence?: "high" | "medium" | "low";
+  matched_item_name?: string | null;
 };
 
 export type ScanResult = {
@@ -27,6 +30,8 @@ export type ScanResult = {
    *  competitor — null otherwise. */
   match_code: string | null;
   match_expires_at: string | null;
+  match_confidence?: "high" | "medium" | "low" | null;
+  match_notes?: string | null;
 };
 
 const NETWORKS_COMMISSION: { network: string; site: string }[] = [
