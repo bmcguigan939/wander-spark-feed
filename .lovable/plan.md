@@ -1,51 +1,77 @@
-## Price-match accuracy: pass deal context + per-business OTA listings
 
-Two-part change: make the existing scanner use the data we already have (Phase 1), and let businesses pin their own OTA listing URLs so the scanner stops guessing (Phase 2).
+# Honest price-match: Phase 1 + Phase 2
 
-### Phase 1 — Feed the scanner what the deal already knows
+Ship both phases in one build. Goal: scanner compares the **same property, room/ticket, dates and pax** as the deal — not a generic city search.
 
-Today the price scanner mostly runs off `title + city`. The deal already carries everything needed for an apples-to-apples quote — we just stop throwing it away.
+## Phase 1 — Feed the scanner what the booking already knows
 
-- Always pass `check_in`, `check_out`, `guests` (adults / children / rooms), `room_id`, and `currency` into `runDealPriceMatch`.
-- Build per-network deep-link templates so the scrape lands on the right dates/pax:
-  - Booking.com: `…/searchresults.html?ss=<name+postcode>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N&no_rooms=R&group_children=C`
-  - Expedia / Hotels.com / Agoda equivalents
-  - GetYourGuide / Viator: activity search + date
-- Upgrade the Firecrawl JSON schema to return a room/ticket list: `{ name, price, currency, refundable, cancellation }` — not just the cheapest headline number.
-- Cache key becomes `(deal_id, room_id, check_in, check_out, guests_signature)` so two different date ranges don't collide.
-- Each scraped quote records `match_confidence` (high / medium / low) and `match_notes` (what was matched on: name, postcode, room-name fuzzy score). Auto-issued MATCH discount codes only fire on `high`.
+**Inputs threaded end-to-end**
+- `PriceMatchBadge` already passes `check_in`, `check_out`, `guests`. Add `room_id` (when a rate is selected) and `currency`.
+- `scanDealPriceMatch` → `runDealPriceMatch` accept all five and include them in the cache key:
+  `(deal_id, room_id|null, check_in|null, check_out|null, guests_signature)`.
 
-### Phase 2 — Per-business pinned OTA listings
+**Per-network deep-link templates** (built in `price-match-scan.server.ts`)
+- Booking.com: `/searchresults.html?ss=<name+postcode>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N&no_rooms=R`
+- Expedia / Agoda / GetYourGuide / Viator: equivalent date+pax query templates.
+- Fallback to current `site:` search when template can't be built.
 
-A new optional "Competitor listings" section on the business profile. Once pinned, the scanner skips search for that business × that network and goes straight to the exact listing page with dates/pax appended.
+**Richer Firecrawl extraction**
+- Upgrade JSON schema in `price-compare.server.ts` to return a list:
+  `{ items: [{ name, price, currency, refundable, cancellation_policy }] }`.
+- Pick the item whose name best matches the deal's room/ticket title (token overlap + price-band sanity).
 
-- New table `business_competitor_urls` keyed by `business_id` with one row per (network, URL). Repeatable rows in the UI — businesses can add as many as they want, leave it empty, or fill some networks and not others. Optional, never blocking.
-- Networks supported at launch: Booking.com, Expedia, Hotels.com, Agoda, Trip.com, GetYourGuide, Viator. Easy to extend.
-- Validation per network:
-  - Host must match the network's domain (e.g. `booking.com`, `www.booking.com`, `secure.booking.com`).
-  - URL shape sanity-checked (e.g. Booking property URLs contain `/hotel/<cc>/<slug>.html`; GYG contains `/-t<id>` or `/-l<id>`).
-  - Reject query-only search URLs ("this looks like a search results page, paste the property page instead").
-- Where the prompt appears (all three):
-  - **Business onboarding** — new optional step "Add your listings on other sites" with a skip button.
-  - **Deal create / edit form** — collapsed "Match accuracy" section showing the business's pinned URLs read-only with an "Edit listings" link to the business profile.
-  - **Price audit page** — when a quote is flagged low-confidence or the business disputes a match, inline nudge: "Pin your Booking.com URL to make this exact" with a one-click add.
-- Scanner logic:
-  1. If a pinned URL exists for `(business, network)` → scrape it directly with dates/pax appended. Confidence = `high`.
-  2. Otherwise fall back to Phase-1 search-based matching.
-  3. If a pinned URL 404s or stops returning rooms, surface a "your pinned Booking.com link looks broken — update it?" notice on the business dashboard (OTAs occasionally re-slug URLs).
+**Confidence scoring on every quote**
+- `high` — pinned URL hit OR template URL + matching room name + dates/pax echoed back.
+- `medium` — template URL but room name not confidently matched.
+- `low` — fallback search-results page; price extracted but property/room not verified.
+- Auto-issued MATCH codes only fire on `high`. Badge copy degrades gracefully for `medium`/`low` ("indicative" vs "verified").
 
-### Out of scope
+## Phase 2 — Per-business pinned OTA listings
 
-- Per-deal URL overrides (deferred — per-business is enough for ~95% of cases; sister-property edge cases can be added later if real data shows we need it).
-- Official partner APIs (Booking Demand API, Expedia EPS, GYG Partner API) — those need partner approval per network.
+**New table `business_competitor_urls`**
+- Columns: `business_id`, `network` (enum: booking, expedia, agoda, getyourguide, viator, airbnb, vrbo, tripadvisor), `url`, `verified_at`, `last_scraped_at`, `last_status`, `last_error`.
+- Unique `(business_id, network)`. RLS: business owner CRUD; service role full.
 
-### Why this answers the original question
+**Validation (server-side)**
+- Host must match the network's domain (e.g. `*.booking.com`).
+- URL shape sanity-checked per network (e.g. Booking property pages contain `/hotel/<cc>/<slug>.html`; query-only search URLs rejected).
+- Optional one-shot Firecrawl probe on save → stores `verified_at` + property title for display.
 
-Yes — businesses pasting their exact OTA listing URLs is enough for the scanner to compare the same property, room type, dates, and pax. The "search by name + postcode" path is the fallback for businesses who don't pin anything; the pinned URL path is the deterministic, one-click-fix path for the cases where search drifts (chains with sister properties, renamed listings, OTA search-results pages above the property page, etc.).
+**Three entry points to add URLs**
+1. Business onboarding — new optional step "Where else are you listed?" with one row per network, "Add another" button.
+2. Deal create/edit form — collapsed "Match accuracy" section with summary ("3 sites pinned") and "Edit listings" link to business settings.
+3. Price-audit page — inline nudge when a recent scan is `low` confidence or a dispute is opened.
 
-### Technical notes
+**Scanner logic change**
+- If a pinned URL exists for `(business, network)` → append dates/pax and scrape directly (`confidence = high`).
+- Otherwise fall back to Phase-1 templates, then `site:` search.
+- On 404 / wrong-domain redirect: mark `last_status = broken`, surface a notice on the business dashboard.
 
-- `business_competitor_urls`: `business_id`, `network` (enum), `url` (text), `verified_at`, `last_scraped_at`, `last_status`. Unique on `(business_id, network)` — one URL per network per business. RLS: business owners read/write their own; service role full access for the scanner.
-- Validation runs both client-side (zod schema per network) and inside the `createServerFn` that saves the row.
-- Scanner change is isolated to the `runDealPriceMatch` server fn + the Firecrawl JSON schema + the URL-builder helpers per network. No change to the discount-code issuing logic except gating on `match_confidence`.
-- All Phase 1 changes ship first and independently; Phase 2 can ship right after without re-touching the scanner core.
+## Out of scope (deferred)
+- Per-deal URL overrides (deal-level pins on top of business-level pins).
+- Official partner APIs (Booking Demand, Expedia EPS, GYG Partner) — need partner approval per network.
+
+## Technical sketch
+
+```text
+PriceMatchBadge (deal, check_in, check_out, guests, room_id, currency)
+   → scanDealPriceMatch (cached 6h on full key)
+      → runDealPriceMatch
+          ├─ for each network:
+          │    1. pinned URL in business_competitor_urls?  → scrape direct
+          │    2. else build template URL with dates+pax    → scrape
+          │    3. else site: search                         → scrape
+          ├─ extract item list, pick best room/ticket match
+          ├─ compute confidence per quote
+          └─ cheapest competitor + match_code (only if confidence=high)
+```
+
+Files touched:
+- DB migration: `business_competitor_urls` (+ GRANTs + RLS).
+- `src/lib/price-match-scan.server.ts` — templates, pinned-URL lookup, confidence.
+- `src/lib/price-compare.server.ts` — list-of-items schema + room matcher.
+- `src/lib/price-match.scan.functions.ts` — accept `room_id`, `currency`; new cache key.
+- `src/components/PriceMatchBadge.tsx` — pass `room_id`, degrade copy by confidence.
+- New `src/lib/business-competitor-urls.functions.ts` — CRUD + validate + probe.
+- New `src/components/business/CompetitorUrlsEditor.tsx` — reusable rows-of-URLs UI.
+- Wire editor into: `business.onboarding.*`, `business.deals.$id.edit`, `business.deals.new`, `business.price-audit`.
