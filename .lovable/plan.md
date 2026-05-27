@@ -1,24 +1,19 @@
 ## Plan
 
-Fix the invite flow so a business invite cannot be accepted by the creator’s currently logged-in account.
+Fix the invite flow so a business invite cannot be accepted by the creator's currently logged-in account.
 
-### 1. Add account mismatch protection on the invite page
-- If someone opens `/business/invite/:token` while logged in as a different email than the invited business email, show a clear warning.
-- Do not show the “Accept & claim your listing” action for that wrong account.
-- Add a button to sign out and continue with the invited business email.
+### 1. Server-side guard in `acceptInvite`
+- Look up the signed-in user's email and compare it to the invite's `contact_email`.
+- If they don't match, throw a clear error: "This invite was sent to {inviteEmail}. Please sign out and sign in (or sign up) with that email to accept it."
+- Prevents Linda (or any other logged-in account) from silently claiming an invite addressed to a different business email.
 
-### 2. Route invited businesses to the right auth path
-- If the invite email already has an account, send them to login with the invite return path.
-- If the invite email has no account, send them to business signup with the invite token.
-- Preserve the requirement to tick the business agreement checkbox before continuing.
+### 2. Client-side warning on `/business/invite/:token`
+- If the visitor is signed in as a different email than the invited business email, replace the "Accept & claim your listing" action with a destructive "Wrong account" panel showing both emails.
+- Add a "Sign out" button so they can re-sign in with the correct invited email.
+- After a correct accept, refresh user roles so the new `business` role is recognised immediately and the "Open your dashboard" button lands on `/business`.
 
-### 3. Harden the server-side accept action
-- Update `acceptInvite` so it checks the logged-in user’s email matches the invite’s `contact_email` before it creates the business role, deal, signing, and dashboard data.
-- If the wrong account tries to accept, return a helpful error instead of silently assigning the invite to that account.
+### Why this fixes what you saw
+The invite link was working, but the page trusted whichever session was active in the browser. Because Linda was already signed in, accepting the invite assigned the business listing to Linda's account and bounced the app back into her creator/profile context. With both the server check and the client warning in place, the invite can only be accepted by the email it was sent to — so the business lands in their own dashboard where they manage their shop front and accept future creator collabs.
 
-### 4. Refresh roles and send them to the business dashboard after acceptance
-- After a correct accept, refresh the user roles so the app recognises the business role immediately.
-- Keep the “Open your dashboard” button pointing to `/business`, where the business manages shop front setup, creator messages, creator applications/collabs, and bookings.
-
-### Why it is not working now
-The invite link itself is reaching the invite flow, but the page currently trusts the active browser session. Because Linda was already logged in, clicking “Approve your listing” accepted the invite under Linda’s account, which then made the app show Linda’s creator/profile context instead of the intended business account.
+### Out of scope
+- Changes to business signup, login, or post-accept redirect targets.
