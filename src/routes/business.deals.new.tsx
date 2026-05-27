@@ -55,18 +55,18 @@ function NewDealPage() {
         </p>
         {!hasPayout && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" />
             <div className="flex-1">
-              <p className="font-semibold text-amber-700 dark:text-amber-400">
+              <p className="font-semibold text-amber-900 dark:text-amber-300">
                 Your bank isn't connected yet
               </p>
-              <p className="mt-0.5 text-amber-700/80 dark:text-amber-300/80">
+              <p className="mt-0.5 text-amber-900/90 dark:text-amber-200/90">
                 No problem — this listing will save as a draft so you don't lose your
                 work. Connect your bank to publish it.
               </p>
               <Link
                 to="/business/onboarding/payout"
-                className="mt-1.5 inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400"
+                className="mt-1.5 inline-flex items-center gap-1 font-semibold text-amber-900 dark:text-amber-300"
               >
                 <Banknote className="h-3 w-3" /> Connect bank
               </Link>
