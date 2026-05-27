@@ -702,6 +702,48 @@ export type Database = {
           },
         ]
       }
+      business_competitor_urls: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_scraped_at: string | null
+          last_status: string | null
+          network: string
+          updated_at: string
+          url: string
+          verified_at: string | null
+          verified_title: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_scraped_at?: string | null
+          last_status?: string | null
+          network: string
+          updated_at?: string
+          url: string
+          verified_at?: string | null
+          verified_title?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_scraped_at?: string | null
+          last_status?: string | null
+          network?: string
+          updated_at?: string
+          url?: string
+          verified_at?: string | null
+          verified_title?: string | null
+        }
+        Relationships: []
+      }
       business_invites: {
         Row: {
           accepted_business_id: string | null
@@ -2738,9 +2780,12 @@ export type Database = {
           guests: number | null
           id: string
           link_id: string | null
+          match_confidence: string | null
+          match_notes: string | null
           normalised_competitor_price_cents: number | null
           providers_checked: string[]
           ran_at: string
+          room_id: string | null
           scanned_urls: Json
         }
         Insert: {
@@ -2759,9 +2804,12 @@ export type Database = {
           guests?: number | null
           id?: string
           link_id?: string | null
+          match_confidence?: string | null
+          match_notes?: string | null
           normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
+          room_id?: string | null
           scanned_urls?: Json
         }
         Update: {
@@ -2780,9 +2828,12 @@ export type Database = {
           guests?: number | null
           id?: string
           link_id?: string | null
+          match_confidence?: string | null
+          match_notes?: string | null
           normalised_competitor_price_cents?: number | null
           providers_checked?: string[]
           ran_at?: string
+          room_id?: string | null
           scanned_urls?: Json
         }
         Relationships: []
