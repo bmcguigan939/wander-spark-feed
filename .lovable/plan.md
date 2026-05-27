@@ -1,41 +1,39 @@
-## Goal
+## Problem
 
-A business clicking the invite link in their email should never see a "wrong account" dead-end. They should land in their own business dashboard — either by creating their account from the invite (first time) or by logging into their existing business account (returning) and seeing the new collab already accepted.
+The "Something went wrong / Minified React error #310" screen on `business/invite/$token` is a **React hooks-order violation**, not a real runtime failure. In `src/routes/business.invite.$token.tsx` the auto-route `useEffect` (added in the previous change) was placed **after** the two early returns:
 
-## Changes
+```
+if (isLoading) return <Loader/>;
+if (error || !data) return <NotFound/>;
+…
+useEffect(() => { /* signOut + navigate to /login */ }, [...]);
+```
 
-### 1. `src/routes/business.invite.$token.tsx` — remove the friction screen
-- Fetch the invite as today, then check the session.
-- If signed in as a **different** email than the invite's `contact_email`:
-  - Call `supabase.auth.signOut()` silently.
-  - Redirect to `/login?invite=<token>&email=<inviteEmail>`.
-- If **not signed in**: same redirect to `/login?invite=<token>&email=<inviteEmail>`.
-- If signed in as the **correct** email: keep today's "Accept & claim your listing" button. After accept, refresh roles and route to `/business`.
-- Delete the red "Wrong account / Sign out" panel.
+On first render `isLoading` is true → component returns before reaching the `useEffect`. On the next render, data resolves → component now calls one more hook than before → React throws #310 → root `errorComponent` renders the "Something went wrong / Try again" page. "Try again" calls `router.invalidate()` and re-runs, which is why hitting it eventually lands on `/login`.
 
-### 2. `src/routes/login.tsx` — prefill + auto-accept
-- Extend `searchSchema` with an optional `email` param.
-- When `?invite=<token>` is present:
-  - Prefill the `email` field from `?email=` and render it `readOnly` so the business can't accidentally type a different address.
-  - After a successful sign-in OR sign-up that yields a session, call `acceptInvite({ data: { token } })` before navigating.
-  - On success, refresh user roles and navigate to `/business` (not back to `/business/invite/:token`).
-  - On failure, surface the error inline and stay on `/login`.
-- The "Create account" tab stays available; the same auto-accept runs after signup.
+So the auto-routing logic is actually correct — it just never gets a chance to run cleanly because the component crashes first.
 
-### 3. Keep the server-side guard in `acceptInvite`
-- The existing email-match check stays as defense in depth. It effectively never fires for a real user now because the client guarantees the session email matches the invite email before calling it.
+## Fix
 
-## Resulting flow
+Move the auto-route `useEffect` **above** every early return in `src/routes/business.invite.$token.tsx`, so it always runs on every render regardless of `isLoading` / `error` state. Inside the effect, keep the existing guards (`if (!accountQ.data || !inviteEmail) return;` etc.) so it only acts once the account-state query resolves.
 
-- **New business:** email link → invite page sees no session → `/login?invite=...&email=...` → picks "Create account", sets password (email locked) → on signup, `acceptInvite` runs automatically → lands on `/business` with the listing already claimed.
-- **Returning business:** email link → invite page sees no/wrong session (auto signed out) → `/login?invite=...&email=...` → enters password → `acceptInvite` runs automatically → lands on `/business` with the new collab already accepted.
-- **Creator clicks an invite while signed in as a creator:** auto signed out and routed to the correct login — no dead-end.
+Concretely, reorder the top of `InvitePage` to:
 
-## Files to change
+1. All `useState` / `useQuery` / `useMutation` / `useServerFn` hooks (unchanged).
+2. Derive `inviteEmail`, `currentEmail`, `wrongAccount` from `accountQ.data` and `user` (move these up from below the early returns).
+3. The `useEffect` that, when the session doesn't match the invited email, calls `signOut()` (if needed) and `navigate({ to: "/login", search: { invite, email } })`.
+4. THEN the `if (isLoading)` and `if (error || !data)` early returns.
+5. The rest of the render (status branches, accept button, etc.) unchanged.
 
-- `src/routes/business.invite.$token.tsx`
-- `src/routes/login.tsx`
+No other files need to change. The login page already accepts `?invite=…&email=…`, prefills the email, runs `acceptInvite` after sign-in/sign-up, and routes to `/business` — that flow is correct and was already implemented.
+
+## Result
+
+- New business clicks "Accept & claim your listing" in email → invite page mounts → effect immediately redirects to `/login?invite=…&email=…` (no error screen, no manual retry). They flip to "Create account", sign up, `acceptInvite` runs automatically, land on `/business`.
+- Existing business → same path, they sign in instead of signing up, `acceptInvite` runs, land on `/business`.
+- Creator who accidentally clicks an invite → effect calls `signOut()` then redirects to the correct login.
 
 ## Out of scope
 
-- Invite email template, business signup page layout, dashboard UI, creator-side outreach flow, the unrelated security findings shown in the More panel.
+- Email template, signup page UI, dashboard layout, creator-side outreach.
+- The root `errorComponent` itself — it's working as designed; the bug was upstream.
