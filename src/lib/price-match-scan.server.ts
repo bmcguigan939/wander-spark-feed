@@ -308,15 +308,28 @@ export async function runDealPriceMatch(args: {
     (h): h is string => !!h,
   );
 
+  // If the business pinned exact OTA listing URLs, use those directly —
+  // it's a like-for-like comparison and avoids false positives from
+  // similarly-named properties.
+  const pinned = args.business_id
+    ? await getPinnedCompetitorUrls(args.business_id)
+    : new Map<string, { url: string; verified_at: string | null }>();
+
   // Scrape all networks in parallel — never include the operator's own site.
   const found = await Promise.all(
     networks
       .filter(({ site }) => !excludeHosts.includes(normaliseHost(site) ?? ""))
       .map(async ({ network, site }) => {
+        const pin = pinned.get(network);
+        if (pin) {
+          const q = await scrape(network, pin.url);
+          return q ? { ...q, confidence: "high" as const } : null;
+        }
         const url = await findUrl(args.query, site, excludeHosts);
-      if (!url) return null;
-      return scrape(network, url);
-    }),
+        if (!url) return null;
+        const q = await scrape(network, url);
+        return q ? { ...q, confidence: "low" as const } : null;
+      }),
   );
   const quotes = found.filter((q): q is ScanQuote => !!q);
 
