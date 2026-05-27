@@ -466,7 +466,14 @@ function InviteForm({
           </button>
           <button
             type="button"
-            onClick={() => copy(`${subject}\n\n${body}`, "Email")}
+            onClick={() =>
+              copy(
+                inviteUrl
+                  ? `${subject}\n\n${body}\n\nApprove your listing: ${inviteUrl}`
+                  : `${subject}\n\n${body}`,
+                "Email",
+              )
+            }
             disabled={!subject && !body}
             className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
           >

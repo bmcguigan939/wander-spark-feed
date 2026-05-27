@@ -300,7 +300,14 @@ export function TagBusinessSheet({ videoId, open, onOpenChange, initial, onCreat
             </button>
             <button
               type="button"
-              onClick={() => copy(`${subject}\n\n${body}`, "Email")}
+              onClick={() =>
+                copy(
+                  inviteUrl
+                    ? `${subject}\n\n${body}\n\nApprove your listing: ${inviteUrl}`
+                    : `${subject}\n\n${body}`,
+                  "Email",
+                )
+              }
               disabled={!subject && !body}
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
             >
