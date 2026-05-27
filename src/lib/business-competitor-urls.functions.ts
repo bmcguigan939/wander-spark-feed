@@ -194,17 +194,19 @@ export async function recordPinnedUrlStatus(
   error?: string | null,
   verifiedTitle?: string | null,
 ): Promise<void> {
-  const patch: Record<string, unknown> = {
+  const patch = {
     last_status: status,
     last_error: error ?? null,
+    ...(status === "verified"
+      ? {
+          verified_at: new Date().toISOString(),
+          ...(verifiedTitle ? { verified_title: verifiedTitle } : {}),
+        }
+      : {}),
   };
-  if (status === "verified") {
-    patch.verified_at = new Date().toISOString();
-    if (verifiedTitle) patch.verified_title = verifiedTitle;
-  }
   await supabaseAdmin
     .from("business_competitor_urls")
-    .update(patch)
+    .update(patch as any)
     .eq("business_id", businessId)
     .eq("network", network);
 }
