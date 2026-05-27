@@ -13,6 +13,7 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
     z
       .object({
         dealId: z.string().uuid(),
+        room_id: z.string().uuid().optional().nullable(),
         check_in: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
         check_out: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
         guests: z.number().int().min(1).max(20).optional().nullable(),
@@ -64,15 +65,35 @@ export const scanDealPriceMatch = createServerFn({ method: "POST" })
     }
     const locality = [deal.city, deal.country].filter(Boolean).join(" ") || deal.destination || "";
     const query = `${deal.title} ${locality}`.trim();
+    // Look up the selected room/ticket so the scanner can fuzzy-match by name
+    // and key the cache per (deal, room, dates, guests).
+    let room_name: string | null = null;
+    let resolved_guests = data.guests ?? null;
+    if (data.room_id) {
+      const { data: room } = await supabaseAdmin
+        .from("deal_rooms")
+        .select("name,max_guests")
+        .eq("id", data.room_id)
+        .eq("deal_id", deal.id)
+        .maybeSingle();
+      if (room) {
+        room_name = (room as any).name ?? null;
+        if (resolved_guests == null && (room as any).max_guests) {
+          resolved_guests = (room as any).max_guests;
+        }
+      }
+    }
     const result = await runDealPriceMatch({
       dealId: deal.id,
       query,
       direct_price_cents: deal.price_cents ?? null,
       direct_currency: deal.currency ?? "GBP",
       business_id: (deal as any).business_id ?? null,
+      room_id: data.room_id ?? null,
+      room_name,
       check_in: data.check_in ?? null,
       check_out: data.check_out ?? null,
-      guests: data.guests ?? null,
+      guests: resolved_guests,
       operator_site_host,
     });
     return {

@@ -33,19 +33,22 @@ export function PriceMatchBadge({
   checkIn,
   checkOut,
   guests,
+  roomId,
 }: {
   dealId: string;
   checkIn?: string | null;
   checkOut?: string | null;
   guests?: number | null;
+  roomId?: string | null;
 }) {
   const scan = useServerFn(scanDealPriceMatch);
   const { data, isLoading } = useQuery({
-    queryKey: ["price-match", dealId, checkIn ?? null, checkOut ?? null, guests ?? null],
+    queryKey: ["price-match", dealId, roomId ?? null, checkIn ?? null, checkOut ?? null, guests ?? null],
     queryFn: () =>
       scan({
         data: {
           dealId,
+          room_id: roomId ?? null,
           check_in: checkIn ?? null,
           check_out: checkOut ?? null,
           guests: guests ?? null,

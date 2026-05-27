@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Check, Circle, Sparkles } from "lucide-react";
+import { Check, Circle, Sparkles, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
@@ -9,6 +9,7 @@ import { getBookableStatus, GATE_LABELS, gateLinkFor, type BookableGate, type Ac
 import { COMMISSION } from "@/lib/commission";
 import { getMyCollabDefaults } from "@/lib/collabs.functions";
 import { listMyDeals } from "@/lib/deals.functions";
+import { listMyCompetitorUrls } from "@/lib/business-competitor-urls.functions";
 
 type Step = {
   id: string;
@@ -84,6 +85,7 @@ export function OnboardingChecklist() {
   const bookableFn = useServerFn(getBookableStatus);
   const defaultsFn = useServerFn(getMyCollabDefaults);
   const dealsFn = useServerFn(listMyDeals);
+  const urlsFn = useServerFn(listMyCompetitorUrls);
 
   const { data: agreement } = useQuery({
     queryKey: ["agreement-status"],
@@ -104,6 +106,14 @@ export function OnboardingChecklist() {
     queryFn: () => dealsFn(),
     enabled: !!user?.id,
   });
+  const { data: competitorUrls } = useQuery({
+    queryKey: ["my-competitor-urls"],
+    queryFn: () => urlsFn(),
+    enabled: !!user?.id,
+  });
+  const brokenPinCount = ((competitorUrls?.urls ?? []) as Array<{ last_status: string | null }>)
+    .filter((u) => u.last_status === "broken" || u.last_status === "wrong_domain" || u.last_status === "no_price")
+    .length;
   const firstDealId: string | null = (myDeals?.deals ?? [])[0]?.id ?? null;
 
   const accountKind: AccountKind = bookable?.accountKind ?? "unknown";
@@ -200,6 +210,17 @@ export function OnboardingChecklist() {
           </li>
         ))}
       </ul>
+      {brokenPinCount > 0 && (
+        <Link
+          to="/business/price-audit"
+          className="mt-2 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-500/15"
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            {brokenPinCount} pinned listing{brokenPinCount === 1 ? "" : "s"} need attention
+          </span>
+        </Link>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { DealForm } from "@/components/business/DealForm";
 import { getDeal, updateDeal, deleteDeal } from "@/lib/deals.functions";
 import { DealCalendarSync } from "@/components/business/DealCalendarSync";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
+import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -83,6 +84,19 @@ function EditDealPage() {
             />
             <DealCalendarSync dealId={id} />
             <RoomsAndRatesEditor dealId={id} category={deal.category} />
+            <details className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-4">
+              <summary className="cursor-pointer text-sm font-semibold">
+                Where else is this listed? <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+              </summary>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Pin your Booking.com / Expedia / GetYourGuide etc. listing URLs so
+                our price-match scanner compares the exact same room or ticket.
+                These apply to every listing under your business.
+              </p>
+              <div className="mt-3">
+                <CompetitorUrlsEditor />
+              </div>
+            </details>
             <button
               type="button"
               onClick={() => {
