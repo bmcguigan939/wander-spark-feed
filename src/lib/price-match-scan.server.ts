@@ -390,6 +390,8 @@ export async function runDealPriceMatch(args: {
   direct_price_cents: number | null;
   direct_currency: string | null;
   business_id?: string | null;
+  room_id?: string | null;
+  room_name?: string | null;
   check_in?: string | null;
   check_out?: string | null;
   guests?: number | null;
@@ -464,12 +466,18 @@ export async function runDealPriceMatch(args: {
       .map(async ({ network, site }) => {
         const pin = pinned.get(network);
         if (pin) {
-          const q = await scrape(network, pin.url);
-          return q ? ({ ...q, confidence: "high" } as ScanQuote) : null;
+          const url = rewriteWithDates(network, pin.url, args.check_in, args.check_out, args.guests);
+          const q = await scrape(network, url, args.room_name ?? null);
+          if (!q) return null;
+          const score = nameScore(args.room_name ?? null, q.matched_item_name ?? null);
+          const confidence: "high" | "medium" =
+            !args.room_name ? "medium" : score >= 0.6 ? "high" : "medium";
+          return { ...q, confidence } as ScanQuote;
         }
         const url = await findUrl(args.query, site, excludeHosts);
         if (!url) return null;
-        const q = await scrape(network, url);
+        const rewritten = rewriteWithDates(network, url, args.check_in, args.check_out, args.guests);
+        const q = await scrape(network, rewritten, args.room_name ?? null);
         return q ? ({ ...q, confidence: "low" } as ScanQuote) : null;
       }),
   );
@@ -502,6 +510,7 @@ export async function runDealPriceMatch(args: {
   let match_expires_at: string | null = null;
   if (
     cheapest &&
+    cheapest.confidence === "high" &&
     args.direct_price_cents != null &&
     args.direct_price_cents > cheapest.price_cents
   ) {
