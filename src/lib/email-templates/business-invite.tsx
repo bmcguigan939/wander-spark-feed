@@ -41,6 +41,9 @@ export const BusinessInviteEmail = ({
       <Container style={container}>
         <Text style={brandMark}>{siteName}</Text>
         <Heading style={h1}>{subject}</Heading>
+        <Button style={button} href={inviteUrl}>
+          Approve your listing
+        </Button>
         {bodyText.split('\n').map((line, i) =>
           line.trim().length === 0 ? (
             <div key={i} style={{ height: 10 }} />

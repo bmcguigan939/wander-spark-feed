@@ -154,9 +154,10 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       if (socials.facebook_handle) socialLinks.push({ label: "Facebook", url: `https://facebook.com/${strip(socials.facebook_handle)}` });
       if (socials.website_url) socialLinks.push({ label: "Website", url: socials.website_url });
     }
-    if (creator?.username) {
-      socialLinks.push({ label: "Travidz", url: `https://travidz.com/u/${creator.username}` });
-    }
+    // Intentionally do NOT include the creator's own Travidz profile URL here.
+    // The email is *from* this creator and the "Approve your listing" CTA already
+    // points to travidz.com — adding another travidz.com link in the body confused
+    // recipients into tapping the profile instead of accepting the invite.
     const socialLinksText = socialLinks.map((l) => `${l.label}: ${l.url}`).join("\n");
 
     const system =
@@ -165,7 +166,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       "Tone: friendly, professional, never salesy or pushy. Keep the body under 180 words. " +
       "CRITICAL ANTI-HALLUCINATION RULES: Do NOT describe what is in the video — no property types, accommodation types, activities, scenery, season, weather, food, or any sensory detail — unless that exact detail is explicitly stated in the data block below. If no video title or description is provided, write a generic opening like 'I recently featured you in a short video on Travidz' and do NOT guess what the video shows. Never include IDs, UUIDs, file names, hex codes, or technical identifiers in the email body. Do not invent facts about the business beyond its name and (if given) city. " +
       "Structure: (1) short intro from the creator referencing the video, (2) one or two sentences explaining Travidz — a short-video travel platform where creators share places they love and send bookings directly to the business, (3) explain the commercial model clearly: Travidz charges a flat " + COMMISSION.totalPct + "% commission on any confirmed bookings sent to the business, with no setup fee and no monthly cost — the business only pays on actual sales, (4) optional one-line follower mention if a count is provided, (5) social feed links as a short labelled list (one per line, e.g. 'Instagram: <url>') so the business can review the creator's work, (6) a brief closing line such as 'Use the button below to approve your listing — happy to answer any questions' and a sign-off. " +
-      "CRITICAL: Do NOT include the invite URL, any travidz.com/business/invite link, any 'click here' link, or any raw URL or token in the email body — the email template renders the call-to-action button separately. " +
+      "CRITICAL: Do NOT include the invite URL, any travidz.com/business/invite link, any travidz.com/u/ profile link, any 'click here' link, or any raw URL or token in the email body — the email template renders the call-to-action button separately. The only travidz.com link the recipient should see is the CTA button, which the template adds for you. " +
       "BANNED phrases — do NOT use any of these or close paraphrases: 'I'm proposing', 'I propose', 'I'd like to offer', 'I'd like to propose', 'performance-based partnership', 'partnership proposal', 'let's partner'. Frame the offer as Travidz's standard model, not the creator's personal proposal. " +
       "Do NOT invent stats. " +
       "Reply ONLY with JSON: { subject: string, body: string } where body is plain text with \\n line breaks.";
