@@ -104,6 +104,37 @@ function InvitePage() {
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
+  const inviteEmail = accountQ.data?.email?.toLowerCase() ?? "";
+  const currentEmail = (user?.email ?? "").toLowerCase();
+  const wrongAccount = !!user && !!inviteEmail && currentEmail !== inviteEmail;
+
+  // Auto-route the business to login (with email prefilled) whenever the
+  // current browser session doesn't match the invited email. Must run BEFORE
+  // any early return so hook order stays stable across renders.
+  useEffect(() => {
+    if (!accountQ.data || !inviteEmail) return;
+    if (data?.invite && data.invite.status !== "pending") return;
+    if (!user) {
+      navigate({
+        to: "/login",
+        search: { invite: token, email: inviteEmail } as any,
+        replace: true,
+      });
+      return;
+    }
+    if (wrongAccount) {
+      (async () => {
+        try { await signOut(); } catch {}
+        navigate({
+          to: "/login",
+          search: { invite: token, email: inviteEmail } as any,
+          replace: true,
+        });
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountQ.data, inviteEmail, user?.id, wrongAccount]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
@@ -127,40 +158,6 @@ function InvitePage() {
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
   const canAccept = agreed;
-
-  const inviteEmail = accountQ.data?.email?.toLowerCase() ?? "";
-  const currentEmail = (user?.email ?? "").toLowerCase();
-  const wrongAccount = !!user && !!inviteEmail && currentEmail !== inviteEmail;
-
-  // Auto-route the business to login (with email prefilled) whenever the
-  // current browser session doesn't match the invited email. This removes the
-  // "wrong account" dead-end: a new business goes straight to create-account,
-  // a returning business goes straight to sign-in, and a creator who
-  // accidentally clicked their own invite is auto-signed-out into the right
-  // login flow.
-  useEffect(() => {
-    if (!accountQ.data || !inviteEmail) return;
-    if (invite && invite.status !== "pending") return;
-    if (!user) {
-      navigate({
-        to: "/login",
-        search: { invite: token, email: inviteEmail } as any,
-        replace: true,
-      });
-      return;
-    }
-    if (wrongAccount) {
-      (async () => {
-        try { await signOut(); } catch {}
-        navigate({
-          to: "/login",
-          search: { invite: token, email: inviteEmail } as any,
-          replace: true,
-        });
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountQ.data, inviteEmail, user?.id, wrongAccount]);
 
   const handleAcceptClick = () => {
     // eslint-disable-next-line no-console
