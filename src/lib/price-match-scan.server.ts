@@ -488,6 +488,9 @@ export async function runDealPriceMatch(args: {
   const cheapest = quotes.length
     ? quotes.reduce((a, b) => (a.price_cents <= b.price_cents ? a : b))
     : null;
+  const overallConfidence: "high" | "medium" | "low" | null = cheapest
+    ? (cheapest.confidence ?? "low")
+    : null;
 
   const ran_at = new Date().toISOString();
   await supabaseAdmin.from("parity_checks").insert({
@@ -535,6 +538,7 @@ export async function runDealPriceMatch(args: {
     ran_at,
     match_code,
     match_expires_at,
+    match_confidence: overallConfidence,
   };
 }
 
