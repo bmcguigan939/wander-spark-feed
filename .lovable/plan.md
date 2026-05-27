@@ -1,39 +1,51 @@
-## Problem
+## Price-match accuracy: pass deal context + per-business OTA listings
 
-The "Something went wrong / Minified React error #310" screen on `business/invite/$token` is a **React hooks-order violation**, not a real runtime failure. In `src/routes/business.invite.$token.tsx` the auto-route `useEffect` (added in the previous change) was placed **after** the two early returns:
+Two-part change: make the existing scanner use the data we already have (Phase 1), and let businesses pin their own OTA listing URLs so the scanner stops guessing (Phase 2).
 
-```
-if (isLoading) return <Loader/>;
-if (error || !data) return <NotFound/>;
-…
-useEffect(() => { /* signOut + navigate to /login */ }, [...]);
-```
+### Phase 1 — Feed the scanner what the deal already knows
 
-On first render `isLoading` is true → component returns before reaching the `useEffect`. On the next render, data resolves → component now calls one more hook than before → React throws #310 → root `errorComponent` renders the "Something went wrong / Try again" page. "Try again" calls `router.invalidate()` and re-runs, which is why hitting it eventually lands on `/login`.
+Today the price scanner mostly runs off `title + city`. The deal already carries everything needed for an apples-to-apples quote — we just stop throwing it away.
 
-So the auto-routing logic is actually correct — it just never gets a chance to run cleanly because the component crashes first.
+- Always pass `check_in`, `check_out`, `guests` (adults / children / rooms), `room_id`, and `currency` into `runDealPriceMatch`.
+- Build per-network deep-link templates so the scrape lands on the right dates/pax:
+  - Booking.com: `…/searchresults.html?ss=<name+postcode>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N&no_rooms=R&group_children=C`
+  - Expedia / Hotels.com / Agoda equivalents
+  - GetYourGuide / Viator: activity search + date
+- Upgrade the Firecrawl JSON schema to return a room/ticket list: `{ name, price, currency, refundable, cancellation }` — not just the cheapest headline number.
+- Cache key becomes `(deal_id, room_id, check_in, check_out, guests_signature)` so two different date ranges don't collide.
+- Each scraped quote records `match_confidence` (high / medium / low) and `match_notes` (what was matched on: name, postcode, room-name fuzzy score). Auto-issued MATCH discount codes only fire on `high`.
 
-## Fix
+### Phase 2 — Per-business pinned OTA listings
 
-Move the auto-route `useEffect` **above** every early return in `src/routes/business.invite.$token.tsx`, so it always runs on every render regardless of `isLoading` / `error` state. Inside the effect, keep the existing guards (`if (!accountQ.data || !inviteEmail) return;` etc.) so it only acts once the account-state query resolves.
+A new optional "Competitor listings" section on the business profile. Once pinned, the scanner skips search for that business × that network and goes straight to the exact listing page with dates/pax appended.
 
-Concretely, reorder the top of `InvitePage` to:
+- New table `business_competitor_urls` keyed by `business_id` with one row per (network, URL). Repeatable rows in the UI — businesses can add as many as they want, leave it empty, or fill some networks and not others. Optional, never blocking.
+- Networks supported at launch: Booking.com, Expedia, Hotels.com, Agoda, Trip.com, GetYourGuide, Viator. Easy to extend.
+- Validation per network:
+  - Host must match the network's domain (e.g. `booking.com`, `www.booking.com`, `secure.booking.com`).
+  - URL shape sanity-checked (e.g. Booking property URLs contain `/hotel/<cc>/<slug>.html`; GYG contains `/-t<id>` or `/-l<id>`).
+  - Reject query-only search URLs ("this looks like a search results page, paste the property page instead").
+- Where the prompt appears (all three):
+  - **Business onboarding** — new optional step "Add your listings on other sites" with a skip button.
+  - **Deal create / edit form** — collapsed "Match accuracy" section showing the business's pinned URLs read-only with an "Edit listings" link to the business profile.
+  - **Price audit page** — when a quote is flagged low-confidence or the business disputes a match, inline nudge: "Pin your Booking.com URL to make this exact" with a one-click add.
+- Scanner logic:
+  1. If a pinned URL exists for `(business, network)` → scrape it directly with dates/pax appended. Confidence = `high`.
+  2. Otherwise fall back to Phase-1 search-based matching.
+  3. If a pinned URL 404s or stops returning rooms, surface a "your pinned Booking.com link looks broken — update it?" notice on the business dashboard (OTAs occasionally re-slug URLs).
 
-1. All `useState` / `useQuery` / `useMutation` / `useServerFn` hooks (unchanged).
-2. Derive `inviteEmail`, `currentEmail`, `wrongAccount` from `accountQ.data` and `user` (move these up from below the early returns).
-3. The `useEffect` that, when the session doesn't match the invited email, calls `signOut()` (if needed) and `navigate({ to: "/login", search: { invite, email } })`.
-4. THEN the `if (isLoading)` and `if (error || !data)` early returns.
-5. The rest of the render (status branches, accept button, etc.) unchanged.
+### Out of scope
 
-No other files need to change. The login page already accepts `?invite=…&email=…`, prefills the email, runs `acceptInvite` after sign-in/sign-up, and routes to `/business` — that flow is correct and was already implemented.
+- Per-deal URL overrides (deferred — per-business is enough for ~95% of cases; sister-property edge cases can be added later if real data shows we need it).
+- Official partner APIs (Booking Demand API, Expedia EPS, GYG Partner API) — those need partner approval per network.
 
-## Result
+### Why this answers the original question
 
-- New business clicks "Accept & claim your listing" in email → invite page mounts → effect immediately redirects to `/login?invite=…&email=…` (no error screen, no manual retry). They flip to "Create account", sign up, `acceptInvite` runs automatically, land on `/business`.
-- Existing business → same path, they sign in instead of signing up, `acceptInvite` runs, land on `/business`.
-- Creator who accidentally clicks an invite → effect calls `signOut()` then redirects to the correct login.
+Yes — businesses pasting their exact OTA listing URLs is enough for the scanner to compare the same property, room type, dates, and pax. The "search by name + postcode" path is the fallback for businesses who don't pin anything; the pinned URL path is the deterministic, one-click-fix path for the cases where search drifts (chains with sister properties, renamed listings, OTA search-results pages above the property page, etc.).
 
-## Out of scope
+### Technical notes
 
-- Email template, signup page UI, dashboard layout, creator-side outreach.
-- The root `errorComponent` itself — it's working as designed; the bug was upstream.
+- `business_competitor_urls`: `business_id`, `network` (enum), `url` (text), `verified_at`, `last_scraped_at`, `last_status`. Unique on `(business_id, network)` — one URL per network per business. RLS: business owners read/write their own; service role full access for the scanner.
+- Validation runs both client-side (zod schema per network) and inside the `createServerFn` that saves the row.
+- Scanner change is isolated to the `runDealPriceMatch` server fn + the Firecrawl JSON schema + the URL-builder helpers per network. No change to the discount-code issuing logic except gating on `match_confidence`.
+- All Phase 1 changes ship first and independently; Phase 2 can ship right after without re-touching the scanner core.
