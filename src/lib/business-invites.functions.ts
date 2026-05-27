@@ -310,6 +310,24 @@ export const acceptInvite = createServerFn({ method: "POST" })
       throw new Error("This invite has expired");
     }
 
+    // Guard: the invite is locked to a specific business email. The signed-in
+    // user MUST match that email — otherwise a creator who is already logged
+    // in (e.g. clicking their own invite link) would claim the business
+    // listing under their own account.
+    const { data: actor, error: actorErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (actorErr) throw new Error(actorErr.message);
+    const actorEmail = (actor?.email ?? "").toLowerCase();
+    const inviteEmail = (invite.contact_email ?? "").toLowerCase();
+    if (!actorEmail || actorEmail !== inviteEmail) {
+      throw new Error(
+        `This invite was sent to ${inviteEmail}. Please sign out and sign in (or sign up) with that email to accept it.`,
+      );
+    }
+
     // Ensure the user has the `business` role.
     await step("assign business role", async () => {
       const { error } = await supabaseAdmin
