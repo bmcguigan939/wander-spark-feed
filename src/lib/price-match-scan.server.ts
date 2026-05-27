@@ -316,19 +316,19 @@ export async function runDealPriceMatch(args: {
     : new Map<string, { url: string; verified_at: string | null }>();
 
   // Scrape all networks in parallel — never include the operator's own site.
-  const found = await Promise.all(
+  const found: (ScanQuote | null)[] = await Promise.all(
     networks
       .filter(({ site }) => !excludeHosts.includes(normaliseHost(site) ?? ""))
       .map(async ({ network, site }) => {
         const pin = pinned.get(network);
         if (pin) {
           const q = await scrape(network, pin.url);
-          return q ? { ...q, confidence: "high" as const } : null;
+          return q ? ({ ...q, confidence: "high" } as ScanQuote) : null;
         }
         const url = await findUrl(args.query, site, excludeHosts);
         if (!url) return null;
         const q = await scrape(network, url);
-        return q ? { ...q, confidence: "low" as const } : null;
+        return q ? ({ ...q, confidence: "low" } as ScanQuote) : null;
       }),
   );
   const quotes = found.filter((q): q is ScanQuote => !!q);
