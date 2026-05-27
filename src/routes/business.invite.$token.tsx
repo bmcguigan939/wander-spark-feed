@@ -314,22 +314,9 @@ function InvitePage() {
 
         {user ? (
           wrongAccount ? (
-            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-3 text-[13px] leading-snug">
-              <p className="font-semibold text-destructive">Wrong account</p>
-              <p className="mt-1 text-muted-foreground">
-                This invite was sent to{" "}
-                <span className="font-medium text-foreground">{inviteEmail}</span>,
-                but you're signed in as{" "}
-                <span className="font-medium text-foreground">{currentEmail}</span>.
-                Sign out and sign in with the invited email to claim your
-                business listing.
-              </p>
-              <button
-                onClick={async () => { await signOut(); }}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
-              >
-                Sign out
-              </button>
+            <div className="rounded-2xl border border-border bg-card p-3 text-center text-[13px] text-muted-foreground">
+              <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+              <p className="mt-2">Switching to the invited account…</p>
             </div>
           ) : (
           <button
@@ -341,36 +328,6 @@ function InvitePage() {
             Accept & claim your listing
           </button>
           )
-        ) : accountQ.data?.accountExists ? (
-          <>
-            <Link
-              to="/login"
-              search={{ invite: token, next: `/business/invite/${token}` } as any}
-              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!canAccept ? "pointer-events-none opacity-50" : ""}`}
-            >
-              Log in to accept
-            </Link>
-            <p className="px-1 text-[11px] text-muted-foreground">
-              You already have a Travidz account for{" "}
-              <span className="font-medium">{accountQ.data.email}</span>. Log in
-              to see your new creator listing and contract.
-            </p>
-          </>
-        ) : accountQ.data ? (
-          <>
-            <Link
-              to="/business/signup"
-              search={{ invite: token } as any}
-              className={`inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft ${!canAccept ? "pointer-events-none opacity-50" : ""}`}
-            >
-              Create your business account
-            </Link>
-            <p className="px-1 text-[11px] text-muted-foreground">
-              We'll create a free Travidz business account for{" "}
-              <span className="font-medium">{accountQ.data.email}</span> — just
-              set a password.
-            </p>
-          </>
         ) : (
           <button
             disabled
