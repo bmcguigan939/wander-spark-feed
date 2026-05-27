@@ -1,76 +1,38 @@
-## Phase 2 follow-on — finish the price-match scanner
+## Finish the remaining price-match slices
 
-Five slices, all targeting the same goal: make the scanner produce **like-for-like** comparisons and only issue MATCH codes when we're sure.
+Three items left from the earlier plan. All are wiring/UI — no schema changes.
 
-### 1. Surface the OTA editor at deal-creation time
+### 1. Per-deal OTA URLs in create/edit forms
 
-Two entry points beyond the audit page:
-- **Onboarding** (`/business/onboarding/website`): after the website step, add a soft "Pin your OTA listings (optional)" panel using `CompetitorUrlsEditor`. Skippable — never gates progression.
-- **Deal create/edit** (`business.deals.new.tsx`, `business.deals.$id.edit.tsx`): inline collapsible "Where else is this listed?" section that opens the same editor. Same business-level data — explained in the help text so businesses understand pins apply to all their deals on that network.
+Add a "Where else is this listed?" section to:
+- `src/routes/business.deals.new.tsx`
+- `src/routes/business.deals.$id.edit.tsx`
 
-### 2. Confidence-aware `PriceMatchBadge`
+Reuse `CompetitorUrlsEditor` (already business-scoped). Render it as a collapsed/optional panel under the main deal fields with a short explainer: "Pinning your Booking.com / Expedia / GYG listing lets us match the exact room or ticket. Leave blank and we'll search by name." Since the editor writes business-level URLs, the copy will make clear this applies to all deals on that network — no per-deal override yet.
 
-- Pass `match_confidence` through `scanDealPriceMatch` return → `PriceMatchBadge`.
-- Copy ladder:
-  - `high` → "Cheaper here — MATCH-XXXX" (code shown, redeemable).
-  - `medium` → "We think we're cheaper" (no code, link to competitor).
-  - `low` → silent (no badge, scan still logged for the audit page).
-- **MATCH codes are only auto-issued on `high`** — enforce in `ensureMatchCode` guard.
+### 2. Thread `room_id` / `room_name` through the scan
 
-### 3. Context-aware scanner inputs (`room_id`, `currency`, dates, pax)
+`runDealPriceMatch` already accepts `room_id` + `room_name`. Wire them in:
 
-- `scanDealPriceMatch` already takes `check_in/out/guests`; add `room_id` and thread it through `runDealPriceMatch` so per-room cache keys work (DB column already exists from last migration).
-- Build per-network **deep-link templates** so search/scrape lands on the right date+pax page:
-  - Booking.com: `/searchresults.html?ss=<name+postcode>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&group_adults=N&no_rooms=R`
-  - Expedia: `/Hotel-Search?destination=...&startDate=...&endDate=...&adults=N`
-  - GYG / Viator: append `?date=YYYY-MM-DD&participants=N`
-- When a pinned URL exists, append the same date/pax query params before scraping (templates encoded per network).
-- Persist `room_id` + `currency` on the `parity_checks` row.
+- `src/lib/price-match.scan.functions.ts` — extend the Zod input with optional `room_id` (uuid). When present, look up the room from `deal_rooms` (name, occupancy) and pass `room_id` + `room_name` + adjust `guests` default to room occupancy when caller didn't provide one.
+- `src/components/PriceMatchBadge.tsx` — accept optional `roomId` prop, include in the React Query key, and forward in the `scan({ data })` call.
+- `src/routes/book.$dealId.tsx` (and any other page rendering `PriceMatchBadge` with a selected room) — pass the currently selected `roomId` so the scan keys per room.
 
-### 4. Multi-item Firecrawl schema
+### 3. Broken-pin chip on `OnboardingChecklist`
 
-- Upgrade `PRICE_SCHEMA` from `{ price, currency }` to:
-  ```
-  { items: [{ name, price, currency, refundable?, cancellation_policy? }] }
-  ```
-- After scrape, run a small matcher: fuzzy-match `item.name` against the deal's room/ticket name. Confidence rules:
-  - Pinned URL + name match ≥ 0.8 → `high`
-  - Pinned URL, no name match → `medium` (pick cheapest item, note "room not matched")
-  - No pin, search result hit → `low`
-- Store `matched_item_name` + `match_notes` on `parity_checks`.
+`src/components/business/OnboardingChecklist.tsx` — add a small warning chip when any `business_competitor_urls` row has `last_status` in (`broken`, `wrong_domain`, `no_price`). Use the existing `listMyCompetitorUrls` server fn via `useServerFn` + `useQuery`. Chip links to `/business/price-audit?tab=urls` (same deep-link the banner uses). Keep it visually consistent with the other checklist warning chips — yellow tone, single-line copy: "N pinned listing(s) need attention".
 
-### 5. Surface broken / wrong-domain pinned URLs
+### Out of scope
 
-- When scrape returns 0 items, record `last_status = 'no_price'` on `business_competitor_urls`; on 404/redirect-off-host, record `'broken'` / `'wrong_domain'` + `last_error`.
-- `CompetitorUrlsEditor` already renders `last_status` — add a yellow banner at the top of `/business/price-audit` when any pinned URL is in a bad state, linking to the **OTA URLs** tab.
-- Add the same warning chip to `OnboardingChecklist` so it's visible from the dashboard.
-
-### Out of scope (still)
-- Per-deal URL overrides (business-level pin is sufficient for v1).
-- Official partner APIs (Booking Demand, EPS, GYG Partner) — needs partner approval per network.
-
-### Technical sketch
-
-```text
-PriceMatchBadge(dealId, roomId?, dates, guests)
-  └→ scanDealPriceMatch  (6h cache: deal+room+dates+guests)
-       └→ runDealPriceMatch
-            ├─ getPinnedCompetitorUrls(business_id)
-            ├─ per network: pin → template-rewrite(dates,pax) → scrape(items[])
-            │                   else findUrl(site:) → scrape(items[])
-            ├─ matchItem(items, deal.room_name) → confidence
-            ├─ ensureMatchCode  (only if confidence === 'high')
-            └─ writeParityCheck(room_id, confidence, matched_item_name, notes)
-```
+- Per-deal URL overrides (would need a new `deal_competitor_urls` table — defer until a user actually asks).
+- Official partner APIs.
+- Refactoring `CompetitorUrlsEditor` into a per-deal variant.
 
 ### Files touched
 
-- `src/lib/price-match-scan.server.ts` — multi-item schema, deep-link templates, confidence, room_id wiring, pinned-URL status writeback.
-- `src/lib/price-match.scan.functions.ts` — accept `room_id`, return confidence + matched name.
-- `src/components/PriceMatchBadge.tsx` — confidence-aware copy, code only on `high`.
-- `src/components/business/CompetitorUrlsEditor.tsx` — already renders status, no changes needed.
-- `src/routes/business.onboarding.website.tsx` — append optional editor panel.
-- `src/routes/business.deals.new.tsx`, `src/routes/business.deals.$id.edit.tsx` — collapsible "Where else is this listed?" section.
-- `src/routes/business.price-audit.tsx` — bad-pin warning banner.
-- `src/components/business/OnboardingChecklist.tsx` — bad-pin chip.
-- No new migration required (room_id / match_confidence / match_notes / last_status all exist from the last migration).
+- `src/routes/business.deals.new.tsx`
+- `src/routes/business.deals.$id.edit.tsx`
+- `src/lib/price-match.scan.functions.ts`
+- `src/components/PriceMatchBadge.tsx`
+- `src/routes/book.$dealId.tsx`
+- `src/components/business/OnboardingChecklist.tsx`
