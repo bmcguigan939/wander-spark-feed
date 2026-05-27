@@ -73,15 +73,136 @@ function urlMatchesExcludedHost(url: string, excluded: string[]): boolean {
 const CACHE_SECONDS = 6 * 60 * 60; // 6h
 const MATCH_CODE_TTL_HOURS = 24;
 
-const PRICE_SCHEMA = {
+const ITEMS_SCHEMA = {
   type: "object",
   properties: {
-    price: { type: "number" },
-    currency: { type: "string" },
-    available: { type: "boolean" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          price: { type: "number" },
+          currency: { type: "string" },
+          refundable: { type: "boolean" },
+          cancellation_policy: { type: "string" },
+        },
+        required: ["price"],
+      },
+    },
   },
-  required: ["price", "currency"],
+  required: ["items"],
 };
+
+type ScrapedItem = {
+  name?: string | null;
+  price: number;
+  currency?: string | null;
+  refundable?: boolean | null;
+  cancellation_policy?: string | null;
+};
+
+/** Append date / pax query params per network so the scrape lands on the
+ *  right inventory. Best-effort: unknown networks fall through unchanged. */
+function rewriteWithDates(
+  network: string,
+  rawUrl: string,
+  check_in: string | null | undefined,
+  check_out: string | null | undefined,
+  guests: number | null | undefined,
+): string {
+  if (!check_in && !check_out && !guests) return rawUrl;
+  let u: URL;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return rawUrl;
+  }
+  const set = (k: string, v: string | number | undefined | null) => {
+    if (v == null || v === "") return;
+    u.searchParams.set(k, String(v));
+  };
+  switch (network) {
+    case "booking.com":
+      set("checkin", check_in);
+      set("checkout", check_out);
+      set("group_adults", guests ?? undefined);
+      set("no_rooms", 1);
+      break;
+    case "expedia":
+      set("chkin", check_in);
+      set("chkout", check_out);
+      if (guests) set("rm1", `a${guests}`);
+      break;
+    case "agoda":
+      set("checkIn", check_in);
+      set("checkOut", check_out);
+      set("adults", guests ?? undefined);
+      break;
+    case "airbnb":
+    case "vrbo":
+      set("check_in", check_in);
+      set("check_out", check_out);
+      set("adults", guests ?? undefined);
+      break;
+    case "getyourguide":
+    case "viator":
+    case "klook":
+    case "tiqets":
+    case "musement":
+      set("date", check_in);
+      set("participants", guests ?? undefined);
+      break;
+  }
+  return u.toString();
+}
+
+/** Simple token-Jaccard score between two names. Returns 0..1. */
+function nameScore(a: string | null | undefined, b: string | null | undefined): number {
+  if (!a || !b) return 0;
+  const tok = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]+/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length > 2),
+    );
+  const A = tok(a);
+  const B = tok(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  return inter / new Set([...A, ...B]).size;
+}
+
+/** Pick the item that best matches the room/ticket name. Returns null when
+ *  no items are present. When no target name is provided, returns the
+ *  cheapest item with score 0. */
+function pickItem(
+  items: ScrapedItem[],
+  targetName: string | null,
+): { item: ScrapedItem; score: number } | null {
+  if (!items.length) return null;
+  if (!targetName) {
+    const cheapest = items.reduce((a, b) => (a.price <= b.price ? a : b));
+    return { item: cheapest, score: 0 };
+  }
+  let best: ScrapedItem | null = null;
+  let bestScore = -1;
+  for (const it of items) {
+    const s = nameScore(targetName, it.name);
+    if (s > bestScore) {
+      best = it;
+      bestScore = s;
+    }
+  }
+  if (bestScore <= 0) {
+    const cheapest = items.reduce((a, b) => (a.price <= b.price ? a : b));
+    return { item: cheapest, score: 0 };
+  }
+  return { item: best!, score: bestScore };
+}
 
 function fcKey() {
   return process.env.FIRECRAWL_API_KEY || null;
