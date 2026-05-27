@@ -16,6 +16,22 @@ const DraftSchema = z.object({
 });
 type Draft = z.infer<typeof DraftSchema>;
 
+// Strip any travidz.com/u/ profile or travidz.com/business/invite link the
+// AI may have re-introduced into the body. The email template renders the
+// CTA button separately — the only travidz.com link a recipient should see
+// is that button, otherwise tapping a profile link lands them on the
+// creator's profile instead of the invite acceptance page.
+function stripStrayTravidzLinks(body: string): string {
+  const lines = body.split("\n").filter((line) => {
+    const l = line.toLowerCase();
+    if (l.includes("travidz.com/u/")) return false;
+    if (l.includes("travidz.com/business/invite/")) return false;
+    return true;
+  });
+  // Collapse 3+ consecutive blank lines down to 2.
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 async function callDraftGateway(system: string, user: string): Promise<Draft | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
@@ -43,7 +59,8 @@ async function callDraftGateway(system: string, user: string): Promise<Draft | n
   const raw = json.choices?.[0]?.message?.content;
   if (!raw) return null;
   try {
-    return DraftSchema.parse(JSON.parse(raw));
+    const parsed = DraftSchema.parse(JSON.parse(raw));
+    return { ...parsed, body: stripStrayTravidzLinks(parsed.body) };
   } catch (e) {
     console.error("[outreach] parse failed", e);
     return null;
@@ -190,7 +207,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
 
     const draft = await callDraftGateway(system, user);
     if (draft) return draft;
-    return fallbackInviteDraft({
+    const fb = fallbackInviteDraft({
       businessName: inv.business_name,
       creatorName,
       videoTitle,
@@ -198,6 +215,7 @@ export const draftInviteEmail = createServerFn({ method: "POST" })
       followers,
       socialLinksText,
     });
+    return { ...fb, body: stripStrayTravidzLinks(fb.body) };
   });
 
 function fallbackApplicationReply(args: {
