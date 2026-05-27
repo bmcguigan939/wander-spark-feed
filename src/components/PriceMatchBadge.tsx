@@ -73,6 +73,12 @@ export function PriceMatchBadge({
   if (!competitor || !direct) return null;
 
   const isOperator = (data as any).pricing_model === "operator_markup";
+  const confidence = (data as any).match_confidence as
+    | "high"
+    | "medium"
+    | "low"
+    | null
+    | undefined;
 
   const tone =
     direct < competitor
@@ -151,6 +157,31 @@ export function PriceMatchBadge({
   // higher — for operator deals, never offer to "match", since the operator may
   // sell direct on their own site at any price.
   if (isOperator) return null;
+  // Only auto-issue MATCH codes on high-confidence (pinned URL + room-name match).
+  // For medium/low we show a soft signal without a redeemable code — businesses
+  // shouldn't get refunds against a guess.
+  if (confidence !== "high") {
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
+        <Equal className="mt-0.5 h-4 w-4 shrink-0" />
+        <div>
+          <div className="font-semibold">We think it's cheaper on {data.cheapest_competitor_network}</div>
+          <div className="text-amber-200/70">
+            They're showing {formatMoney(competitor, data.currency)}.{" "}
+            <a
+              href={data.cheapest_competitor_url ?? "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Check the listing
+            </a>
+            . We're still verifying it's the same room/ticket.
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
       <Equal className="mt-0.5 h-4 w-4 shrink-0" />
