@@ -73,15 +73,136 @@ function urlMatchesExcludedHost(url: string, excluded: string[]): boolean {
 const CACHE_SECONDS = 6 * 60 * 60; // 6h
 const MATCH_CODE_TTL_HOURS = 24;
 
-const PRICE_SCHEMA = {
+const ITEMS_SCHEMA = {
   type: "object",
   properties: {
-    price: { type: "number" },
-    currency: { type: "string" },
-    available: { type: "boolean" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          price: { type: "number" },
+          currency: { type: "string" },
+          refundable: { type: "boolean" },
+          cancellation_policy: { type: "string" },
+        },
+        required: ["price"],
+      },
+    },
   },
-  required: ["price", "currency"],
+  required: ["items"],
 };
+
+type ScrapedItem = {
+  name?: string | null;
+  price: number;
+  currency?: string | null;
+  refundable?: boolean | null;
+  cancellation_policy?: string | null;
+};
+
+/** Append date / pax query params per network so the scrape lands on the
+ *  right inventory. Best-effort: unknown networks fall through unchanged. */
+function rewriteWithDates(
+  network: string,
+  rawUrl: string,
+  check_in: string | null | undefined,
+  check_out: string | null | undefined,
+  guests: number | null | undefined,
+): string {
+  if (!check_in && !check_out && !guests) return rawUrl;
+  let u: URL;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return rawUrl;
+  }
+  const set = (k: string, v: string | number | undefined | null) => {
+    if (v == null || v === "") return;
+    u.searchParams.set(k, String(v));
+  };
+  switch (network) {
+    case "booking.com":
+      set("checkin", check_in);
+      set("checkout", check_out);
+      set("group_adults", guests ?? undefined);
+      set("no_rooms", 1);
+      break;
+    case "expedia":
+      set("chkin", check_in);
+      set("chkout", check_out);
+      if (guests) set("rm1", `a${guests}`);
+      break;
+    case "agoda":
+      set("checkIn", check_in);
+      set("checkOut", check_out);
+      set("adults", guests ?? undefined);
+      break;
+    case "airbnb":
+    case "vrbo":
+      set("check_in", check_in);
+      set("check_out", check_out);
+      set("adults", guests ?? undefined);
+      break;
+    case "getyourguide":
+    case "viator":
+    case "klook":
+    case "tiqets":
+    case "musement":
+      set("date", check_in);
+      set("participants", guests ?? undefined);
+      break;
+  }
+  return u.toString();
+}
+
+/** Simple token-Jaccard score between two names. Returns 0..1. */
+function nameScore(a: string | null | undefined, b: string | null | undefined): number {
+  if (!a || !b) return 0;
+  const tok = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]+/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length > 2),
+    );
+  const A = tok(a);
+  const B = tok(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  return inter / new Set([...A, ...B]).size;
+}
+
+/** Pick the item that best matches the room/ticket name. Returns null when
+ *  no items are present. When no target name is provided, returns the
+ *  cheapest item with score 0. */
+function pickItem(
+  items: ScrapedItem[],
+  targetName: string | null,
+): { item: ScrapedItem; score: number } | null {
+  if (!items.length) return null;
+  if (!targetName) {
+    const cheapest = items.reduce((a, b) => (a.price <= b.price ? a : b));
+    return { item: cheapest, score: 0 };
+  }
+  let best: ScrapedItem | null = null;
+  let bestScore = -1;
+  for (const it of items) {
+    const s = nameScore(targetName, it.name);
+    if (s > bestScore) {
+      best = it;
+      bestScore = s;
+    }
+  }
+  if (bestScore <= 0) {
+    const cheapest = items.reduce((a, b) => (a.price <= b.price ? a : b));
+    return { item: cheapest, score: 0 };
+  }
+  return { item: best!, score: bestScore };
+}
 
 function fcKey() {
   return process.env.FIRECRAWL_API_KEY || null;
@@ -184,24 +305,45 @@ async function findUrl(
   return null;
 }
 
-async function scrape(network: string, url: string): Promise<ScanQuote | null> {
+async function scrape(
+  network: string,
+  url: string,
+  targetName: string | null = null,
+): Promise<ScanQuote | null> {
   const r = await fc(
     "/v2/scrape",
     {
       url,
-      formats: [{ type: "json", schema: PRICE_SCHEMA, prompt: "Extract the lowest total bookable price visible for the default dates/party size." }],
+      formats: [
+        {
+          type: "json",
+          schema: ITEMS_SCHEMA,
+          prompt:
+            "Extract every distinct bookable rate / room / ticket option visible on the page. For each, return the option name (room type, ticket type, package name), the lowest visible total price for that option, and the currency. Do not invent items.",
+        },
+      ],
       onlyMainContent: true,
     },
-    8000,
+    10000,
   );
   const result = r?.data ?? r;
   const json = result?.json ?? result?.data?.json;
-  if (!json || typeof json.price !== "number") return null;
+  const rawItems = Array.isArray(json?.items) ? json.items : [];
+  const items: ScrapedItem[] = rawItems
+    .filter((i: any) => i && typeof i.price === "number" && i.price > 0)
+    .map((i: any) => ({
+      name: typeof i.name === "string" ? i.name : null,
+      price: i.price,
+      currency: typeof i.currency === "string" ? i.currency.toUpperCase() : null,
+    }));
+  const picked = pickItem(items, targetName);
+  if (!picked) return null;
   return {
     network,
     url,
-    price_cents: toCents(json.price),
-    currency: (json.currency || "GBP").toString().toUpperCase(),
+    price_cents: toCents(picked.item.price),
+    currency: (picked.item.currency || "GBP").toUpperCase(),
+    matched_item_name: picked.item.name ?? null,
   };
 }
 
@@ -248,6 +390,8 @@ export async function runDealPriceMatch(args: {
   direct_price_cents: number | null;
   direct_currency: string | null;
   business_id?: string | null;
+  room_id?: string | null;
+  room_name?: string | null;
   check_in?: string | null;
   check_out?: string | null;
   guests?: number | null;
@@ -322,12 +466,18 @@ export async function runDealPriceMatch(args: {
       .map(async ({ network, site }) => {
         const pin = pinned.get(network);
         if (pin) {
-          const q = await scrape(network, pin.url);
-          return q ? ({ ...q, confidence: "high" } as ScanQuote) : null;
+          const url = rewriteWithDates(network, pin.url, args.check_in, args.check_out, args.guests);
+          const q = await scrape(network, url, args.room_name ?? null);
+          if (!q) return null;
+          const score = nameScore(args.room_name ?? null, q.matched_item_name ?? null);
+          const confidence: "high" | "medium" =
+            !args.room_name ? "medium" : score >= 0.6 ? "high" : "medium";
+          return { ...q, confidence } as ScanQuote;
         }
         const url = await findUrl(args.query, site, excludeHosts);
         if (!url) return null;
-        const q = await scrape(network, url);
+        const rewritten = rewriteWithDates(network, url, args.check_in, args.check_out, args.guests);
+        const q = await scrape(network, rewritten, args.room_name ?? null);
         return q ? ({ ...q, confidence: "low" } as ScanQuote) : null;
       }),
   );
@@ -337,6 +487,9 @@ export async function runDealPriceMatch(args: {
   // display is out of scope for v1; FX still happens on bookings.)
   const cheapest = quotes.length
     ? quotes.reduce((a, b) => (a.price_cents <= b.price_cents ? a : b))
+    : null;
+  const overallConfidence: "high" | "medium" | "low" | null = cheapest
+    ? (cheapest.confidence ?? "low")
     : null;
 
   const ran_at = new Date().toISOString();
@@ -360,6 +513,7 @@ export async function runDealPriceMatch(args: {
   let match_expires_at: string | null = null;
   if (
     cheapest &&
+    cheapest.confidence === "high" &&
     args.direct_price_cents != null &&
     args.direct_price_cents > cheapest.price_cents
   ) {
@@ -384,6 +538,7 @@ export async function runDealPriceMatch(args: {
     ran_at,
     match_code,
     match_expires_at,
+    match_confidence: overallConfidence,
   };
 }
 
