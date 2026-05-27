@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { acceptInvite } from "@/lib/business-invites.functions";
+import { useAuth } from "@/lib/auth";
 import { Compass, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +13,7 @@ const searchSchema = z.object({
   invite: z.string().min(8).max(128).optional(),
   next: z.string().max(500).optional(),
   mode: z.enum(["signin", "signup"]).optional(),
+  email: z.string().email().max(200).optional(),
 });
 
 export const Route = createFileRoute("/login")({
@@ -20,40 +24,59 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { invite, next, mode: initialMode } = Route.useSearch();
+  const { invite, next, mode: initialMode, email: emailParam } = Route.useSearch();
   const redirectTo =
     next && next.startsWith("/")
       ? next
       : invite
-        ? `/business/invite/${invite}`
+        ? "/business"
         : "/";
   const [mode, setMode] = useState<"signin" | "signup">(initialMode ?? "signin");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(emailParam ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const acceptFn = useServerFn(acceptInvite);
+  const { refreshRoles } = useAuth();
+
+  async function runInviteAccept(): Promise<boolean> {
+    if (!invite) return true;
+    try {
+      await acceptFn({ data: { token: invite } });
+      try { await refreshRoles(); } catch {}
+      return true;
+    } catch (e: any) {
+      setError(e?.message ?? "Couldn't accept invite");
+      return false;
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setInfo(null); setLoading(true);
     if (mode === "signin") {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      if (err) { setLoading(false); return setError(err.message); }
+      const ok = await runInviteAccept();
       setLoading(false);
-      if (err) return setError(err.message);
+      if (!ok) return;
       navigate({ to: redirectTo as any });
     } else {
       const { data, error: err } = await supabase.auth.signUp({
         email, password,
         options: { emailRedirectTo: window.location.origin + redirectTo },
       });
-      setLoading(false);
-      if (err) return setError(err.message);
+      if (err) { setLoading(false); return setError(err.message); }
       if (data.session) {
         try { localStorage.removeItem("travidz:welcomed"); } catch {}
+        const ok = await runInviteAccept();
+        setLoading(false);
+        if (!ok) return;
         navigate({ to: (invite ? redirectTo : "/welcome") as any });
       } else {
+        setLoading(false);
         setInfo("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
       }
@@ -123,7 +146,8 @@ function LoginPage() {
         <input
           type="email" required placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary"
+          readOnly={!!invite && !!emailParam}
+          className={`w-full rounded-xl border border-border bg-card/80 px-4 py-3 text-sm outline-none backdrop-blur focus:border-primary ${invite && emailParam ? "opacity-80" : ""}`}
           style={{ scrollMarginTop: 80, scrollMarginBottom: 120 }}
         />
         <div className="relative">
