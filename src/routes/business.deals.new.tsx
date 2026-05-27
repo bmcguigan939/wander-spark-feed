@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { DealForm } from "@/components/business/DealForm";
+import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 import { useAccountKind } from "@/lib/useAccountKind";
 import { createDeal } from "@/lib/deals.functions";
 import { getMyConnectStatus } from "@/lib/stripe-connect.functions";
@@ -115,6 +116,20 @@ function NewDealPage() {
             }
           }}
         />
+        <details className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-4">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Where else is this listed? <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+          </summary>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Pin your Booking.com / Expedia / GetYourGuide etc. listing URLs so our
+            price-match scanner compares the exact same room or ticket. These apply
+            to every listing under your business — leave blank and we'll search by
+            name instead.
+          </p>
+          <div className="mt-3">
+            <CompetitorUrlsEditor />
+          </div>
+        </details>
       </div>
     </MobileShell>
   );

@@ -214,6 +214,7 @@ function BookPage() {
             {deal.bookable && (
               <PriceMatchBadge
                 dealId={dealId}
+                roomId={roomId ?? null}
                 checkIn={travelDate || null}
                 guests={guests}
               />
