@@ -368,6 +368,8 @@ function PriceAuditPage() {
             ))}
           </div>
         )}
+
+        {tab === "otas" && <CompetitorUrlsEditor />}
       </div>
     </MobileShell>
   );
