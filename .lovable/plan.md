@@ -1,28 +1,24 @@
-## Fix two invite bugs
+## Plan
 
-### 1. "Copy email" omits the invite link
-In `src/routes/business/TagBusinessSheet.tsx` and `src/routes/business/SmartDealsSheet.tsx`, update the "Copy email" button handlers to append a CTA line with the actual invite URL when copying:
+Fix the invite flow so a business invite cannot be accepted by the creator’s currently logged-in account.
 
-```
-{subject}
+### 1. Add account mismatch protection on the invite page
+- If someone opens `/business/invite/:token` while logged in as a different email than the invited business email, show a clear warning.
+- Do not show the “Accept & claim your listing” action for that wrong account.
+- Add a button to sign out and continue with the invited business email.
 
-{body}
+### 2. Route invited businesses to the right auth path
+- If the invite email already has an account, send them to login with the invite return path.
+- If the invite email has no account, send them to business signup with the invite token.
+- Preserve the requirement to tick the business agreement checkbox before continuing.
 
-Approve your listing: {inviteUrl}
-```
+### 3. Harden the server-side accept action
+- Update `acceptInvite` so it checks the logged-in user’s email matches the invite’s `contact_email` before it creates the business role, deal, signing, and dashboard data.
+- If the wrong account tries to accept, return a helpful error instead of silently assigning the invite to that account.
 
-Only append when `inviteUrl` is available. Leave the separate "Copy invite link" button unchanged.
+### 4. Refresh roles and send them to the business dashboard after acceptance
+- After a correct accept, refresh the user roles so the app recognises the business role immediately.
+- Keep the “Open your dashboard” button pointing to `/business`, where the business manages shop front setup, creator messages, creator applications/collabs, and bookings.
 
-### 2. Travidz-sent email lands on Linda's profile
-The AI-drafted body still occasionally contains a `travidz.com/u/<creator>` profile link, even though it was removed from `socialLinks` and a prompt rule warns against it. The model re-invents it.
-
-In `src/lib/outreach.functions.ts`, after the gateway returns a draft (and inside `fallbackInviteDraft` too), post-process `draft.body` to:
-- Strip any line containing `travidz.com/u/` or `travidz.com/business/invite/`
-- Collapse resulting double blank lines
-
-This guarantees the only Travidz link a recipient sees in a Travidz-sent email is the "Approve your listing" CTA button rendered by the email template.
-
-### Out of scope
-- Already-sent/queued emails
-- Unrelated open security findings
-- Commission/template/invite-flow logic
+### Why it is not working now
+The invite link itself is reaching the invite flow, but the page currently trusts the active browser session. Because Linda was already logged in, clicking “Approve your listing” accepted the invite under Linda’s account, which then made the app show Linda’s creator/profile context instead of the intended business account.
