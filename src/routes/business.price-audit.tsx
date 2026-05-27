@@ -9,6 +9,7 @@ import { listParityChecksForBusiness, disputeMatchCode, setParityExempt, exportP
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff, Download } from "lucide-react";
+import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 
 export const Route = createFileRoute("/business/price-audit")({
   head: () => ({ meta: [{ title: "Price-match audit — Travidz" }] }),
@@ -45,7 +46,7 @@ function PriceAuditPage() {
     enabled: !!user && isBusiness,
   });
 
-  const [tab, setTab] = useState<"checks" | "codes" | "listings">("codes");
+  const [tab, setTab] = useState<"checks" | "codes" | "listings" | "otas">("codes");
   const [disputing, setDisputing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [exemptingId, setExemptingId] = useState<string | null>(null);
@@ -133,6 +134,12 @@ function PriceAuditPage() {
             className={`px-4 py-1.5 rounded-full ${tab === "listings" ? "bg-primary text-primary-foreground" : ""}`}
           >
             Listings ({data?.links?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setTab("otas")}
+            className={`px-4 py-1.5 rounded-full ${tab === "otas" ? "bg-primary text-primary-foreground" : ""}`}
+          >
+            OTA URLs
           </button>
         </div>
 
