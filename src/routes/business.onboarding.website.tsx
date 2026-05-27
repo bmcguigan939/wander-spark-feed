@@ -7,6 +7,7 @@ import {
   getMyOperatorSite,
   updateMyOperatorSite,
 } from "@/lib/operator-site.functions";
+import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 
 export const Route = createFileRoute("/business/onboarding/website")({
   head: () => ({
@@ -117,6 +118,18 @@ function WebsiteStepPage() {
           </Link>
         </form>
       )}
+
+      <div className="mt-10 border-t border-border pt-6">
+        <h2 className="font-display text-lg font-semibold leading-tight">
+          Pin your OTA listings <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+        </h2>
+        <p className="mt-1 mb-3 text-xs text-muted-foreground">
+          Paste the exact URL of your listing on Booking.com, Expedia, GetYourGuide etc.
+          Our scanner uses these for a like-for-like price comparison instead of guessing
+          via search. You can skip this and add them later in your dashboard.
+        </p>
+        <CompetitorUrlsEditor />
+      </div>
     </div>
   );
 }

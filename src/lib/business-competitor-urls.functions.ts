@@ -183,3 +183,28 @@ export function networkHostMatches(network: string, host: string): boolean {
 }
 
 export { hostOf };
+
+/** Scanner-side writeback for pinned URL health. Called by the price-match
+ *  scanner after each scrape attempt so the OTA editor can surface broken /
+ *  wrong-domain / no-price pins. */
+export async function recordPinnedUrlStatus(
+  businessId: string,
+  network: string,
+  status: "verified" | "no_price" | "broken" | "wrong_domain",
+  error?: string | null,
+  verifiedTitle?: string | null,
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    last_status: status,
+    last_error: error ?? null,
+  };
+  if (status === "verified") {
+    patch.verified_at = new Date().toISOString();
+    if (verifiedTitle) patch.verified_title = verifiedTitle;
+  }
+  await supabaseAdmin
+    .from("business_competitor_urls")
+    .update(patch)
+    .eq("business_id", businessId)
+    .eq("network", network);
+}
