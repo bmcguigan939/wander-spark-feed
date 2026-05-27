@@ -64,7 +64,6 @@ function CollabSettings() {
   const [deliverables, setDeliverables] = useState("");
   const [nights, setNights] = useState("");
   const [usage, setUsage] = useState("90");
-  const [commission, setCommission] = useState("10");
   const [dos, setDos] = useState("");
   const [donts, setDonts] = useState("");
   const [tags, setTags] = useState("");
@@ -74,7 +73,6 @@ function CollabSettings() {
     setDeliverables((dv.default_deliverables ?? []).join("\n"));
     setNights(dv.default_nights != null ? String(dv.default_nights) : "");
     setUsage(String(dv.default_usage_rights_days ?? 90));
-    setCommission(String(dv.default_commission_pct ?? 10));
     setDos(dv.brand_dos ?? "");
     setDonts(dv.brand_donts ?? "");
     setTags(csv(dv.required_hashtags));
@@ -88,7 +86,6 @@ function CollabSettings() {
           default_deliverables: parseLines(deliverables),
           default_nights: nights ? Number(nights) : null,
           default_usage_rights_days: Number(usage) || 90,
-          default_commission_pct: Number(commission) || 10,
           brand_dos: dos || null,
           brand_donts: donts || null,
           required_hashtags: parseCsv(tags),
@@ -105,7 +102,6 @@ function CollabSettings() {
   function applyRecommended() {
     setDeliverables(RECOMMENDED_DEFAULTS.default_deliverables.join("\n"));
     setUsage(String(RECOMMENDED_DEFAULTS.default_usage_rights_days));
-    setCommission(String(RECOMMENDED_DEFAULTS.default_commission_pct));
     setDos(RECOMMENDED_DEFAULTS.brand_dos);
     setDonts(RECOMMENDED_DEFAULTS.brand_donts);
     setTags(RECOMMENDED_DEFAULTS.required_hashtags.join(", "));
@@ -165,7 +161,7 @@ function CollabSettings() {
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Collab defaults</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Set once. Every creator you accept inherits these terms and gets an auto-generated brief.
+          Set once. These defaults cover deliverables, comp nights, usage rights, and brand voice for every creator you accept. Commission is fixed by Travidz (11%) — it isn't negotiated per collab.
         </p>
 
         <section className="mt-5 rounded-2xl border border-border bg-card/40 p-4">
@@ -192,10 +188,6 @@ function CollabSettings() {
                 <Input value={nights} onChange={(e) => setNights(e.target.value)} type="number" min="0" max="60" placeholder="2" />
               </div>
               <div>
-                <Label>Commission %</Label>
-                <Input value={commission} onChange={(e) => setCommission(e.target.value)} type="number" min="0" max="100" />
-              </div>
-              <div className="col-span-2">
                 <Label>Usage rights (days)</Label>
                 <Input value={usage} onChange={(e) => setUsage(e.target.value)} type="number" min="0" max="3650" />
               </div>
