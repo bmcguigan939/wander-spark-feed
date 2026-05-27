@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
@@ -31,6 +31,7 @@ function InvitePage() {
   const qc = useQueryClient();
   const { user, loading } = useAuth();
   const { signOut, refreshRoles } = useAuth();
+  const navigate = useNavigate();
 
   const getFn = useServerFn(getInviteByToken);
   const acceptFn = useServerFn(acceptInvite);
@@ -130,6 +131,36 @@ function InvitePage() {
   const inviteEmail = accountQ.data?.email?.toLowerCase() ?? "";
   const currentEmail = (user?.email ?? "").toLowerCase();
   const wrongAccount = !!user && !!inviteEmail && currentEmail !== inviteEmail;
+
+  // Auto-route the business to login (with email prefilled) whenever the
+  // current browser session doesn't match the invited email. This removes the
+  // "wrong account" dead-end: a new business goes straight to create-account,
+  // a returning business goes straight to sign-in, and a creator who
+  // accidentally clicked their own invite is auto-signed-out into the right
+  // login flow.
+  useEffect(() => {
+    if (!accountQ.data || !inviteEmail) return;
+    if (invite && invite.status !== "pending") return;
+    if (!user) {
+      navigate({
+        to: "/login",
+        search: { invite: token, email: inviteEmail } as any,
+        replace: true,
+      });
+      return;
+    }
+    if (wrongAccount) {
+      (async () => {
+        try { await signOut(); } catch {}
+        navigate({
+          to: "/login",
+          search: { invite: token, email: inviteEmail } as any,
+          replace: true,
+        });
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountQ.data, inviteEmail, user?.id, wrongAccount]);
 
   const handleAcceptClick = () => {
     // eslint-disable-next-line no-console
