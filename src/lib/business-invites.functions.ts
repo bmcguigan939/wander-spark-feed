@@ -314,13 +314,10 @@ export const acceptInvite = createServerFn({ method: "POST" })
     // user MUST match that email — otherwise a creator who is already logged
     // in (e.g. clicking their own invite link) would claim the business
     // listing under their own account.
-    const { data: actor, error: actorErr } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email")
-      .eq("id", userId)
-      .maybeSingle();
+    const { data: actorRes, error: actorErr } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
     if (actorErr) throw new Error(actorErr.message);
-    const actorEmail = (actor?.email ?? "").toLowerCase();
+    const actorEmail = (actorRes?.user?.email ?? "").toLowerCase();
     const inviteEmail = (invite.contact_email ?? "").toLowerCase();
     if (!actorEmail || actorEmail !== inviteEmail) {
       throw new Error(
