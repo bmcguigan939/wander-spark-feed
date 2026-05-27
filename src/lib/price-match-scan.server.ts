@@ -1,6 +1,9 @@
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { getPinnedCompetitorUrls } from "@/lib/business-competitor-urls.functions";
+import {
+  getPinnedCompetitorUrls,
+  recordPinnedUrlStatus,
+} from "@/lib/business-competitor-urls.functions";
 
 /**
  * Deal-level price-match scan. Scrapes a handful of major OTA networks
@@ -468,7 +471,26 @@ export async function runDealPriceMatch(args: {
         if (pin) {
           const url = rewriteWithDates(network, pin.url, args.check_in, args.check_out, args.guests);
           const q = await scrape(network, url, args.room_name ?? null);
-          if (!q) return null;
+          if (!q) {
+            if (args.business_id) {
+              await recordPinnedUrlStatus(
+                args.business_id,
+                network,
+                "no_price",
+                "No price found on the pinned listing page",
+              );
+            }
+            return null;
+          }
+          if (args.business_id) {
+            await recordPinnedUrlStatus(
+              args.business_id,
+              network,
+              "verified",
+              null,
+              q.matched_item_name ?? null,
+            );
+          }
           const score = nameScore(args.room_name ?? null, q.matched_item_name ?? null);
           const confidence: "high" | "medium" =
             !args.room_name ? "medium" : score >= 0.6 ? "high" : "medium";

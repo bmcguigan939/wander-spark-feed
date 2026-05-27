@@ -8,8 +8,10 @@ import { useAuth } from "@/lib/auth";
 import { listParityChecksForBusiness, disputeMatchCode, setParityExempt, exportPriceAuditCsv } from "@/lib/price-match.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff, Download } from "lucide-react";
+import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff, Download, Link2 } from "lucide-react";
 import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
+import { useServerFn as _useServerFn } from "@tanstack/react-start";
+import { listMyCompetitorUrls } from "@/lib/business-competitor-urls.functions";
 
 export const Route = createFileRoute("/business/price-audit")({
   head: () => ({ meta: [{ title: "Price-match audit — Travidz" }] }),
@@ -33,6 +35,15 @@ function PriceAuditPage() {
   const exemptFn = useServerFn(setParityExempt);
   const exportFn = useServerFn(exportPriceAuditCsv);
   const qc = useQueryClient();
+  const otaListFn = useServerFn(listMyCompetitorUrls);
+  const { data: otaData } = useQuery({
+    queryKey: ["my-competitor-urls"],
+    queryFn: () => otaListFn(),
+    enabled: !!user && isBusiness,
+  });
+  const brokenPins = ((otaData?.urls ?? []) as any[]).filter(
+    (u) => u.last_status === "broken" || u.last_status === "wrong_domain" || u.last_status === "no_price",
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -115,6 +126,21 @@ function PriceAuditPage() {
           competitor prices and records the result here. You can dispute any match you
           believe is unfair.
         </p>
+
+        {brokenPins.length > 0 && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-100 flex items-start gap-2">
+            <Link2 className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="font-semibold text-amber-50">
+                {brokenPins.length} pinned OTA URL{brokenPins.length === 1 ? "" : "s"} need attention
+              </div>
+              <div className="opacity-80">
+                Our last scan couldn't pull a price from: {brokenPins.map((p) => p.network).join(", ")}.
+                Open <button onClick={() => setTab("otas")} className="underline">OTA URLs</button> and re-paste the correct listing URL.
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="inline-flex rounded-full border bg-card p-1 text-xs font-medium">
           <button
