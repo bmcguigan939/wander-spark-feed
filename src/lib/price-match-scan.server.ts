@@ -305,24 +305,45 @@ async function findUrl(
   return null;
 }
 
-async function scrape(network: string, url: string): Promise<ScanQuote | null> {
+async function scrape(
+  network: string,
+  url: string,
+  targetName: string | null = null,
+): Promise<ScanQuote | null> {
   const r = await fc(
     "/v2/scrape",
     {
       url,
-      formats: [{ type: "json", schema: PRICE_SCHEMA, prompt: "Extract the lowest total bookable price visible for the default dates/party size." }],
+      formats: [
+        {
+          type: "json",
+          schema: ITEMS_SCHEMA,
+          prompt:
+            "Extract every distinct bookable rate / room / ticket option visible on the page. For each, return the option name (room type, ticket type, package name), the lowest visible total price for that option, and the currency. Do not invent items.",
+        },
+      ],
       onlyMainContent: true,
     },
-    8000,
+    10000,
   );
   const result = r?.data ?? r;
   const json = result?.json ?? result?.data?.json;
-  if (!json || typeof json.price !== "number") return null;
+  const rawItems = Array.isArray(json?.items) ? json.items : [];
+  const items: ScrapedItem[] = rawItems
+    .filter((i: any) => i && typeof i.price === "number" && i.price > 0)
+    .map((i: any) => ({
+      name: typeof i.name === "string" ? i.name : null,
+      price: i.price,
+      currency: typeof i.currency === "string" ? i.currency.toUpperCase() : null,
+    }));
+  const picked = pickItem(items, targetName);
+  if (!picked) return null;
   return {
     network,
     url,
-    price_cents: toCents(json.price),
-    currency: (json.currency || "GBP").toString().toUpperCase(),
+    price_cents: toCents(picked.item.price),
+    currency: (picked.item.currency || "GBP").toUpperCase(),
+    matched_item_name: picked.item.name ?? null,
   };
 }
 
