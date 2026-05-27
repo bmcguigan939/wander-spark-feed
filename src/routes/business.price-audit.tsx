@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ShieldCheck, AlertTriangle, ChevronLeft, ExternalLink, ShieldOff, Download, Link2 } from "lucide-react";
 import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
-import { useServerFn as _useServerFn } from "@tanstack/react-start";
 import { listMyCompetitorUrls } from "@/lib/business-competitor-urls.functions";
 
 export const Route = createFileRoute("/business/price-audit")({
