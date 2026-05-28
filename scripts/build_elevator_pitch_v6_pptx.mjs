@@ -7,8 +7,8 @@ const W=13.333, H=7.5;
 
 const BG="0F172A", PANEL="111C36", CARD="1B2742", PRIMARY="3B82F6",
       GLOW="60A5FA", CYAN="22D3EE", INK="F8FAFC", MUTED="94A3B8", LINE="243049", WHITE="FFFFFF";
-const LIVE_URL="https://wander-spark-feed.lovable.app/invest";
-const LIVE_LABEL="wander-spark-feed.lovable.app/invest";
+const LIVE_URL="https://travidz.com/invest";
+const LIVE_LABEL="travidz.com/invest";
 
 const s = pres.addSlide();
 s.background = { color: BG };
@@ -32,8 +32,8 @@ function mcell(i,label,big,sub){
   s.addText(sub,{x:x+0.25,y:BY+BH-0.32,w:cw-0.4,h:0.25,fontSize:9,color:CYAN,fontFace:"Calibri"});
 }
 mcell(0,"TAM","£87.6B / £675B","UK / Global · ONS · Eurostat · UNWTO");
-mcell(1,"SAM","£23.2B / £175B","26% creator-influenced × bookable (global blend)");
-mcell(2,"Y5 SOM","£350M → £1.32B","UK Base → Global Viral · £16.2M → £61.6M net @ 4.65%");
+mcell(1,"SAM","£25.2B / £175B","28.8% creator-influenced × bookable (UK) · 26% global");
+mcell(2,"Y5 SOM","£444M → £1.32B","24k cr × £18.5k GBV · 4.65% net take");
 
 // Ask cell with allocation bar
 const ax=0.2+3*cw;
@@ -115,17 +115,17 @@ s.addText([
   {text:" and own the customer. Creators send the intent — OTAs keep the margin and the data.",options:{color:INK}}
 ],{x:LX+0.2,y:lyP+0.45,w:LW-0.4,h:cardH-0.55,fontSize:9.5,fontFace:"Calibri",valign:"top"});
 
-panel(LX,lyT,LW,cardH,"TRACTION");
-[["Waitlist (organic, UK)","3,200+"],["Creator LOIs · 4.2M reach","85"],["Supply signed · 3 cities","12"]].forEach(([l,v],i)=>{
+panel(LX,lyT,LW,cardH,"PROGRAMME · FOUNDING 5,000");
+[["Founding Creator cap","5,000"],["50/50 split locked","24 months"],["Power tier · rolling 12mo GBV","£25k"]].forEach(([l,v],i)=>{
   const ry=lyT+0.5+i*0.34;
   s.addText(l,{x:LX+0.2,y:ry,w:LW-0.4,h:0.3,fontSize:9,color:MUTED,fontFace:"Calibri"});
   s.addText(v,{x:LX+0.2,y:ry,w:LW-0.4,h:0.3,fontSize:12,bold:true,color:CYAN,align:"right",fontFace:"Calibri"});
 });
 
-panel(LX,lyTm,LW,cardH,"TEAM");
-[["CEO","ex-Booking.com · scaled supply 0→1"],
- ["CTO","ex-TikTok Shop · creator-commerce rails"],
- ["CPO","ex-Airbnb · marketplace growth"]].forEach(([n,b],i)=>{
+panel(LX,lyTm,LW,cardH,"FOUNDERS");
+[["Brendan","Co-founder · CEO"],
+ ["Linda",  "Co-founder"],
+ ["Hiring", "Eng & growth post-seed"]].forEach(([n,b],i)=>{
   const ry=lyTm+0.5+i*0.34;
   s.addShape("ellipse",{x:LX+0.2,y:ry+0.06,w:0.16,h:0.16,fill:{color:CYAN},line:{color:CYAN}});
   s.addText(n,{x:LX+0.45,y:ry,w:0.6,h:0.28,fontSize:9.5,bold:true,color:INK,fontFace:"Calibri"});
@@ -140,24 +140,24 @@ s.addText([
   {text:" Creator posts trip → traveller books in 2 taps → creator earns for life. Native checkout, unified inventory (stays · tours · experiences), persistent attribution.",options:{color:INK}}
 ],{x:RX+0.2,y:ryS+0.45,w:RW-0.4,h:cardH-0.55,fontSize:9.5,fontFace:"Calibri",valign:"top"});
 
-panel(RX,ryB,RW,cardH,"BUSINESS MODEL");
-["• Take-rate 4-7%  ·  blended Y5 4.65%",
- "• Creator rev-share 30-50% of net",
- "• ~55% contribution margin at scale",
- "• Zero paid acquisition Y1-2 (creator-led)",
- "• Breakeven M48 · Y1 −£1.56M · +£181k cushion"].forEach((t,i)=>{
+panel(RX,ryB,RW,cardH,"UNIT ECONOMICS (V6 MODEL)");
+["• 11% gross commission on every booking",
+ "• Stripe 2.9% + £0.20 shared off the top",
+ "• Net pool split 50/50/50/40/30 by tier",
+ "• Blended Y5 take-rate 4.65% net to Travidz",
+ "• Stays + tours/experiences only · no restaurants"].forEach((t,i)=>{
   s.addText(t,{x:RX+0.2,y:ryB+0.48+i*0.26,w:RW-0.3,h:0.26,fontSize:9.5,color:INK,fontFace:"Calibri"});
 });
 
 panel(RX,ryG,RW,cardH,"GROWTH PLAN: PROVE → SCALE → DEFEND");
 [["PROVE","M0-18 · UK · 2.4k cr · £44M GBV · 40% M3 retention"],
  ["SCALE","M18-44 · EU-5 · 14k cr · £259M · CAC payback <6mo"],
- ["DEFEND","M44-60 · 24k cr · £350M UK Base · Global Viral upside £1.32B"]].forEach(([p,desc],i)=>{
+ ["DEFEND","M44-60 · 24k cr · £444M UK Base · Global Viral upside £1.32B"]].forEach(([p,desc],i)=>{
   const ry=ryG+0.5+i*0.34;
   s.addShape("roundRect",{x:RX+0.2,y:ry+0.04,w:0.7,h:0.22,rectRadius:0.11,fill:{color:PRIMARY},line:{color:PRIMARY}});
   s.addText(p,{x:RX+0.2,y:ry+0.04,w:0.7,h:0.22,fontSize:8,bold:true,color:WHITE,align:"center",fontFace:"Calibri"});
   s.addText(desc,{x:RX+0.95,y:ry,w:RW-1.1,h:0.3,fontSize:7.5,color:INK,fontFace:"Calibri"});
 });
 
-await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v5.pptx"});
+await pres.writeFile({fileName:"/mnt/documents/Travidz_Elevator_Pitch_v6.pptx"});
 console.log("OK");
