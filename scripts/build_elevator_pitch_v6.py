@@ -11,10 +11,10 @@ BG=HexColor("#0F172A"); PANEL=HexColor("#111C36"); CARD=HexColor("#1B2742")
 PRIMARY=HexColor("#3B82F6"); GLOW=HexColor("#60A5FA"); CYAN=HexColor("#22D3EE")
 INK=HexColor("#F8FAFC"); MUTED=HexColor("#94A3B8"); LINE=HexColor("#243049")
 
-OUT="/mnt/documents/Travidz_Elevator_Pitch_v5.pdf"
+OUT="/mnt/documents/Travidz_Elevator_Pitch_v6.pdf"
 HERO="/tmp/elevator_hero.jpg"
-LIVE_URL="https://wander-spark-feed.lovable.app/invest"
-LIVE_LABEL="wander-spark-feed.lovable.app/invest"
+LIVE_URL="https://travidz.com/invest"
+LIVE_LABEL="travidz.com/invest"
 
 c = canvas.Canvas(OUT, pagesize=landscape(A4))
 c.setFillColor(BG); c.rect(0,0,W,H,fill=1,stroke=0)
@@ -50,8 +50,8 @@ def market_cell(i, label, big, sub, accent=CYAN):
     c.drawString(x+18, BOT_Y+12, sub)
 
 market_cell(0, "TAM",   "£87.6B / £675B",   "UK / Global · ONS · Eurostat · UNWTO")
-market_cell(1, "SAM",   "£23.2B / £175B",   "26% creator-influenced × bookable (global blend)")
-market_cell(2, "Y5 SOM","£350M → £1.32B",   "UK Base → Global Viral · £16.2M → £61.6M net @ 4.65%")
+market_cell(1, "SAM",   "£25.2B / £175B",   "28.8% creator-influenced × bookable (UK) · 26% global")
+market_cell(2, "Y5 SOM","£444M → £1.32B",   "UK Base → Global Viral · 24k creators × £18.5k GBV · 4.65% net")
 # Ask cell
 x = cells_x + 3*cw
 c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 8)
@@ -162,17 +162,17 @@ body(LX+14, y1+card_h-30, LW-28,
      "Discovery moved to creators; booking didn't. <b>£675B</b> of global leisure-travel bookings flow through OTAs that pay creators <b>£0</b> and own the customer. Creators send the intent — OTAs keep the margin and the data.",
      size=8.5, leading=10.5)
 
-y2 = col_card(LX, 1, LW, "Traction")
-items=[("Waitlist (organic, UK)","3,200+"),("Creator LOIs · 4.2M reach","85"),("Supply signed · 3 cities","12")]
+y2 = col_card(LX, 1, LW, "Programme · Founding 5,000")
+items=[("Founding Creator cap","5,000"),("50/50 split locked","24 months"),("Power tier · rolling 12mo GBV","£25k")]
 for i,(lbl,val) in enumerate(items):
     yy = y2 + card_h - 32 - i*18
     c.setFillColor(MUTED); c.setFont("Helvetica", 8); c.drawString(LX+18, yy, lbl)
     c.setFillColor(CYAN);  c.setFont("Helvetica-Bold", 11); c.drawRightString(LX+LW-14, yy, val)
 
-y3 = col_card(LX, 2, LW, "Team")
-team=[("CEO","ex-Booking.com · scaled supply 0→1"),
-      ("CTO","ex-TikTok Shop · creator-commerce rails"),
-      ("CPO","ex-Airbnb · marketplace growth")]
+y3 = col_card(LX, 2, LW, "Founders")
+team=[("Brendan","Co-founder · CEO"),
+      ("Linda",  "Co-founder"),
+      ("Hiring", "Eng & growth post-seed")]
 for i,(n,b) in enumerate(team):
     yy = y3 + card_h - 32 - i*18
     c.setFillColor(CYAN); c.circle(LX+22, yy+3, 4, fill=1, stroke=0)
@@ -185,20 +185,20 @@ body(RX+14, y1+card_h-30, RW-28,
      "Shoppable travel feed. Creator posts trip → traveller books in 2 taps → creator earns for life. Native checkout, unified inventory (stays · tours · experiences), persistent attribution.",
      size=8.5, leading=10.5)
 
-y2 = col_card(RX, 1, RW, "Business model")
-lines=["• Take-rate 4-7%  ·  blended Y5 4.65%",
-       "• Creator rev-share 30-50% of net",
-       "• ~55% contribution margin at scale",
-       "• Zero paid acquisition Y1-2 (creator-led)",
-       "• Breakeven M48 · Y1 −£1.56M · +£181k cushion"]
+y2 = col_card(RX, 1, RW, "Unit economics (v6 model)")
+lines=["• 11% gross commission on every booking",
+       "• Stripe 2.9% + £0.20 shared off the top",
+       "• Net pool split 50/50/50/40/30 by tier",
+       "• Blended Y5 take-rate 4.65% net to Travidz",
+       "• Stays + tours/experiences only · no restaurants"]
 for i,ln in enumerate(lines):
     c.setFillColor(INK); c.setFont("Helvetica", 8.5)
     c.drawString(RX+18, y2+card_h-30-i*14, ln)
 
 y3 = col_card(RX, 2, RW, "Growth plan: Prove → Scale → Defend")
-phases=[("PROVE",  "M0-18 · UK · 2.4k cr · £44M GBV · gate: 40% M3 retention"),
-        ("SCALE",  "M18-44 · EU-5 · 14k cr · £259M · gate: CAC payback <6mo"),
-        ("DEFEND", "M44-60 · 24k cr · £350M UK Base · Global Viral upside £1.32B")]
+phases=[("PROVE",  "M0-18 · UK · 2.4k cr · £44M GBV · 40% M3 retention gate"),
+        ("SCALE",  "M18-44 · EU-5 · 14k cr · £259M · CAC payback <6mo"),
+        ("DEFEND", "M44-60 · 24k cr · £444M UK Base · Global Viral £1.32B")]
 for i,(p,desc) in enumerate(phases):
     yy = y3 + card_h - 32 - i*18
     pw = c.stringWidth(p,"Helvetica-Bold",7)+14
