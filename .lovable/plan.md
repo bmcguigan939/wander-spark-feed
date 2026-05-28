@@ -1,62 +1,50 @@
 ## Goal
 
-Update Travidz TAM/SAM/SOM to align with the **v6 Financial Model** and **v6 Elevator Pitch** that the user attached. Today there are three sources of truth and they disagree:
+The live `/invest` page still carries v5/v10-era numbers and wording in several places even though `assumptions.ts` was already moved to v6. Bring the visible page fully into line with the three attached v6 sources (Financial Model v6, Elevator Pitch v6, Market Research TAM/SOM v11).
 
-| Source | Y5 UK SOM (GBV) | UK TAM | UK SAM | Y5 Take | Round |
-|---|---|---|---|---|---|
-| v6 Financial Model (attached) | £444M | £87.56B | £25.22B | n/a | n/a |
-| v6 Elevator Pitch (attached) | £444M → £1.32B | £87.6B / £675B Global | £25.2B / £175B Global | 4.65% | £2.5M SAFE |
-| Live `/invest` page (`assumptions.ts → GLOBAL_MARKET`) | **£350M** ❌ | £87.6B | £25.2B | 4.65% | n/a |
-| Standalone workbook (`…TAM_SOM_v10_Global.xlsx`) | £444M (chart) but headline stats say "£350M (UK Base)" ❌; calls commission "8% pool" ❌; Seed "£2.0M" ❌ | £89.75B ❌ | £23.20B ❌ | 4.68% | £2.0M ❌ |
+## Discrepancies found on `/invest` today
 
-The pitch and the financial model agree. The in-app constants and the standalone workbook are stale.
+| Area | Current (stale) | v6 truth |
+|---|---|---|
+| Hero meta description / chip | "£2.0M SAFE" | **£2.5M SAFE** |
+| Hero stat tile | "Y5 GBV £350M → £1.32B", "Take 4.68%" | **£444M → £1.32B**, **4.65%** |
+| StickyBar PDF / PPTX download | v5 deck | **v6 deck** (already in `public/decks/`) |
+| StickyBar "Market v10" button | v10 workbook | **v11** workbook (need to copy in) |
+| Hero "Download deck" link | v5 PDF | **v6 PDF** |
+| BusinessModel calculator | `gbv * 0.0468`, label "4.68%" | **4.65%** (matches pitch) |
+| GlobalExpansion compare table | UK GBV £350M / net £16.3M / contribution £15.5M | **£444M / £20.8M / ~£20.0M** (and recomputed multiples) |
+| GlobalExpansion download buttons | v10 market workbook | **v11** |
+| GrowthPlan "Defend" KPI | "£350M GBV (UK Base)" | **£444M GBV** |
+| TheAsk | "£2.0M SAFE", "Series A £8M at £2M ARR (M22)" | **£2.5M SAFE**, "Series A at **£18M ARR run-rate**" |
+| ProblemSolution | Implies but doesn't state the strategic line | Add one line: *"OTAs were built for search intent. Travidz is built for creator-led, identity-driven commerce — from day one."* |
+| UnitEconomics props | `ukBaseNetY5 = market.somNetBaseY5` (£20.8M) — already correct, but comment in `invest.tsx` still says "£16.3M" | Update stale comment |
 
 ## Changes
 
-### 1. `src/lib/investor-model/assumptions.ts` — update `GLOBAL_MARKET` Y5 anchors
+### 1. `public/decks/Travidz_Market_Research_TAM_SOM_v11_Global.xlsx`
 
-```ts
-export const GLOBAL_MARKET = {
-  bookingsPerTraveller: 1.5,
-  samPct: 0.26,
-  somGBVBaseY5: 444_000_000,      // was 350_000_000 — v6 Y5 = 24k × £18.5k
-  somNetBaseY5: 20_800_000,       // was 16_290_000 — v6 model Y5 net (≈4.68% take)
-  somGBVGlobalY5: 1_322_400_000,  // unchanged — workbook + pitch agree
-  somNetGlobalY5: 61_900_000,     // unchanged
-};
-```
+Copy the uploaded v11 workbook into `public/decks/` so the download buttons resolve. Leave v10 in place (don't break any external links already shared).
 
-No other file changes — `/invest` market panel and reconciliation banners read these constants automatically.
+### 2. `src/routes/invest.tsx` — surgical text/number edits only, no structural changes
 
-### 2. Produce new standalone workbook → `/mnt/documents/Travidz_Market_Research_TAM_SOM_v11_Global.xlsx`
+- **Meta + Hero**: "£2.0M SAFE" → "£2.5M SAFE" (3 places: `description`, `og:description`, hero chip). Hero stat tile: GBV "£350M → £1.32B" → "£444M → £1.32B", Take "4.68%" → "4.65%".
+- **StickyBar**: PDF/PPTX hrefs from `…_v5.…` → `…_v6.…`; Market v10 button → Market v11 button + filename.
+- **Hero "Download deck"**: v5 → v6 PDF.
+- **ProblemSolution**: append a single sentence to the Problem card body: *"OTAs were built for search intent. Travidz is built for creator-led, identity-driven commerce — from day one."*
+- **BusinessModel**: change `0.0468` → `0.0465`, "Blended Y5: 4.68%" → "4.65%", "Travidz net @ 4.68%" → "@ 4.65%".
+- **GlobalExpansion `compare` array**: UK GBV "£350M" → "£444M"; UK net "£16.3M" → "£20.8M"; UK contribution "£15.5M" → "£20.0M"; recompute "vs UK" multiples (GBV 1.32B/444M = **3.0x**, net 61.9/20.8 = **3.0x**, contribution 58.9/20.0 = **2.9x**). Update download button to v11 workbook + filename. Update caption "reconciled to the v10 TAM/SOM workbook" → "v11", and "£2.0M SAFE" → "£2.5M SAFE".
+- **GrowthPlan**: "£350M GBV (UK Base)" → "£444M GBV (UK Base)".
+- **TheAsk**: headline "£2.0M SAFE · 18-month runway" → "£2.5M SAFE · 18-month runway"; subhead "Next: Series A £8M at £2M ARR (M22)" → "Next: Series A at **£18M ARR run-rate**. Target KPIs at next round: 24,000 active creators, £444M annualised GBV, 4.65% blended take." (mirrors pitch + v6 model Y5).
+- **Stale comment** on lines 48–50 ("…£16.3M…") updated to reference £20.8M so future readers aren't misled. No logic change — `ukBaseNetY5` already reads from `GLOBAL_MARKET.somNetBaseY5`.
 
-Replaces v10. Same overall structure (so investors can diff against v10) but every headline now matches the v6 model + pitch. Sheets:
+### Out of scope
 
-1. **README** — what changed vs v10, with a one-line diff table; commission framework restated correctly (11% gross, Stripe shared off the top, tiered 50/50/50/40/30 split — **not** "8% pool").
-2. **Inputs** — UK travellers 178.7M, ABV £490, bookings/traveller 1.0, SAM% 28.8%, gross commission 11%, Stripe 2.9% + £0.20, EU-5 multiplier 2.91× — all sourced and matching the v6 Assumptions sheet exactly.
-3. **TAM** — formula-driven: UK = 178.7M × 1.0 × £490 = **£87.56B**; UK+EU-5 = **£342.37B**; Global = sum of GLOBAL_REGIONS (UK 25M×£480 + EU-5 150M×£460 + USA 180M×£540 + … × 1.5 bookings) → headline rounded to **£675B** to match pitch, with the precise computed figure shown below.
-4. **SAM** — UK SAM **£25.22B**, UK+EU-5 SAM **£98.60B**, Global SAM **£175B** (26% of Global TAM, matches pitch).
-5. **SOM_UK_Base** — 5-year build: creators [500, 2400, 6800, 14000, 24000] × £18.5k → GBV [£9.25M, £44.4M, £125.8M, £259.0M, **£444.0M**]; tier mix from v6 (Y5 = 0/32/40/20/8); commission walk → Travidz net **~£20.8M Y5** at blended **~4.68%** take rate.
-6. **SOM_Global_Viral** — upside path: creators [1.5k, 9k, 32k, 70k, **120k**] × blended £11k → GBV ramp to **£1.32B**, net **£61.9M Y5**. (Unchanged from v10, kept for continuity.)
-7. **Scenarios** — Bear / Base / Bull mirroring the v6 model's Scenarios sheet (Bear ~40% Base, Bull ~1.6× Base, Bull ABV £560).
-8. **Executive_Summary** — investor headline page with the corrected "Top 5 stats":
-   - £675B Global TAM · £342B UK+EU-5 · £87.6B UK
-   - 11% gross commission · 4.65% Y5 blended net take
-   - Y5 SOM range £444M (UK Base) → £1.32B (Global Viral) — both <1% of Global SAM
-   - Founding 5,000 cap · 50/50 locked 24 months
-   - Seed **£2.5M SAFE** → Series A at **£18M ARR run-rate**
-9. **Reconciliation_to_v6_Model** — side-by-side workbook vs v6 model values with a zero-delta check column.
-10. **Sources** — numbered [S1]…[S25] citations (ONS, VisitBritain, Eurostat, UNWTO, WTTC, GWI, Phocuswright, Skift, Expedia P2P, Stripe).
-
-All numbers formula-driven from the Inputs sheet — no hardcoded outputs. Standard colour conventions (blue = input, black = formula, green = cross-sheet, yellow = key assumption). After build, run `recalculate_formulas.py`, then QA: open with pandas and assert UK TAM ≈ £87.56B, UK Y5 SOM = £444M, Y5 take rate within 10bps of 4.65%.
-
-## Out of scope
-
-- No edits to the v6 financial model workbook, the elevator pitch, or the Paul response doc — those are already aligned.
-- No changes to commission, tier, or Stripe logic in `src/lib/commission.ts` — only the `GLOBAL_MARKET` Y5 anchors move.
-- No UI/route changes; the `/invest` market panel will pick up the new anchor values automatically.
+- No changes to `assumptions.ts`, `compute.ts`, `scenarios.ts`, or `commission.ts` — the v6 numbers are already encoded there.
+- No changes to the deck/pitch artifacts themselves; the user has already attached the v6 versions.
+- No new routes, components, or schema changes.
 
 ## Deliverables
 
-1. Updated `src/lib/investor-model/assumptions.ts` (4-line numeric change in `GLOBAL_MARKET`).
-2. New `Travidz_Market_Research_TAM_SOM_v11_Global.xlsx` delivered via `<presentation-artifact>`.
+1. `public/decks/Travidz_Market_Research_TAM_SOM_v11_Global.xlsx` copied in from upload.
+2. Edited `src/routes/invest.tsx` with the 11 surgical edits above.
+3. Visual check of `/invest` to confirm headline stats now read £444M / £1.32B / 4.65% / £2.5M SAFE.
