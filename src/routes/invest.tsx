@@ -669,7 +669,7 @@ function GrowthPlan() {
     {
       n: "Defend",
       t: "M44–60",
-      kpis: ["24,000 creators", "£350M GBV (UK Base)", "Creator ledger lock-in", "Supply exclusivity"],
+      kpis: ["24,000 creators", "£444M GBV (UK Base)", "Creator ledger lock-in", "Supply exclusivity"],
     },
   ];
   return (
@@ -748,10 +748,10 @@ function TheAsk() {
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
         <SectionLabel icon={<TrendingUp className="h-3.5 w-3.5" />}>The Ask</SectionLabel>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">£2.0M SAFE · 18-month runway.</h2>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">£2.5M SAFE · 18-month runway.</h2>
         <p className="mt-3 max-w-2xl text-white/70">
-          Next: Series A £8M at £2M ARR (M22). Target KPIs at next round: 8k active creators,
-          £40M annualised GBV, 4% blended take.
+          Next: Series A at £18M ARR run-rate. Target KPIs by Y5: 24,000 active creators,
+          £444M annualised GBV, 4.65% blended take.
         </p>
         <Card className="mt-8">
           <div className="mb-3 text-xs uppercase tracking-wider text-white/50">Use of funds</div>
