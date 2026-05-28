@@ -1,65 +1,62 @@
 ## Goal
 
-Produce `Travidz_Operator_Mix_Q11.xlsx` in `/mnt/documents/` — a standalone, formula-driven workbook (no external links to the v6 model) that demonstrates how Travidz's operator mix supports the 11% gross commission line used in Q11 of the Paul response.
+Update Travidz TAM/SAM/SOM to align with the **v6 Financial Model** and **v6 Elevator Pitch** that the user attached. Today there are three sources of truth and they disagree:
 
-Only two operator categories are in the revenue model (per Q11): **Stays** and **Tours / Experiences**. Restaurants are explicitly excluded.
+| Source | Y5 UK SOM (GBV) | UK TAM | UK SAM | Y5 Take | Round |
+|---|---|---|---|---|---|
+| v6 Financial Model (attached) | £444M | £87.56B | £25.22B | n/a | n/a |
+| v6 Elevator Pitch (attached) | £444M → £1.32B | £87.6B / £675B Global | £25.2B / £175B Global | 4.65% | £2.5M SAFE |
+| Live `/invest` page (`assumptions.ts → GLOBAL_MARKET`) | **£350M** ❌ | £87.6B | £25.2B | 4.65% | n/a |
+| Standalone workbook (`…TAM_SOM_v10_Global.xlsx`) | £444M (chart) but headline stats say "£350M (UK Base)" ❌; calls commission "8% pool" ❌; Seed "£2.0M" ❌ | £89.75B ❌ | £23.20B ❌ | 4.68% | £2.0M ❌ |
 
-## Workbook structure (5 sheets, Arial, standard colour conventions: blue = input, black = formula, green = cross-sheet)
+The pitch and the financial model agree. The in-app constants and the standalone workbook are stale.
 
-### 1. `README`
-Plain-language context: what Q11 asked, what 11% means (gross commission, not blended margin), what's in scope (stays + experiences only), source notes pointing to `src/lib/commission.ts` (`COMMISSION.totalPct = 11`) and `src/lib/investor-model/assumptions.ts` (`grossCommissionPct: 0.11`).
+## Changes
 
-### 2. `Industry_Benchmarks`
-Reference table of published direct-channel commission ranges per operator type, each row sourced (Booking.com, Expedia partner docs, GetYourGuide, Viator, Airbnb Experiences). Columns: Category · Sub-type · Low % · Mid % · High % · Source. This is the evidence base the mix sheet pulls from.
+### 1. `src/lib/investor-model/assumptions.ts` — update `GLOBAL_MARKET` Y5 anchors
 
-Rows include: independent hotel direct, boutique/lifestyle, branded chain wholesale, B&B/guesthouse, vacation rental, day tour, multi-day tour, activity/experience, ticketed attraction.
-
-### 3. `Mix_Scenarios` (the core "supports 11%" sheet)
-Three named scenarios — Conservative / Base / Stretch — each computing a weighted blended commission. Layout:
-
-```
-                          Conservative   Base    Stretch
-Stays % of GBV               75%         70%     60%
-Tours/Experiences % of GBV   25%         30%     40%
-                            ----        ----    ----
-Stays commission %            9.0%       10.0%   11.0%
-Tours/Exp commission %       16.0%       18.0%   20.0%
-                            ----        ----    ----
-Blended gross commission   =SUMPRODUCT  =SP     =SP    ← target ≈ 11%
-Variance vs 11% target     =B-0.11      ...     ...
+```ts
+export const GLOBAL_MARKET = {
+  bookingsPerTraveller: 1.5,
+  samPct: 0.26,
+  somGBVBaseY5: 444_000_000,      // was 350_000_000 — v6 Y5 = 24k × £18.5k
+  somNetBaseY5: 20_800_000,       // was 16_290_000 — v6 model Y5 net (≈4.68% take)
+  somGBVGlobalY5: 1_322_400_000,  // unchanged — workbook + pitch agree
+  somNetGlobalY5: 61_900_000,     // unchanged
+};
 ```
 
-All cells formula-driven (`SUMPRODUCT`), with the mix % and per-category commission % pulled from `Industry_Benchmarks` via cell refs where possible. Base scenario must compute to ≈ 11.0% (within 25bps) to validate the headline.
+No other file changes — `/invest` market panel and reconciliation banners read these constants automatically.
 
-### 4. `Sensitivity`
-2-D data table: rows = Stays share of GBV (50% → 90% in 5pt steps); columns = Tours/Experiences commission % (12% → 22% in 2pt steps). Body cells = blended gross commission. Conditional formatting (yellow band) highlights cells where blended ≈ 10.5%–11.5%, visually showing the wide region of operator mixes that all support an 11% headline.
+### 2. Produce new standalone workbook → `/mnt/documents/Travidz_Market_Research_TAM_SOM_v11_Global.xlsx`
 
-### 5. `Reconciliation_to_Net_Take`
-End-to-end walk on a £100 booking using v6 mechanics, so the reader can trace 11% gross → 4.65% Travidz net:
+Replaces v10. Same overall structure (so investors can diff against v10) but every headline now matches the v6 model + pitch. Sheets:
 
-```
-GBV                                  £100.00
-Gross commission (11%)              =B*0.11
-Stripe variable (2.9%)              =B*0.029
-Stripe fixed (£0.20)                 0.20
-Stripe total                        =SUM
-Net pool (gross − Stripe)           =formula
-Creator share (Y5 blended ~57.5%)   =formula
-Travidz net                         =formula
-Travidz take rate of GBV            =formula  ← lands ≈ 4.65%
-```
+1. **README** — what changed vs v10, with a one-line diff table; commission framework restated correctly (11% gross, Stripe shared off the top, tiered 50/50/50/40/30 split — **not** "8% pool").
+2. **Inputs** — UK travellers 178.7M, ABV £490, bookings/traveller 1.0, SAM% 28.8%, gross commission 11%, Stripe 2.9% + £0.20, EU-5 multiplier 2.91× — all sourced and matching the v6 Assumptions sheet exactly.
+3. **TAM** — formula-driven: UK = 178.7M × 1.0 × £490 = **£87.56B**; UK+EU-5 = **£342.37B**; Global = sum of GLOBAL_REGIONS (UK 25M×£480 + EU-5 150M×£460 + USA 180M×£540 + … × 1.5 bookings) → headline rounded to **£675B** to match pitch, with the precise computed figure shown below.
+4. **SAM** — UK SAM **£25.22B**, UK+EU-5 SAM **£98.60B**, Global SAM **£175B** (26% of Global TAM, matches pitch).
+5. **SOM_UK_Base** — 5-year build: creators [500, 2400, 6800, 14000, 24000] × £18.5k → GBV [£9.25M, £44.4M, £125.8M, £259.0M, **£444.0M**]; tier mix from v6 (Y5 = 0/32/40/20/8); commission walk → Travidz net **~£20.8M Y5** at blended **~4.68%** take rate.
+6. **SOM_Global_Viral** — upside path: creators [1.5k, 9k, 32k, 70k, **120k**] × blended £11k → GBV ramp to **£1.32B**, net **£61.9M Y5**. (Unchanged from v10, kept for continuity.)
+7. **Scenarios** — Bear / Base / Bull mirroring the v6 model's Scenarios sheet (Bear ~40% Base, Bull ~1.6× Base, Bull ABV £560).
+8. **Executive_Summary** — investor headline page with the corrected "Top 5 stats":
+   - £675B Global TAM · £342B UK+EU-5 · £87.6B UK
+   - 11% gross commission · 4.65% Y5 blended net take
+   - Y5 SOM range £444M (UK Base) → £1.32B (Global Viral) — both <1% of Global SAM
+   - Founding 5,000 cap · 50/50 locked 24 months
+   - Seed **£2.5M SAFE** → Series A at **£18M ARR run-rate**
+9. **Reconciliation_to_v6_Model** — side-by-side workbook vs v6 model values with a zero-delta check column.
+10. **Sources** — numbered [S1]…[S25] citations (ONS, VisitBritain, Eurostat, UNWTO, WTTC, GWI, Phocuswright, Skift, Expedia P2P, Stripe).
 
-Tier split table (Founding/Power/New 50/50, Maturing 60/40, Mature 70/30) shown alongside, with the Y5 tier mix from `assumptions.ts` (`tierMixByYear[4]`) driving the blended creator share via `SUMPRODUCT`.
-
-## Build steps
-
-1. Read `src/lib/investor-model/assumptions.ts` for exact `tierMixByYear`, `creatorSharePctByTier`, `grossCommissionPct`, `stripeVariablePct`, `stripeFixedPerTxn` values so Sheet 5 reconciles to the live model.
-2. Generate workbook with `openpyxl` (Arial 10pt, blue inputs, black formulas, yellow conditional formatting on Sensitivity), every calc as a real formula — no hardcoded results.
-3. Run `knowledge://skill/xlsx/scripts/recalculate_formulas.py` to materialise values and confirm zero formula errors.
-4. QA: open the recalculated file with pandas, print Base blended commission and Y5 take rate, confirm ≈ 11.0% and ≈ 4.65%; if off, adjust Base mix % in code and re-run.
-5. Deliver via `<presentation-artifact>` pointing at `Travidz_Operator_Mix_Q11.xlsx`.
+All numbers formula-driven from the Inputs sheet — no hardcoded outputs. Standard colour conventions (blue = input, black = formula, green = cross-sheet, yellow = key assumption). After build, run `recalculate_formulas.py`, then QA: open with pandas and assert UK TAM ≈ £87.56B, UK Y5 SOM = £444M, Y5 take rate within 10bps of 4.65%.
 
 ## Out of scope
 
-- No edits to the live v6 model workbook, the Paul response doc, or any deck script.
-- No code/UI changes in the app.
+- No edits to the v6 financial model workbook, the elevator pitch, or the Paul response doc — those are already aligned.
+- No changes to commission, tier, or Stripe logic in `src/lib/commission.ts` — only the `GLOBAL_MARKET` Y5 anchors move.
+- No UI/route changes; the `/invest` market panel will pick up the new anchor values automatically.
+
+## Deliverables
+
+1. Updated `src/lib/investor-model/assumptions.ts` (4-line numeric change in `GLOBAL_MARKET`).
+2. New `Travidz_Market_Research_TAM_SOM_v11_Global.xlsx` delivered via `<presentation-artifact>`.
