@@ -315,6 +315,9 @@ function ProblemSolution() {
             every booking still flows through Booking, Expedia, Airbnb. £675B transacted globally;
             £0 paid to the creator who sourced the customer.
           </p>
+          <p className="mt-3 text-sm text-white/55">
+            OTAs were built for search intent. Travidz is built for creator-led, identity-driven commerce — from day one.
+          </p>
         </Card>
         <Card highlight>
           <SectionLabel small icon={<Sparkles className="h-3.5 w-3.5" />}>Solution</SectionLabel>
@@ -370,7 +373,7 @@ function HowItWorks() {
 
 function BusinessModel() {
   const [gbv, setGbv] = useState(100_000_000);
-  const net = gbv * 0.0468;
+  const net = gbv * 0.0465;
   return (
     <section className="border-b border-white/5 py-20">
       <div className="mx-auto max-w-6xl px-4">
@@ -379,7 +382,7 @@ function BusinessModel() {
           Take rate underwritable, distribution creator-owned.
         </h2>
         <div className="mt-10 grid gap-4 md:grid-cols-4">
-          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.68%" />
+          <Stat k="Take rate" v="4–7%" sub="Blended Y5: 4.65%" />
           <Stat k="Creator share" v="30–50%" sub="of net pool (post-Stripe)" />
           <Stat k="Contribution margin" v="~55%" sub="at scale" />
           <Stat k="Paid acquisition" v="£0" sub="Y1–Y2, creator-led" />
@@ -393,7 +396,7 @@ function BusinessModel() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.68%</div>
+              <div className="text-xs uppercase tracking-wider text-white/50">Travidz net @ 4.65%</div>
               <div className="mt-1 text-2xl font-bold tracking-tight text-[#ff8e72]">
                 {fmtGBP(net, { compact: true })}
               </div>
@@ -562,10 +565,10 @@ function _GlobalExpansionImpl() {
   ];
   const compare = [
     { label: "Active creators (Y5)", uk: "24,000", gv: "120,000", mult: "5.0x" },
-    { label: "Annual GBV (Y5)", uk: "£350M", gv: "£1.32B", mult: "3.8x" },
-    { label: "Travidz net revenue (Y5)", uk: "£16.3M", gv: "£61.9M", mult: "3.8x" },
-    { label: "Contribution margin (Y5, after infra)", uk: "£15.5M", gv: "£58.9M", mult: "3.8x" },
-    { label: "Blended take-rate", uk: "4.68%", gv: "4.69%", mult: "—" },
+    { label: "Annual GBV (Y5)", uk: "£444M", gv: "£1.32B", mult: "3.0x" },
+    { label: "Travidz net revenue (Y5)", uk: "£20.8M", gv: "£61.9M", mult: "3.0x" },
+    { label: "Contribution margin (Y5, after infra)", uk: "£20.0M", gv: "£58.9M", mult: "2.9x" },
+    { label: "Blended take-rate", uk: "4.65%", gv: "4.69%", mult: "—" },
   ];
   return (
     <section className="border-b border-white/5 bg-gradient-to-b from-[#0a0612] via-[#120824] to-[#0a0612] py-20">
@@ -626,7 +629,7 @@ function _GlobalExpansionImpl() {
           <p className="mt-4 text-xs text-white/50">
             Illustrative scenario layered on the v6 global model, reconciled to the v10 TAM/SOM
             workbook. Assumes one breakout region per year and a TikTok-style creator loop.
-            UK Base remains our funded plan and what the £2.0M SAFE underwrites. Still &lt; 0.4%
+            UK Base remains our funded plan and what the £2.5M SAFE underwrites. Still &lt; 0.4%
             of the global SAM at Y5.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -637,10 +640,10 @@ function _GlobalExpansionImpl() {
               <Download className="h-3.5 w-3.5" /> Financial model v6 (Global)
             </a>
             <a
-              href="/decks/Travidz_Market_Research_TAM_SOM_v10_Global.xlsx"
+              href="/decks/Travidz_Market_Research_TAM_SOM_v11_Global.xlsx"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-[#7C3AED]/25"
             >
-              <Download className="h-3.5 w-3.5" /> Market research v10 (Global)
+              <Download className="h-3.5 w-3.5" /> Market research v11 (Global)
             </a>
           </div>
         </Card>
