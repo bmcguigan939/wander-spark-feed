@@ -72,8 +72,8 @@ export const GLOBAL_MARKET = {
   bookingsPerTraveller: 1.5, // matches Global Viral column in the workbook
   samPct: 0.26, // creator-influenced × bookable, global blend
   // Y5 SOM anchors (from workbook)
-  somGBVBaseY5: 350_000_000, // UK Base Y5 GBV
-  somNetBaseY5: 16_290_000, // UK Base Y5 Travidz net (v6: 11% − Stripe shared − tiered split)
+  somGBVBaseY5: 444_000_000, // UK Base Y5 GBV (v6: 24k creators × £18.5k)
+  somNetBaseY5: 20_800_000, // UK Base Y5 Travidz net (v6: 11% − Stripe shared − tiered split, ≈4.68% blended)
   somGBVGlobalY5: 1_322_400_000, // Global Viral Y5 GBV
   somNetGlobalY5: 61_900_000, // Global Viral Y5 Travidz net (v6)
 } as const;
