@@ -44,11 +44,11 @@ function gateCopy(
       return isActivity
         ? {
             title: "Add your activity packages",
-            desc: "Add each package you sell (half-day, full-day, private, etc.), with a photo.",
+            desc: "Add each package, set its price, and connect your calendar — all on one page.",
           }
         : {
             title: GATE_LABELS.items,
-            desc: "Add rooms or activity options, each with a photo.",
+            desc: "Add each room/option, set its price, and connect your calendar — all on one page.",
           };
     case "rates":
       return isActivity
