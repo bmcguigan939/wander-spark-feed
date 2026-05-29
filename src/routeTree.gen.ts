@@ -100,7 +100,6 @@ import { Route as BusinessDealsIdIndexRouteImport } from './routes/business.deal
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as BusinessDealsIdEditRouteImport } from './routes/business.deals.$id.edit'
 import { Route as BookMatchCodeThanksRouteImport } from './routes/book.match.$code.thanks'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksSyncExternalCalendarsRouteImport } from './routes/api/public/hooks/sync-external-calendars'
@@ -577,11 +576,6 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BusinessDealsIdEditRoute = BusinessDealsIdEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => BusinessDealsIdRoute,
-} as any)
 const BookMatchCodeThanksRoute = BookMatchCodeThanksRouteImport.update({
   id: '/thanks',
   path: '/thanks',
@@ -776,7 +770,6 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
-  '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -883,7 +876,6 @@ export interface FileRoutesByTo {
   '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
-  '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -994,7 +986,6 @@ export interface FileRoutesById {
   '/api/public/hooks/sync-external-calendars': typeof ApiPublicHooksSyncExternalCalendarsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/book/match/$code/thanks': typeof BookMatchCodeThanksRoute
-  '/business/deals/$id/edit': typeof BusinessDealsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1106,7 +1097,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
-    | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1213,7 +1203,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
-    | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1323,7 +1312,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-external-calendars'
     | '/api/public/payments/webhook'
     | '/book/match/$code/thanks'
-    | '/business/deals/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -2056,13 +2044,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/business/deals/$id/edit': {
-      id: '/business/deals/$id/edit'
-      path: '/edit'
-      fullPath: '/business/deals/$id/edit'
-      preLoaderRoute: typeof BusinessDealsIdEditRouteImport
-      parentRoute: typeof BusinessDealsIdRoute
-    }
     '/book/match/$code/thanks': {
       id: '/book/match/$code/thanks'
       path: '/thanks'
@@ -2302,12 +2283,10 @@ const BookMatchCodeRouteWithChildren = BookMatchCodeRoute._addFileChildren(
 )
 
 interface BusinessDealsIdRouteChildren {
-  BusinessDealsIdEditRoute: typeof BusinessDealsIdEditRoute
   BusinessDealsIdIndexRoute: typeof BusinessDealsIdIndexRoute
 }
 
 const BusinessDealsIdRouteChildren: BusinessDealsIdRouteChildren = {
-  BusinessDealsIdEditRoute: BusinessDealsIdEditRoute,
   BusinessDealsIdIndexRoute: BusinessDealsIdIndexRoute,
 }
 
@@ -2405,3 +2384,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
