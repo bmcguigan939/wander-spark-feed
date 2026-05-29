@@ -63,6 +63,7 @@ import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
+import { Route as BusinessPhotosRouteImport } from './routes/business.photos'
 import { Route as BusinessCollabsRouteImport } from './routes/business.collabs'
 import { Route as BusinessCalculatorRouteImport } from './routes/business.calculator'
 import { Route as BusinessApplyRouteImport } from './routes/business.apply'
@@ -388,6 +389,11 @@ const BusinessPriceAuditRoute = BusinessPriceAuditRouteImport.update({
   path: '/business/price-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BusinessPhotosRoute = BusinessPhotosRouteImport.update({
+  id: '/business/photos',
+  path: '/business/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BusinessCollabsRoute = BusinessCollabsRouteImport.update({
   id: '/business/collabs',
   path: '/business/collabs',
@@ -710,6 +716,7 @@ export interface FileRoutesByFullPath {
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/collabs': typeof BusinessCollabsRoute
+  '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -818,6 +825,7 @@ export interface FileRoutesByTo {
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/collabs': typeof BusinessCollabsRoute
+  '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -928,6 +936,7 @@ export interface FileRoutesById {
   '/business/apply': typeof BusinessApplyRoute
   '/business/calculator': typeof BusinessCalculatorRoute
   '/business/collabs': typeof BusinessCollabsRoute
+  '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
   '/business/signup': typeof BusinessSignupRoute
@@ -1040,6 +1049,7 @@ export interface FileRouteTypes {
     | '/business/apply'
     | '/business/calculator'
     | '/business/collabs'
+    | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1148,6 +1158,7 @@ export interface FileRouteTypes {
     | '/business/apply'
     | '/business/calculator'
     | '/business/collabs'
+    | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1257,6 +1268,7 @@ export interface FileRouteTypes {
     | '/business/apply'
     | '/business/calculator'
     | '/business/collabs'
+    | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
     | '/business/signup'
@@ -1357,6 +1369,7 @@ export interface RootRouteChildren {
   BusinessApplyRoute: typeof BusinessApplyRoute
   BusinessCalculatorRoute: typeof BusinessCalculatorRoute
   BusinessCollabsRoute: typeof BusinessCollabsRoute
+  BusinessPhotosRoute: typeof BusinessPhotosRoute
   BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
@@ -1795,6 +1808,13 @@ declare module '@tanstack/react-router' {
       path: '/business/price-audit'
       fullPath: '/business/price-audit'
       preLoaderRoute: typeof BusinessPriceAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/photos': {
+      id: '/business/photos'
+      path: '/business/photos'
+      fullPath: '/business/photos'
+      preLoaderRoute: typeof BusinessPhotosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/collabs': {
@@ -2341,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessApplyRoute: BusinessApplyRoute,
   BusinessCalculatorRoute: BusinessCalculatorRoute,
   BusinessCollabsRoute: BusinessCollabsRoute,
+  BusinessPhotosRoute: BusinessPhotosRoute,
   BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
   BusinessSignupRoute: BusinessSignupRoute,
@@ -2405,13 +2426,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
