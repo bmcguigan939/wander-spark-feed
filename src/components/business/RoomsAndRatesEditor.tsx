@@ -552,6 +552,9 @@ function RatePlanRow({
             value={local.price}
             onChange={(e) => setLocal({ ...local, price: e.target.value })}
           />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Match your OTA price, or go lower — never higher.
+          </p>
         </div>
         <div>
           <Label className="text-xs">Strike-through (optional)</Label>
