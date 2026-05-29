@@ -83,10 +83,13 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
         </h2>
         <p className="text-xs text-muted-foreground">
           {isLodging
-            ? "Add the room types you sell, each with one or more rate options (refundable, non-refundable, breakfast included, etc.)."
+            ? "Add the room types you sell, each with one or more rate options (refundable, non-refundable, breakfast included, etc.). "
             : isActivity
-            ? "Add each package you sell (e.g. Half-day, Full-day, Private). Each package needs at least one photo and one rate."
-            : "Add one or more rate options travellers can pick at checkout."}
+            ? "Add each package you sell (e.g. Half-day, Full-day, Private). Each package needs at least one photo and one rate. "
+            : "Add one or more rate options travellers can pick at checkout. "}
+          <span className="font-medium text-foreground">
+            Prices must match what you advertise on Booking.com, Expedia, etc. — unless you're offering it cheaper on Travidz.
+          </span>
         </p>
       </div>
 
@@ -549,6 +552,9 @@ function RatePlanRow({
             value={local.price}
             onChange={(e) => setLocal({ ...local, price: e.target.value })}
           />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Match your OTA price, or go lower — never higher.
+          </p>
         </div>
         <div>
           <Label className="text-xs">Strike-through (optional)</Label>

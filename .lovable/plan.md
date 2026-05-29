@@ -1,35 +1,39 @@
-## Fix new-listing crash + collapse checklist steps
+## New listing — copy + validation tightening
 
-Two related problems on the operator onboarding checklist:
+Pure copy/UX changes. No new backend logic.
 
-1. **Crash on "Add rooms / activity options"** — clicking Open routes through `/business/deals/new`, which now bootstraps a draft with `status: "draft"`. The Postgres check constraint `deals_status_check` only allows `pending_review | approved | rejected | expired`, so the insert fails with the toast in the screenshot.
-2. **Redundant checklist rows** — "Set prices" and "Connect your calendar" each have their own row + Open button, but all three (rooms, prices, calendar) now live on the same unified setup page. They should not be separately clickable steps before a listing exists.
+### 1. Title field — `src/components/business/DealForm.tsx`
+Replace the bare "Title" label with a label + helper line:
+- Label: "Listing title"
+- Helper (small, muted, under the input): "Use the exact name shown on Booking.com / Expedia / GetYourGuide etc. Travellers and our price-match scanner match by name — mismatches break the match."
 
-### Changes
+### 2. Link URL field — `src/components/business/DealForm.tsx`
+Rename and clarify:
+- Label: "Your website or direct booking page"
+- Helper: "Your own site for this listing (not your Booking.com / OTA page). Used as the 'visit website' link on your Travidz card."
+- Keep field optional (it already is).
 
-**1. Migration — allow `draft` status**
+### 3. "Active" checkbox — `src/components/business/DealForm.tsx`
+Remove the standalone "Active" checkbox from the form. It duplicates the Publish / Draft flow and confuses operators (publishing already sets `is_active: true`; unpublished drafts are inactive). The form will simply omit `is_active`, and `publishNow` in the edit route continues to set it to `true`. Existing live listings keep their value — no migration.
 
-```sql
-ALTER TABLE public.deals DROP CONSTRAINT deals_status_check;
-ALTER TABLE public.deals
-  ADD CONSTRAINT deals_status_check
-  CHECK (status = ANY (ARRAY['draft','pending_review','approved','rejected','expired']));
-```
+### 4. Rate plans guidance — `src/components/business/RoomsAndRatesEditor.tsx`
+Update the subhead under "Rooms & rates / Packages & rates / Rate plans" (line 84-90) to append a parity reminder, e.g.:
+- Lodging: "Add the room types you sell, each with one or more rate options. **Prices must match what you advertise on Booking.com, Expedia, etc. — unless you're offering it cheaper on Travidz.**"
+- Activity: same trailing sentence appended.
+- Generic: same trailing sentence appended.
 
-No data backfill needed; existing rows already use the legacy values.
+Also add a one-line muted note inside the rate-plan card near the Price field (or directly under the rate-plans header) repeating: "Match your OTA price, or go lower — never higher."
 
-**2. `src/components/business/OnboardingChecklist.tsx`**
+### 5. "Where else is this listed?" — required, not optional — `src/routes/business.deals.$id.edit.tsx`
+- Remove the `<details>` wrapper so the section is always expanded.
+- Promote it to a real `<section>` matching the Basics / Rooms / Calendar sections.
+- Drop the "(optional)" tag.
+- New heading: "Where else is this listed?"
+- New helper copy: "Pin your listing URL on every OTA you're on. Our price-match scanner uses these to compare like-for-like and protect your rate parity. If you're only on Travidz, you can skip this."
 
-- Drop `rates` and `calendar` from the displayed `ALL_GATES` array. The bookable-status backend still tracks them (so the operator is still gated from going live until prices + calendar are set), but they don't show as separate Open buttons in the checklist UI.
-- The remaining gates the operator clicks are: agreement → photos → items (Add rooms / activity options) → payouts → collab-rules. Each routes to a page that fully handles its scope.
-- The "Add rooms / activity options" copy gets a small append: "Add each room/option, set its price, and connect your calendar." so the operator knows the next page covers all three.
+Soft-required: not blocking save/publish (operators truly only on Travidz exist), but visually treated as a required step — no "(optional)" chip, sits above the publish button, and shows a subtle amber hint badge ("Recommended for OTA listings") when empty. No backend validation change.
 
-**3. Out of scope**
-
-- No changes to `business.deals.$id.edit.tsx` (the unified page already exposes rooms/rates/calendar sections).
-- No changes to `gateLinkFor` for `rates`/`calendar` — they're just not rendered.
-- No changes to `getBookableStatus` — the server still enforces all gates before flipping a listing live.
-
-### Risk
-
-If an operator has rooms but no prices/calendar, the checklist will say "Add rooms / activity options" is the only outstanding setup item — but clicking it lands them on the unified page where the same "Set prices" and "Calendar feeds" sections live. The page itself remains the source of truth. Acceptable.
+### Out of scope
+- No DB / server function changes.
+- No changes to publish gates or the bookable status backend.
+- No changes to `business.deals.new.tsx` (it just bootstraps a draft).
