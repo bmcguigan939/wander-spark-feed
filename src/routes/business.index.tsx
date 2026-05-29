@@ -23,7 +23,7 @@ function BusinessDashboard() {
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
-  useAccountKind();
+  const accountKind = useAccountKind();
 
   useEffect(() => {
     if (loading) return;
