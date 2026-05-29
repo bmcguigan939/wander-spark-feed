@@ -248,7 +248,7 @@ export function gateLinkFor(
     case "website":
       return "/business/onboarding/website";
     case "photos":
-      return "/business#photos";
+      return "/business/photos";
     case "items":
       return firstDealId
         ? `/business/deals/${firstDealId}/edit#rooms`
