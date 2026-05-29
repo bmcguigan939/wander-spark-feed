@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
 import { getBookableStatus, GATE_LABELS, gateLinkFor, type BookableGate, type AccountKind } from "@/lib/bookable.functions";
 import { COMMISSION } from "@/lib/commission";
-import { getMyCollabDefaults } from "@/lib/collabs.functions";
+import { getMyCollabRules } from "@/lib/collabs.functions";
 import { listMyDeals } from "@/lib/deals.functions";
 import { listMyCompetitorUrls } from "@/lib/business-competitor-urls.functions";
 
@@ -83,7 +83,7 @@ export function OnboardingChecklist() {
   const { user } = useAuth();
   const agreementFn = useServerFn(getMyAgreementStatus);
   const bookableFn = useServerFn(getBookableStatus);
-  const defaultsFn = useServerFn(getMyCollabDefaults);
+  const rulesFn = useServerFn(getMyCollabRules);
   const dealsFn = useServerFn(listMyDeals);
   const urlsFn = useServerFn(listMyCompetitorUrls);
 
@@ -96,9 +96,9 @@ export function OnboardingChecklist() {
     queryFn: () => bookableFn({ data: { businessId: user!.id } }),
     enabled: !!user?.id,
   });
-  const { data: collabDefaults } = useQuery({
-    queryKey: ["collab-defaults"],
-    queryFn: () => defaultsFn(),
+  const { data: collabRules } = useQuery({
+    queryKey: ["collab-rules"],
+    queryFn: () => rulesFn(),
     enabled: !!user?.id,
   });
   const { data: myDeals } = useQuery({
@@ -142,10 +142,19 @@ export function OnboardingChecklist() {
       };
     }),
     {
-      id: "collab-defaults",
-      title: "Set your collab defaults",
-      desc: "30s with recommended settings — every creator you accept inherits these terms.",
-      done: !!collabDefaults?.defaults,
+      id: "collab-rules",
+      title: "Set your auto-accept rules",
+      desc: "Tell us who to instantly accept and who lands in your inbox.",
+      done: (() => {
+        const rules: any = collabRules?.rules;
+        if (!rules) return false;
+        return (
+          !!rules.auto_accept_enabled ||
+          (rules.min_followers ?? 0) > 0 ||
+          (rules.min_rolling_gbv_cents ?? 0) > 0 ||
+          rules.manual_review_above_followers != null
+        );
+      })(),
       to: "/business/collabs",
     },
   ];
