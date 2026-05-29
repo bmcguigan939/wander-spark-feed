@@ -1,25 +1,38 @@
-## Goal
-Collab default terms (deliverables, comp nights, usage rights, brand do's/don'ts, hashtags, mentions) are a platform-level commitment from Travidz — every business gets the same terms so creators have a consistent experience. The current page lets each business build bespoke defaults, which contradicts that. Lock those fields to platform presets and show them as read-only. Keep **Auto-accept rules** fully editable per business — those are legitimately per-operator (their own follower thresholds, GBV minimums, monthly caps, etc.).
+## One-page new listing flow
 
-## Changes
+Merge the "New listing" form and the "Edit listing" page into a single scrolling setup page so operators set up Basics → Rooms & rates → Calendar feeds → Publish without bouncing.
 
-### 1. `src/routes/business.collabs.tsx`
-Replace the editable "Default terms" section with a read-only summary card sourced from `RECOMMENDED_DEFAULTS`:
+### Changes
 
-- Remove: `deliverables`, `nights`, `usage`, `dos`, `donts`, `tags`, `mentions` state; the form inputs; the Save button; the `applyRecommended()` helper; the `saveDefaultsMut` mutation; the `useEffect` that hydrates defaults from `d`.
-- Remove imports of `upsertMyCollabDefaults`, `RECOMMENDED_DEFAULTS` (re-import the latter from collabs.functions for display), `Input`, `Sparkles` (if unused elsewhere), `Label` (if unused elsewhere).
-- Render a static "Default terms" card showing each value with a small "Set by Travidz" badge in the header. Bullet list for deliverables, two stat tiles for comp nights / usage rights, paragraphs for brand do's/don'ts, chip rows for hashtags and mentions.
-- Update the page subtitle to: *"Travidz sets the collab terms below so creators get a consistent experience across every business. You control who you accept using the Auto-accept rules underneath."*
+**1. `src/routes/business.deals.new.tsx` — bootstrapper**
+- On mount, call `createDeal` with seed values: `title: "Untitled listing"`, `is_active: false`, `status: "draft"`, `cancellation_policy_code: "travidz_standard"`, and a category derived from `useAccountKind` (existing logic).
+- Redirect with `replace: true` to `/business/deals/$id/edit` so back button doesn't re-draft.
+- Render a small "Preparing your listing…" loader while the draft is being created.
 
-The **Auto-accept rules** section (and its state, mutation, and Save button) stays untouched.
+**2. `src/routes/business.deals.$id.edit.tsx` — unified setup page**
+- Detect `deal.status === "draft"` → header reads **"New listing"** + the existing "Customers always book and pay through Travidz…" intro.
+- Move the "Your bank isn't connected yet" amber banner from `new.tsx` here, shown when draft + no payout.
+- Sections in order with anchor IDs and clear headers:
+  1. **Basics** — `DealForm` with `autoSaveOnBlur` enabled for drafts (silent saves, no Save button mid-flow). Cancellation-policy select (currently on new.tsx) moves above `DealForm` here.
+  2. **Rooms & options** — `RoomsAndRatesEditor`.
+  3. **Calendar feeds** — `DealCalendarSync`.
+  4. **Where else is this listed?** — existing `<details>` block.
+- Bottom CTA replaces "Done — back to dashboard":
+  - draft + has payout → **Publish listing** (updateDeal with `status: "approved"`, `is_active: true`).
+  - draft + no payout → **Save as draft** button + Connect-bank link.
+  - already live → **Done — back to dashboard** (unchanged).
+- Delete button stays at the bottom.
 
-### 2. `src/components/business/OnboardingChecklist.tsx`
-The "Set your collab defaults" gate currently completes when `getMyCollabDefaults` returns a row, which the user can no longer create from the UI. Replace the gate so it tracks something the operator actually does: completing **Auto-accept rules** (`rules.auto_accept_enabled === true` OR a non-null `min_followers/min_rolling_gbv_cents/manual_review_above_followers`). Use `getMyCollabRules` (already exported) via a new `useQuery` and update the step's `done` predicate. Title becomes "Set your auto-accept rules", desc "Tell us who to instantly accept and who lands in your inbox." Link stays `/business/collabs`.
+**3. `src/components/business/DealForm.tsx`**
+- Add `autoSaveOnBlur?: boolean` prop. When true, debounce field changes (800ms) and invoke `onSubmit` automatically; hide the submit button.
+- Skip the first effect run so hydrated initial values don't immediately re-save.
 
-### 3. Leave server-side intact
-Do **not** delete `upsertMyCollabDefaults`, `DefaultsInput`, or the `business_collab_defaults` table — they're referenced from `getMyCollabApplication` and may be reused for future per-business overrides (e.g. localized hashtags). They simply stop being called from the UI.
+**4. `OnboardingChecklist`** — no functional change. `calendar`/`rates` links already resolve to `/business/deals/{firstDealId}/edit#calendar|#rates`. When `firstDealId` is null, the existing fallback `/business/deals/new` now auto-drafts and lands the operator on the unified page — the dead-end is gone for free.
 
-## Out of scope
-- Schema changes / migrations.
-- Touching the Auto-accept rules card itself.
-- Admin tooling to edit the platform presets (currently hardcoded in `RECOMMENDED_DEFAULTS`).
+### Out of scope
+- Server changes (createDeal/updateDeal already accept the needed fields).
+- Internal restructure of `RoomsAndRatesEditor` or `DealCalendarSync`.
+- Cleanup job for abandoned empty drafts (noted as a follow-up risk).
+
+### Risk
+Auto-drafting on page open means an operator who immediately closes the tab leaves a "Untitled listing" draft in their dashboard. Easy to delete; can add a cleanup job later if needed.

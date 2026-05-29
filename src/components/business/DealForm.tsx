@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImagePlus, Loader2, X, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -26,12 +26,14 @@ export function DealForm({
   onSubmit,
   busy,
   accountKind,
+  autoSaveOnBlur,
 }: {
   initial?: Partial<DealFormValues>;
   submitLabel: string;
   onSubmit: (values: DealFormValues) => Promise<void> | void;
   busy?: boolean;
   accountKind?: "stay" | "activity" | "unknown";
+  autoSaveOnBlur?: boolean;
 }) {
   const [v, setV] = useState<DealFormValues>({
     title: initial?.title ?? "",
@@ -51,6 +53,22 @@ export function DealForm({
       (accountKind === "activity" ? "do" : accountKind === "stay" ? "stay" : "other"),
   });
   const [uploading, setUploading] = useState(false);
+
+  // Debounced auto-save. Skip the first run so hydrated initial values
+  // don't trigger an immediate re-save.
+  const skipFirst = useRef(true);
+  useEffect(() => {
+    if (!autoSaveOnBlur) return;
+    if (skipFirst.current) {
+      skipFirst.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      void onSubmit(v);
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v, autoSaveOnBlur]);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
@@ -271,13 +289,15 @@ export function DealForm({
           />
         )}
       </div>
-      <button
-        type="submit"
-        disabled={busy || uploading}
-        className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 disabled:opacity-60"
-      >
-        {busy ? "Saving…" : submitLabel}
-      </button>
+      {!autoSaveOnBlur && (
+        <button
+          type="submit"
+          disabled={busy || uploading}
+          className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 disabled:opacity-60"
+        >
+          {busy ? "Saving…" : submitLabel}
+        </button>
+      )}
     </form>
   );
 }
