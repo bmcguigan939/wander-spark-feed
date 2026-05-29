@@ -117,7 +117,13 @@ export function DealForm({
     }
   };
 
-  const field = (label: string, key: keyof DealFormValues, type = "text", required = false) => (
+  const field = (
+    label: string,
+    key: keyof DealFormValues,
+    type = "text",
+    required = false,
+    helper?: string,
+  ) => (
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
       <input
@@ -127,6 +133,9 @@ export function DealForm({
         onChange={(e) => setV({ ...v, [key]: e.target.value })}
         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
       />
+      {helper && (
+        <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{helper}</span>
+      )}
     </label>
   );
 
@@ -138,7 +147,13 @@ export function DealForm({
       }}
       className="space-y-3"
     >
-      {field("Title", "title", "text", true)}
+      {field(
+        "Listing title",
+        "title",
+        "text",
+        true,
+        "Use the exact name shown on Booking.com / Expedia / GetYourGuide etc. Travellers and our price-match scanner match by name — mismatches break the match.",
+      )}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Category</span>
         <select
@@ -163,7 +178,13 @@ export function DealForm({
           className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
         />
       </label>
-      {field("Link URL", "url", "url", true)}
+      {field(
+        "Your website or direct booking page",
+        "url",
+        "url",
+        false,
+        "Your own site for this listing (not your Booking.com / OTA page). Used as the 'visit website' link on your Travidz card.",
+      )}
       <div>
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Cover image</span>
         {v.image_url ? (
@@ -246,14 +267,6 @@ export function DealForm({
           />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={v.is_active}
-          onChange={(e) => setV({ ...v, is_active: e.target.checked })}
-        />
-        <span>Active</span>
-      </label>
       <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
         <label className="flex items-start gap-2 text-sm">
           <input
