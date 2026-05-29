@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, Lock, Zap } from "lucide-react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  getMyCollabDefaults,
-  upsertMyCollabDefaults,
   getMyCollabRules,
   upsertMyCollabRules,
   RECOMMENDED_DEFAULTS,
@@ -23,23 +21,11 @@ export const Route = createFileRoute("/business/collabs")({
   component: CollabSettings,
 });
 
-function csv(arr: string[] | null | undefined) {
-  return (arr ?? []).join(", ");
-}
-function parseCsv(s: string): string[] {
-  return s.split(",").map((x) => x.trim()).filter(Boolean);
-}
-function parseLines(s: string): string[] {
-  return s.split("\n").map((x) => x.trim()).filter(Boolean);
-}
-
 function CollabSettings() {
   const { user, loading, isBusiness } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const fetchDefaults = useServerFn(getMyCollabDefaults);
   const fetchRules = useServerFn(getMyCollabRules);
-  const saveDefaults = useServerFn(upsertMyCollabDefaults);
   const saveRules = useServerFn(upsertMyCollabRules);
 
   useEffect(() => {
@@ -48,64 +34,11 @@ function CollabSettings() {
     else if (!isBusiness) navigate({ to: "/business/apply" });
   }, [loading, user, isBusiness, navigate]);
 
-  const { data: d } = useQuery({
-    queryKey: ["collab-defaults"],
-    queryFn: () => fetchDefaults(),
-    enabled: !!user && isBusiness,
-  });
   const { data: r } = useQuery({
     queryKey: ["collab-rules"],
     queryFn: () => fetchRules(),
     enabled: !!user && isBusiness,
   });
-
-  // Defaults form
-  const dv: any = d?.defaults ?? {};
-  const [deliverables, setDeliverables] = useState("");
-  const [nights, setNights] = useState("");
-  const [usage, setUsage] = useState("90");
-  const [dos, setDos] = useState("");
-  const [donts, setDonts] = useState("");
-  const [tags, setTags] = useState("");
-  const [mentions, setMentions] = useState("");
-
-  useEffect(() => {
-    setDeliverables((dv.default_deliverables ?? []).join("\n"));
-    setNights(dv.default_nights != null ? String(dv.default_nights) : "");
-    setUsage(String(dv.default_usage_rights_days ?? 90));
-    setDos(dv.brand_dos ?? "");
-    setDonts(dv.brand_donts ?? "");
-    setTags(csv(dv.required_hashtags));
-    setMentions(csv(dv.required_mentions));
-  }, [d]);
-
-  const saveDefaultsMut = useMutation({
-    mutationFn: () =>
-      saveDefaults({
-        data: {
-          default_deliverables: parseLines(deliverables),
-          default_nights: nights ? Number(nights) : null,
-          default_usage_rights_days: Number(usage) || 90,
-          brand_dos: dos || null,
-          brand_donts: donts || null,
-          required_hashtags: parseCsv(tags),
-          required_mentions: parseCsv(mentions),
-        } as any,
-      }),
-    onSuccess: () => {
-      toast.success("Defaults saved");
-      qc.invalidateQueries({ queryKey: ["collab-defaults"] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Failed"),
-  });
-
-  function applyRecommended() {
-    setDeliverables(RECOMMENDED_DEFAULTS.default_deliverables.join("\n"));
-    setUsage(String(RECOMMENDED_DEFAULTS.default_usage_rights_days));
-    setDos(RECOMMENDED_DEFAULTS.brand_dos);
-    setDonts(RECOMMENDED_DEFAULTS.brand_donts);
-    setTags(RECOMMENDED_DEFAULTS.required_hashtags.join(", "));
-  }
 
   // Rules form
   const rv: any = r?.rules ?? {};
@@ -159,60 +92,56 @@ function CollabSettings() {
         <Link to="/business" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ArrowLeft className="h-4 w-4" /> Dashboard
         </Link>
-        <h1 className="mt-3 text-xl font-semibold">Collab defaults</h1>
+        <h1 className="mt-3 text-xl font-semibold">Collab terms</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Set once. These defaults cover deliverables, comp nights, usage rights, and brand voice for every creator you accept. Commission is fixed by Travidz (11%) — it isn't negotiated per collab.
+          Travidz sets the collab terms below so creators get a consistent experience across every business. You control who you accept using the Auto-accept rules underneath.
         </p>
 
         <section className="mt-5 rounded-2xl border border-border bg-card/40 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Default terms</h2>
-            <Button size="sm" variant="outline" onClick={applyRecommended}>
-              <Sparkles className="mr-1 h-3.5 w-3.5" /> Use recommended
-            </Button>
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <Lock className="h-3 w-3" /> Set by Travidz
+            </span>
           </div>
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-4 text-sm">
             <div>
-              <Label>Deliverables (one per line)</Label>
-              <textarea
-                value={deliverables}
-                onChange={(e) => setDeliverables(e.target.value)}
-                rows={4}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="1 short-form video (15-60s)&#10;3 in-feed photos"
-              />
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deliverables</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {RECOMMENDED_DEFAULTS.default_deliverables.map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+              </ul>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Comp nights</Label>
-                <Input value={nights} onChange={(e) => setNights(e.target.value)} type="number" min="0" max="60" placeholder="2" />
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Comp nights</div>
+                <div className="mt-1 text-lg font-semibold">2</div>
               </div>
-              <div>
-                <Label>Usage rights (days)</Label>
-                <Input value={usage} onChange={(e) => setUsage(e.target.value)} type="number" min="0" max="3650" />
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Usage rights</div>
+                <div className="mt-1 text-lg font-semibold">{RECOMMENDED_DEFAULTS.default_usage_rights_days} days</div>
               </div>
             </div>
             <div>
-              <Label>Brand do's</Label>
-              <textarea value={dos} onChange={(e) => setDos(e.target.value)} rows={3}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Brand do's</div>
+              <p className="mt-1 text-sm text-foreground/90">{RECOMMENDED_DEFAULTS.brand_dos}</p>
             </div>
             <div>
-              <Label>Brand don'ts</Label>
-              <textarea value={donts} onChange={(e) => setDonts(e.target.value)} rows={3}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Brand don'ts</div>
+              <p className="mt-1 text-sm text-foreground/90">{RECOMMENDED_DEFAULTS.brand_donts}</p>
             </div>
             <div>
-              <Label>Required hashtags (comma-separated)</Label>
-              <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="#Travidz, #YourBrand" />
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Required hashtags</div>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {RECOMMENDED_DEFAULTS.required_hashtags.map((t) => (
+                  <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{t}</span>
+                ))}
+              </div>
             </div>
-            <div>
-              <Label>Required mentions (comma-separated)</Label>
-              <Input value={mentions} onChange={(e) => setMentions(e.target.value)} placeholder="@yourbrand" />
-            </div>
-            <Button onClick={() => saveDefaultsMut.mutate()} disabled={saveDefaultsMut.isPending} className="w-full">
-              {saveDefaultsMut.isPending ? "Saving…" : "Save defaults"}
-            </Button>
+            <p className="text-[11px] text-muted-foreground">
+              Commission is fixed by Travidz (11%) — it isn't negotiated per collab.
+            </p>
           </div>
         </section>
 
