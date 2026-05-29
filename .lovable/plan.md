@@ -1,26 +1,35 @@
-## Dedicated property photos page
+## Fix new-listing crash + collapse checklist steps
 
-Today, the "Add property photos" checklist item links to `/business#photos`, which dumps operators on the entire dashboard (My Deals, calculator, banks, etc.) just scrolled to the photos card. Make it a focused, single-purpose page.
+Two related problems on the operator onboarding checklist:
+
+1. **Crash on "Add rooms / activity options"** — clicking Open routes through `/business/deals/new`, which now bootstraps a draft with `status: "draft"`. The Postgres check constraint `deals_status_check` only allows `pending_review | approved | rejected | expired`, so the insert fails with the toast in the screenshot.
+2. **Redundant checklist rows** — "Set prices" and "Connect your calendar" each have their own row + Open button, but all three (rooms, prices, calendar) now live on the same unified setup page. They should not be separately clickable steps before a listing exists.
 
 ### Changes
 
-1. **New `src/routes/business.photos.tsx`**
-   - Auth guard (mirror `business.deals.$id.edit.tsx`): redirect to `/login` if no user, `/business/apply` if not a business.
-   - `MobileShell` with a back link to `/business`.
-   - Header: **"Property photos"** (activity operators: **"Activity photos"**, picked via `useAccountKind`), plus the existing intro copy ("Add at least 3 photos … Tap the star to choose your cover photo.").
-   - Body: `<BusinessPhotosEditor businessId={user.id} kind={photosKind} />` — nothing else.
-   - Bottom CTA: **Done — back to dashboard** button (navigates to `/business`).
-   - `head()` sets title `Property Photos — Travidz`.
+**1. Migration — allow `draft` status**
 
-2. **`src/lib/bookable.functions.ts`**
-   - In `gateLinkFor`, change `case "photos"` from `/business#photos` to `/business/photos`. No other gates touched.
+```sql
+ALTER TABLE public.deals DROP CONSTRAINT deals_status_check;
+ALTER TABLE public.deals
+  ADD CONSTRAINT deals_status_check
+  CHECK (status = ANY (ARRAY['draft','pending_review','approved','rejected','expired']));
+```
 
-3. **`src/routes/business.index.tsx`**
-   - Remove the `BusinessPhotosEditor` card from the dashboard so photos only live on the dedicated page (and the related `id="photos"` anchor / heading wrapping it). Keeps the dashboard about deals + ops, not setup.
+No data backfill needed; existing rows already use the legacy values.
 
-### Out of scope
-- No changes to `BusinessPhotosEditor` itself, the photo functions, or storage.
-- No change to other onboarding gates' destinations.
+**2. `src/components/business/OnboardingChecklist.tsx`**
+
+- Drop `rates` and `calendar` from the displayed `ALL_GATES` array. The bookable-status backend still tracks them (so the operator is still gated from going live until prices + calendar are set), but they don't show as separate Open buttons in the checklist UI.
+- The remaining gates the operator clicks are: agreement → photos → items (Add rooms / activity options) → payouts → collab-rules. Each routes to a page that fully handles its scope.
+- The "Add rooms / activity options" copy gets a small append: "Add each room/option, set its price, and connect your calendar." so the operator knows the next page covers all three.
+
+**3. Out of scope**
+
+- No changes to `business.deals.$id.edit.tsx` (the unified page already exposes rooms/rates/calendar sections).
+- No changes to `gateLinkFor` for `rates`/`calendar` — they're just not rendered.
+- No changes to `getBookableStatus` — the server still enforces all gates before flipping a listing live.
 
 ### Risk
-Anyone with a bookmark to `/business#photos` lands on the dashboard with no anchor target. Acceptable — the new page is one tap away from the checklist, which is where operators reach this from in practice.
+
+If an operator has rooms but no prices/calendar, the checklist will say "Add rooms / activity options" is the only outstanding setup item — but clicking it lands them on the unified page where the same "Set prices" and "Calendar feeds" sections live. The page itself remains the source of truth. Acceptable.
