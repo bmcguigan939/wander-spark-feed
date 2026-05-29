@@ -60,9 +60,7 @@ function BusinessDashboard() {
         <div className="mb-4">
           <PayoutMethodCard />
         </div>
-        <div className="mb-4">
-          <BusinessPhotosEditor businessId={user.id} kind={photosKind} />
-        </div>
+        {/* Property photos moved to /business/photos */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
