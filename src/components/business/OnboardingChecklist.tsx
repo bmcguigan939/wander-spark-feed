@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { Check, Circle, Sparkles, AlertTriangle } from "lucide-react";
+import { Check, Circle, Sparkles, AlertTriangle, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { getMyAgreementStatus } from "@/lib/verification.functions";
@@ -187,10 +187,9 @@ export function OnboardingChecklist() {
       <ul className="space-y-1.5">
         {steps.map((s) => (
           <li key={s.id}>
-            <Link
-              to={s.to}
-              className={`flex items-start gap-2.5 rounded-xl px-2 py-1.5 text-sm transition ${
-                s.done ? "opacity-60" : "hover:bg-primary/5"
+            <div
+              className={`flex items-start gap-2.5 rounded-xl px-2 py-1.5 text-sm ${
+                s.done ? "opacity-60" : ""
               }`}
             >
               {s.done ? (
@@ -198,15 +197,31 @@ export function OnboardingChecklist() {
               ) : (
                 <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               )}
-              <div className="flex-1">
-                <div
-                  className={`text-xs font-semibold ${s.done ? "line-through" : ""}`}
-                >
-                  {s.title}
+              {s.done ? (
+                <div className="flex-1">
+                  <div className="text-xs font-semibold line-through">{s.title}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.desc}</div>
                 </div>
-                <div className="text-[11px] text-muted-foreground">{s.desc}</div>
-              </div>
-            </Link>
+              ) : (
+                <Link to={s.to} className="flex-1 min-w-0 rounded-md -mx-1 px-1 hover:bg-primary/5">
+                  <div className="text-xs font-semibold">{s.title}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.desc}</div>
+                </Link>
+              )}
+              {s.done ? (
+                <span className="ml-2 mt-0.5 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
+                  Done
+                </span>
+              ) : (
+                <Link
+                  to={s.to}
+                  className="ml-2 mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+                >
+                  Open
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              )}
+            </div>
           </li>
         ))}
       </ul>
