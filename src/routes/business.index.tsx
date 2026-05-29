@@ -11,7 +11,6 @@ import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
-import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
 import { useAccountKind } from "@/lib/useAccountKind";
 
 export const Route = createFileRoute("/business/")({
@@ -24,8 +23,7 @@ function BusinessDashboard() {
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
-  const accountKind = useAccountKind();
-  const photosKind: "stay" | "activity" = accountKind === "activity" ? "activity" : "stay";
+  useAccountKind();
 
   useEffect(() => {
     if (loading) return;
