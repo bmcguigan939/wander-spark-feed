@@ -91,7 +91,6 @@ import { Route as BusinessThreadsIdRouteImport } from './routes/business.threads
 import { Route as BusinessOnboardingWebsiteRouteImport } from './routes/business.onboarding.website'
 import { Route as BusinessOnboardingPayoutRouteImport } from './routes/business.onboarding.payout'
 import { Route as BusinessInviteTokenRouteImport } from './routes/business.invite.$token'
-import { Route as BusinessDealsNewRouteImport } from './routes/business.deals.new'
 import { Route as BusinessDealsIdRouteImport } from './routes/business.deals.$id'
 import { Route as BookMatchCodeRouteImport } from './routes/book.match.$code'
 import { Route as ApiPublicMuxWebhookRouteImport } from './routes/api/public/mux-webhook'
@@ -531,11 +530,6 @@ const BusinessInviteTokenRoute = BusinessInviteTokenRouteImport.update({
   path: '/business/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BusinessDealsNewRoute = BusinessDealsNewRouteImport.update({
-  id: '/business/deals/new',
-  path: '/business/deals/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BusinessDealsIdRoute = BusinessDealsIdRouteImport.update({
   id: '/business/deals/$id',
   path: '/business/deals/$id',
@@ -750,7 +744,6 @@ export interface FileRoutesByFullPath {
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
-  '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
@@ -857,7 +850,6 @@ export interface FileRoutesByTo {
   '/api/public/attribute': typeof ApiPublicAttributeRoute
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRouteWithChildren
-  '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
@@ -968,7 +960,6 @@ export interface FileRoutesById {
   '/api/public/mux-webhook': typeof ApiPublicMuxWebhookRoute
   '/book/match/$code': typeof BookMatchCodeRouteWithChildren
   '/business/deals/$id': typeof BusinessDealsIdRouteWithChildren
-  '/business/deals/new': typeof BusinessDealsNewRoute
   '/business/invite/$token': typeof BusinessInviteTokenRoute
   '/business/onboarding/payout': typeof BusinessOnboardingPayoutRoute
   '/business/onboarding/website': typeof BusinessOnboardingWebsiteRoute
@@ -1080,7 +1071,6 @@ export interface FileRouteTypes {
     | '/api/public/mux-webhook'
     | '/book/match/$code'
     | '/business/deals/$id'
-    | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/business/onboarding/website'
@@ -1187,7 +1177,6 @@ export interface FileRouteTypes {
     | '/api/public/attribute'
     | '/api/public/mux-webhook'
     | '/book/match/$code'
-    | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/business/onboarding/website'
@@ -1297,7 +1286,6 @@ export interface FileRouteTypes {
     | '/api/public/mux-webhook'
     | '/book/match/$code'
     | '/business/deals/$id'
-    | '/business/deals/new'
     | '/business/invite/$token'
     | '/business/onboarding/payout'
     | '/business/onboarding/website'
@@ -1390,7 +1378,6 @@ export interface RootRouteChildren {
   ApiPublicMuxWebhookRoute: typeof ApiPublicMuxWebhookRoute
   BookMatchCodeRoute: typeof BookMatchCodeRouteWithChildren
   BusinessDealsIdRoute: typeof BusinessDealsIdRouteWithChildren
-  BusinessDealsNewRoute: typeof BusinessDealsNewRoute
   BusinessInviteTokenRoute: typeof BusinessInviteTokenRoute
   BusinessOnboardingPayoutRoute: typeof BusinessOnboardingPayoutRoute
   BusinessOnboardingWebsiteRoute: typeof BusinessOnboardingWebsiteRoute
@@ -1993,13 +1980,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/business/deals/new': {
-      id: '/business/deals/new'
-      path: '/business/deals/new'
-      fullPath: '/business/deals/new'
-      preLoaderRoute: typeof BusinessDealsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/business/deals/$id': {
       id: '/business/deals/$id'
       path: '/business/deals/$id'
@@ -2374,7 +2354,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMuxWebhookRoute: ApiPublicMuxWebhookRoute,
   BookMatchCodeRoute: BookMatchCodeRouteWithChildren,
   BusinessDealsIdRoute: BusinessDealsIdRouteWithChildren,
-  BusinessDealsNewRoute: BusinessDealsNewRoute,
   BusinessInviteTokenRoute: BusinessInviteTokenRoute,
   BusinessOnboardingPayoutRoute: BusinessOnboardingPayoutRoute,
   BusinessOnboardingWebsiteRoute: BusinessOnboardingWebsiteRoute,
@@ -2405,3 +2384,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
