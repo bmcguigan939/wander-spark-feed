@@ -210,19 +210,17 @@ function EditDealPage() {
             </section>
 
             {/* 4. Where else is this listed */}
-            <details className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-4">
-              <summary className="cursor-pointer text-sm font-semibold">
-                Where else is this listed? <span className="text-xs font-normal text-muted-foreground">(optional)</span>
-              </summary>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Pin your Booking.com / Expedia / GetYourGuide etc. listing URLs so
-                our price-match scanner compares the exact same room or ticket.
-                These apply to every listing under your business.
+            <section id="otas" className="mt-6 scroll-mt-20">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Where else is this listed?
+              </h2>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Pin your listing URL on every OTA you're on. Our price-match
+                scanner uses these to compare like-for-like and protect your
+                rate parity. If you're only on Travidz, you can skip this.
               </p>
-              <div className="mt-3">
-                <CompetitorUrlsEditor />
-              </div>
-            </details>
+              <CompetitorUrlsEditor />
+            </section>
 
             {/* Bottom CTA */}
             {isDraft && hasPayout && (
