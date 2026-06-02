@@ -41,7 +41,15 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const ok = await checkRateLimit("profile_update", userId, 20, 60);
     if (!ok) throw new Error("Too many profile updates — slow down for a moment.");
-    const { error } = await supabase.from("profiles").update(data).eq("id", userId);
+    const { data: updated, error } = await supabase
+      .from("profiles")
+      .update(data)
+      .eq("id", userId)
+      .select("id")
+      .maybeSingle();
     if (error) throw new Error(error.message);
+    if (!updated) {
+      throw new Error("Update was blocked — please sign out and back in, then try again.");
+    }
     return { ok: true };
   });
