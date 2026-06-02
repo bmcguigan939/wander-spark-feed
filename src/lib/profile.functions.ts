@@ -53,3 +53,64 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const uploadMyAvatar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      contentType: z.string().regex(/^image\/[a-z0-9.+-]+$/i, "Must be an image"),
+      dataBase64: z.string().min(1).max(10_000_000), // ~7.5 MB binary
+      ext: z.string().regex(/^[a-z0-9]{1,8}$/).optional(),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const ok = await checkRateLimit("avatar_upload", userId, 10, 60);
+    if (!ok) throw new Error("Too many uploads — please wait a moment.");
+
+    // Decode base64 → bytes
+    let bytes: Uint8Array;
+    try {
+      const cleaned = data.dataBase64.includes(",")
+        ? data.dataBase64.split(",")[1]
+        : data.dataBase64;
+      const bin = atob(cleaned.replace(/\s/g, ""));
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } catch {
+      throw new Error("Invalid image data");
+    }
+    if (bytes.byteLength > 5 * 1024 * 1024) {
+      throw new Error("Image must be under 5 MB");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const ext = (data.ext || data.contentType.split("/")[1] || "jpg")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .slice(0, 6) || "jpg";
+    const path = `${userId}/${Date.now()}.${ext}`;
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("avatars")
+      .upload(path, bytes, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: data.contentType,
+      });
+    if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+
+    const { data: pub } = supabaseAdmin.storage.from("avatars").getPublicUrl(path);
+    const avatarUrl = pub.publicUrl;
+
+    const { data: updated, error: dbErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", userId)
+      .select("id")
+      .maybeSingle();
+    if (dbErr) throw new Error(`Save failed: ${dbErr.message}`);
+    if (!updated) throw new Error("Profile not found — please sign out and back in.");
+
+    return { avatar_url: avatarUrl };
+  });
