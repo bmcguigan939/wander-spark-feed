@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
-import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
+import { getMyProfile, updateMyProfile, uploadMyAvatar } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
 import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2, Camera, Loader2, Mail } from "lucide-react";
@@ -28,6 +28,7 @@ function ProfilePage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getMyProfile);
   const updateFn = useServerFn(updateMyProfile);
+  const uploadAvatarFn = useServerFn(uploadMyAvatar);
   const becomeFn = useServerFn(becomeCreator);
   const rerunFn = useServerFn(rerunAutoTag);
   const applyTitleFn = useServerFn(applyAiSuggestedTitle);
