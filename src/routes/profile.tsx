@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
-import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
+import { getMyProfile, updateMyProfile, uploadMyAvatar } from "@/lib/profile.functions";
 import { becomeCreator } from "@/lib/mux.functions";
 import { useAuth } from "@/lib/auth";
 import { Settings, LogOut, Video, Heart, Bookmark, Sparkles, Briefcase, Wand2, Send, CheckCircle2, BarChart3, Map, Shield, Clapperboard, Link2, Youtube, Instagram, Globe, Facebook, RefreshCw, Download, Music2, Camera, Loader2, Mail } from "lucide-react";
@@ -13,7 +13,6 @@ import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
 import { listMyPendingReviews } from "@/lib/reviews.functions";
 import { Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
@@ -28,6 +27,7 @@ function ProfilePage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getMyProfile);
   const updateFn = useServerFn(updateMyProfile);
+  const uploadAvatarFn = useServerFn(uploadMyAvatar);
   const becomeFn = useServerFn(becomeCreator);
   const rerunFn = useServerFn(rerunAutoTag);
   const applyTitleFn = useServerFn(applyAiSuggestedTitle);
@@ -163,20 +163,29 @@ function ProfilePage() {
       if (!user) throw new Error("Not signed in");
       if (!file.type.startsWith("image/")) throw new Error("Please pick an image file");
       if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
-        cacheControl: "3600",
-        upsert: true,
-        contentType: file.type,
+      const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 6);
+      const dataBase64: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = () => reject(new Error("Couldn't read file"));
+        r.readAsDataURL(file);
       });
-      if (upErr) throw new Error(upErr.message);
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      await updateFn({ data: { avatar_url: pub.publicUrl } });
-      return pub.publicUrl;
+      const res = await uploadAvatarFn({
+        data: { contentType: file.type, dataBase64, ext: ext || undefined },
+      });
+      return res.avatar_url;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-profile"] }); toast("Profile photo updated"); },
-    onError: (e: any) => toast(e?.message ?? "Couldn't update photo"),
+    onSuccess: (url) => {
+      qc.setQueryData(["my-profile"], (old: any) =>
+        old?.profile ? { ...old, profile: { ...old.profile, avatar_url: url } } : old,
+      );
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast("Profile photo updated");
+    },
+    onError: (e: any) => {
+      console.error("[avatar upload]", e);
+      toast(e?.message ?? "Couldn't update photo");
+    },
   });
   const becomeM = useMutation({
     mutationFn: () => becomeFn({ data: undefined as any }),
