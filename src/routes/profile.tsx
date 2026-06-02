@@ -13,7 +13,6 @@ import { rerunAutoTag, applyAiSuggestedTitle } from "@/lib/ai.functions";
 import { getMySocials, upsertMySocials, syncYouTubeForCreator, syncTikTokOfficial, importExternalVideosBulk, setImportedThumbnail } from "@/lib/social.functions";
 import { listMyPendingReviews } from "@/lib/reviews.functions";
 import { Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Travidz" }] }),
