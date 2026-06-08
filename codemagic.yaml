@@ -1,13 +1,15 @@
 # Codemagic CI/CD for Travidz native builds
 # https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/
 #
-# Two manual workflows:
-#   - ios-build      → archives a signed IPA for App Store / TestFlight
-#   - android-build  → builds a signed AAB for Google Play
+# Workflows (both manual-trigger only):
+#   - ios-build      → archives a SIGNED IPA for App Store / TestFlight
+#                      using Codemagic automatic code signing
+#   - android-build  → builds an unsigned AAB (add keystore later)
 #
-# Until Apple/Google developer accounts are set up, both workflows can run
-# WITHOUT signing (unsigned IPA / debug APK) so you can verify the pipeline
-# works end-to-end. Add the signing blocks once your accounts are live.
+# Prerequisite for ios-build:
+#   Codemagic → Teams → Integrations → "Developer Portal" connected to your
+#   Apple Developer account (Team L784LR8VY6). Automatic signing then handles
+#   certificates + provisioning profiles for bundle id com.travidz.app.
 
 workflows:
   ios-build:
@@ -22,9 +24,9 @@ workflows:
       node: 20
       xcode: latest
       cocoapods: default
-      # ios_signing:
-      #   distribution_type: app_store
-      #   bundle_identifier: com.travidz.app
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.travidz.app
     triggering:
       events: []   # manual trigger only — no auto-build on push
     scripts:
@@ -45,17 +47,19 @@ workflows:
           bunx cap sync ios
       - name: Install CocoaPods
         script: cd ios/App && pod install
-      # - name: Set up code signing
-      #   script: xcode-project use-profiles
+      - name: Set up code signing
+        script: xcode-project use-profiles
       - name: Build IPA
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-flags "CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO" || true
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+    # TODO: enable after adding an App Store Connect API key to Codemagic
+    # (Teams → Integrations → App Store Connect). Once enabled, future builds
+    # auto-land in TestFlight and you can skip the Transporter step.
     # publishing:
     #   app_store_connect:
     #     auth: integration
@@ -70,6 +74,8 @@ workflows:
         PACKAGE_NAME: "com.travidz.app"
       node: 20
       java: 17
+      # TODO: add a keystore in Codemagic (Teams → Code signing identities →
+      # Android keystores) and reference it here as `travidz_keystore`.
       # android_signing:
       #   - travidz_keystore
     triggering:
