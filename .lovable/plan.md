@@ -1,76 +1,68 @@
-## Important reality check first
+## Honest answer on the IPA first
 
-Lovable's sandbox is a Linux web build environment — it **cannot produce a signed iOS `.ipa` or run Xcode**. Apple requires the binary to be built and signed on macOS with your Apple Developer account credentials. The good news: the project is already wired for this. `capacitor.config.ts` (bundle id `com.travidz.app`) and `codemagic.yaml` (Mac M2 build pipeline) are in place. The actual archive + TestFlight upload runs on **Codemagic's cloud Mac builders** (or your own Mac with Xcode), using your Apple Developer credentials.
+You asked for either a TestFlight build or a signed `Travidz.ipa`. I have to be straight with you: **I cannot produce either from Lovable.** Apple requires the binary to be archived and signed on macOS using your Apple Developer certificates and provisioning profiles. Lovable's sandbox runs on Linux and has no Xcode, no Apple keychain, and no access to your developer account. There is no workaround — this is an Apple platform rule, not a Lovable limitation.
 
-So this plan splits the work into:
-- **What I can deliver from Lovable** (everything except the signed binary)
-- **What you / Codemagic must do on a Mac** (the build + upload itself)
+The signed IPA gets produced in exactly one of two places:
+- **Codemagic** (already configured in `codemagic.yaml`) — runs on a cloud Mac, archives + signs, uploads to TestFlight. You click "Start build" on codemagic.io.
+- **Your own Mac** with Xcode — open the generated `ios/App/App.xcworkspace`, Product → Archive → Distribute App.
 
----
-
-## 1. App Store assets I will generate
-
-Saved into `public/appstore/` and `/mnt/documents/appstore/` so you can drag them straight into App Store Connect.
-
-- **App icon 1024×1024 PNG** — flat, no transparency, no rounded corners (Apple rejects those). Generated from the existing Travidz orange→pink→purple gradient.
-- **iPhone 6.5" screenshots (1290×2796)** — 5 frames: feed, deal detail, map, creator profile, checkout. Captured via a headless script that renders the live preview and crops with the right safe areas.
-- **iPad 12.9" screenshots (2048×2732)** — 3 frames (only if you want iPad submission; otherwise we declare iPhone-only).
-- **App preview video** — skipped for v1.0 (optional, often delays review).
-
-## 2. App Store metadata file
-
-A single `appstore/metadata.md` containing copy you paste into each App Store Connect field:
-
-- Promotional Text (≤170 chars) — your supplied line
-- Subtitle (≤30 chars)
-- Description (≤4000 chars)
-- Keywords (≤100 chars, comma-separated)
-- Support URL → `https://www.travidz.com/support`
-- Marketing URL → `https://www.travidz.com`
-- Privacy Policy URL → `https://www.travidz.com/legal/privacy`
-- Copyright → `© 2026 Travidz Limited`
-- Category: Travel (primary), Social Networking (secondary)
-- Age rating questionnaire answers (UGC + location → 12+)
-
-## 3. Apple Review information
-
-- A dedicated reviewer test account seeded in the DB via a one-off seed script: `apple-review@travidz.com` / generated password, pre-verified, with sample saved deals and a sample booking so reviewers can exercise checkout in Stripe test mode.
-- Reviewer notes covering: how to sign in, that bookings use Stripe test cards, that creator upload is gated behind `Become a creator`, and that all video content is moderated.
-
-## 4. Privacy questionnaire answers
-
-A `appstore/privacy-nutrition.md` with the exact Apple "Data Used to Track You / Linked to You / Not Linked to You" answers based on what the code actually collects: email, name, photos (uploaded videos), coarse location (map search), purchase history, device id (analytics), crash data. No third-party tracking SDKs detected, so "Used to Track You" = none.
-
-## 5. Monetisation note (important for Apple)
-
-Apple's rule: **physical goods/services** (a hotel night, a tour) are billed through Stripe — Apple takes no cut. **Digital content unlocked inside the app** (e.g. a paid subscription to premium creator features) must go through Apple IAP. The plan declares Travidz as a real-world travel marketplace (Stripe-only, no IAP), which is the same model Airbnb and Booking.com use. The metadata doc spells this out for the reviewer so they don't flag Guideline 3.1.1.
-
-## 6. Build pipeline activation
-
-Edit `codemagic.yaml` to:
-- Uncomment the `ios_signing` and `app_store_connect` publishing blocks
-- Wire it to the App Store Connect API key (you create the key in App Store Connect → Users and Access → Integrations, then add it to Codemagic as an integration)
-- Flip the trigger so a Lovable publish optionally kicks a TestFlight build
-
-Once that's set, every Codemagic run produces a signed IPA and uploads it to TestFlight automatically.
-
-## 7. PWA / Universal Links sanity check
-
-`public/.well-known/apple-app-site-association` still has `TEAMID.com.travidz.app` placeholder. I'll replace `TEAMID` with your actual 10-character Apple Team ID (you'll need to give it to me — it's shown top-right of developer.apple.com).
+Everything else in your request I can deliver. The plan below covers it.
 
 ---
 
-## What I need from you to finish the pack
+## 1. Fix Universal Links — use your Team ID
 
-1. **Apple Team ID** (10-char, top-right of Apple Developer console) — to fix the AASA file.
-2. **Confirm iPad support**: submit iPhone-only for v1.0, or include iPad screenshots?
-3. **App Store Connect API key** (Issuer ID, Key ID, .p8) — to enable Codemagic → TestFlight auto-upload. If you'd rather upload the IPA manually via Transporter the first time, skip this.
-4. **Reviewer test account password** — I'll generate one if you don't have a preference.
+Replace `TEAMID` in `public/.well-known/apple-app-site-association` with `L784LR8VY6`, so both entries become `L784LR8VY6.com.travidz.app`. This makes iOS recognise travidz.com links and open them in the app once installed.
 
-## What happens after you approve this plan
+## 2. Confirm Universal app (iPhone + iPad)
 
-1. I generate the icon, screenshots, metadata, privacy doc, reviewer seed script, and update the AASA file.
-2. You run the Codemagic `ios-build` workflow (one click on codemagic.io) — it produces the signed IPA and pushes it to TestFlight.
-3. You paste the metadata into App Store Connect, attach the screenshots and icon, paste the reviewer credentials, and hit **Submit for Review**.
+Update `public/appstore/metadata.md` to declare iPhone + iPad. No code change needed in `capacitor.config.ts` — Capacitor builds universal by default; Xcode just needs the iPad target ticked when archiving (it is by default).
 
-I cannot produce step 2's binary from inside Lovable — but everything else in your request will be ready in one batch.
+## 3. Generate the reviewer test account
+
+Create `scripts/seed-apple-reviewer.ts` that uses the service-role key to:
+- Create `apple-review@travidz.com` with a strong generated password
+- Pre-confirm the email
+- Seed: 1 saved collection, 1 in-progress itinerary, 1 confirmed booking in Stripe test mode
+
+Run it once (one psql migration plus an insert) so the account exists in production. Write the generated password into `public/appstore/reviewer-notes.md` and `/mnt/documents/appstore/reviewer-notes.md`.
+
+Proposed password format: `Travidz-Review-2026!{8-char-random}` — easy for a reviewer to type, hard to guess.
+
+## 4. App Store screenshots — iPhone 6.5" and iPad 12.9"
+
+I will write a Playwright script (`scripts/capture-appstore-screenshots.ts`) that:
+- Boots the preview at the right viewport (1290×2796 for iPhone 6.5", 2048×2732 for iPad 12.9")
+- Signs in as a seeded demo user with realistic content
+- Captures 5 iPhone frames: Feed, Deal detail, Map, Creator profile, Checkout
+- Captures 5 iPad frames: same screens, iPad layout
+- Saves PNGs to `public/appstore/screenshots/iphone-6.5/` and `public/appstore/screenshots/ipad-12.9/`, mirrored to `/mnt/documents/appstore/screenshots/`
+
+**Important caveat Apple will care about:** screenshots captured from a web preview are *web Chrome with a forced viewport*, not real iOS chrome. Apple sometimes rejects these for "non-device chrome / status bar mismatch". The safest first submission is to install the TestFlight build on an iPhone + iPad and screenshot from the device (5 seconds per screen). I will still generate the web-preview set as a usable fallback, but I will mark them as "draft / replace with on-device captures if possible" in the README.
+
+## 5. Update the README and metadata
+
+- `public/appstore/README.md` — record the Team ID, mark iPad screenshots as required, note manual upload via Transporter (since you are not wiring the App Store Connect API key yet), add Transporter step-by-step.
+- `public/appstore/metadata.md` — flip Devices to "iPhone, iPad" and the iPad screenshot row from `[ ]` to `[x]`.
+- `public/appstore/reviewer-notes.md` — fill in the generated password and confirm Universal app.
+
+## 6. Manual Transporter upload — instructions added to README
+
+The first-release path without an API key:
+1. Codemagic `ios-build` workflow produces `Travidz.ipa` as an artifact — download it.
+2. Open **Transporter** (free, App Store).
+3. Sign in with your Apple ID.
+4. Drag `Travidz.ipa` in → Deliver.
+5. Wait ~10 minutes; the build appears in App Store Connect → TestFlight.
+6. From there: attach screenshots, paste metadata, paste reviewer credentials, Submit for Review.
+
+---
+
+## What I need from you to proceed
+
+Nothing — you've given me everything to execute. Approve and I'll switch to build mode and ship items 1–6.
+
+## Technical notes (skip if not interested)
+- Playwright is already a dev dependency pattern in the project (used in other scripts). The capture script runs against the live preview URL via puppeteer-style flow but does not need a Mac.
+- The seed script will use `supabaseAdmin` from `src/integrations/supabase/client.server.ts`, executed as a one-off `bun run scripts/seed-apple-reviewer.ts` from the sandbox.
+- AASA does not need a redeploy of native; iOS refetches it. But you'll only see it work after the first TestFlight install.
