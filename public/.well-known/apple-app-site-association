@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.travidz.app",
+        "appID": "L784LR8VY6.com.travidz.app",
         "paths": [
           "/",
           "/v/*",
@@ -20,6 +20,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["TEAMID.com.travidz.app"]
+    "apps": ["L784LR8VY6.com.travidz.app"]
   }
 }
