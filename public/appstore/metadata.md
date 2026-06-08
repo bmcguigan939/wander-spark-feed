@@ -1,0 +1,65 @@
+# Travidz — App Store Connect Metadata (v1.0)
+
+Paste each block into the matching field in App Store Connect → App Information / Pricing / iOS App 1.0.
+
+## App Information
+- **Name:** Travidz
+- **Subtitle (≤30 chars):** Real travel, by real creators
+- **Bundle ID:** com.travidz.app
+- **SKU:** travidz-ios-1
+- **Primary Category:** Travel
+- **Secondary Category:** Social Networking
+- **Content Rights:** Does not use third-party content
+- **Age Rating:** 12+ (Infrequent/Mild Mature/Suggestive Themes — UGC, location)
+
+## Pricing & Availability
+- **Price:** Free
+- **Availability:** All territories
+
+## Version 1.0 — App Store Page
+
+### Promotional Text (≤170 chars)
+Discover authentic travel experiences through creators you trust.
+
+### Description (≤4000 chars)
+Travidz is the travel app where real creators share the spots they actually visited — and you can book the same hotels, tours and experiences in a couple of taps.
+
+• A full-screen video feed of real trips, filmed by real travellers
+• Save spots to personal collections and turn them into itineraries
+• Book hotels and experiences at creator-negotiated prices, with our price-match guarantee
+• Follow creators whose taste matches yours and get notified when they post
+• Explore the world on an interactive map with verified businesses
+
+No fake influencer ads. No stock photography. No travel agents. Just the places people loved enough to film, and the prices that make them worth booking.
+
+Become a Travidz creator and earn commission every time a viewer books from one of your videos.
+
+### Keywords (≤100 chars, comma-separated)
+travel,hotels,trips,vacation,booking,creators,video,deals,itinerary,destinations
+
+### Support URL
+https://www.travidz.com/support
+
+### Marketing URL
+https://www.travidz.com
+
+### Privacy Policy URL
+https://www.travidz.com/legal/privacy
+
+### Copyright
+© 2026 Travidz Limited
+
+### What's New in This Version
+First release of Travidz. Browse real travel videos, save your favourite spots, and book hotels and experiences at creator-negotiated prices.
+
+## Build
+- **Version:** 1.0
+- **Build:** 1 (Codemagic will increment automatically)
+- **Minimum iOS:** 15.0
+- **Devices:** iPhone (iPad: see decision in plan)
+
+## Assets checklist (already in this folder)
+- [x] AppIcon-1024.png — 1024×1024, flat RGB, no alpha
+- [ ] iPhone 6.5" screenshots (1290×2796) — 3 to 10 frames, captured from the live preview
+- [ ] iPad 12.9" screenshots (2048×2732) — only if iPad submission is on
+- [ ] App preview video — skipped for v1.0
