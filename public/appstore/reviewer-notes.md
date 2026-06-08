@@ -6,7 +6,9 @@ Paste this into App Store Connect → App Review Information.
 Yes.
 
 - **Username:** apple-review@travidz.com
-- **Password:** _generate via the seed script in `scripts/seed-apple-reviewer.ts` and paste here_
+- **Password:** `Travidz-Review-2026!LiR3ZKhb`
+
+Account is seeded via `bun run scripts/seed-apple-reviewer.ts` (one-off, run against production). The app is a **Universal app (iPhone + iPad)** — please test on both form factors.
 
 The account is pre-verified, has a sample saved collection, an in-progress itinerary, and one demo booking so reviewers can exercise every major flow without filling forms.
 
