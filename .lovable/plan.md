@@ -1,64 +1,76 @@
-## Why uploads currently look broken
+## Important reality check first
 
-I traced the full path. The bucket, RLS policies, and server-side profile update are all wired correctly:
+Lovable's sandbox is a Linux web build environment — it **cannot produce a signed iOS `.ipa` or run Xcode**. Apple requires the binary to be built and signed on macOS with your Apple Developer account credentials. The good news: the project is already wired for this. `capacitor.config.ts` (bundle id `com.travidz.app`) and `codemagic.yaml` (Mac M2 build pipeline) are in place. The actual archive + TestFlight upload runs on **Codemagic's cloud Mac builders** (or your own Mac with Xcode), using your Apple Developer credentials.
 
-- `avatars` bucket exists and is public.
-- Storage policies allow `auth.uid()/...` uploads/updates/deletes.
-- `profiles` RLS allows self update.
-- Recent `updateMyProfile` change already throws a real error if the row update returns no row.
+So this plan splits the work into:
+- **What I can deliver from Lovable** (everything except the signed binary)
+- **What you / Codemagic must do on a Mac** (the build + upload itself)
 
-So the user-visible failure is almost certainly happening at the **client-side storage upload step** in `src/routes/profile.tsx` (`uploadAvatarM`). The most common silent failure modes there are:
+---
 
-1. The browser's Supabase session JWT is stale/refreshed mid-call, so the `storage.objects` INSERT policy rejects the upload — error is shown as a toast and then forgotten.
-2. The public URL succeeds, but the `updateMyProfile` call is rejected by zod or RLS, and the toast disappears too fast for the user to read.
-3. The `<img>` keeps the previous `src` because the React Query cache rehydrates with the same row before the new avatar URL lands.
+## 1. App Store assets I will generate
 
-There is no server-side observability today — `console.error` is not called, and the server function is never reached if the storage step fails. That's why "it just doesn't save."
+Saved into `public/appstore/` and `/mnt/documents/appstore/` so you can drag them straight into App Store Connect.
 
-## Fix plan
+- **App icon 1024×1024 PNG** — flat, no transparency, no rounded corners (Apple rejects those). Generated from the existing Travidz orange→pink→purple gradient.
+- **iPhone 6.5" screenshots (1290×2796)** — 5 frames: feed, deal detail, map, creator profile, checkout. Captured via a headless script that renders the live preview and crops with the right safe areas.
+- **iPad 12.9" screenshots (2048×2732)** — 3 frames (only if you want iPad submission; otherwise we declare iPhone-only).
+- **App preview video** — skipped for v1.0 (optional, often delays review).
 
-Move the upload to the trusted server boundary so it can't be defeated by a stale JWT, and make the failure mode loud.
+## 2. App Store metadata file
 
-### 1. New server function `uploadMyAvatar`
+A single `appstore/metadata.md` containing copy you paste into each App Store Connect field:
 
-File: `src/lib/profile.functions.ts`
+- Promotional Text (≤170 chars) — your supplied line
+- Subtitle (≤30 chars)
+- Description (≤4000 chars)
+- Keywords (≤100 chars, comma-separated)
+- Support URL → `https://www.travidz.com/support`
+- Marketing URL → `https://www.travidz.com`
+- Privacy Policy URL → `https://www.travidz.com/legal/privacy`
+- Copyright → `© 2026 Travidz Limited`
+- Category: Travel (primary), Social Networking (secondary)
+- Age rating questionnaire answers (UGC + location → 12+)
 
-- `createServerFn({ method: "POST" })` with `requireSupabaseAuth`.
-- Input: `{ contentType: string; dataBase64: string }` validated with zod (max ~7 MB after base64 inflation, content type must start with `image/`).
-- Handler:
-  - Decode base64 into a `Uint8Array`.
-  - Use `supabaseAdmin.storage.from("avatars").upload(\`${userId}/${Date.now()}.${ext}\`, bytes, { contentType, upsert: true })`.
-  - Get the public URL.
-  - `supabaseAdmin.from("profiles").update({ avatar_url }).eq("id", userId).select("id").maybeSingle()` — throw if no row.
-  - Return `{ avatar_url }`.
-- Import `supabaseAdmin` inside the handler with `await import("@/integrations/supabase/client.server")` so it never leaks into client bundles.
+## 3. Apple Review information
 
-### 2. Rewire `uploadAvatarM` in `src/routes/profile.tsx`
+- A dedicated reviewer test account seeded in the DB via a one-off seed script: `apple-review@travidz.com` / generated password, pre-verified, with sample saved deals and a sample booking so reviewers can exercise checkout in Stripe test mode.
+- Reviewer notes covering: how to sign in, that bookings use Stripe test cards, that creator upload is gated behind `Become a creator`, and that all video content is moderated.
 
-- Replace the direct `supabase.storage.from("avatars").upload(...)` flow with a call to the new `uploadMyAvatar` server fn via `useServerFn`.
-- Convert the picked `File` to base64 with `FileReader` before invoking.
-- Keep the 5 MB / image-only guards on the client for fast feedback.
-- On success, set the returned `avatar_url` directly into the React Query cache (`qc.setQueryData(["my-profile"], …)`) in addition to invalidating, so the image swaps instantly with no race against refetch.
-- On error, log the full error to `console.error` and show the real message in the toast (not a truncated one).
+## 4. Privacy questionnaire answers
 
-### 3. Bust the `<img>` cache after a fresh upload
+A `appstore/privacy-nutrition.md` with the exact Apple "Data Used to Track You / Linked to You / Not Linked to You" answers based on what the code actually collects: email, name, photos (uploaded videos), coarse location (map search), purchase history, device id (analytics), crash data. No third-party tracking SDKs detected, so "Used to Track You" = none.
 
-In the avatar `<img>` at line 219, append `?v=${encodeURIComponent(p.avatar_url ? '' : '')}` style cache-buster only when the URL just changed. Simplest: append `?t=${Date.now()}` once, stored in state and reset after upload. This guarantees the user sees the new picture even if a CDN cached the previous one at the same path.
+## 5. Monetisation note (important for Apple)
 
-### 4. Leave the existing client-side bucket path in place but unused
+Apple's rule: **physical goods/services** (a hotel night, a tour) are billed through Stripe — Apple takes no cut. **Digital content unlocked inside the app** (e.g. a paid subscription to premium creator features) must go through Apple IAP. The plan declares Travidz as a real-world travel marketplace (Stripe-only, no IAP), which is the same model Airbnb and Booking.com use. The metadata doc spells this out for the reviewer so they don't flag Guideline 3.1.1.
 
-We don't need to delete the `avatars` bucket policies — they remain a valid backup. The UI just stops depending on them.
+## 6. Build pipeline activation
 
-## Out of scope
+Edit `codemagic.yaml` to:
+- Uncomment the `ios_signing` and `app_store_connect` publishing blocks
+- Wire it to the App Store Connect API key (you create the key in App Store Connect → Users and Access → Integrations, then add it to Codemagic as an integration)
+- Flip the trigger so a Lovable publish optionally kicks a TestFlight build
 
-- Storage bucket changes (none needed).
-- `updateMyProfile` changes (last turn's fix stays).
-- Any unrelated security findings from the current scan view.
+Once that's set, every Codemagic run produces a signed IPA and uploads it to TestFlight automatically.
 
-## Verification
+## 7. PWA / Universal Links sanity check
 
-After implementing:
-1. Sign in as a normal user, pick a JPG → toast says "Profile photo updated" and the avatar visibly changes within ~1s.
-2. Pick a 6 MB file → client-side toast: "Image must be under 5 MB" (no network call).
-3. Pick a `.txt` renamed to `.jpg` → server rejects with "Please upload an image"; toast surfaces it.
-4. Server logs (`stack_modern--server-function-logs` filtered by `uploadMyAvatar`) show a clean 200 on success and a clear error on failure — so we can debug the next report instead of guessing.
+`public/.well-known/apple-app-site-association` still has `TEAMID.com.travidz.app` placeholder. I'll replace `TEAMID` with your actual 10-character Apple Team ID (you'll need to give it to me — it's shown top-right of developer.apple.com).
+
+---
+
+## What I need from you to finish the pack
+
+1. **Apple Team ID** (10-char, top-right of Apple Developer console) — to fix the AASA file.
+2. **Confirm iPad support**: submit iPhone-only for v1.0, or include iPad screenshots?
+3. **App Store Connect API key** (Issuer ID, Key ID, .p8) — to enable Codemagic → TestFlight auto-upload. If you'd rather upload the IPA manually via Transporter the first time, skip this.
+4. **Reviewer test account password** — I'll generate one if you don't have a preference.
+
+## What happens after you approve this plan
+
+1. I generate the icon, screenshots, metadata, privacy doc, reviewer seed script, and update the AASA file.
+2. You run the Codemagic `ios-build` workflow (one click on codemagic.io) — it produces the signed IPA and pushes it to TestFlight.
+3. You paste the metadata into App Store Connect, attach the screenshots and icon, paste the reviewer credentials, and hit **Submit for Review**.
+
+I cannot produce step 2's binary from inside Lovable — but everything else in your request will be ready in one batch.
