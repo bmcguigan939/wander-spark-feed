@@ -24,6 +24,12 @@ Everything in this folder is what you paste / upload into App Store Connect.
 
 ## Recommended order
 
+### Step 0 — Codemagic setup (one-time, ~10 min)
+
+1. Sign in to [codemagic.io](https://codemagic.io) with GitHub → add this repo.
+2. **Teams → Integrations → Developer Portal** → connect your Apple Developer account (Team `L784LR8VY6`). This is what `ios_signing: distribution_type: app_store` in `codemagic.yaml` reads — Codemagic will auto-create / fetch the distribution certificate and provisioning profile for `com.travidz.app`.
+3. (Optional, later) **Teams → Integrations → App Store Connect** → add an API key. Once added, uncomment the `publishing.app_store_connect` block in `codemagic.yaml` and every future build auto-uploads to TestFlight — no Transporter needed.
+
 ### Step 1 — Seed the reviewer account (one-off)
 ```bash
 SUPABASE_URL=<prod url> \
@@ -42,13 +48,10 @@ Outputs `public/appstore/screenshots/iphone-6.5/*.png` and `…/ipad-12.9/*.png`
 ### Step 3 — Build the IPA on a Mac (Codemagic OR local Xcode)
 
 **Option A — Codemagic (recommended, no Mac needed):**
-1. Push the repo to GitHub/GitLab/Bitbucket.
-2. Connect it on codemagic.io.
-3. Open the `ios-build` workflow. Before running, in Codemagic settings:
-   - Add your Apple Developer signing certificate + provisioning profile (or use Codemagic's automatic code signing with your Apple Developer account).
-   - Uncomment the `ios_signing` block in `codemagic.yaml` (currently commented out for unsigned dry-runs).
-4. Click **Start new build → ios-build**. Wait ~20 minutes.
-5. Download the `Travidz.ipa` artifact when the build completes.
+1. Make sure Step 0 is done (Apple Developer Portal integration connected).
+2. Open the `ios-build` workflow → **Start new build** → pick `main` branch → **Start**.
+3. Wait ~15–20 minutes. Automatic signing fetches the cert + profile and produces a signed IPA.
+4. Download `Travidz.ipa` from the **Artifacts** tab.
 
 **Option B — Local Xcode (if you have a Mac):**
 ```bash
@@ -66,6 +69,8 @@ In Xcode: select **Any iOS Device** → **Product → Archive** → **Distribute
 3. Drag `Travidz.ipa` into the window.
 4. Click **Deliver**.
 5. Wait ~10 minutes — the build appears in App Store Connect → TestFlight → iOS Builds, status "Processing" then "Ready to Submit".
+
+> **Later: skip Transporter entirely.** Add an App Store Connect API key to Codemagic (Step 0.3) and uncomment the `publishing.app_store_connect` block in `codemagic.yaml`. Every future `ios-build` then auto-uploads to TestFlight and Steps 4 disappear.
 
 ### Step 5 — App Store Connect form
 1. **App Information** — paste from `metadata.md`.

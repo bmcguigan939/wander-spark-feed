@@ -1,68 +1,63 @@
-## Honest answer on the IPA first
+## Goal
 
-You asked for either a TestFlight build or a signed `Travidz.ipa`. I have to be straight with you: **I cannot produce either from Lovable.** Apple requires the binary to be archived and signed on macOS using your Apple Developer certificates and provisioning profiles. Lovable's sandbox runs on Linux and has no Xcode, no Apple keychain, and no access to your developer account. There is no workaround — this is an Apple platform rule, not a Lovable limitation.
+Wire `codemagic.yaml` for **automatic iOS signing** and leave App Store Connect publishing as a **placeholder** (manual Transporter upload for v1.0, easy to flip on later). Then answer the "can Lovable do everything?" question with the honest split.
 
-The signed IPA gets produced in exactly one of two places:
-- **Codemagic** (already configured in `codemagic.yaml`) — runs on a cloud Mac, archives + signs, uploads to TestFlight. You click "Start build" on codemagic.io.
-- **Your own Mac** with Xcode — open the generated `ios/App/App.xcworkspace`, Product → Archive → Distribute App.
+## Changes
 
-Everything else in your request I can deliver. The plan below covers it.
+### 1. `codemagic.yaml` — iOS workflow
 
----
+- Uncomment `ios_signing` and set:
+  ```yaml
+  ios_signing:
+    distribution_type: app_store
+    bundle_identifier: com.travidz.app
+  ```
+  This uses Codemagic's **automatic** signing (managed by App Store Connect API integration). No `.p12` / provisioning profile juggling.
+- Uncomment the `xcode-project use-profiles` step so the build picks up the fetched profiles.
+- Change the IPA build step: remove `CODE_SIGNING_ALLOWED=NO` and the trailing `|| true` so a signing failure actually fails the build.
+- Leave the `publishing.app_store_connect` block commented with a clear `# TODO: enable after adding App Store Connect API key` header, plus the two-line snippet ready to uncomment:
+  ```yaml
+  # publishing:
+  #   app_store_connect:
+  #     auth: integration
+  #     submit_to_testflight: true
+  ```
 
-## 1. Fix Universal Links — use your Team ID
+### 2. `codemagic.yaml` — Android workflow
 
-Replace `TEAMID` in `public/.well-known/apple-app-site-association` with `L784LR8VY6`, so both entries become `L784LR8VY6.com.travidz.app`. This makes iOS recognise travidz.com links and open them in the app once installed.
+- Leave `android_signing` block commented with a `# TODO` note. (You haven't given me a keystore yet; out of scope for this turn.)
 
-## 2. Confirm Universal app (iPhone + iPad)
+### 3. `public/appstore/README.md`
 
-Update `public/appstore/metadata.md` to declare iPhone + iPad. No code change needed in `capacitor.config.ts` — Capacitor builds universal by default; Xcode just needs the iPad target ticked when archiving (it is by default).
+Add a new top section **"Codemagic setup (one-time, ~10 min)"** with the exact clicks:
 
-## 3. Generate the reviewer test account
+1. Sign in to codemagic.io with GitHub → add this repo.
+2. **Teams → Integrations → Apple Developer Portal** → connect with Apple ID `L784LR8VY6`. This is what `ios_signing: distribution_type: app_store` reads.
+3. Open the `ios-build` workflow → **Start new build** → pick `main` branch → Start.
+4. When it finishes (~15 min), download `Travidz.ipa` from the Artifacts tab.
+5. Open **Transporter** (free, Mac App Store) → sign in with your Apple ID → drag the IPA → Deliver.
+6. ~10 min later, the build appears in App Store Connect → attach to v1.0 → submit.
 
-Create `scripts/seed-apple-reviewer.ts` that uses the service-role key to:
-- Create `apple-review@travidz.com` with a strong generated password
-- Pre-confirm the email
-- Seed: 1 saved collection, 1 in-progress itinerary, 1 confirmed booking in Stripe test mode
+Plus a **"Later: skip Transporter"** subsection explaining that adding an App Store Connect API key + uncommenting the `publishing` block makes future builds auto-land in TestFlight.
 
-Run it once (one psql migration plus an insert) so the account exists in production. Write the generated password into `public/appstore/reviewer-notes.md` and `/mnt/documents/appstore/reviewer-notes.md`.
+## What Lovable can and cannot do — honest split
 
-Proposed password format: `Travidz-Review-2026!{8-char-random}` — easy for a reviewer to type, hard to guess.
+**I (Lovable) can do, and will do this turn:**
+- ✅ Write `codemagic.yaml` correctly
+- ✅ Write the seed script for the Apple reviewer account
+- ✅ Write the Playwright screenshot script (web-preview draft quality)
+- ✅ Write all App Store Connect metadata text
+- ✅ Update the README with exact click-by-click instructions
 
-## 4. App Store screenshots — iPhone 6.5" and iPad 12.9"
+**I cannot do — requires you on a Mac or in a browser:**
+- ❌ Run Codemagic — needs you to click "Start build" in codemagic.io
+- ❌ Produce a signed `.ipa` — Apple signing requires macOS + your Apple Developer cert; only Codemagic (cloud Mac) or your own Mac can do it
+- ❌ Upload to App Store Connect — Transporter is a Mac app
+- ❌ Take real on-device screenshots — Apple may reject web-preview frames as "non-device chrome"; ideally captured in Xcode Simulator
+- ❌ Run the reviewer-seed script against prod — needs the prod service-role key, which lives on your machine, not in this sandbox
 
-I will write a Playwright script (`scripts/capture-appstore-screenshots.ts`) that:
-- Boots the preview at the right viewport (1290×2796 for iPhone 6.5", 2048×2732 for iPad 12.9")
-- Signs in as a seeded demo user with realistic content
-- Captures 5 iPhone frames: Feed, Deal detail, Map, Creator profile, Checkout
-- Captures 5 iPad frames: same screens, iPad layout
-- Saves PNGs to `public/appstore/screenshots/iphone-6.5/` and `public/appstore/screenshots/ipad-12.9/`, mirrored to `/mnt/documents/appstore/screenshots/`
+## Out of scope (ask if you want them)
 
-**Important caveat Apple will care about:** screenshots captured from a web preview are *web Chrome with a forced viewport*, not real iOS chrome. Apple sometimes rejects these for "non-device chrome / status bar mismatch". The safest first submission is to install the TestFlight build on an iPhone + iPad and screenshot from the device (5 seconds per screen). I will still generate the web-preview set as a usable fallback, but I will mark them as "draft / replace with on-device captures if possible" in the README.
-
-## 5. Update the README and metadata
-
-- `public/appstore/README.md` — record the Team ID, mark iPad screenshots as required, note manual upload via Transporter (since you are not wiring the App Store Connect API key yet), add Transporter step-by-step.
-- `public/appstore/metadata.md` — flip Devices to "iPhone, iPad" and the iPad screenshot row from `[ ]` to `[x]`.
-- `public/appstore/reviewer-notes.md` — fill in the generated password and confirm Universal app.
-
-## 6. Manual Transporter upload — instructions added to README
-
-The first-release path without an API key:
-1. Codemagic `ios-build` workflow produces `Travidz.ipa` as an artifact — download it.
-2. Open **Transporter** (free, App Store).
-3. Sign in with your Apple ID.
-4. Drag `Travidz.ipa` in → Deliver.
-5. Wait ~10 minutes; the build appears in App Store Connect → TestFlight.
-6. From there: attach screenshots, paste metadata, paste reviewer credentials, Submit for Review.
-
----
-
-## What I need from you to proceed
-
-Nothing — you've given me everything to execute. Approve and I'll switch to build mode and ship items 1–6.
-
-## Technical notes (skip if not interested)
-- Playwright is already a dev dependency pattern in the project (used in other scripts). The capture script runs against the live preview URL via puppeteer-style flow but does not need a Mac.
-- The seed script will use `supabaseAdmin` from `src/integrations/supabase/client.server.ts`, executed as a one-off `bun run scripts/seed-apple-reviewer.ts` from the sandbox.
-- AASA does not need a redeploy of native; iOS refetches it. But you'll only see it work after the first TestFlight install.
+- Android signing block (need a keystore from you first)
+- App Store Connect API key integration (you said no API key for v1.0)
+- Real on-device screenshot capture (needs Xcode Simulator on a Mac)
