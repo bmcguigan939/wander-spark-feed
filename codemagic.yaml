@@ -1,16 +1,3 @@
-# Codemagic CI/CD for Travidz native builds
-# https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/
-#
-# Workflows (both manual-trigger only):
-#   - ios-build      → archives a SIGNED IPA for App Store / TestFlight
-#                      using Codemagic automatic code signing
-#   - android-build  → builds an unsigned AAB (add keystore later)
-#
-# Prerequisite for ios-build:
-#   Codemagic → Teams → Integrations → "Developer Portal" connected to your
-#   Apple Developer account (Team L784LR8VY6). Automatic signing then handles
-#   certificates + provisioning profiles for bundle id com.travidz.app.
-
 workflows:
   ios-build:
     name: Travidz iOS
@@ -27,46 +14,53 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.travidz.app
+
     triggering:
-      events: []   # manual trigger only — no auto-build on push
+      events: []
+
     scripts:
       - name: Install bun
         script: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin:$PATH"
           echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
+
       - name: Install dependencies
-        script: export PATH="$HOME/.bun/bin:$PATH"
-    bun install --frozen-lockfile
-      - name: Build web bundle
-        script: export PATH="$HOME/.bun/bin:$PATH"
-    bun run build
-      - name: Generate iOS project (first run only)
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
-    if [ ! -d "ios" ]; then
-      bunx cap add ios
-    fi
-    bunx cap sync ios
+          bun install --frozen-lockfile
+
+      - name: Build web bundle
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun run build
+
+      - name: Generate iOS project
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          if [ ! -d "ios" ]; then
+            bunx cap add ios
+          fi
+          bunx cap sync ios
+
       - name: Install CocoaPods
-        script: cd ios/App && pod install
+        script: |
+          cd ios/App
+          pod install
+
       - name: Set up code signing
-        script: xcode-project use-profiles
+        script: |
+          xcode-project use-profiles
+
       - name: Build IPA
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"
+
     artifacts:
       - build/ios/ipa/*.ipa
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-    # TODO: enable after adding an App Store Connect API key to Codemagic
-    # (Teams → Integrations → App Store Connect). Once enabled, future builds
-    # auto-land in TestFlight and you can skip the Transporter step.
-    # publishing:
-    #   app_store_connect:
-    #     auth: integration
-    #     submit_to_testflight: true
 
   android-build:
     name: Travidz Android
@@ -77,36 +71,40 @@ workflows:
         PACKAGE_NAME: "com.travidz.app"
       node: 20
       java: 17
-      # TODO: add a keystore in Codemagic (Teams → Code signing identities →
-      # Android keystores) and reference it here as `travidz_keystore`.
-      # android_signing:
-      #   - travidz_keystore
+
     triggering:
-      events: []   # manual trigger only
+      events: []
+
     scripts:
       - name: Install bun
         script: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin:$PATH"
           echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
+
       - name: Install dependencies
-        script: bun install --frozen-lockfile
-      - name: Build web bundle
-        script: bun run build
-      - name: Generate Android project (first run only)
         script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun install --frozen-lockfile
+
+      - name: Build web bundle
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun run build
+
+      - name: Generate Android project
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
           if [ ! -d "android" ]; then
             bunx cap add android
           fi
           bunx cap sync android
+
       - name: Build AAB
         script: |
           cd android
           ./gradlew bundleRelease
+
     artifacts:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
-    # publishing:
-    #   google_play:
-    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-    #     track: internal
