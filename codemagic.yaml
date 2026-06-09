@@ -36,15 +36,18 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
       - name: Install dependencies
-        script: bun install --frozen-lockfile
+        script: export PATH="$HOME/.bun/bin:$PATH"
+    bun install --frozen-lockfile
       - name: Build web bundle
-        script: bun run build
+        script: export PATH="$HOME/.bun/bin:$PATH"
+    bun run build
       - name: Generate iOS project (first run only)
         script: |
-          if [ ! -d "ios" ]; then
-            bunx cap add ios
-          fi
-          bunx cap sync ios
+          export PATH="$HOME/.bun/bin:$PATH"
+    if [ ! -d "ios" ]; then
+      bunx cap add ios
+    fi
+    bunx cap sync ios
       - name: Install CocoaPods
         script: cd ios/App && pod install
       - name: Set up code signing
