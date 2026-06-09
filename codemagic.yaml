@@ -3,14 +3,17 @@ workflows:
     name: Travidz iOS
     instance_type: mac_mini_m2
     max_build_duration: 60
+
     environment:
       vars:
         BUNDLE_ID: "com.travidz.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
+
       node: 20
       xcode: latest
       cocoapods: default
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.travidz.app
@@ -19,7 +22,7 @@ workflows:
       events: []
 
     scripts:
-      - name: Install bun
+      - name: Install Bun
         script: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin:$PATH"
@@ -30,6 +33,11 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun install --frozen-lockfile
 
+      - name: Install Capacitor CLI
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun add -d @capacitor/cli
+
       - name: Build web bundle
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
@@ -38,10 +46,12 @@ workflows:
       - name: Generate iOS project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
+
           if [ ! -d "ios" ]; then
-            bunx cap add ios
+            bunx --bun @capacitor/cli add ios
           fi
-          bunx cap sync ios
+
+          bunx --bun @capacitor/cli sync ios
 
       - name: Install CocoaPods
         script: |
@@ -66,9 +76,11 @@ workflows:
     name: Travidz Android
     instance_type: linux_x2
     max_build_duration: 60
+
     environment:
       vars:
         PACKAGE_NAME: "com.travidz.app"
+
       node: 20
       java: 17
 
@@ -76,7 +88,7 @@ workflows:
       events: []
 
     scripts:
-      - name: Install bun
+      - name: Install Bun
         script: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin:$PATH"
@@ -87,6 +99,11 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun install --frozen-lockfile
 
+      - name: Install Capacitor CLI
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun add -d @capacitor/cli
+
       - name: Build web bundle
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
@@ -95,10 +112,12 @@ workflows:
       - name: Generate Android project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
+
           if [ ! -d "android" ]; then
-            bunx cap add android
+            bunx --bun @capacitor/cli add android
           fi
-          bunx cap sync android
+
+          bunx --bun @capacitor/cli sync android
 
       - name: Build AAB
         script: |
