@@ -42,12 +42,33 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun run build
 
+          echo "Checking build output..."
+          find . -maxdepth 3 -name index.html
+
+          if [ -f "dist/index.html" ]; then
+            echo "dist/index.html found"
+          elif [ -f "build/index.html" ]; then
+            rm -rf dist
+            cp -R build dist
+          elif [ -f "out/index.html" ]; then
+            rm -rf dist
+            cp -R out dist
+          elif [ -f "www/index.html" ]; then
+            rm -rf dist
+            cp -R www dist
+          else
+            echo "No valid web build output found"
+            exit 1
+          fi
+
       - name: Generate iOS project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
+
           if [ ! -d "ios" ]; then
             bunx cap add ios
           fi
+
           bunx cap sync ios
 
       - name: Install CocoaPods
@@ -106,12 +127,30 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun run build
 
+          if [ -f "dist/index.html" ]; then
+            echo "dist/index.html found"
+          elif [ -f "build/index.html" ]; then
+            rm -rf dist
+            cp -R build dist
+          elif [ -f "out/index.html" ]; then
+            rm -rf dist
+            cp -R out dist
+          elif [ -f "www/index.html" ]; then
+            rm -rf dist
+            cp -R www dist
+          else
+            echo "No valid web build output found"
+            exit 1
+          fi
+
       - name: Generate Android project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
+
           if [ ! -d "android" ]; then
             bunx cap add android
           fi
+
           bunx cap sync android
 
       - name: Build AAB
