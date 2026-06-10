@@ -41,6 +41,7 @@ workflows:
           "$HOME/.bun/bin/bun" install --frozen-lockfile
       - name: Build web bundle
         script: |
+          set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
           # TanStack Start (SSR) outputs to dist/client + dist/server.
           # Capacitor needs a static webDir with an index.html, so we
@@ -65,11 +66,13 @@ workflows:
             <body><div class="c">Loading Travidz…</div></body>
           </html>
           HTML
+          test -f dist/mobile/index.html
           echo "Built dist/client, dist/server, and dist/mobile/index.html"
       - name: Generate iOS project (first run only)
         script: |
           set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
+          test -f dist/mobile/index.html || { echo "webDir dist/mobile/index.html missing — web build failed earlier"; exit 1; }
           if [ ! -f "ios/App/Podfile" ]; then
             rm -rf ios
             ./node_modules/.bin/cap add ios
@@ -126,6 +129,7 @@ workflows:
           "$HOME/.bun/bin/bun" install --frozen-lockfile
       - name: Build web bundle
         script: |
+          set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
           "$HOME/.bun/bin/bun" run build
           mkdir -p dist/mobile
@@ -146,10 +150,12 @@ workflows:
             <body><div class="c">Loading Travidz…</div></body>
           </html>
           HTML
+          test -f dist/mobile/index.html
       - name: Generate Android project (first run only)
         script: |
           set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
+          test -f dist/mobile/index.html || { echo "webDir dist/mobile/index.html missing — web build failed earlier"; exit 1; }
           if [ ! -f "android/build.gradle" ]; then
             rm -rf android
             ./node_modules/.bin/cap add android

@@ -1,20 +1,28 @@
-## What's happening
+Yes — this is the same bug class: the CocoaPods step is failing because the iOS project was not actually generated earlier. The current update improved the guard, but one important validation is still missing: Capacitor needs `dist/mobile/index.html` to exist before `cap add ios` / `cap sync ios` can generate and sync the native project correctly.
 
-"Generate iOS project" took only ~1s and is marked successful, but the next step ("Install CocoaPods") fails with `No 'Podfile' found in the project directory`. That means `cap add ios` either didn't run or exited without actually generating the iOS project — and our script didn't catch the failure.
+Plan:
 
-Two likely causes:
-1. The `if [ ! -d "ios" ]` guard found a stale (empty) `ios/` directory from a cached build, so `cap add ios` was skipped and `cap sync ios` did nothing.
-2. `cap add ios` failed silently because the script doesn't use `set -e`.
+1. Harden `codemagic.yaml` iOS generation
+   - Add a preflight check before `cap add ios` / `cap sync ios`:
+     - `test -f dist/mobile/index.html`
+   - If the web shell is missing, fail immediately in the iOS generation step with a clear message instead of waiting until CocoaPods.
+   - Keep the existing stale-folder cleanup based on `ios/App/Podfile`.
+   - Keep the final `ls -la ios/App` sanity output.
 
-## Fix (codemagic.yaml only)
+2. Harden `codemagic.yaml` Android generation
+   - Add the same `dist/mobile/index.html` preflight before `cap add android` / `cap sync android`.
+   - Keep the existing stale-folder cleanup based on `android/build.gradle`.
 
-Rewrite the "Generate iOS project" and "Generate Android project" steps to:
-- Use `set -euo pipefail` so any failure aborts the step loudly.
-- Guard on the actual generated marker file (`ios/App/Podfile` / `android/build.gradle`), not just the directory.
-- If the marker is missing, wipe the stale platform folder and re-run `cap add`.
-- Always run `cap sync` after.
-- Print a sanity `ls` so logs show whether the Podfile was actually created.
+3. Make the web bundle step fail loudly
+   - Add `set -euo pipefail` to both iOS and Android “Build web bundle” scripts so a failed `bun run build` or failed shell write cannot continue silently.
+   - Add `test -f dist/mobile/index.html` immediately after creating the shell file.
 
-Also tighten "Install CocoaPods" to `set -e` and fail loudly if `ios/App/Podfile` is missing.
+4. Review cache risk
+   - The current `codemagic.yaml` has no explicit cache paths, so it is not intentionally caching `ios/` or `android/`.
+   - With the marker-file guards plus cleanup, even if Codemagic restores a stale folder, it will be removed and regenerated when the required project files are missing.
 
-No other files change. After approval: push to GitHub, rerun Codemagic with **Clear cache** ON.
+Expected result:
+
+- If the web build fails, the build stops at “Build web bundle”.
+- If Capacitor cannot generate iOS, the build stops at “Generate iOS project” with the real error.
+- CocoaPods should only run after `ios/App/Podfile` exists, so the current misleading “Podfile missing — cap add ios failed earlier” failure should no longer be the first useful signal.
