@@ -9,7 +9,7 @@ workflows:
         BUNDLE_ID: "com.travidz.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
       ios_signing:
@@ -77,7 +77,7 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.travidz.app"
-      node: 20
+      node: 22
       java: 17
 
     triggering:
