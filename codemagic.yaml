@@ -36,14 +36,17 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
       - name: Install dependencies
-        script: bun install --frozen-lockfile
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
       - name: Build web bundle
         script: |
+          export PATH="$HOME/.bun/bin:$PATH"
           # TanStack Start (SSR) outputs to dist/client + dist/server.
           # Capacitor needs a static webDir with an index.html, so we
           # build the SSR bundle (for the web deploy) and ALSO emit a
           # tiny dist/mobile/ shell that the native WebView loads.
-          bun run build
+          "$HOME/.bun/bin/bun" run build
           mkdir -p dist/mobile
           cat > dist/mobile/index.html <<'HTML'
           <!doctype html>
@@ -65,10 +68,11 @@ workflows:
           echo "Built dist/client, dist/server, and dist/mobile/index.html"
       - name: Generate iOS project (first run only)
         script: |
+          export PATH="$HOME/.bun/bin:$PATH"
           if [ ! -d "ios" ]; then
-            bunx cap add ios
+            "$HOME/.bun/bin/bunx" cap add ios
           fi
-          bunx cap sync ios
+          "$HOME/.bun/bin/bunx" cap sync ios
       - name: Install CocoaPods
         script: cd ios/App && pod install
       - name: Set up code signing
@@ -111,10 +115,13 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
       - name: Install dependencies
-        script: bun install --frozen-lockfile
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
       - name: Build web bundle
         script: |
-          bun run build
+          export PATH="$HOME/.bun/bin:$PATH"
+          "$HOME/.bun/bin/bun" run build
           mkdir -p dist/mobile
           cat > dist/mobile/index.html <<'HTML'
           <!doctype html>
@@ -135,10 +142,11 @@ workflows:
           HTML
       - name: Generate Android project (first run only)
         script: |
+          export PATH="$HOME/.bun/bin:$PATH"
           if [ ! -d "android" ]; then
-            bunx cap add android
+            "$HOME/.bun/bin/bunx" cap add android
           fi
-          bunx cap sync android
+          "$HOME/.bun/bin/bunx" cap sync android
       - name: Build AAB
         script: |
           cd android

@@ -1,12 +1,40 @@
-## Fix: regenerate AppIcon-1024.png with lowercase "t"
+The current Codemagic failure is different from the earlier `dist/index.html` issue. It now fails at **Install dependencies** with `bun: command not found`, which means Bun is installed in one step but not available in the next step’s shell.
 
-**Problem:** `public/appstore/AppIcon-1024.png` shows an uppercase "T" but the brand mark is lowercase "t". The source `public/icon.svg` is already correct (lowercase `t`), so only the PNG export is stale.
+Plan:
 
-**Fix:** Regenerate the 1024×1024 PNG from the corrected SVG using imagegen, matching the existing gradient (orange → pink → purple) with a lowercase white "t" centered on a rounded square.
+1. Update `codemagic.yaml` so every step that uses Bun first loads the Bun path reliably.
+   - Keep the `Install bun` step.
+   - Change later commands from plain `bun` / `bunx` to `$HOME/.bun/bin/bun` and `$HOME/.bun/bin/bunx`, or add the Bun path inside each script block.
+   - This avoids relying on `$CM_ENV`, which is not carrying the PATH into the next step on your Codemagic machine.
 
-**Steps**
-1. Generate a new `public/appstore/AppIcon-1024.png` (1024×1024, flat RGB, no alpha, lowercase "t") via the image tool, using the gradient and styling from `public/icon.svg`.
-2. Also regenerate `public/icon-192.png` and `public/icon-512.png` so the PWA manifest icons match (they likely have the same uppercase "T" issue since they were exported alongside).
-3. Verify by viewing the generated files.
+2. Keep the previous mobile bundle fix intact.
+   - Preserve the `dist/mobile/index.html` creation.
+   - Keep `capacitor.config.ts` pointing to `dist/mobile` and `https://www.travidz.com`.
 
-**Not changing:** `public/icon.svg` (already correct), `public/manifest.webmanifest`, or any App Store metadata text.
+3. After implementation, you should start a fresh Codemagic build with **Clear cache** enabled.
+   - This ensures Codemagic checks out the latest GitHub version of `codemagic.yaml` and does not reuse the stale failing command.
+
+Technical change preview:
+
+```yaml
+- name: Install dependencies
+  script: |
+    export PATH="$HOME/.bun/bin:$PATH"
+    "$HOME/.bun/bin/bun" install --frozen-lockfile
+
+- name: Build web bundle
+  script: |
+    export PATH="$HOME/.bun/bin:$PATH"
+    "$HOME/.bun/bin/bun" run build
+    ...
+
+- name: Generate iOS project (first run only)
+  script: |
+    export PATH="$HOME/.bun/bin:$PATH"
+    if [ ! -d "ios" ]; then
+      "$HOME/.bun/bin/bunx" cap add ios
+    fi
+    "$HOME/.bun/bin/bunx" cap sync ios
+```
+
+Once you approve, I’ll apply this directly to `codemagic.yaml`.
