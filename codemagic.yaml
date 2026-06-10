@@ -68,13 +68,19 @@ workflows:
           echo "Built dist/client, dist/server, and dist/mobile/index.html"
       - name: Generate iOS project (first run only)
         script: |
+          set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
-          if [ ! -d "ios" ]; then
+          if [ ! -f "ios/App/Podfile" ]; then
+            rm -rf ios
             ./node_modules/.bin/cap add ios
           fi
           ./node_modules/.bin/cap sync ios
+          ls -la ios/App
       - name: Install CocoaPods
-        script: cd ios/App && pod install
+        script: |
+          set -euo pipefail
+          test -f ios/App/Podfile || { echo "Podfile missing — cap add ios failed earlier"; exit 1; }
+          cd ios/App && pod install
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Build IPA
@@ -142,11 +148,14 @@ workflows:
           HTML
       - name: Generate Android project (first run only)
         script: |
+          set -euo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
-          if [ ! -d "android" ]; then
+          if [ ! -f "android/build.gradle" ]; then
+            rm -rf android
             ./node_modules/.bin/cap add android
           fi
           ./node_modules/.bin/cap sync android
+          ls -la android
       - name: Build AAB
         script: |
           cd android
