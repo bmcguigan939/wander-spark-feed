@@ -1,40 +1,32 @@
-The current Codemagic failure is different from the earlier `dist/index.html` issue. It now fails at **Install dependencies** with `bun: command not found`, which means Bun is installed in one step but not available in the next step’s shell.
+## The real error
 
-Plan:
+Codemagic step "Generate iOS project" fails with:
 
-1. Update `codemagic.yaml` so every step that uses Bun first loads the Bun path reliably.
-   - Keep the `Install bun` step.
-   - Change later commands from plain `bun` / `bunx` to `$HOME/.bun/bin/bun` and `$HOME/.bun/bin/bunx`, or add the Bun path inside each script block.
-   - This avoids relying on `$CM_ENV`, which is not carrying the PATH into the next step on your Codemagic machine.
-
-2. Keep the previous mobile bundle fix intact.
-   - Preserve the `dist/mobile/index.html` creation.
-   - Keep `capacitor.config.ts` pointing to `dist/mobile` and `https://www.travidz.com`.
-
-3. After implementation, you should start a fresh Codemagic build with **Clear cache** enabled.
-   - This ensures Codemagic checks out the latest GitHub version of `codemagic.yaml` and does not reuse the stale failing command.
-
-Technical change preview:
-
-```yaml
-- name: Install dependencies
-  script: |
-    export PATH="$HOME/.bun/bin:$PATH"
-    "$HOME/.bun/bin/bun" install --frozen-lockfile
-
-- name: Build web bundle
-  script: |
-    export PATH="$HOME/.bun/bin:$PATH"
-    "$HOME/.bun/bin/bun" run build
-    ...
-
-- name: Generate iOS project (first run only)
-  script: |
-    export PATH="$HOME/.bun/bin:$PATH"
-    if [ ! -d "ios" ]; then
-      "$HOME/.bun/bin/bunx" cap add ios
-    fi
-    "$HOME/.bun/bin/bunx" cap sync ios
+```
+error: could not determine executable to run for package cap
 ```
 
-Once you approve, I’ll apply this directly to `codemagic.yaml`.
+`bunx cap ...` tries to download an npm package literally named `cap` (which doesn't exist). The Capacitor CLI binary is `cap`, but it ships inside `@capacitor/cli`. And right now **no Capacitor packages are in `package.json`** — that's why nothing resolves.
+
+## Fix
+
+1. **Add Capacitor as devDependencies** in `package.json` so they install with `bun install`:
+   - `@capacitor/cli`
+   - `@capacitor/core`
+   - `@capacitor/ios`
+   - `@capacitor/android`
+
+   Install locally so the lockfile updates (this is what makes `bun install --frozen-lockfile` succeed on Codemagic).
+
+2. **Update `codemagic.yaml`** to call the local binary instead of `bunx cap`:
+   - Replace `"$HOME/.bun/bin/bunx" cap add ios` → `./node_modules/.bin/cap add ios`
+   - Replace `"$HOME/.bun/bin/bunx" cap sync ios` → `./node_modules/.bin/cap sync ios`
+   - Same for Android.
+
+   This bypasses bunx's "treat first arg as a package name" behavior and runs the real Capacitor CLI installed in `node_modules`.
+
+3. Leave `capacitor.config.ts`, the `dist/mobile/index.html` shell, and the Bun PATH fixes unchanged — they're already correct.
+
+## After implementation
+
+Push to GitHub (auto-syncs), then start a fresh Codemagic build with **Clear cache** ON.
