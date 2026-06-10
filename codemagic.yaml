@@ -29,27 +29,36 @@ workflows:
       - name: Install dependencies
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
-          bun install --frozen-lockfile
+          bun install
+
+      - name: Ensure Capacitor packages
+        script: |
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun add @capacitor/core @capacitor/ios
+          bun add -d @capacitor/cli
 
       - name: Build web bundle
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
           bun run build
+
           if [ -d "dist/client" ]; then
             mv dist dist-ssr
             mv dist-ssr/client dist
             rm -rf dist-ssr
           fi
-          test -f dist/index.html || { echo "No dist/index.html after build"; find . -maxdepth 3 -type d; exit 1; }
+
+          test -f dist/index.html || { echo "No dist/index.html after build"; find . -name index.html; exit 1; }
 
       - name: Generate iOS project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
-          if [ ! -d "ios/App" ]; then
-            bunx cap add ios
-          fi
+
+          rm -rf ios
+          bunx cap add ios
           bunx cap sync ios
-          test -f ios/App/Podfile || { echo "Podfile missing after cap sync"; ls -la ios/App || true; exit 1; }
+
+          test -f ios/App/Podfile || { echo "Podfile missing after cap add/sync"; find ios -maxdepth 4 -type f; exit 1; }
 
       - name: Install CocoaPods
         script: |
