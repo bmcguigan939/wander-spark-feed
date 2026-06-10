@@ -21,11 +21,13 @@
 const config = {
   appId: "com.travidz.app",
   appName: "Travidz",
-  webDir: "dist",
+  webDir: "dist/mobile",
   server: {
-    // In production the WebView loads the bundled web assets directly.
-    // To point a dev build at the live preview during local testing, set
-    // `url: "https://www.travidz.com"` and `cleartext: false`.
+    // The bundled webDir is a tiny shell that redirects to the live site.
+    // `url` makes the WebView load the live Travidz site directly so the
+    // native app always serves the latest SSR build.
+    url: "https://www.travidz.com",
+    cleartext: false,
     androidScheme: "https",
   },
   ios: {
