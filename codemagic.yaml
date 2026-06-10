@@ -38,7 +38,31 @@ workflows:
       - name: Install dependencies
         script: bun install --frozen-lockfile
       - name: Build web bundle
-        script: bun run build
+        script: |
+          # TanStack Start (SSR) outputs to dist/client + dist/server.
+          # Capacitor needs a static webDir with an index.html, so we
+          # build the SSR bundle (for the web deploy) and ALSO emit a
+          # tiny dist/mobile/ shell that the native WebView loads.
+          bun run build
+          mkdir -p dist/mobile
+          cat > dist/mobile/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+              <title>Travidz</title>
+              <style>
+                html,body{margin:0;height:100%;background:#0F172A;color:#fff;
+                  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+                .c{display:flex;align-items:center;justify-content:center;height:100%;}
+              </style>
+              <script>window.location.replace('https://www.travidz.com');</script>
+            </head>
+            <body><div class="c">Loading Travidz…</div></body>
+          </html>
+          HTML
+          echo "Built dist/client, dist/server, and dist/mobile/index.html"
       - name: Generate iOS project (first run only)
         script: |
           if [ ! -d "ios" ]; then
@@ -89,7 +113,26 @@ workflows:
       - name: Install dependencies
         script: bun install --frozen-lockfile
       - name: Build web bundle
-        script: bun run build
+        script: |
+          bun run build
+          mkdir -p dist/mobile
+          cat > dist/mobile/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+              <title>Travidz</title>
+              <style>
+                html,body{margin:0;height:100%;background:#0F172A;color:#fff;
+                  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+                .c{display:flex;align-items:center;justify-content:center;height:100%;}
+              </style>
+              <script>window.location.replace('https://www.travidz.com');</script>
+            </head>
+            <body><div class="c">Loading Travidz…</div></body>
+          </html>
+          HTML
       - name: Generate Android project (first run only)
         script: |
           if [ ! -d "android" ]; then
