@@ -70,14 +70,16 @@ workflows:
           echo "Built dist/client, dist/server, and dist/mobile/index.html"
       - name: Generate iOS project (first run only)
         script: |
-          set -euo pipefail
+          set -euxo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
           test -f dist/mobile/index.html || { echo "webDir dist/mobile/index.html missing — web build failed earlier"; exit 1; }
+          bunx --bun cap --version
           if [ ! -f "ios/App/Podfile" ]; then
             rm -rf ios
-            ./node_modules/.bin/cap add ios
+            bunx --bun cap add ios
+            test -f ios/App/Podfile || { echo "cap add ios returned 0 but Podfile was not generated"; ls -laR ios || true; exit 1; }
           fi
-          ./node_modules/.bin/cap sync ios
+          bunx --bun cap sync ios
           ls -la ios/App
       - name: Install CocoaPods
         script: |
@@ -153,14 +155,16 @@ workflows:
           test -f dist/mobile/index.html
       - name: Generate Android project (first run only)
         script: |
-          set -euo pipefail
+          set -euxo pipefail
           export PATH="$HOME/.bun/bin:$PATH"
           test -f dist/mobile/index.html || { echo "webDir dist/mobile/index.html missing — web build failed earlier"; exit 1; }
+          bunx --bun cap --version
           if [ ! -f "android/build.gradle" ]; then
             rm -rf android
-            ./node_modules/.bin/cap add android
+            bunx --bun cap add android
+            test -f android/app/build.gradle || { echo "cap add android returned 0 but app/build.gradle was not generated"; ls -laR android || true; exit 1; }
           fi
-          ./node_modules/.bin/cap sync android
+          bunx --bun cap sync android
           ls -la android
       - name: Build AAB
         script: |
