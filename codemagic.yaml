@@ -42,22 +42,19 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun run build
 
-          echo "Checking build output..."
-          find . -maxdepth 3 -name index.html
+          echo "Preparing Capacitor web assets..."
 
-          if [ -f "dist/index.html" ]; then
-            echo "dist/index.html found"
-          elif [ -f "build/index.html" ]; then
+          if [ -f "dist/client/index.html" ]; then
+            rm -rf capacitor-dist
+            mkdir capacitor-dist
+            cp -R dist/client/* capacitor-dist/
             rm -rf dist
-            cp -R build dist
-          elif [ -f "out/index.html" ]; then
-            rm -rf dist
-            cp -R out dist
-          elif [ -f "www/index.html" ]; then
-            rm -rf dist
-            cp -R www dist
+            mv capacitor-dist dist
+          elif [ -f "dist/index.html" ]; then
+            echo "dist/index.html already exists"
           else
-            echo "No valid web build output found"
+            echo "Could not find index.html for Capacitor"
+            find . -name index.html
             exit 1
           fi
 
@@ -127,19 +124,19 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun run build
 
-          if [ -f "dist/index.html" ]; then
-            echo "dist/index.html found"
-          elif [ -f "build/index.html" ]; then
+          echo "Preparing Capacitor web assets..."
+
+          if [ -f "dist/client/index.html" ]; then
+            rm -rf capacitor-dist
+            mkdir capacitor-dist
+            cp -R dist/client/* capacitor-dist/
             rm -rf dist
-            cp -R build dist
-          elif [ -f "out/index.html" ]; then
-            rm -rf dist
-            cp -R out dist
-          elif [ -f "www/index.html" ]; then
-            rm -rf dist
-            cp -R www dist
+            mv capacitor-dist dist
+          elif [ -f "dist/index.html" ]; then
+            echo "dist/index.html already exists"
           else
-            echo "No valid web build output found"
+            echo "Could not find index.html for Capacitor"
+            find . -name index.html
             exit 1
           fi
 
