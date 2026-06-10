@@ -44,17 +44,41 @@ workflows:
 
           echo "Preparing Capacitor web assets..."
 
-          if [ -f "dist/client/index.html" ]; then
+          if [ -d "dist/client/assets" ]; then
             rm -rf capacitor-dist
-            mkdir capacitor-dist
-            cp -R dist/client/* capacitor-dist/
+            mkdir -p capacitor-dist/assets
+            cp -R dist/client/assets/* capacitor-dist/assets/
+
+            MAIN_JS=$(find capacitor-dist/assets -name "index-*.js" -type f | sort | tail -n 1 | sed 's|capacitor-dist/||')
+            MAIN_CSS=$(find capacitor-dist/assets -name "*.css" -type f | sed 's|capacitor-dist/||')
+
+            cat > capacitor-dist/index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Travidz</title>
+          EOF
+
+            for css in $MAIN_CSS; do
+              echo "    <link rel=\"stylesheet\" href=\"/$css\" />" >> capacitor-dist/index.html
+            done
+
+            cat >> capacitor-dist/index.html <<EOF
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/$MAIN_JS"></script>
+            </body>
+          </html>
+          EOF
+
             rm -rf dist
             mv capacitor-dist dist
-          elif [ -f "dist/index.html" ]; then
-            echo "dist/index.html already exists"
           else
-            echo "Could not find index.html for Capacitor"
-            find . -name index.html
+            echo "Could not find dist/client/assets"
+            find . -maxdepth 4 -type d
             exit 1
           fi
 
@@ -86,75 +110,3 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-
-  android-build:
-    name: Travidz Android
-    instance_type: linux_x2
-    max_build_duration: 60
-
-    environment:
-      vars:
-        PACKAGE_NAME: "com.travidz.app"
-      node: 22
-      java: 17
-
-    triggering:
-      events: []
-
-    scripts:
-      - name: Install Bun
-        script: |
-          curl -fsSL https://bun.sh/install | bash
-          export PATH="$HOME/.bun/bin:$PATH"
-          echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $CM_ENV
-
-      - name: Install dependencies
-        script: |
-          export PATH="$HOME/.bun/bin:$PATH"
-          bun install --frozen-lockfile
-
-      - name: Install Capacitor packages
-        script: |
-          export PATH="$HOME/.bun/bin:$PATH"
-          bun add -d @capacitor/cli
-          bun add @capacitor/core @capacitor/ios @capacitor/android
-
-      - name: Build web bundle
-        script: |
-          export PATH="$HOME/.bun/bin:$PATH"
-          bun run build
-
-          echo "Preparing Capacitor web assets..."
-
-          if [ -f "dist/client/index.html" ]; then
-            rm -rf capacitor-dist
-            mkdir capacitor-dist
-            cp -R dist/client/* capacitor-dist/
-            rm -rf dist
-            mv capacitor-dist dist
-          elif [ -f "dist/index.html" ]; then
-            echo "dist/index.html already exists"
-          else
-            echo "Could not find index.html for Capacitor"
-            find . -name index.html
-            exit 1
-          fi
-
-      - name: Generate Android project
-        script: |
-          export PATH="$HOME/.bun/bin:$PATH"
-
-          if [ ! -d "android" ]; then
-            bunx cap add android
-          fi
-
-          bunx cap sync android
-
-      - name: Build AAB
-        script: |
-          cd android
-          ./gradlew bundleRelease
-
-    artifacts:
-      - android/app/build/outputs/**/*.aab
-      - android/app/build/outputs/**/*.apk
