@@ -70,9 +70,9 @@ workflows:
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
           if [ ! -d "ios" ]; then
-            "$HOME/.bun/bin/bunx" cap add ios
+            ./node_modules/.bin/cap add ios
           fi
-          "$HOME/.bun/bin/bunx" cap sync ios
+          ./node_modules/.bin/cap sync ios
       - name: Install CocoaPods
         script: cd ios/App && pod install
       - name: Set up code signing
@@ -144,9 +144,9 @@ workflows:
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
           if [ ! -d "android" ]; then
-            "$HOME/.bun/bin/bunx" cap add android
+            ./node_modules/.bin/cap add android
           fi
-          "$HOME/.bun/bin/bunx" cap sync android
+          ./node_modules/.bin/cap sync android
       - name: Build AAB
         script: |
           cd android
