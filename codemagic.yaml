@@ -9,11 +9,9 @@ workflows:
         BUNDLE_ID: "com.travidz.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-
       node: 20
       xcode: latest
       cocoapods: default
-
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.travidz.app
@@ -33,10 +31,11 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun install --frozen-lockfile
 
-      - name: Install Capacitor CLI
+      - name: Install Capacitor packages
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
           bun add -d @capacitor/cli
+          bun add @capacitor/core @capacitor/ios @capacitor/android
 
       - name: Build web bundle
         script: |
@@ -46,12 +45,10 @@ workflows:
       - name: Generate iOS project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
-
           if [ ! -d "ios" ]; then
-            bunx --bun @capacitor/cli add ios
+            bunx cap add ios
           fi
-
-          bunx --bun @capacitor/cli sync ios
+          bunx cap sync ios
 
       - name: Install CocoaPods
         script: |
@@ -80,7 +77,6 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.travidz.app"
-
       node: 20
       java: 17
 
@@ -99,10 +95,11 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           bun install --frozen-lockfile
 
-      - name: Install Capacitor CLI
+      - name: Install Capacitor packages
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
           bun add -d @capacitor/cli
+          bun add @capacitor/core @capacitor/ios @capacitor/android
 
       - name: Build web bundle
         script: |
@@ -112,12 +109,10 @@ workflows:
       - name: Generate Android project
         script: |
           export PATH="$HOME/.bun/bin:$PATH"
-
           if [ ! -d "android" ]; then
-            bunx --bun @capacitor/cli add android
+            bunx cap add android
           fi
-
-          bunx --bun @capacitor/cli sync android
+          bunx cap sync android
 
       - name: Build AAB
         script: |
