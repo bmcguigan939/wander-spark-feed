@@ -1,46 +1,39 @@
 ## What's actually happening
 
-The screenshot shows:
-- **Generate iOS project** step → 1s, exited 0 (not red).
-- **Install CocoaPods** step → failed, our guard `test -f ios/App/Podfile` fired with "Podfile missing — cap add ios failed earlier".
+The "Generate iOS project" step is red, but the log shows `cap add ios` actually succeeded — it produced the full Capacitor 8 iOS template:
 
-That combination means `./node_modules/.bin/cap add ios` ran, exited with status 0, and yet did NOT create `ios/App/Podfile`. The web-bundle heredoc indentation hint is a red herring here — YAML's `|` literal block strips the common indent (verified with `cat -A`), so the heredoc terminator does line up at column 0 in bash, and the previous step completed successfully (16s).
+```
+ios/App/CapApp-SPM/
+  Package.swift
+  Sources/CapApp-SPM/CapApp-SPM.swift
+ios/capacitor-cordova-ios-plugins/
+  CordovaPluginsResources.podspec
+```
 
-The real failure is silent: Capacitor 8's `cap add ios` exited cleanly but never produced the iOS template. We can't see why because the step's output isn't captured loudly, and our guard runs in the NEXT step instead of immediately after the offending command.
+That is the **Swift Package Manager** layout. Capacitor 7+ switched iOS plugin management from CocoaPods to SPM. There is no `ios/App/Podfile` anymore — and there shouldn't be. Our assertion `test -f ios/App/Podfile` therefore fires after a perfectly successful `cap add ios`, killing the step with the misleading "Podfile was not generated" message.
+
+The next step ("Install CocoaPods") would also fail for the same reason — Capacitor 8 doesn't use Pods.
 
 ## Fix plan (edits to `codemagic.yaml` only)
 
-### 1. Generate iOS project — make it fail at the source
-Replace the iOS generation script with one that:
-- Keeps `set -euo pipefail` and the `dist/mobile/index.html` preflight.
-- Adds `set -x` so every command is echoed to the build log.
-- Runs `bunx --bun cap --version` first to confirm the CLI resolves (replaces `./node_modules/.bin/cap` which depends on the bin symlink existing).
-- Uses `bunx --bun cap add ios` and `bunx --bun cap sync ios` instead of the `.bin` path.
-- Immediately after `cap add ios`, asserts the template landed:
-  `test -f ios/App/Podfile || { echo "cap add ios returned 0 but Podfile was not generated"; ls -laR ios || true; exit 1; }`
-- Keeps the stale-folder cleanup (`rm -rf ios` when Podfile is missing).
-- Ends with `ls -la ios/App` for visibility.
+### 1. Generate iOS project — assert the SPM artifact, not Podfile
+Replace `test -f ios/App/Podfile` with the real Capacitor 8 marker:
+```
+test -f ios/App/CapApp-SPM/Package.swift || { echo "cap add ios did not generate SPM package"; ls -laR ios || true; exit 1; }
+```
+Same change in the "stale folder" check — replace `[ ! -f "ios/App/Podfile" ]` with `[ ! -f "ios/App/CapApp-SPM/Package.swift" ]`.
 
-### 2. Generate Android project — same hardening
-- Add `set -x`.
-- Switch to `bunx --bun cap add android` / `bunx --bun cap sync android`.
-- After `cap add android`, assert `test -f android/app/build.gradle` (Capacitor 8 puts `build.gradle` under `android/app/` as well as the root) and fail loudly with `ls -laR android` if missing.
+### 2. Drop the "Install CocoaPods" step entirely
+Capacitor 8 resolves plugins via SPM during `xcodebuild`. `pod install` is not needed and `ios/App/Podfile` will never exist. Remove the whole step.
 
-### 3. Install CocoaPods — keep the existing guard
-Already prints "Podfile missing — cap add ios failed earlier" and exits 1. With the changes in step 1, this should no longer be the first failure we see — the iOS step itself will turn red with the real reason.
+### 3. Build IPA step — point at the right workspace
+Capacitor 8 still generates `ios/App/App.xcworkspace`, so `XCODE_WORKSPACE` stays the same. No change needed there — but verify by adding `ls ios/App` already present at the end of the generate step.
 
-### 4. No other changes
-- `capacitor.config.ts`, `package.json`, and the web build are correct.
-- `@capacitor/cli@^8.4.0` is in devDependencies and present in `bun.lock`.
-- `.gitignore` does not track `ios/` or `android/`, so each fresh CI run starts from a clean state — no cache-collision fix needed.
+### 4. Android — no change required
+The Android assertion (`test -f android/app/build.gradle`) is still correct for Capacitor 8.
 
-## Technical details (for reference)
+## Expected result
 
-- `cap add ios` copies a template from `node_modules/@capacitor/ios/ios-template/` into `ios/App/`. If that copy is interrupted or skipped, the CLI can still exit 0 in some failure modes. `set -x` plus the immediate Podfile assertion will surface exactly which case we hit.
-- `bunx --bun cap` resolves the CLI via Bun's runner rather than relying on `node_modules/.bin/cap`, which avoids a class of "binary symlink missing after frozen-lockfile install" issues.
-
-## Expected result after the fix
-
-- If `cap add ios` truly fails, the **Generate iOS project** step turns red with the actual `set -x` trace and a `ls -laR ios` dump — no more misleading "CocoaPods failed" symptom.
-- If `cap add ios` succeeds, `ios/App/Podfile` is asserted to exist before the next step, so **Install CocoaPods** can run normally.
-- Same behavior for Android.
+- "Generate iOS project" turns green (it was already doing the right work).
+- No more "Install CocoaPods" step to fail.
+- Build proceeds to "Set up code signing" → "Build IPA".

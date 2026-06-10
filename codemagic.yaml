@@ -74,18 +74,13 @@ workflows:
           export PATH="$HOME/.bun/bin:$PATH"
           test -f dist/mobile/index.html || { echo "webDir dist/mobile/index.html missing — web build failed earlier"; exit 1; }
           bunx --bun cap --version
-          if [ ! -f "ios/App/Podfile" ]; then
+          if [ ! -f "ios/App/CapApp-SPM/Package.swift" ]; then
             rm -rf ios
             bunx --bun cap add ios
-            test -f ios/App/Podfile || { echo "cap add ios returned 0 but Podfile was not generated"; ls -laR ios || true; exit 1; }
+            test -f ios/App/CapApp-SPM/Package.swift || { echo "cap add ios did not generate SPM package"; ls -laR ios || true; exit 1; }
           fi
           bunx --bun cap sync ios
           ls -la ios/App
-      - name: Install CocoaPods
-        script: |
-          set -euo pipefail
-          test -f ios/App/Podfile || { echo "Podfile missing — cap add ios failed earlier"; exit 1; }
-          cd ios/App && pod install
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Build IPA
