@@ -21,7 +21,7 @@ workflows:
         BUNDLE_ID: "com.travidz.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
       ios_signing:
@@ -100,7 +100,7 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.travidz.app"
-      node: 20
+      node: 22
       java: 17
       # TODO: add a keystore in Codemagic (Teams → Code signing identities →
       # Android keystores) and reference it here as `travidz_keystore`.
