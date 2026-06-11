@@ -93,10 +93,10 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
     # Requires an App Store Connect API key added to Codemagic:
     #   Teams → Integrations → Developer Portal / App Store Connect
-    # Save the integration with the reference name APP_STORE_CONNECT_KEY
-    # (case-sensitive — must match the value below).
+    # The integration reference name below must match the key name saved
+    # in Codemagic (case-sensitive). Current key name: "Codemagic".
     integrations:
-      app_store_connect: APP_STORE_CONNECT_KEY
+      app_store_connect: Codemagic
     publishing:
       app_store_connect:
         auth: integration
