@@ -91,13 +91,21 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-    # TODO: enable after adding an App Store Connect API key to Codemagic
-    # (Teams → Integrations → App Store Connect). Once enabled, future builds
-    # auto-land in TestFlight and you can skip the Transporter step.
-    # publishing:
-    #   app_store_connect:
-    #     auth: integration
-    #     submit_to_testflight: true
+    # Requires an App Store Connect API key added to Codemagic:
+    #   Teams → Integrations → Developer Portal / App Store Connect
+    # Save the integration with the reference name APP_STORE_CONNECT_KEY
+    # (case-sensitive — must match the value below).
+    integrations:
+      app_store_connect: APP_STORE_CONNECT_KEY
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Optional — auto-distribute to a TestFlight group once Apple
+        # finishes processing. Uncomment and set the group name(s) you
+        # created in App Store Connect → TestFlight → Internal Testing.
+        # beta_groups:
+        #   - Internal
 
   android-build:
     name: Travidz Android

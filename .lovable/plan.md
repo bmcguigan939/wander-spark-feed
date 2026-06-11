@@ -1,43 +1,49 @@
-## Bug
+## Goal
+You don't have a Mac, so let Codemagic upload the signed `App.ipa` straight to App Store Connect / TestFlight. After that, the build appears under your App Store submission's "Build" picker in ~10–30 min.
 
-`Build IPA` fails with:
-```
-xcode-project build-ipa: error: argument --workspace: Path "ios/App/App.xcworkspace" does not exist
-```
+## What you do once (in the browser, no Mac needed)
 
-Capacitor 8's iOS template no longer generates an `.xcworkspace` (that was the CocoaPods layout). It only generates `ios/App/App.xcodeproj`. The previous fix removed the CocoaPods step but left the Build IPA step pointing at the workspace.
+### 1. Create an App Store Connect API key
+App Store Connect → **Users and Access → Integrations → App Store Connect API**:
+- Click **+**, name: `Codemagic`, access: **App Manager**.
+- Download the `.p8` file (one-time download).
+- Copy **Issuer ID** (top of page) and **Key ID** (next to the key).
 
-## Fix (single edit to `codemagic.yaml`)
+### 2. Add the key to Codemagic
+Codemagic → **Teams → Personal Account → Integrations → Developer Portal / App Store Connect**:
+- Add new App Store Connect API key.
+- Paste Issuer ID + Key ID, upload the `.p8`.
+- **Reference name must be exactly:** `APP_STORE_CONNECT_KEY` (case-sensitive — matches the YAML).
 
-### 1. Build IPA — use `--project` instead of `--workspace`
-Replace:
+## What I'll change in the repo
+
+One edit to `codemagic.yaml`, in the `ios-build` workflow only. Replace the commented-out publishing block with a live one:
+
 ```yaml
-- name: Build IPA
-  script: |
-    xcode-project build-ipa \
-      --workspace "$XCODE_WORKSPACE" \
-      --scheme "$XCODE_SCHEME"
-```
-with:
-```yaml
-- name: Build IPA
-  script: |
-    xcode-project build-ipa \
-      --project "$XCODE_PROJECT" \
-      --scheme "$XCODE_SCHEME"
+integrations:
+  app_store_connect: APP_STORE_CONNECT_KEY
+
+publishing:
+  app_store_connect:
+    auth: integration
+    submit_to_testflight: true
+    # Optional — auto-distribute once Apple finishes processing:
+    # beta_groups:
+    #   - Internal
 ```
 
-### 2. Update the env var
-In `environment.vars`, replace:
-```
-XCODE_WORKSPACE: "ios/App/App.xcworkspace"
-```
-with:
-```
-XCODE_PROJECT: "ios/App/App.xcodeproj"
-```
+No other changes. Android workflow untouched.
 
-No other changes. Android workflow is unaffected.
+## After it lands
 
-## Expected result
-`Build IPA` finds `ios/App/App.xcodeproj`, archives via SPM, and produces the signed `.ipa`.
+1. Push to GitHub → rerun `ios-build` in Codemagic.
+2. Build finishes → Codemagic uploads the IPA → email from Apple "Processing complete" in ~10–30 min.
+3. App Store Connect → **TestFlight → Builds** shows the build.
+4. On your App Store submission page, **Build** section becomes populated → **+ → pick build → Add for Review**.
+
+## If Apple emails ITMS warnings
+Common first-build warning: missing encryption declaration. Easy fix later — add `ITSAppUsesNonExemptEncryption=false` to `Info.plist`. Not blocking.
+
+---
+
+Switch to **build mode** and I'll apply the `codemagic.yaml` change. The API key setup in App Store Connect + Codemagic you'll need to do yourself (those are external UIs).
