@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { PriceMatchBadge } from "@/components/PriceMatchBadge";
 import { RatingSummary } from "@/components/reviews/RatingSummary";
+import { RateSelector } from "@/components/deals/RateSelector";
 
 export const Route = createFileRoute("/book/$dealId")({
   head: () => ({ meta: [{ title: "Book — Travidz" }] }),
@@ -258,7 +259,7 @@ function BookPage() {
                 {guests === 1 ? "guest" : "guests"}.
               </p>
               <div className="mt-3">
-                <RateInlineWrapper
+                <RateSelector
                   dealId={dealId}
                   category={deal.category}
                   currency={deal.currency}
@@ -446,20 +447,6 @@ function HighlightChips({ deal, business }: { deal: any; business: any }) {
       })}
     </div>
   );
-}
-
-// Reusable wrapper so we don't have to import RateSelector at the top of the
-// route (it pulls a lot of icons). Kept inline since it's used once.
-function RateInlineWrapper(props: {
-  dealId: string;
-  category?: string;
-  currency?: string;
-  referrerVideoId?: string;
-}) {
-  // dynamic import not strictly needed; just delegate
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { RateSelector } = require("@/components/deals/RateSelector");
-  return <RateSelector {...props} />;
 }
 
 function DateGuestSheet({
