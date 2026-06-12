@@ -19,10 +19,16 @@ import {
   Plus,
   Minus,
   Bed,
+  Mountain,
+  Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getMySetupState,
+  saveSetupBusinessType,
+  saveSetupActivityBasics,
+  saveSetupActivityLocation,
+  saveSetupActivityPricing,
   saveSetupPropertyType,
   saveSetupCount,
   saveSetupOtaListings,
@@ -44,13 +50,16 @@ import { geocodePlace, type GeocodeResult } from "@/lib/map.functions";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
+import { DealForm } from "@/components/business/DealForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/business/setup")({
   head: () => ({ meta: [{ title: "Set up your property — Travidz" }] }),
   component: BusinessSetupPage,
 });
 
-const TOTAL_STEPS = 16;
+const STAY_TOTAL = 16;
+const ACTIVITY_TOTAL = 11;
 
 type Profile = any;
 type FirstDeal = any;
@@ -73,6 +82,12 @@ function BusinessSetupPage() {
     enabled: !!user && isBusiness,
   });
 
+  const businessType = (data?.profile?.setup_business_type as
+    | "stay"
+    | "activity"
+    | null) ?? null;
+  const total = businessType === "activity" ? ACTIVITY_TOTAL : STAY_TOTAL;
+
   // Where the user currently is in the flow. Initialise to the first
   // incomplete step once state loads.
   const [step, setStep] = useState<number>(1);
@@ -80,10 +95,10 @@ function BusinessSetupPage() {
   useEffect(() => {
     if (!initialised && data?.profile) {
       const completed = data.profile.setup_step_completed ?? 0;
-      setStep(Math.min(TOTAL_STEPS, completed + 1));
+      setStep(Math.min(total, Math.max(1, completed + 1)));
       setInitialised(true);
     }
-  }, [data, initialised]);
+  }, [data, initialised, total]);
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["business-setup-state"] });
@@ -100,12 +115,12 @@ function BusinessSetupPage() {
           </Link>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Step {step} of {TOTAL_STEPS}
+              {businessType ? `Step ${step} of ${total}` : "Choose your path"}
             </p>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+                style={{ width: `${businessType ? (step / total) * 100 : 0}%` }}
               />
             </div>
           </div>
@@ -127,6 +142,8 @@ function BusinessSetupPage() {
             profile={data.profile}
             firstDeal={data.firstDeal}
             refresh={refresh}
+            businessType={businessType}
+            total={total}
           />
         )}
       </div>
@@ -142,16 +159,42 @@ function StepRouter({
   profile,
   firstDeal,
   refresh,
+  businessType,
+  total,
 }: {
   step: number;
   setStep: (n: number) => void;
   profile: Profile;
   firstDeal: FirstDeal | null;
   refresh: () => void;
+  businessType: "stay" | "activity" | null;
+  total: number;
 }) {
-  const next = (n?: number) => setStep(n ?? Math.min(TOTAL_STEPS, step + 1));
+  const next = (n?: number) => setStep(n ?? Math.min(total, step + 1));
   const back = () => setStep(Math.max(1, step - 1));
   const common = { profile, firstDeal, next, back, refresh };
+
+  if (!businessType) {
+    return <Step0BusinessType {...common} />;
+  }
+
+  if (businessType === "activity") {
+    switch (step) {
+      case 1: return <ActivityStep1Basics {...common} />;
+      case 2: return <ActivityStep2Location {...common} />;
+      case 3: return <Step8Languages {...common} />;
+      case 4: return <Step9HostProfile {...common} />;
+      case 5: return <ActivityStep5FirstPackage {...common} />;
+      case 6: return <ActivityStep6Photos {...common} />;
+      case 7: return <ActivityStep7Pricing {...common} />;
+      case 8: return <Step10BookingModel {...common} />;
+      case 9: return <Step11Payments {...common} hideAtProperty />;
+      case 10: return <Step15LegalEntity {...common} />;
+      case 11: return <Step16GoLive {...common} />;
+      default: return null;
+    }
+  }
+
   switch (step) {
     case 1:
       return <Step1Type {...common} />;
