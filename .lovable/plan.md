@@ -1,138 +1,71 @@
 
-# Booking.com-style onboarding wizard + booking page
+# Two pathways in business setup: Stays vs Activities
 
-Two big pieces, designed to slot into what's already built (DealForm, RoomsAndRatesEditor, BusinessPhotosEditor, PayoutMethodCard, DealCalendarSync, rate plans, blocked dates, Stripe Connect, price-match, etc.). Nothing existing gets removed — the wizard wraps it; the booking page redesigns the traveller-facing surface.
+## Problem
+The 16-step wizard at `/business/setup` assumes every business is a stay. Step 1 only offers Apartment / Home / Hotel / Alternative places, and the rest of the flow (rooms & rates, breakfast, parking, long stays, pay-at-property, cancellation policies) is stay-specific. An activity operator invited by a creator has nowhere to say "I run tours / experiences / classes" and ends up answering hotel questions.
 
-## Part A — Business setup wizard
+## Solution
+Add a fork at the very start of the wizard, then run one of two tailored paths.
 
-A single new route `/business/setup` that drives a 14-step flow with progress bar, Back/Continue, autosave-as-you-go, and resumes where you left off. Existing standalone pages (`/business/photos`, `/business/onboarding/payout`, `/business/deals/new`) keep working for editing later.
+### New Step 0 — "What does your business offer?"
+Two large tiles:
+1. **Stays** — hotels, apartments, villas, B&Bs, unique stays. → existing 16-step path (becomes Steps 1–16 unchanged).
+2. **Activities & experiences** — tours, classes, tastings, rentals, spas, attractions. → new shorter path (below).
 
-Branches based on property type chosen at step 3:
+Stored on `profiles.setup_business_type` enum: `stay` | `activity`.
 
-```text
-type ──┬─ Apartment ───────► single OR multi-apartment subflow (same/different address)
-       ├─ Homes ───────────► entire-place subflow (villa, holiday home)
-       ├─ Hotel/B&B ──────► rooms-and-rates subflow (multi-room types, per-room rates)
-       └─ Alternative ────► single-unit lightweight subflow (boat, campsite, tent)
-```
+### Activities path (new, ~10 steps)
+Mirrors the Booking.com-feel but tuned for GetYourGuide/Viator-style listings:
 
-### Steps (mirrors the PDF)
+1. Activity category — tour, experience, class/workshop, rental, food & drink, wellness, attraction/ticket, transport, other.
+2. Format — group / private / self-guided / ticket-only.
+3. Location — meeting point address + map (reuses `BusinessLocationPrompt`).
+4. Languages offered (reuses Step 8).
+5. Host / operator profile (reuses Step 9 — display name, bio, "about your activity").
+6. First package — uses `DealForm` with `category` locked to `do` / `tour` and price-per-person fields (reuses `deal_time_slots` for schedule).
+7. Photos — ≥5, `BusinessPhotosEditor` with `kind="activity"`.
+8. Pricing & policies — per-person price, group min/max, cancellation policy.
+9. Booking model — instant vs request (reuses Step 10).
+10. Payments → legal entity → go live (reuses Steps 11, 15, 16).
 
-1. **Property type** — 4-tile picker; sets `setup_property_kind` on profile.
-2. **Count & layout** — "one / multiple", "same address?" if multi (apartments/homes only). Hotels skip.
-3. **OTA import** — "Where else is your property listed?" (Airbnb, Vrbo, Expedia, Hotels.com, TripAdvisor, none). Just captures URLs into `profiles.ota_listings jsonb` for now; actual import is a no-op stub with a "we'll process this" message (real scrape is out of scope).
-4. **Address** — quick-search (uses existing geocoder if present, else free-text + lat/lng manual) + map confirm. Reuses `BusinessLocationPrompt` patterns.
-5. **Channel manager** — yes/no toggle → `profiles.channel_manager_planned bool`. Yes shows a "we'll wire this after you finish" note.
-6. **Facilities** — chip multiselect (WiFi, AC, pool, etc.) → `profiles.facilities text[]`.
-7. **Services** — breakfast (yes/no), parking (free/paid/no) → columns on profile.
-8. **Languages** — multiselect → `profiles.languages_spoken text[]`.
-9. **Host profile** — display name, "about you", "about the neighbourhood" → fills `profiles.display_name`, `bio`, new `profiles.neighbourhood_blurb`.
-10. **Booking model** — instant vs request-to-book → `profiles.default_booking_model text` and applied to new deals.
-11. **Payments** — "online via Travidz" (default) + optional "pay at property" toggle, kicks `PayoutMethodCard` / Stripe Connect onboarding.
-12. **First unit** — branch:
-    - Apartment/Home/Alternative: "Set up your first apartment" → reuses `DealForm` in a slimmed inline mode (title, beds/bathrooms, guests, amenities-per-unit, photos via `BusinessPhotosEditor`).
-    - Hotel/B&B: opens `RoomsAndRatesEditor` inline to add the first room type + rates.
-13. **Photos** — at least 5, drag-drop. Reuses `BusinessPhotosEditor` with the "≥5" gate from PDF.
-14. **Pricing & policies** — per-night price, group-size pricing toggle, cancellation policy code (existing `cancellation_policy_code` enum), 30+ night stays toggle → `profiles.long_stays_enabled bool`.
-15. **Legal entity** — Individual vs Business; if Business, capture entity name/email/phone → `profiles.legal_entity_type`, `legal_entity_name`, `legal_contact_email`, `legal_contact_phone`. Locks behind the existing Business Agreement.
-16. **Go live** — review summary; "Open for bookings" sets the first deal `is_active = true` and `status = 'approved'`; "I'm not ready" keeps it draft.
+Skipped vs Stays path: unit count, OTA imports (Airbnb/Vrbo/Expedia don't apply — replace with a single "GetYourGuide / Viator URL" capture), channel manager, facilities list, breakfast/parking, long stays, rooms & rates editor.
 
-### UX shell
+### Resume + branching logic
+- `getMySetupState` returns `setup_business_type` and `setup_step_completed`.
+- The wizard component picks the step array based on `setup_business_type`. Each path has its own step count for the progress bar.
+- If `setup_business_type` is null (existing users mid-wizard), they re-see Step 0 once and continue.
+- `ensureFirstDeal` already sets `category` from `setup_property_kind`; extend it so `setup_business_type === 'activity'` gives `category = 'do'` and a sensible default title.
 
-- Sticky top progress bar (`Step n / 16`), sticky bottom Continue/Back, side "Need help?" link.
-- Each step persists on Continue via a new `upsertSetupStep` server fn; if the user closes mid-flow, returning to `/business/setup` jumps to the first incomplete step (tracked via `profiles.setup_step_completed int` and `profiles.setup_completed_at`).
-- `OnboardingChecklist` on `/business` gets a "Resume setup" CTA when setup is incomplete.
+### Knock-on fixes
+- `OnboardingChecklist`'s `gateCopy` reads `accountKind` to swap stays vs activity wording. Update it to prefer `profiles.setup_business_type` (then fall back to the legacy detection) so a freshly-onboarded activity operator sees activity wording everywhere — this fixes the "why is the page focused on activities?" issue from earlier in the other direction.
+- `business.apply.tsx` "Resume property setup" CTA copy → "Resume business setup" (kind-agnostic).
+- Booking page (`/book/$dealId`): the Booking.com-flavoured chrome stays for stays. For activities, hide the room-rate table and amenities grid, show "What's included / What to bring / Meeting point / Duration / Group size" instead, and keep the same sticky reserve bar (per-person price × guests).
 
-## Part B — Booking.com-flavoured booking page
+## Backend changes
+One migration:
+- `profiles.setup_business_type` enum `'stay' | 'activity'` nullable (default null so existing rows aren't forced).
+- `profiles.activity_category text` nullable.
+- `profiles.activity_format text` nullable.
+- `profiles.activity_meeting_point text` nullable.
+- `deals.price_unit text` nullable (`per_night` | `per_person` | `per_group` | `flat`) — needed so booking page knows what to multiply.
 
-Redesign `/book/$dealId` (and the read-only deal preview at `/deals/$id`) into a single-column mobile-first layout that feels like Booking.com:
+New / updated server fns in `src/lib/business-setup.functions.ts`:
+- `saveSetupBusinessType({ setup_business_type })` — Step 0.
+- `saveSetupActivityBasics({ activity_category, activity_format })`.
+- `saveSetupActivityLocation({ address, lat, lng, meeting_point })`.
+- Reuse `saveSetupHostProfile`, `saveSetupLanguages`, `saveSetupBookingModel`, `saveSetupPayments`, `saveSetupLegalEntity`, `completeSetup`.
 
-```text
-┌───────────────────────────────────────┐
-│  Photo gallery (swipe, "+N photos")   │
-├───────────────────────────────────────┤
-│  Title · ★rating · location · map pin │
-│  Verified badge · cancellation chip   │
-├───────────────────────────────────────┤
-│  Property highlights (chips)          │
-│  WiFi · Free cancel · Pay at property │
-├───────────────────────────────────────┤
-│  About this place (description)       │
-│  Neighbourhood blurb                  │
-├───────────────────────────────────────┤
-│  Amenities grid (icons)               │
-├───────────────────────────────────────┤
-│  Choose your room / rate              │
-│  (existing RateSelector restyled into │
-│   Booking.com "table-row + Select"    │
-│   cards; per-rate cancellation,       │
-│   breakfast, deposit pill)            │
-├───────────────────────────────────────┤
-│  Guest reviews (RatingSummary +       │
-│  top 3 review excerpts)               │
-├───────────────────────────────────────┤
-│  House rules & policies               │
-├───────────────────────────────────────┤
-│  Meet your host (avatar, name, bio)   │
-├───────────────────────────────────────┤
-│  Sticky bottom bar:                   │
-│   £xx total · "Reserve" / "Request"   │
-└───────────────────────────────────────┘
-```
+## Out of scope
+- Real ticketing / availability calendar beyond what `deal_time_slots` already supports.
+- Pickup-location management beyond a single meeting point.
+- Translating activity descriptions.
+- Migrating existing `setup_property_kind = 'alternative'` rows (they stay as stays; the operator can change later).
 
-Behaviour:
-- Date picker + guest stepper live in a slide-up sheet triggered by "Reserve"; selection persists in URL search params (already supported).
-- Blocked dates fed from existing `getBlockedDates`.
-- Price-match badge stays.
-- "Instant book" vs "Request to book" CTA depends on the deal's booking model (from step 10).
-- If the user opened the page from a video clip (`?v=`), a small "via @creator" credit pill appears at the top.
+## Files touched
+- `supabase/migrations/<new>.sql` — schema additions + GRANTs already present.
+- `src/lib/business-setup.functions.ts` — new fns, extended `ensureFirstDeal`.
+- `src/routes/business.setup.tsx` — Step 0 fork, activity step components, branching renderer.
+- `src/components/business/OnboardingChecklist.tsx` — prefer `setup_business_type` for copy.
+- `src/routes/book.$dealId.tsx` — activity-variant chrome + price_unit multiplier.
+- `src/routes/business.apply.tsx` / `src/routes/business.index.tsx` — copy tweak.
 
-The old book screen logic (Stripe embedded checkout, pay-at-property, return URL) is reused as-is — only the chrome around it changes.
-
-## Part C — Backend changes
-
-One migration adds the fields the wizard needs and a couple of supporting tables. All new columns are nullable / defaulted so nothing breaks for existing users.
-
-`profiles` adds:
-- `setup_property_kind text` (`apartment` | `home` | `hotel` | `alternative`)
-- `setup_unit_count int`, `setup_units_same_address bool`
-- `setup_step_completed int default 0`, `setup_completed_at timestamptz`
-- `ota_listings jsonb default '[]'` (array of `{source, url}`)
-- `channel_manager_planned bool default false`
-- `facilities text[] default '{}'`
-- `breakfast_offered text` (`no` | `yes_free` | `yes_paid`), `parking_offered text`
-- `languages_spoken text[] default '{}'`
-- `neighbourhood_blurb text`
-- `default_booking_model text default 'instant'` (`instant` | `request`)
-- `pay_at_property_enabled bool default false`
-- `long_stays_enabled bool default true`
-- `legal_entity_type text` (`individual` | `business`), `legal_entity_name text`, `legal_contact_email text`, `legal_contact_phone text`
-
-`deals` gets:
-- `booking_model text default 'instant'` (defaults from profile at create time)
-
-New server fns in `src/lib/business-setup.functions.ts`:
-- `getMySetupState` (auth, returns profile + first deal + step pointer)
-- `saveSetupStep` (auth, validates step payload with Zod, writes only the columns for that step)
-- `markSetupComplete` (auth, sets `setup_completed_at`, optionally activates first deal)
-
-All use `requireSupabaseAuth`; RLS already covers `profiles` for self-update.
-
-No changes to existing rate plans / rooms / photos schemas — the wizard calls into the same editors.
-
-## Out of scope (this round)
-
-- Real OTA import (Expedia/Airbnb scraping). Step 3 stores URLs only.
-- Real channel-manager (Cloudbeds, SiteMinder) integrations. Captures intent only.
-- Two-column desktop booking layout — single-column mobile-first per your answer.
-- Translating the host profile to other languages.
-- Replacing existing `/business/deals/new` standalone form — it stays for power users editing later.
-
-## Rollout
-
-1. Migration for new profile/deal columns.
-2. New `business-setup.functions.ts` + step Zod schemas.
-3. `/business/setup` route + `WizardShell` + 16 step components (reusing existing editors inside steps 12 and 13).
-4. "Resume setup" entry on `/business` and redirect from `/business/apply` after activation.
-5. Redesign `/book/$dealId` page chrome + restyle `RateSelector` rows; add bottom reserve bar and date/guests sheet.
-6. Smoke: create new business → walk full wizard → list deal → book it as a different user.
