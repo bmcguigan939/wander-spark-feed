@@ -1106,7 +1106,13 @@ function Step10BookingModel({ profile, next, back, refresh }: StepProps) {
 }
 
 // ---------- Step 11: Payments ----------
-function Step11Payments({ profile, next, back, refresh }: StepProps) {
+function Step11Payments({
+  profile,
+  next,
+  back,
+  refresh,
+  hideAtProperty,
+}: StepProps & { hideAtProperty?: boolean }) {
   const save = useServerFn(saveSetupPayments);
   const [payAtProp, setPayAtProp] = useState<boolean>(profile?.pay_at_property_enabled ?? false);
   const [busy, setBusy] = useState(false);
@@ -1123,7 +1129,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
           commission.
         </p>
       </div>
-      <div className="mt-3">
+      {!hideAtProperty && <div className="mt-3">
         <label className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
           <input
             type="checkbox"
@@ -1138,7 +1144,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
             </p>
           </div>
         </label>
-      </div>
+      </div>}
 
       <div className="mt-4">
         <PayoutMethodCard />
@@ -1150,7 +1156,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
         onContinue={async () => {
           setBusy(true);
           try {
-            await save({ data: { pay_at_property_enabled: payAtProp } });
+            await save({ data: { pay_at_property_enabled: hideAtProperty ? false : payAtProp } });
             refresh();
             next();
           } catch (e: any) {
