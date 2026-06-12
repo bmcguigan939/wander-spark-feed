@@ -3161,6 +3161,8 @@ export type Database = {
           business_rating_count: number
           business_rating_refreshed_at: string | null
           business_website_url: string | null
+          cookie_consent: string | null
+          cookie_consent_at: string | null
           created_at: string
           creator_agreement_accepted_at: string | null
           creator_joined_at: string | null
@@ -3217,6 +3219,8 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          cookie_consent?: string | null
+          cookie_consent_at?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
@@ -3273,6 +3277,8 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          cookie_consent?: string | null
+          cookie_consent_at?: string | null
           created_at?: string
           creator_agreement_accepted_at?: string | null
           creator_joined_at?: string | null
