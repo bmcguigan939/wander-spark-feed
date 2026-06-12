@@ -19,10 +19,16 @@ import {
   Plus,
   Minus,
   Bed,
+  Mountain,
+  Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getMySetupState,
+  saveSetupBusinessType,
+  saveSetupActivityBasics,
+  saveSetupActivityLocation,
+  saveSetupActivityPricing,
   saveSetupPropertyType,
   saveSetupCount,
   saveSetupOtaListings,
@@ -44,13 +50,16 @@ import { geocodePlace, type GeocodeResult } from "@/lib/map.functions";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
+import { DealForm } from "@/components/business/DealForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/business/setup")({
   head: () => ({ meta: [{ title: "Set up your property — Travidz" }] }),
   component: BusinessSetupPage,
 });
 
-const TOTAL_STEPS = 16;
+const STAY_TOTAL = 16;
+const ACTIVITY_TOTAL = 11;
 
 type Profile = any;
 type FirstDeal = any;
@@ -73,6 +82,12 @@ function BusinessSetupPage() {
     enabled: !!user && isBusiness,
   });
 
+  const businessType = (data?.profile?.setup_business_type as
+    | "stay"
+    | "activity"
+    | null) ?? null;
+  const total = businessType === "activity" ? ACTIVITY_TOTAL : STAY_TOTAL;
+
   // Where the user currently is in the flow. Initialise to the first
   // incomplete step once state loads.
   const [step, setStep] = useState<number>(1);
@@ -80,10 +95,10 @@ function BusinessSetupPage() {
   useEffect(() => {
     if (!initialised && data?.profile) {
       const completed = data.profile.setup_step_completed ?? 0;
-      setStep(Math.min(TOTAL_STEPS, completed + 1));
+      setStep(Math.min(total, Math.max(1, completed + 1)));
       setInitialised(true);
     }
-  }, [data, initialised]);
+  }, [data, initialised, total]);
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["business-setup-state"] });
@@ -100,12 +115,12 @@ function BusinessSetupPage() {
           </Link>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Step {step} of {TOTAL_STEPS}
+              {businessType ? `Step ${step} of ${total}` : "Choose your path"}
             </p>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+                style={{ width: `${businessType ? (step / total) * 100 : 0}%` }}
               />
             </div>
           </div>
@@ -127,6 +142,8 @@ function BusinessSetupPage() {
             profile={data.profile}
             firstDeal={data.firstDeal}
             refresh={refresh}
+            businessType={businessType}
+            total={total}
           />
         )}
       </div>
@@ -142,16 +159,42 @@ function StepRouter({
   profile,
   firstDeal,
   refresh,
+  businessType,
+  total,
 }: {
   step: number;
   setStep: (n: number) => void;
   profile: Profile;
   firstDeal: FirstDeal | null;
   refresh: () => void;
+  businessType: "stay" | "activity" | null;
+  total: number;
 }) {
-  const next = (n?: number) => setStep(n ?? Math.min(TOTAL_STEPS, step + 1));
+  const next = (n?: number) => setStep(n ?? Math.min(total, step + 1));
   const back = () => setStep(Math.max(1, step - 1));
   const common = { profile, firstDeal, next, back, refresh };
+
+  if (!businessType) {
+    return <Step0BusinessType {...common} />;
+  }
+
+  if (businessType === "activity") {
+    switch (step) {
+      case 1: return <ActivityStep1Basics {...common} />;
+      case 2: return <ActivityStep2Location {...common} />;
+      case 3: return <Step8Languages {...common} />;
+      case 4: return <Step9HostProfile {...common} />;
+      case 5: return <ActivityStep5FirstPackage {...common} />;
+      case 6: return <ActivityStep6Photos {...common} />;
+      case 7: return <ActivityStep7Pricing {...common} />;
+      case 8: return <Step10BookingModel {...common} />;
+      case 9: return <Step11Payments {...common} hideAtProperty />;
+      case 10: return <Step15LegalEntity {...common} />;
+      case 11: return <Step16GoLive {...common} />;
+      default: return null;
+    }
+  }
+
   switch (step) {
     case 1:
       return <Step1Type {...common} />;
@@ -1063,7 +1106,13 @@ function Step10BookingModel({ profile, next, back, refresh }: StepProps) {
 }
 
 // ---------- Step 11: Payments ----------
-function Step11Payments({ profile, next, back, refresh }: StepProps) {
+function Step11Payments({
+  profile,
+  next,
+  back,
+  refresh,
+  hideAtProperty,
+}: StepProps & { hideAtProperty?: boolean }) {
   const save = useServerFn(saveSetupPayments);
   const [payAtProp, setPayAtProp] = useState<boolean>(profile?.pay_at_property_enabled ?? false);
   const [busy, setBusy] = useState(false);
@@ -1080,7 +1129,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
           commission.
         </p>
       </div>
-      <div className="mt-3">
+      {!hideAtProperty && <div className="mt-3">
         <label className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
           <input
             type="checkbox"
@@ -1095,7 +1144,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
             </p>
           </div>
         </label>
-      </div>
+      </div>}
 
       <div className="mt-4">
         <PayoutMethodCard />
@@ -1107,7 +1156,7 @@ function Step11Payments({ profile, next, back, refresh }: StepProps) {
         onContinue={async () => {
           setBusy(true);
           try {
-            await save({ data: { pay_at_property_enabled: payAtProp } });
+            await save({ data: { pay_at_property_enabled: hideAtProperty ? false : payAtProp } });
             refresh();
             next();
           } catch (e: any) {
@@ -1523,6 +1572,515 @@ function Step16GoLive({ profile, firstDeal, back, refresh }: StepProps) {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+// ============================================================
+// Step 0 + Activity path components
+// ============================================================
+
+function Step0BusinessType({ refresh }: StepProps) {
+  const save = useServerFn(saveSetupBusinessType);
+  const [pick, setPick] = useState<"stay" | "activity" | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <StepTitle
+        kicker="Welcome to Travidz"
+        title="What does your business offer?"
+        sub="We'll tailor the next steps so you only answer questions that apply to you."
+      />
+      <div className="space-y-3">
+        <Card onClick={() => setPick("stay")} selected={pick === "stay"}>
+          <div className="rounded-xl bg-primary/15 p-2 text-primary">
+            <Hotel className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Stays</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Hotels, apartments, villas, B&amp;Bs and unique stays.
+            </p>
+          </div>
+          {pick === "stay" && <Check className="h-4 w-4 text-primary" />}
+        </Card>
+        <Card onClick={() => setPick("activity")} selected={pick === "activity"}>
+          <div className="rounded-xl bg-primary/15 p-2 text-primary">
+            <Mountain className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Activities &amp; experiences</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Tours, classes, tastings, rentals, attractions and more.
+            </p>
+          </div>
+          {pick === "activity" && <Check className="h-4 w-4 text-primary" />}
+        </Card>
+      </div>
+      <StickyFooter
+        hideBack
+        disabled={!pick}
+        busy={busy}
+        onContinue={async () => {
+          if (!pick) return;
+          setBusy(true);
+          try {
+            await save({ data: { setup_business_type: pick } });
+            refresh();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+const ACTIVITY_CATEGORIES = [
+  { key: "tour", label: "Tour", sub: "Walking, bus, boat, bike tours and city tours." },
+  { key: "experience", label: "Experience", sub: "Unique one-off experiences travellers join." },
+  { key: "class", label: "Class or workshop", sub: "Cooking, craft, language and other classes." },
+  { key: "rental", label: "Rental", sub: "Equipment, bikes, scooters, gear hire." },
+  { key: "food_drink", label: "Food & drink", sub: "Tastings, dinners, food tours, bar crawls." },
+  { key: "wellness", label: "Wellness & spa", sub: "Spa days, yoga, retreats, massages." },
+  { key: "attraction", label: "Attraction or ticket", sub: "Museums, parks, shows, entry tickets." },
+  { key: "transport", label: "Transport", sub: "Transfers, day trips, charter." },
+  { key: "other", label: "Something else", sub: "Tell us more later." },
+];
+
+const ACTIVITY_FORMATS = [
+  { key: "group", label: "Group", sub: "Guests join other travellers on shared dates." },
+  { key: "private", label: "Private", sub: "Booked exclusively for one party." },
+  { key: "self_guided", label: "Self-guided", sub: "Guests follow your route or kit on their own time." },
+  { key: "ticket", label: "Ticket only", sub: "Time-slot entry without a guide." },
+];
+
+function ActivityStep1Basics({ profile, next, refresh }: StepProps) {
+  const save = useServerFn(saveSetupActivityBasics);
+  const [cat, setCat] = useState<string | null>(profile?.activity_category ?? null);
+  const [fmt, setFmt] = useState<string | null>(profile?.activity_format ?? null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <StepTitle
+        kicker="Get started"
+        title="What kind of activity do you run?"
+        sub="Pick the category that fits best — we'll use it to set up your listing."
+      />
+      <div className="space-y-2">
+        {ACTIVITY_CATEGORIES.map((c) => (
+          <Card key={c.key} onClick={() => setCat(c.key)} selected={cat === c.key}>
+            <div className="rounded-xl bg-primary/15 p-2 text-primary">
+              <Ticket className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{c.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{c.sub}</p>
+            </div>
+            {cat === c.key && <Check className="h-4 w-4 text-primary" />}
+          </Card>
+        ))}
+      </div>
+      {cat && (
+        <>
+          <p className="mt-5 mb-2 text-sm font-medium">How is it booked?</p>
+          <div className="space-y-2">
+            {ACTIVITY_FORMATS.map((f) => (
+              <Card key={f.key} onClick={() => setFmt(f.key)} selected={fmt === f.key}>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{f.label}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{f.sub}</p>
+                </div>
+                {fmt === f.key && <Check className="h-4 w-4 text-primary" />}
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+      <StickyFooter
+        hideBack
+        disabled={!cat || !fmt}
+        busy={busy}
+        onContinue={async () => {
+          if (!cat || !fmt) return;
+          setBusy(true);
+          try {
+            await save({ data: { activity_category: cat as any, activity_format: fmt as any } });
+            refresh();
+            next();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function ActivityStep2Location({ profile, next, back, refresh }: StepProps) {
+  const geocode = useServerFn(geocodePlace);
+  const save = useServerFn(saveSetupActivityLocation);
+  const [q, setQ] = useState(profile?.address ?? profile?.place_name ?? "");
+  const [results, setResults] = useState<GeocodeResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [pick, setPick] = useState<GeocodeResult | null>(
+    profile?.lat && profile?.lng
+      ? {
+          id: "existing",
+          place_name: profile.place_name ?? profile.address ?? "",
+          text: profile.place_name ?? profile.address ?? "",
+          center: [profile.lng, profile.lat],
+        }
+      : null
+  );
+  const [meeting, setMeeting] = useState<string>(profile?.activity_meeting_point ?? "");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!q.trim() || q === pick?.place_name) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const r = await geocode({ data: { q: q.trim() } });
+        setResults(r.results);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  return (
+    <>
+      <StepTitle
+        title="Where does your activity take place?"
+        sub="Pick the main address, then tell guests exactly where to meet you."
+      />
+      <div className="relative">
+        <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPick(null);
+          }}
+          placeholder="Street, city, postal code…"
+          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-3 text-sm outline-none focus:border-primary"
+        />
+        {searching && (
+          <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
+      {results.length > 0 && !pick && (
+        <ul className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+          {results.map((r) => (
+            <li key={r.id}>
+              <button
+                className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-primary/5"
+                onClick={() => {
+                  setPick(r);
+                  setQ(r.place_name);
+                  setResults([]);
+                }}
+              >
+                <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <span>{r.place_name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pick && (
+        <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+          <div className="flex items-start gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+            <div>
+              <p className="font-medium">{pick.place_name}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Pin: {pick.center[1].toFixed(4)}, {pick.center[0].toFixed(4)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      <Field
+        label="Meeting point instructions"
+        hint="What guests will see in their booking confirmation."
+      >
+        <textarea
+          value={meeting}
+          onChange={(e) => setMeeting(e.target.value)}
+          rows={3}
+          placeholder="e.g. Meet outside the main entrance of the museum, near the ticket booth."
+          className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+        />
+      </Field>
+      <StickyFooter
+        onBack={back}
+        busy={busy}
+        disabled={!pick}
+        onContinue={async () => {
+          if (!pick) return;
+          setBusy(true);
+          try {
+            const parts = pick.place_name.split(",").map((s) => s.trim());
+            const country = parts[parts.length - 1] ?? null;
+            const city = parts.length >= 3 ? parts[parts.length - 3] : parts[0] ?? null;
+            await save({
+              data: {
+                address: pick.place_name,
+                place_name: pick.place_name,
+                business_city: city,
+                business_country: country,
+                lat: pick.center[1],
+                lng: pick.center[0],
+                activity_meeting_point: meeting || null,
+              },
+            });
+            refresh();
+            next();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function ActivityStep5FirstPackage({ profile, firstDeal, next, back, refresh }: StepProps) {
+  const ensure = useServerFn(ensureFirstDeal);
+  const mark = useServerFn(markSetupStepComplete);
+  const [creating, setCreating] = useState(false);
+  const [dealId, setDealId] = useState<string | null>(firstDeal?.id ?? null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (dealId) return;
+    setCreating(true);
+    ensure()
+      .then((r) => {
+        setDealId(r.id);
+        refresh();
+      })
+      .catch((e: any) => toast.error(e?.message ?? "Could not create draft package"))
+      .finally(() => setCreating(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSave(values: any) {
+    if (!dealId) return;
+    const patch: Record<string, any> = {
+      title: values.title,
+      description: values.description ?? null,
+      image_url: values.image_url ?? null,
+      destination: values.destination ?? null,
+      country: values.country ?? null,
+      city: values.city ?? null,
+      discount_label: values.discount_label ?? null,
+      lat: values.lat ?? null,
+      lng: values.lng ?? null,
+      category: values.category ?? "do",
+    };
+    const { error } = await supabase
+      .from("deals")
+      .update(patch as never)
+      .eq("id", dealId);
+    if (error) toast.error(error.message);
+  }
+
+  return (
+    <>
+      <StepTitle
+        title="Set up your first package"
+        sub="Give travellers a clear picture of what they'll get. You can add more packages from your dashboard later."
+      />
+      {creating && (
+        <div className="flex h-32 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {dealId && (
+        <div className="rounded-2xl border border-border bg-card p-3">
+          <DealForm
+            initial={{
+              title: firstDeal?.title ?? "",
+              description: firstDeal?.description ?? "",
+              image_url: firstDeal?.image_url ?? "",
+              destination: profile?.place_name ?? undefined,
+              city: profile?.business_city ?? undefined,
+              country: profile?.business_country ?? undefined,
+              lat: profile?.lat ?? undefined,
+              lng: profile?.lng ?? undefined,
+              is_active: false,
+              category: profile?.activity_category === "tour" ? "tour" : "do",
+            }}
+            accountKind="activity"
+            submitLabel="Save"
+            autoSaveOnBlur
+            onSubmit={handleSave}
+          />
+        </div>
+      )}
+      <StickyFooter
+        onBack={back}
+        busy={busy}
+        disabled={!dealId}
+        onContinue={async () => {
+          setBusy(true);
+          try {
+            await mark({ data: { step: 5 } });
+            refresh();
+            next();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+function ActivityStep6Photos({ profile, next, back, refresh }: StepProps) {
+  const mark = useServerFn(markSetupStepComplete);
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <StepTitle
+        title="Show your activity"
+        sub="Upload at least 5 photos that show what guests will experience."
+      />
+      <BusinessPhotosEditor businessId={profile.id} kind="activity" />
+      <StickyFooter
+        onBack={back}
+        busy={busy}
+        onContinue={async () => {
+          setBusy(true);
+          try {
+            await mark({ data: { step: 6 } });
+            refresh();
+            next();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+const ACTIVITY_PRICE_UNITS = [
+  { v: "per_person", label: "Per person" },
+  { v: "per_group", label: "Per group / private booking" },
+  { v: "flat", label: "Flat ticket price" },
+];
+
+function ActivityStep7Pricing({ firstDeal, next, back, refresh }: StepProps) {
+  const save = useServerFn(saveSetupActivityPricing);
+  const [priceMajor, setPriceMajor] = useState<string>(
+    firstDeal?.price_cents ? (firstDeal.price_cents / 100).toFixed(2) : ""
+  );
+  const [currency, setCurrency] = useState<string>(firstDeal?.currency ?? "GBP");
+  const [unit, setUnit] = useState<string>(firstDeal?.price_unit ?? "per_person");
+  const [policy, setPolicy] = useState<string>(
+    firstDeal?.cancellation_policy_code ?? "free_cancel_until_start"
+  );
+  const [busy, setBusy] = useState(false);
+  const priceNum = Number(priceMajor);
+  const valid = firstDeal?.id && priceNum > 0 && currency.length === 3;
+
+  return (
+    <>
+      <StepTitle
+        title="Pricing & cancellation"
+        sub="Set the price guests will see and how cancellations work."
+      />
+      <div className="space-y-3">
+        <Field label="Price">
+          <div className="flex gap-2">
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm"
+            >
+              {["GBP", "EUR", "USD"].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={priceMajor}
+              onChange={(e) => setPriceMajor(e.target.value)}
+              className="flex-1 rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+              placeholder="45.00"
+            />
+          </div>
+        </Field>
+        <Field label="Charged">
+          <div className="space-y-2">
+            {ACTIVITY_PRICE_UNITS.map((u) => (
+              <Card key={u.v} onClick={() => setUnit(u.v)} selected={unit === u.v}>
+                <div className="flex-1 text-sm">{u.label}</div>
+                {unit === u.v && <Check className="h-4 w-4 text-primary" />}
+              </Card>
+            ))}
+          </div>
+        </Field>
+        <Field label="Cancellation policy">
+          <div className="space-y-2">
+            {CANCEL_POLICIES.map((p) => (
+              <Card key={p.v} onClick={() => setPolicy(p.v)} selected={policy === p.v}>
+                <div className="flex-1 text-sm">{p.label}</div>
+                {policy === p.v && <Check className="h-4 w-4 text-primary" />}
+              </Card>
+            ))}
+          </div>
+        </Field>
+      </div>
+      <StickyFooter
+        onBack={back}
+        busy={busy}
+        disabled={!valid}
+        onContinue={async () => {
+          if (!valid) return;
+          setBusy(true);
+          try {
+            await save({
+              data: {
+                dealId: firstDeal!.id,
+                price_cents: Math.round(priceNum * 100),
+                currency,
+                price_unit: unit as any,
+                cancellation_policy_code: policy as any,
+              },
+            });
+            refresh();
+            next();
+          } catch (e: any) {
+            toast.error(e?.message ?? "Could not save");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
     </>
   );
 }

@@ -10,6 +10,7 @@ import { COMMISSION } from "@/lib/commission";
 import { getMyCollabRules } from "@/lib/collabs.functions";
 import { listMyDeals } from "@/lib/deals.functions";
 import { listMyCompetitorUrls } from "@/lib/business-competitor-urls.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 type Step = {
   id: string;
@@ -111,12 +112,30 @@ export function OnboardingChecklist() {
     queryFn: () => urlsFn(),
     enabled: !!user?.id,
   });
+  // Setup wizard's business type wins over the legacy account-kind heuristic.
+  const { data: setupBizType } = useQuery({
+    queryKey: ["my-setup-business-type", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("setup_business_type")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return (data as any)?.setup_business_type as "stay" | "activity" | null;
+    },
+    enabled: !!user?.id,
+  });
   const brokenPinCount = ((competitorUrls?.urls ?? []) as Array<{ last_status: string | null }>)
     .filter((u) => u.last_status === "broken" || u.last_status === "wrong_domain" || u.last_status === "no_price")
     .length;
   const firstDealId: string | null = (myDeals?.deals ?? [])[0]?.id ?? null;
 
-  const accountKind: AccountKind = bookable?.accountKind ?? "unknown";
+  const accountKind: AccountKind =
+    setupBizType === "activity"
+      ? "activity"
+      : setupBizType === "stay"
+        ? "stay"
+        : (bookable?.accountKind ?? "unknown");
   const ALL_GATES: BookableGate[] =
     accountKind === "activity"
       ? ["website", "photos", "items", "payouts"]

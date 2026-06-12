@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // only the columns it owns. Resume is driven by setup_step_completed.
 
 const setupSelect =
-  "id,setup_property_kind,setup_unit_count,setup_units_same_address,setup_step_completed,setup_completed_at,ota_listings,channel_manager_planned,facilities,breakfast_offered,parking_offered,languages_spoken,neighbourhood_blurb,default_booking_model,pay_at_property_enabled,long_stays_enabled,legal_entity_type,legal_entity_name,legal_contact_email,legal_contact_phone,display_name,bio,address,place_name,lat,lng,business_name,business_website_url,business_country,business_city,business_agreement_accepted_at,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,payout_method";
+  "id,setup_business_type,activity_category,activity_format,activity_meeting_point,setup_property_kind,setup_unit_count,setup_units_same_address,setup_step_completed,setup_completed_at,ota_listings,channel_manager_planned,facilities,breakfast_offered,parking_offered,languages_spoken,neighbourhood_blurb,default_booking_model,pay_at_property_enabled,long_stays_enabled,legal_entity_type,legal_entity_name,legal_contact_email,legal_contact_phone,display_name,bio,address,place_name,lat,lng,business_name,business_website_url,business_country,business_city,business_agreement_accepted_at,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,payout_method";
 
 export const getMySetupState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -22,13 +22,101 @@ export const getMySetupState = createServerFn({ method: "GET" })
     const { data: firstDeal } = await supabaseAdmin
       .from("deals")
       .select(
-        "id,title,description,image_url,price_cents,currency,is_active,status,cancellation_policy_code,booking_model,category"
+        "id,title,description,image_url,price_cents,currency,is_active,status,cancellation_policy_code,booking_model,category,price_unit"
       )
       .eq("business_id", userId)
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     return { profile, firstDeal };
+  });
+
+// Step 0: business type (stay vs activity)
+export const saveSetupBusinessType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({ setup_business_type: z.enum(["stay", "activity"]) })
+      .parse(i)
+  )
+  .handler(async ({ data, context }) =>
+    bumpStep(context.userId, 0, { setup_business_type: data.setup_business_type })
+  );
+
+// Activity Step A: category + format
+export const saveSetupActivityBasics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        activity_category: z.enum([
+          "tour",
+          "experience",
+          "class",
+          "rental",
+          "food_drink",
+          "wellness",
+          "attraction",
+          "transport",
+          "other",
+        ]),
+        activity_format: z.enum(["group", "private", "self_guided", "ticket"]),
+      })
+      .parse(i)
+  )
+  .handler(async ({ data, context }) => bumpStep(context.userId, 1, { ...data }));
+
+// Activity Step B: meeting point (extends address save)
+export const saveSetupActivityLocation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        address: z.string().min(2).max(300),
+        place_name: z.string().max(200).optional().nullable(),
+        business_city: z.string().max(120).optional().nullable(),
+        business_country: z.string().max(120).optional().nullable(),
+        lat: z.number().min(-90).max(90).optional().nullable(),
+        lng: z.number().min(-180).max(180).optional().nullable(),
+        activity_meeting_point: z.string().max(400).optional().nullable(),
+      })
+      .parse(i)
+  )
+  .handler(async ({ data, context }) => bumpStep(context.userId, 2, { ...data }));
+
+// Activity Step pricing (per-person price + cancellation, no long-stays)
+export const saveSetupActivityPricing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        dealId: z.string().uuid(),
+        price_cents: z.number().int().min(0).max(10_000_000),
+        currency: z.string().length(3),
+        price_unit: z.enum(["per_person", "per_group", "flat"]),
+        cancellation_policy_code: z.enum([
+          "travidz_standard",
+          "free_cancel_until_start",
+          "non_refundable",
+          "custom_24h",
+          "custom_7d",
+        ]),
+      })
+      .parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await supabaseAdmin
+      .from("deals")
+      .update({
+        price_cents: data.price_cents,
+        currency: data.currency,
+        price_unit: data.price_unit,
+        cancellation_policy_code: data.cancellation_policy_code,
+      })
+      .eq("id", data.dealId)
+      .eq("business_id", context.userId);
+    if (error) throw new Error(error.message);
+    return bumpStep(context.userId, 8, {});
   });
 
 async function bumpStep(userId: string, step: number, patch: Record<string, unknown>) {
@@ -314,15 +402,23 @@ export const ensureFirstDeal = createServerFn({ method: "POST" })
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select(
-        "display_name,business_name,business_city,business_country,address,lat,lng,setup_property_kind,default_booking_model"
+        "display_name,business_name,business_city,business_country,address,lat,lng,setup_property_kind,setup_business_type,activity_category,default_booking_model"
       )
       .eq("id", userId)
       .maybeSingle();
     const p: any = profile ?? {};
-    const category =
-      p.setup_property_kind === "hotel" || p.setup_property_kind === "apartment" || p.setup_property_kind === "home"
+    const isActivity = p.setup_business_type === "activity";
+    const category = isActivity
+      ? p.activity_category === "tour"
+        ? "tour"
+        : "do"
+      : p.setup_property_kind === "hotel" ||
+          p.setup_property_kind === "apartment" ||
+          p.setup_property_kind === "home" ||
+          p.setup_property_kind === "alternative"
         ? "stay"
         : "other";
+    const price_unit = isActivity ? "per_person" : "per_night";
     const title = p.business_name || p.display_name || "My listing";
     const { data: row, error } = await supabaseAdmin
       .from("deals")
@@ -341,6 +437,7 @@ export const ensureFirstDeal = createServerFn({ method: "POST" })
         status: "draft",
         booking_model: p.default_booking_model ?? "instant",
         currency: "GBP",
+        price_unit,
         url: "https://travidz.com/",
       } as any)
       .select("id")

@@ -2160,6 +2160,7 @@ export type Database = {
           parity_exempt: boolean
           parity_exempt_reason: string | null
           price_cents: number | null
+          price_unit: string | null
           quality_reasons: Json | null
           quality_score: number | null
           source: string
@@ -2206,6 +2207,7 @@ export type Database = {
           parity_exempt?: boolean
           parity_exempt_reason?: string | null
           price_cents?: number | null
+          price_unit?: string | null
           quality_reasons?: Json | null
           quality_score?: number | null
           source?: string
@@ -2252,6 +2254,7 @@ export type Database = {
           parity_exempt?: boolean
           parity_exempt_reason?: string | null
           price_cents?: number | null
+          price_unit?: string | null
           quality_reasons?: Json | null
           quality_score?: number | null
           source?: string
@@ -3149,6 +3152,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_category: string | null
+          activity_format: string | null
+          activity_meeting_point: string | null
           address: string | null
           avatar_url: string | null
           bio: string | null
@@ -3206,6 +3212,7 @@ export type Database = {
           review_reason: string | null
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
+          setup_business_type: string | null
           setup_completed_at: string | null
           setup_property_kind: string | null
           setup_step_completed: number
@@ -3226,6 +3233,9 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          activity_category?: string | null
+          activity_format?: string | null
+          activity_meeting_point?: string | null
           address?: string | null
           avatar_url?: string | null
           bio?: string | null
@@ -3283,6 +3293,7 @@ export type Database = {
           review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          setup_business_type?: string | null
           setup_completed_at?: string | null
           setup_property_kind?: string | null
           setup_step_completed?: number
@@ -3303,6 +3314,9 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          activity_category?: string | null
+          activity_format?: string | null
+          activity_meeting_point?: string | null
           address?: string | null
           avatar_url?: string | null
           bio?: string | null
@@ -3360,6 +3374,7 @@ export type Database = {
           review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          setup_business_type?: string | null
           setup_completed_at?: string | null
           setup_property_kind?: string | null
           setup_step_completed?: number

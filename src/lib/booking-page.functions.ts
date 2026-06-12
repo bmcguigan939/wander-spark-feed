@@ -15,7 +15,7 @@ export const getBookablePropertyDetails = createServerFn({ method: "GET" })
     const { data: deal, error } = await supabaseAdmin
       .from("deals")
       .select(
-        "id,title,description,destination,country,city,discount_label,price_cents,currency,image_url,is_active,bookable,status,category,cancellation_policy_code,booking_model,deal_rating_avg,deal_rating_count,business_id,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url,business_name,business_rating_avg,business_rating_count,bio,neighbourhood_blurb,facilities,languages_spoken,breakfast_offered,parking_offered,pay_at_property_enabled,place_name,address,business_city,business_country)"
+        "id,title,description,destination,country,city,discount_label,price_cents,currency,price_unit,image_url,is_active,bookable,status,category,cancellation_policy_code,booking_model,deal_rating_avg,deal_rating_count,business_id,business:profiles!deals_business_id_fkey(id,username,display_name,avatar_url,business_name,business_rating_avg,business_rating_count,bio,neighbourhood_blurb,facilities,languages_spoken,breakfast_offered,parking_offered,pay_at_property_enabled,place_name,address,business_city,business_country,setup_business_type,activity_category,activity_format,activity_meeting_point)"
       )
       .eq("id", data.dealId)
       .maybeSingle();

@@ -83,7 +83,28 @@ function BookPage() {
   );
   const dateBlocked = !!(travelDate && blockedSet.has(travelDate));
 
-  const total = useMemo(() => (deal?.price_cents ?? 0) * guests, [deal, guests]);
+  // Activities priced per_group/flat charge a single fee regardless of guests.
+  const priceUnit = (deal as any)?.price_unit as
+    | "per_night"
+    | "per_person"
+    | "per_group"
+    | "flat"
+    | undefined;
+  const isFlatPriced = priceUnit === "per_group" || priceUnit === "flat";
+  const total = useMemo(
+    () => (deal?.price_cents ?? 0) * (isFlatPriced ? 1 : guests),
+    [deal, guests, isFlatPriced]
+  );
+  const unitLabel =
+    priceUnit === "per_night"
+      ? "per night"
+      : priceUnit === "per_person"
+        ? "per person"
+        : priceUnit === "per_group"
+          ? "per group"
+          : priceUnit === "flat"
+            ? "per booking"
+            : "";
   const fmt = (cents: number) =>
     (cents / 100).toLocaleString("en-GB", {
       style: "currency",
@@ -255,8 +276,12 @@ function BookPage() {
             <section>
               <h2 className="text-sm font-semibold">Choose your room or rate</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Showing {fmt(deal.price_cents ?? 0)} base price × {guests}{" "}
-                {guests === 1 ? "guest" : "guests"}.
+                {fmt(deal.price_cents ?? 0)}
+                {unitLabel ? ` ${unitLabel}` : ""}
+                {!isFlatPriced && (
+                  <> × {guests} {guests === 1 ? "guest" : "guests"}</>
+                )}
+                .
               </p>
               <div className="mt-3">
                 <RateSelector
