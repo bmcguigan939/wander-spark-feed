@@ -2128,6 +2128,7 @@ export type Database = {
           ai_confidence: number | null
           ai_summary: string | null
           bookable: boolean
+          booking_model: string
           business_id: string | null
           cancellation_policy_code: string
           category: Database["public"]["Enums"]["deal_category"]
@@ -2173,6 +2174,7 @@ export type Database = {
           ai_confidence?: number | null
           ai_summary?: string | null
           bookable?: boolean
+          booking_model?: string
           business_id?: string | null
           cancellation_policy_code?: string
           category?: Database["public"]["Enums"]["deal_category"]
@@ -2218,6 +2220,7 @@ export type Database = {
           ai_confidence?: number | null
           ai_summary?: string | null
           bookable?: boolean
+          booking_model?: string
           business_id?: string | null
           cancellation_policy_code?: string
           category?: Database["public"]["Enums"]["deal_category"]
@@ -3152,6 +3155,7 @@ export type Database = {
           block_reason: string | null
           blocked_at: string | null
           blocked_by: string | null
+          breakfast_offered: string | null
           business_agreement_accepted_at: string | null
           business_city: string | null
           business_country: string | null
@@ -3161,6 +3165,7 @@ export type Database = {
           business_rating_count: number
           business_rating_refreshed_at: string | null
           business_website_url: string | null
+          channel_manager_planned: boolean
           cookie_consent: string | null
           cookie_consent_at: string | null
           created_at: string
@@ -3170,15 +3175,27 @@ export type Database = {
           creator_quality_score: number | null
           creator_rating_avg: number | null
           creator_rating_count: number
+          default_booking_model: string
           display_name: string | null
+          facilities: string[]
           founding_creator_number: number | null
           id: string
           is_blocked: boolean
           is_founding_creator: boolean
           is_restaurant: boolean
           is_verified: boolean
+          languages_spoken: string[]
           lat: number | null
+          legal_contact_email: string | null
+          legal_contact_phone: string | null
+          legal_entity_name: string | null
+          legal_entity_type: string | null
           lng: number | null
+          long_stays_enabled: boolean
+          neighbourhood_blurb: string | null
+          ota_listings: Json
+          parking_offered: string | null
+          pay_at_property_enabled: boolean
           payout_bank_details_encrypted: string | null
           payout_method: string
           pending_admin_review: boolean
@@ -3189,6 +3206,11 @@ export type Database = {
           review_reason: string | null
           rolling_12mo_gbv_cents: number
           rolling_12mo_gbv_refreshed_at: string | null
+          setup_completed_at: string | null
+          setup_property_kind: string | null
+          setup_step_completed: number
+          setup_unit_count: number | null
+          setup_units_same_address: boolean | null
           stripe_connect_account_id: string | null
           stripe_connect_charges_enabled: boolean
           stripe_connect_country: string | null
@@ -3210,6 +3232,7 @@ export type Database = {
           block_reason?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
+          breakfast_offered?: string | null
           business_agreement_accepted_at?: string | null
           business_city?: string | null
           business_country?: string | null
@@ -3219,6 +3242,7 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          channel_manager_planned?: boolean
           cookie_consent?: string | null
           cookie_consent_at?: string | null
           created_at?: string
@@ -3228,15 +3252,27 @@ export type Database = {
           creator_quality_score?: number | null
           creator_rating_avg?: number | null
           creator_rating_count?: number
+          default_booking_model?: string
           display_name?: string | null
+          facilities?: string[]
           founding_creator_number?: number | null
           id: string
           is_blocked?: boolean
           is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
+          languages_spoken?: string[]
           lat?: number | null
+          legal_contact_email?: string | null
+          legal_contact_phone?: string | null
+          legal_entity_name?: string | null
+          legal_entity_type?: string | null
           lng?: number | null
+          long_stays_enabled?: boolean
+          neighbourhood_blurb?: string | null
+          ota_listings?: Json
+          parking_offered?: string | null
+          pay_at_property_enabled?: boolean
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           pending_admin_review?: boolean
@@ -3247,6 +3283,11 @@ export type Database = {
           review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          setup_completed_at?: string | null
+          setup_property_kind?: string | null
+          setup_step_completed?: number
+          setup_unit_count?: number | null
+          setup_units_same_address?: boolean | null
           stripe_connect_account_id?: string | null
           stripe_connect_charges_enabled?: boolean
           stripe_connect_country?: string | null
@@ -3268,6 +3309,7 @@ export type Database = {
           block_reason?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
+          breakfast_offered?: string | null
           business_agreement_accepted_at?: string | null
           business_city?: string | null
           business_country?: string | null
@@ -3277,6 +3319,7 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          channel_manager_planned?: boolean
           cookie_consent?: string | null
           cookie_consent_at?: string | null
           created_at?: string
@@ -3286,15 +3329,27 @@ export type Database = {
           creator_quality_score?: number | null
           creator_rating_avg?: number | null
           creator_rating_count?: number
+          default_booking_model?: string
           display_name?: string | null
+          facilities?: string[]
           founding_creator_number?: number | null
           id?: string
           is_blocked?: boolean
           is_founding_creator?: boolean
           is_restaurant?: boolean
           is_verified?: boolean
+          languages_spoken?: string[]
           lat?: number | null
+          legal_contact_email?: string | null
+          legal_contact_phone?: string | null
+          legal_entity_name?: string | null
+          legal_entity_type?: string | null
           lng?: number | null
+          long_stays_enabled?: boolean
+          neighbourhood_blurb?: string | null
+          ota_listings?: Json
+          parking_offered?: string | null
+          pay_at_property_enabled?: boolean
           payout_bank_details_encrypted?: string | null
           payout_method?: string
           pending_admin_review?: boolean
@@ -3305,6 +3360,11 @@ export type Database = {
           review_reason?: string | null
           rolling_12mo_gbv_cents?: number
           rolling_12mo_gbv_refreshed_at?: string | null
+          setup_completed_at?: string | null
+          setup_property_kind?: string | null
+          setup_step_completed?: number
+          setup_unit_count?: number | null
+          setup_units_same_address?: boolean | null
           stripe_connect_account_id?: string | null
           stripe_connect_charges_enabled?: boolean
           stripe_connect_country?: string | null
