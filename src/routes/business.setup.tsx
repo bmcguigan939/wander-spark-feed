@@ -1896,7 +1896,7 @@ function ActivityStep5FirstPackage({ profile, firstDeal, next, back, refresh }: 
     };
     const { error } = await supabase
       .from("deals")
-      .update(patch)
+      .update(patch as never)
       .eq("id", dealId);
     if (error) toast.error(error.message);
   }
