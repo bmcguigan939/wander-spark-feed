@@ -38,8 +38,10 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const [overlayHeight, setOverlayHeight] = useState(0);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("travidz:feedCollapsed") === "1";
+    if (typeof window === "undefined") return true;
+    const v = window.sessionStorage.getItem("travidz:feedCollapsed");
+    // Default to collapsed; only expand if user explicitly chose "0" this session.
+    return v === null ? true : v === "1";
   });
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -117,6 +119,12 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
       const prevLiked = liked;
       setLiked(!prevLiked);
       patchFeeds("like_count", delta);
+      // Auto-expand deals when the user likes (not when unliking),
+      // and remember the preference for the rest of the session.
+      if (!prevLiked) {
+        setCollapsed(false);
+        try { window.sessionStorage.setItem("travidz:feedCollapsed", "0"); } catch {}
+      }
       return {
         rollback: () => {
           setLiked(prevLiked);
