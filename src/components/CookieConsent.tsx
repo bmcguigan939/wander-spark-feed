@@ -1,28 +1,89 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "travidz_cookie_consent_v1";
 
+type ConsentValue = "accepted" | "essential";
+
+function readLocal(): ConsentValue | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw).value;
+    return v === "accepted" || v === "essential" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocal(value: ConsentValue) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ value, at: new Date().toISOString() }),
+    );
+  } catch {}
+}
+
 export function CookieConsent() {
+  const { user, loading } = useAuth();
   const [show, setShow] = useState(false);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(STORAGE_KEY)) setShow(true);
-    } catch {}
-  }, []);
+    if (loading) return;
+    let cancelled = false;
+    (async () => {
+      const local = readLocal();
+      if (!user) {
+        if (!cancelled) {
+          setShow(!local);
+          setResolved(true);
+        }
+        return;
+      }
+      // Signed in: server value wins.
+      const { data } = await supabase
+        .from("profiles")
+        .select("cookie_consent")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const serverValue = (data as { cookie_consent?: ConsentValue | null } | null)?.cookie_consent ?? null;
+      if (serverValue) {
+        writeLocal(serverValue);
+        setShow(false);
+      } else if (local) {
+        // Backfill local choice to profile so it follows them across devices.
+        await supabase
+          .from("profiles")
+          .update({ cookie_consent: local, cookie_consent_at: new Date().toISOString() })
+          .eq("id", user.id);
+        setShow(false);
+      } else {
+        setShow(true);
+      }
+      setResolved(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, loading]);
 
-  const decide = (value: "accepted" | "essential") => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ value, at: new Date().toISOString() }),
-      );
-    } catch {}
+  const decide = async (value: ConsentValue) => {
+    writeLocal(value);
     setShow(false);
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ cookie_consent: value, cookie_consent_at: new Date().toISOString() })
+        .eq("id", user.id);
+    }
   };
 
-  if (!show) return null;
+  if (!resolved || !show) return null;
 
   return (
     <div
