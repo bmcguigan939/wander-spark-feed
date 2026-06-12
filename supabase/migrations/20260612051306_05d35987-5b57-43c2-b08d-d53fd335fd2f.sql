@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS cookie_consent text, ADD COLUMN IF NOT EXISTS cookie_consent_at timestamptz;
