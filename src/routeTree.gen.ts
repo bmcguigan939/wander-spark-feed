@@ -61,6 +61,7 @@ import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as CollabCodeRouteImport } from './routes/collab.$code'
 import { Route as BusinessThreadsRouteImport } from './routes/business.threads'
 import { Route as BusinessSignupRouteImport } from './routes/business.signup'
+import { Route as BusinessSetupRouteImport } from './routes/business.setup'
 import { Route as BusinessRedemptionsRouteImport } from './routes/business.redemptions'
 import { Route as BusinessPriceAuditRouteImport } from './routes/business.price-audit'
 import { Route as BusinessPhotosRouteImport } from './routes/business.photos'
@@ -377,6 +378,11 @@ const BusinessThreadsRoute = BusinessThreadsRouteImport.update({
 const BusinessSignupRoute = BusinessSignupRouteImport.update({
   id: '/business/signup',
   path: '/business/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessSetupRoute = BusinessSetupRouteImport.update({
+  id: '/business/setup',
+  path: '/business/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessRedemptionsRoute = BusinessRedemptionsRouteImport.update({
@@ -719,6 +725,7 @@ export interface FileRoutesByFullPath {
   '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/setup': typeof BusinessSetupRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
   '/collab/$code': typeof CollabCodeRoute
@@ -828,6 +835,7 @@ export interface FileRoutesByTo {
   '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/setup': typeof BusinessSetupRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
   '/collab/$code': typeof CollabCodeRoute
@@ -939,6 +947,7 @@ export interface FileRoutesById {
   '/business/photos': typeof BusinessPhotosRoute
   '/business/price-audit': typeof BusinessPriceAuditRoute
   '/business/redemptions': typeof BusinessRedemptionsRoute
+  '/business/setup': typeof BusinessSetupRoute
   '/business/signup': typeof BusinessSignupRoute
   '/business/threads': typeof BusinessThreadsRouteWithChildren
   '/collab/$code': typeof CollabCodeRoute
@@ -1052,6 +1061,7 @@ export interface FileRouteTypes {
     | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/setup'
     | '/business/signup'
     | '/business/threads'
     | '/collab/$code'
@@ -1161,6 +1171,7 @@ export interface FileRouteTypes {
     | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/setup'
     | '/business/signup'
     | '/business/threads'
     | '/collab/$code'
@@ -1271,6 +1282,7 @@ export interface FileRouteTypes {
     | '/business/photos'
     | '/business/price-audit'
     | '/business/redemptions'
+    | '/business/setup'
     | '/business/signup'
     | '/business/threads'
     | '/collab/$code'
@@ -1372,6 +1384,7 @@ export interface RootRouteChildren {
   BusinessPhotosRoute: typeof BusinessPhotosRoute
   BusinessPriceAuditRoute: typeof BusinessPriceAuditRoute
   BusinessRedemptionsRoute: typeof BusinessRedemptionsRoute
+  BusinessSetupRoute: typeof BusinessSetupRoute
   BusinessSignupRoute: typeof BusinessSignupRoute
   BusinessThreadsRoute: typeof BusinessThreadsRouteWithChildren
   CollabCodeRoute: typeof CollabCodeRoute
@@ -1794,6 +1807,13 @@ declare module '@tanstack/react-router' {
       path: '/business/signup'
       fullPath: '/business/signup'
       preLoaderRoute: typeof BusinessSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/setup': {
+      id: '/business/setup'
+      path: '/business/setup'
+      fullPath: '/business/setup'
+      preLoaderRoute: typeof BusinessSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business/redemptions': {
@@ -2364,6 +2384,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessPhotosRoute: BusinessPhotosRoute,
   BusinessPriceAuditRoute: BusinessPriceAuditRoute,
   BusinessRedemptionsRoute: BusinessRedemptionsRoute,
+  BusinessSetupRoute: BusinessSetupRoute,
   BusinessSignupRoute: BusinessSignupRoute,
   BusinessThreadsRoute: BusinessThreadsRouteWithChildren,
   CollabCodeRoute: CollabCodeRoute,

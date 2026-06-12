@@ -28,7 +28,7 @@ function BusinessApply() {
       await applyFn();
       await refreshRoles();
       toast.success("You're now a business account");
-      navigate({ to: "/business" });
+      navigate({ to: "/business/setup" });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to apply");
     }

@@ -12,6 +12,8 @@ import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { useAccountKind } from "@/lib/useAccountKind";
+import { getMySetupState } from "@/lib/business-setup.functions";
+import { Rocket } from "lucide-react";
 
 export const Route = createFileRoute("/business/")({
   head: () => ({ meta: [{ title: "Business Portal — Travidz" }] }),
@@ -23,6 +25,7 @@ function BusinessDashboard() {
   const navigate = useNavigate();
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
+  const fetchSetup = useServerFn(getMySetupState);
   const accountKind = useAccountKind();
 
   useEffect(() => {
@@ -37,6 +40,15 @@ function BusinessDashboard() {
     enabled: !!user && isBusiness,
   });
   const deals = data?.deals ?? [];
+
+  const { data: setupState } = useQuery({
+    queryKey: ["business-setup-state"],
+    queryFn: () => fetchSetup(),
+    enabled: !!user && isBusiness,
+  });
+  const setupStep = (setupState?.profile as any)?.setup_step_completed ?? 0;
+  const setupDone = !!(setupState?.profile as any)?.setup_completed_at;
+  const showSetupCta = !setupDone;
 
   const statsQueries = useQueries({
     queries: deals.map((d: any) => ({
@@ -54,6 +66,20 @@ function BusinessDashboard() {
       <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
         {user && <BusinessLocationPrompt userId={user.id} />}
+        {showSetupCta && (
+          <Link
+            to="/business/setup"
+            className="mb-4 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm"
+          >
+            <span className="flex items-center gap-2 font-semibold text-primary">
+              <Rocket className="h-4 w-4" />
+              {setupStep > 0 ? "Resume property setup" : "Set up your property"}
+            </span>
+            <span className="text-xs font-medium text-primary">
+              {setupStep > 0 ? `Step ${Math.min(setupStep + 1, 16)} / 16` : "Start"}
+            </span>
+          </Link>
+        )}
         <OnboardingChecklist />
         <div className="mb-4">
           <PayoutMethodCard />
