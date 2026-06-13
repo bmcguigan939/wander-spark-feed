@@ -136,7 +136,7 @@ function BusinessDashboard() {
             </div>
           );
         })()}
-        <OnboardingChecklist />
+        {(setupState?.profile as any)?.setup_business_type && <OnboardingChecklist />}
         <div className="mb-4">
           <PayoutMethodCard />
         </div>

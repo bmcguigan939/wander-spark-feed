@@ -1,7 +1,3 @@
-## Change
+In `src/routes/business.index.tsx`, only render `<OnboardingChecklist />` when `setupState?.profile.setup_business_type` is set (`"stay"` or `"activity"`). When null, the "Enable bookings on Travidz" panel is hidden, leaving only the two path-choice cards under "Set up your listing". After the user picks stays or activities, the checklist appears with steps tailored to the chosen path.
 
-Remove the top `<AgreementBanner kind="business" />` from `src/routes/business.index.tsx` so the "Accept business agreement" appears only once — inside the Enable bookings checklist below.
-
-Also drop the now-unused `AgreementBanner` import from that file.
-
-No other files affected. `AgreementBanner.tsx` stays in the codebase (still used elsewhere, e.g. studio/creator surfaces).
+No other files change.
