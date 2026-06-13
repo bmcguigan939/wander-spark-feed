@@ -339,6 +339,11 @@ function UploadFlowBody() {
                   }} />
                 </div>
               </div>
+              {isJunkTitle(title) && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Required — name this so travellers can find it on the map.
+                </p>
+              )}
             </Field>
             <Field label="Description">
               <div className="relative">
