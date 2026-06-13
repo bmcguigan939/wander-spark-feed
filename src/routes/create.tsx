@@ -298,7 +298,7 @@ function UploadFlowBody() {
         )}
 
         {file && !uploading && videoId && !publishedVideoId && (
-          <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) finalizeM.mutate(); }} className="mt-6 space-y-3">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-3">
             <Field label="Title">
               <div className="relative">
                 <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={`${inputCls} pr-10`} />
@@ -341,6 +341,11 @@ function UploadFlowBody() {
               {lat && lng && (
                 <p className="mb-2 text-xs text-primary">
                   ✓ Pinned at {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+                </p>
+              )}
+              {!(lat && lng) && (
+                <p className="mb-2 text-xs text-amber-600 dark:text-amber-400">
+                  This post won't show on the map until you drop a pin.
                 </p>
               )}
               <details className="rounded-xl border border-border bg-card/40 px-3 py-2">
@@ -427,10 +432,11 @@ function UploadFlowBody() {
               </div>
             </Field>
             <button
-              disabled={finalizeM.isPending || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
+              disabled={finalizeM.isPending || resolvingPin || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
               className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
             >
-              {finalizeM.isPending ? "Saving…" :
+              {resolvingPin ? "Finding location…" :
+                finalizeM.isPending ? "Saving…" :
                 publishMode === "now" ? "Publish" :
                 publishMode === "draft" ? "Save draft" : "Schedule"}
             </button>
