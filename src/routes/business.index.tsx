@@ -78,7 +78,7 @@ function BusinessDashboard() {
   return (
     <MobileShell>
       <div className="px-4 pt-6">
-        {user && <BusinessLocationPrompt userId={user.id} />}
+        {setupDone && user && <BusinessLocationPrompt userId={user.id} />}
         {showSetupCta && (() => {
           const kind = (setupState?.profile as any)?.setup_business_type as
             | "stay"
@@ -155,11 +155,14 @@ function BusinessDashboard() {
             </div>
           );
         })()}
-        {(setupState?.profile as any)?.setup_business_type && <OnboardingChecklist />}
-        <div className="mb-4">
-          <PayoutMethodCard />
-        </div>
-        <ChannelManagerCard />
+        {setupDone && (
+          <>
+            <div className="mb-4">
+              <PayoutMethodCard />
+            </div>
+            <ChannelManagerCard />
+          </>
+        )}
         {/* Property photos moved to /business/photos */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
