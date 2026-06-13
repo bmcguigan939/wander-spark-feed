@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { MobileShell } from "@/components/layout/BottomNav";
+// Note: setup wizard intentionally does NOT use MobileShell. The global
+// BottomNav overlaps the per-step StickyFooter (Back/Continue), making it
+// impossible to advance steps. We render a plain shell instead.
 import { useAuth } from "@/lib/auth";
 import {
   ArrowLeft,
@@ -119,7 +121,7 @@ function BusinessSetupPage() {
   if (!user || !isBusiness) return null;
 
   return (
-    <MobileShell>
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col bg-background">
       <div className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <Link to="/business" className="text-muted-foreground hover:text-foreground">
@@ -179,7 +181,7 @@ function BusinessSetupPage() {
           />
         )}
       </div>
-    </MobileShell>
+    </div>
   );
 }
 
