@@ -163,7 +163,7 @@ export function LocationPickerSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-50 flex min-h-0 flex-col bg-background">
       {/* Top bar */}
       <div className="relative z-10 flex items-start gap-2 border-b border-border bg-background/95 p-3 backdrop-blur">
         <div className="min-w-0 flex-1">
