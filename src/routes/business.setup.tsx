@@ -15,7 +15,6 @@ import {
   Home,
   Tent,
   Loader2,
-  MapPin,
   Plus,
   Minus,
   Bed,
