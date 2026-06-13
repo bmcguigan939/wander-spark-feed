@@ -60,7 +60,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const { data: deal, error: dErr } = await supabaseAdmin
       .from("deals")
       .select(
-        "id, business_id, title, image_url, price_cents, currency, bookable, is_active, status, inventory_mode, inventory_remaining, cancellation_policy_code",
+        "id, business_id, title, image_url, price_cents, currency, bookable, is_active, status, inventory_mode, inventory_remaining, cancellation_policy_code, category",
       )
       .eq("id", data.dealId)
       .maybeSingle();
