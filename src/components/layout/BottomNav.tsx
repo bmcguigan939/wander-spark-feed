@@ -21,8 +21,8 @@ export function BottomNav() {
   );
   return (
     <nav
-      className="fixed left-1/2 z-50 w-[min(26rem,calc(100%-1.25rem))] -translate-x-1/2 rounded-full border border-border/40 bg-background/55 shadow-lg shadow-black/30 backdrop-blur-2xl"
-      style={{ bottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+      className="fixed left-1/2 z-40 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 rounded-full border border-border/30 bg-background/35 shadow-lg shadow-black/20 backdrop-blur-2xl"
+      style={{ bottom: "max(env(safe-area-inset-bottom), 0.25rem)" }}
     >
       <ul className="flex items-stretch justify-between px-2 py-1.5">
         {tabs.map(({ to, label, icon: Icon }) => {
