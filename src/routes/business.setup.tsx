@@ -674,8 +674,8 @@ function Step4Address({ profile, next, back, refresh }: StepProps) {
                 place_name: pick.place_name,
                 business_city: city,
                 business_country: country,
-                lat: pick.lat ?? 0,
-                lng: pick.lng ?? 0,
+                lat: pick.lat,
+                lng: pick.lng,
               },
             });
             refresh();
