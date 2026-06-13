@@ -163,7 +163,7 @@ export function LocationPickerSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex min-h-0 flex-col bg-background">
+    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-background">
       {/* Top bar */}
       <div className="relative z-10 flex items-start gap-2 border-b border-border bg-background/95 p-3 backdrop-blur">
         <div className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export function LocationPickerSheet({
           ref={mapRef}
           mapboxAccessToken={MAPBOX_PUBLIC_TOKEN}
           initialViewState={initialView}
-          mapStyle="mapbox://styles/mapbox/standard"
+          mapStyle="mapbox://styles/mapbox/streets-v12"
           onClick={handleMapClick}
           onLoad={() => {
             // Force a resize after the fixed-overlay layout settles so tiles

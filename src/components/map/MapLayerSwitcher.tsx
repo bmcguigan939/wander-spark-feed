@@ -4,7 +4,7 @@ import { Layers, Check } from "lucide-react";
 export type MapLayer = "default" | "satellite" | "terrain";
 
 export const LAYER_STYLES: Record<MapLayer, string> = {
-  default: "mapbox://styles/mapbox/standard",
+  default: "mapbox://styles/mapbox/streets-v12",
   satellite: "mapbox://styles/mapbox/satellite-streets-v12",
   terrain: "mapbox://styles/mapbox/outdoors-v12",
 };
