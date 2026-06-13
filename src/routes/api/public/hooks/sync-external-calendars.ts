@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 import {
   syncBusinessFeed,
   syncOneExternalCalendar,
@@ -9,14 +10,8 @@ export const Route = createFileRoute("/api/public/hooks/sync-external-calendars"
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // pg_cron uses the standard apikey header pattern. /api/public/* is
-        // already unauthenticated at the edge — we just sanity-check the key
-        // matches the project's anon key so random callers can't trigger it.
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY;
-        const provided = request.headers.get("apikey") ?? "";
-        if (!expected || provided !== expected) {
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
 
         // Per-deal calendars that aren't managed by a business feed.
         const { data: cals, error } = await supabaseAdmin
