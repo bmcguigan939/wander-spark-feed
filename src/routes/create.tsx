@@ -96,6 +96,7 @@ function UploadFlowBody() {
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduleAt, setScheduleAt] = useState("");
   const [track, setTrack] = useState<MusicTrack | null>(null);
