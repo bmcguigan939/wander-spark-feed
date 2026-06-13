@@ -60,7 +60,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const { data: deal, error: dErr } = await supabaseAdmin
       .from("deals")
       .select(
-        "id, business_id, title, image_url, price_cents, currency, bookable, is_active, status, inventory_mode, inventory_remaining, cancellation_policy_code",
+        "id, business_id, title, image_url, price_cents, currency, bookable, is_active, status, inventory_mode, inventory_remaining, cancellation_policy_code, category",
       )
       .eq("id", data.dealId)
       .maybeSingle();
@@ -131,6 +131,16 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       | "pay_at_property"
       | "deposit_online_rest_at_property";
 
+    // Travidz only allows "pay at property" for stays (hotels, villas, hostels).
+    // For tour operators / activities / restaurants, we must collect online so
+    // our 11% is captured — those providers can't pre-collect our commission.
+    const isStay = (deal as any).category === "stay";
+    if (paymentTiming === "pay_at_property" && !isStay) {
+      throw new Error(
+        "Pay at property is only available for stays. Please switch this rate to 'Pay online' or 'Deposit now, rest at property'.",
+      );
+    }
+
     if (deal.inventory_mode === "fixed") {
       if ((deal.inventory_remaining ?? 0) < data.guests) {
         throw new Error("Not enough availability");
@@ -167,11 +177,24 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
     const businessPayout = subtotal - commission;
     const currency = (ratePlan?.currency || deal.currency || "GBP").toLowerCase();
 
-    // For deposit flow, only charge the deposit portion online
-    const depositPct = paymentTiming === "deposit_online_rest_at_property" ? ratePlan?.deposit_pct ?? 25 : null;
+    // Effective deposit percentage. Enforce a floor of COMMISSION_PCT so the
+    // online charge always covers Travidz's commission — never let a hotel
+    // configure a deposit smaller than our cut.
+    const configuredDepositPct =
+      paymentTiming === "deposit_online_rest_at_property"
+        ? ratePlan?.deposit_pct ?? 25
+        : null;
+    const depositPct =
+      configuredDepositPct != null
+        ? Math.max(COMMISSION_PCT, configuredDepositPct)
+        : null;
+
+    // For "pay at property", we still take the 11% commission online up front
+    // as a non-refundable deposit. The hotel collects the remaining 89% from
+    // the guest on arrival.
     const chargeNow =
       paymentTiming === "pay_at_property"
-        ? 0
+        ? commission
         : paymentTiming === "deposit_online_rest_at_property"
           ? Math.round((subtotal * (depositPct ?? 25)) / 100)
           : subtotal;
@@ -218,7 +241,9 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         commission_cents: commission,
         business_payout_cents: businessPayout,
         currency: currency.toUpperCase(),
-        status: paymentTiming === "pay_at_property" ? "confirmed" : "pending",
+        // Always pending until Stripe confirms — even for pay-at-property,
+        // because we now collect the 11% deposit online first.
+        status: "pending",
         customer_email: customerEmail ?? undefined,
         customer_name: customer?.display_name ?? customer?.username ?? undefined,
         notes: data.notes ?? undefined,
@@ -231,17 +256,20 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
       .single();
     if (bErr) throw new Error(bErr.message);
 
-    // Pay-at-property: skip Stripe entirely, booking is already confirmed.
-    if (paymentTiming === "pay_at_property") {
-      return { clientSecret: null, bookingId: booking.id, payAtProperty: true };
-    }
-
     const stripe = createStripeClient(data.environment as StripeEnv);
     const productName = `${deal.title}${data.guests > 1 ? ` × ${data.guests}` : ""}`;
     const lineDescription =
       paymentTiming === "deposit_online_rest_at_property"
         ? `${productName} — ${depositPct}% deposit (balance at property)`
-        : productName;
+        : paymentTiming === "pay_at_property"
+          ? `${productName} — ${COMMISSION_PCT}% booking deposit (balance at property)`
+          : productName;
+    // Unit amount for the Stripe line. For per-guest deposit-style charges we
+    // divide by guest count so the line item displays a per-guest unit price.
+    const unitAmount =
+      paymentTiming === "pay_online"
+        ? unitPrice
+        : Math.max(1, Math.round(chargeNow / Math.max(1, data.guests)));
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       ui_mode: "embedded_page",
@@ -254,10 +282,7 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
               name: lineDescription,
               ...(deal.image_url ? { images: [deal.image_url] } : {}),
             },
-            unit_amount:
-              paymentTiming === "deposit_online_rest_at_property"
-                ? Math.round((unitPrice * (depositPct ?? 25)) / 100)
-                : unitPrice,
+            unit_amount: unitAmount,
           },
           quantity: data.guests,
         },
@@ -269,11 +294,20 @@ export const createBookingCheckout = createServerFn({ method: "POST" })
         // Stripe Connect bank, Travidz keeps the application fee.
         ...(connectActive && connectAccountId
           ? {
-              application_fee_amount: computeApplicationFee({
+              // Application fee = the whole chargeNow amount when chargeNow
+              // equals our commission (pay-at-property), otherwise 11% of the
+              // amount actually being charged online (capped at chargeNow so
+              // we never try to fee more than was collected).
+              application_fee_amount: Math.min(
                 chargeNow,
-                guests: data.guests,
-                commissionPct: COMMISSION_PCT,
-              }),
+                paymentTiming === "pay_at_property"
+                  ? commission
+                  : computeApplicationFee({
+                      chargeNow,
+                      guests: data.guests,
+                      commissionPct: COMMISSION_PCT,
+                    }),
+              ),
               transfer_data: { destination: connectAccountId },
             }
           : {}),

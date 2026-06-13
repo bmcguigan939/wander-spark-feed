@@ -140,8 +140,7 @@ function BookPage() {
       if (res.clientSecret) {
         setClientSecret(res.clientSecret);
       } else {
-        // pay_at_property — booking confirmed, no Stripe redirect
-        navigate({ to: "/book/return", search: { booking_id: res.bookingId } as any });
+        throw new Error("Could not start checkout");
       }
     } catch (e: any) {
       setErr(e?.message ?? "Could not start checkout");

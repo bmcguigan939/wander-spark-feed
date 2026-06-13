@@ -1,43 +1,77 @@
-## Goal
+# Two pricing models, driven by deal category
 
-When a user scrolls the feed, the next clip should start playing immediately with sound — no tap-to-unmute required (after the first interaction allows it).
+Today every booking uses one formula (`subtotal × 11%`) and "pay at property" skips Stripe entirely, so Travidz collects £0. We'll split behaviour by `deals.category`:
 
-## Why it isn't already working
+| Category | Model | What guest pays | What Travidz keeps | What provider gets |
+|---|---|---|---|---|
+| `stay` (hotel/villa/hostel) | **Commission** | Listed price | 11% of listed price | 89% of listed price |
+| `tour`, `do`, `eat`, `transport`, `other` | **Markup** | Operator's net × 100/89 (≈ +12.36%) | The uplift | Their full net price |
 
-In `src/components/feed/VideoCard.tsx` the player is hard-coded to start muted:
+## Hotel pay-at-property — the fix
 
-- `useState(true)` for `muted`
-- `autoPlay={active ? "muted" : false}`
+When `payment_timing = 'pay_at_property'` AND category = `stay`:
+- Do **not** skip Stripe.
+- Charge the guest **11% of the subtotal** online now as a non-refundable deposit. That deposit IS Travidz's commission.
+- Hotel collects the remaining 89% from the guest on arrival.
+- Booking is marked `confirmed` only after the Stripe deposit succeeds (via existing webhook), not at insert time.
+- UI copy on the booking page changes from "Pay £0 now" to "Pay £X deposit now — £Y on arrival at the property".
 
-So every clip plays silent until the user taps to unmute. Browsers/iOS also block autoplay-with-sound until the page has received a user gesture — we have to handle that fallback.
+For `deposit_online_rest_at_property`: enforce a **minimum 11% deposit**. If the hotel's configured deposit_pct ≥ 11, no change. If < 11, bump it to 11. Commission stays at 11% of full subtotal (not 11% of deposit), taken as `application_fee_amount` on the Stripe charge.
 
-## Plan
+For `pay_online`: unchanged.
 
-Edit only `src/components/feed/VideoCard.tsx` (frontend/presentation only).
+## Tour operator markup — the fix
 
-1. **Session-wide sound preference.** Replace the per-card `useState(true)` with a tiny shared store (module-level `let` + listener set, or a `useSyncExternalStore` hook in the same file) backed by `sessionStorage` key `travidz:feedSound` (default `"on"`). Once any clip is successfully unmuted, every other card mirrors that state immediately — no more re-muting between scrolls.
+For non-`stay` categories, the price the operator enters in DealForm is their **net rate**. The guest-facing price (and the amount charged to Stripe) is `net × 100 / 89`, rounded up. Travidz's application fee = guest price − operator net × guests. Operator gets exactly what they listed.
 
-2. **Try sound first, fall back to muted.** When `active` becomes true:
-   - Set the player muted to the current preference (`false` if sound is on).
-   - Call `playerRef.current.play()` in a `try/catch`. If it rejects (autoplay-with-sound blocked before first gesture), set muted to `true` and retry `play()`, and flip the shared preference to `"off"` so the UI shows the "tap for sound" affordance.
-   - When the card goes inactive, `pause()` it.
+- DealForm label changes per category: "Price guest pays" (stay) vs "Your net price — we add 11% on top" (tour/do/etc.).
+- `bookings` rows record `operator_net_cents` alongside `subtotal_cents` for reconciliation.
+- "Pay at property" is **disallowed** for tour operators in v1 — the operator collecting cash on the day means we have no way to claim our markup without invoicing. Force `pay_online` or `deposit_online_rest_at_property` (deposit ≥ markup).
 
-3. **Tap toggles sound for the whole feed.** The existing `onClick={() => setMuted(m => !m)}` becomes `toggleFeedSound()` — updates the shared store, persists to `sessionStorage`, and unmutes/mutes the active player. First tap also "unlocks" autoplay-with-sound for subsequent scrolls.
+## Files touched
 
-4. **One-time gesture unlock on the feed.** On mount, attach a one-shot `pointerdown`/`touchstart` listener on `window` that, if the preference is `"on"` but the active player is currently muted (because autoplay was blocked), unmutes and resumes it. Remove after fire.
+1. `src/lib/booking.functions.ts` — branch on `deal.category`; new `chargeNow` rules; enforce deposit minimums; reject pay_at_property for non-stay.
+2. `src/components/business/DealForm.tsx` — dynamic price-field label; hide the "pay at property" option when category ≠ stay; show preview "Guest will pay £X" for operators.
+3. `src/routes/book.$dealId.tsx` — show "Deposit £X now • £Y at property" for hotel pay-at-property; show single guest-facing price for operators.
+4. Migration:
+   - Add `bookings.operator_net_cents int`, `bookings.markup_cents int` (nullable, for operator deals).
+   - No schema change needed for category — already exists.
+5. Webhook (`src/routes/api/public/payments/webhook.ts`) — verify; should already mark booking `confirmed` on `checkout.session.completed`. Remove the "pre-confirm pay_at_property at insert time" path.
 
-5. **Replace static `autoPlay` prop.** Drop `autoPlay={active ? "muted" : false}` in favour of imperatively driving `play()`/`pause()` + `muted` from the `active` effect — gives us the try-sound-then-fallback behaviour above. Keep `playsInline`, `loop`, `poster`.
+## Technical details
 
-6. **Subtle "tap for sound" hint.** When the active card is muted *because* autoplay-with-sound was blocked (not because the user chose mute), show a small pill (e.g. "Tap for sound 🔊") near the existing right-rail buttons that disappears on first tap. Reuses existing Tailwind tokens — no new design system.
+**New `chargeNow` logic in `createBookingCheckout`:**
 
-No backend, schema, or server-function changes. No other components touched.
+```text
+isStay = deal.category === 'stay'
 
-## Out of scope
+if isStay:
+  subtotal = unitPrice * guests           // unitPrice = guest-facing
+  commission = round(subtotal * 0.11)
+  switch payment_timing:
+    pay_online:                       chargeNow = subtotal
+    deposit_online_rest_at_property:  depositPct = max(11, configured)
+                                      chargeNow = round(subtotal * depositPct/100)
+    pay_at_property:                  chargeNow = commission          // NEW
+  applicationFee = commission         // always 11% of full subtotal
+  businessPayout = subtotal - commission
 
-- Per-creator default volume.
-- Remembering sound preference across sessions (sessionStorage only, matches existing `travidz:feedCollapsed` convention).
-- Background audio when the app is backgrounded.
+else (operator):
+  operatorNet = unitPrice * guests          // what operator listed
+  subtotal = ceil(operatorNet * 100 / 89)   // what guest pays
+  markup = subtotal - operatorNet
+  reject if payment_timing == 'pay_at_property'
+  chargeNow = (deposit flow) ? max(markup, deposit) : subtotal
+  applicationFee = markup
+  businessPayout = subtotal - markup        // = operatorNet
+```
 
-## Caveat to flag
+**Application fee** still flows via `payment_intent_data.application_fee_amount` + `transfer_data.destination` on Connect-active businesses.
 
-iOS Safari and most mobile browsers will still refuse autoplay-with-sound until the very first user gesture on the page. The first clip a fresh visitor sees may start muted with the "Tap for sound" hint; every clip after their first tap will play instantly with sound. This is a platform constraint, not something we can bypass.
+**Edge cases handled:** rounding (use `Math.ceil` for guest price so we never under-collect markup), Connect not active (fall back to manual_bank — booking still created, but flag for manual reconciliation), refunds (refund the full `chargeNow`, including our commission, for cancellations within policy).
+
+## Out of scope (flag for later)
+
+- No-show fees / card-on-file for hotel pay-at-property guests who don't show.
+- Allowing operators to opt into "pay at property" once we have a reliable invoicing flow.
+- Surfacing the operator vs guest price split in the business dashboard analytics.

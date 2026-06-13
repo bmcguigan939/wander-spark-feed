@@ -129,7 +129,14 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
             <Tag className="h-4 w-4" /> Rate plans
           </div>
           {flatRates.map((rp) => (
-            <RatePlanRow key={rp.id} rate={rp} dealId={dealId} onChange={invalidate} showBreakfast={false} />
+            <RatePlanRow
+              key={rp.id}
+              rate={rp}
+              dealId={dealId}
+              onChange={invalidate}
+              showBreakfast={false}
+              isLodging={false}
+            />
           ))}
           <AddRateButton dealId={dealId} roomId={null} onAdded={invalidate} />
         </div>
@@ -461,11 +468,13 @@ function RatePlanRow({
   dealId,
   onChange,
   showBreakfast = true,
+  isLodging = true,
 }: {
   rate: RatePlan;
   dealId: string;
   onChange: () => void;
   showBreakfast?: boolean;
+  isLodging?: boolean;
 }) {
   const upsert = useServerFn(upsertRatePlan);
   const del = useServerFn(deleteRatePlan);
@@ -584,21 +593,32 @@ function RatePlanRow({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="pay_online">Pay online now</SelectItem>
-              <SelectItem value="pay_at_property">Pay at property</SelectItem>
+              {isLodging && (
+                <SelectItem value="pay_at_property">Pay at property</SelectItem>
+              )}
               <SelectItem value="deposit_online_rest_at_property">Deposit now, rest at property</SelectItem>
             </SelectContent>
           </Select>
+          {local.payment === "pay_at_property" && (
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Guest pays an 11% deposit online now (Travidz commission) and the
+              remaining 89% to you on arrival.
+            </p>
+          )}
         </div>
         {local.payment === "deposit_online_rest_at_property" && (
           <div>
-            <Label className="text-xs">Deposit %</Label>
+            <Label className="text-xs">Deposit % (min 11)</Label>
             <Input
               type="number"
-              min={1}
+              min={11}
               max={99}
               value={local.deposit}
               onChange={(e) => setLocal({ ...local, deposit: Number(e.target.value) })}
             />
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Minimum 11% so the deposit covers Travidz's commission.
+            </p>
           </div>
         )}
         {showBreakfast && (
