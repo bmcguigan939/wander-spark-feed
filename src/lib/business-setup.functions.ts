@@ -331,10 +331,6 @@ export const getMyChannelFeeds = createServerFn({ method: "GET" })
   });
 
 // (Step 5 legacy alias kept above; nothing else changes.)
-  )
-  .handler(async ({ data, context }) =>
-    bumpStep(context.userId, 5, { channel_manager_planned: data.channel_manager_planned })
-  );
 
 // Step 6: facilities
 export const saveSetupFacilities = createServerFn({ method: "POST" })
