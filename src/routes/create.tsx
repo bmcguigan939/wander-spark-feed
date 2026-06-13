@@ -17,6 +17,7 @@ import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
 import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/lib/cross-links.functions";
 import { ShareToSocialsCard } from "@/components/create/ShareToSocialsCard";
 import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
+import { geocodePlace } from "@/lib/map.functions";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
