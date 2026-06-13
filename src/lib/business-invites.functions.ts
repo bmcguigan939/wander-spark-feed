@@ -157,6 +157,14 @@ export type InviteLanding = {
     view_count: number;
     like_count: number;
   } | null;
+  /**
+   * True when the recipient email has already accepted at least one prior
+   * Travidz invite. The landing page uses this to skip the offer block and
+   * the legal-agreement checkbox so subsequent creators land as one-tap
+   * accepts.
+   */
+  isReturningBusiness: boolean;
+  priorAcceptedInvites: number;
 };
 
 export const getInviteByToken = createServerFn({ method: "GET" })
@@ -167,14 +175,14 @@ export const getInviteByToken = createServerFn({ method: "GET" })
     const { data: invite, error } = await supabaseAdmin
       .from("business_invites")
       .select(
-        "id, business_name, website_url, city, status, expires_at, commission_pct, creator_id, video_id",
+        "id, business_name, website_url, city, status, expires_at, commission_pct, creator_id, video_id, contact_email",
       )
       .eq("token", data.token)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!invite) throw new Error("Invite not found");
 
-    const [{ data: creator }, { data: video }] = await Promise.all([
+    const [{ data: creator }, { data: video }, { count: priorAccepted }] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("id, username, display_name, avatar_url")
@@ -185,6 +193,12 @@ export const getInviteByToken = createServerFn({ method: "GET" })
         .select("id, title, thumbnail_url, view_count, like_count")
         .eq("id", invite.video_id)
         .maybeSingle(),
+      supabaseAdmin
+        .from("business_invites")
+        .select("id", { count: "exact", head: true })
+        .eq("contact_email", (invite.contact_email ?? "").toLowerCase())
+        .eq("status", "accepted")
+        .neq("id", invite.id),
     ]);
 
     // Auto-mark expired if past the window.
@@ -209,6 +223,8 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       },
       creator: creator ?? null,
       video: video ?? null,
+      isReturningBusiness: (priorAccepted ?? 0) > 0,
+      priorAcceptedInvites: priorAccepted ?? 0,
     };
   });
 
