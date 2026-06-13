@@ -568,3 +568,85 @@ export const checkInviteAccountState = createServerFn({ method: "GET" })
     }
     return { email, accountExists };
   });
+
+// Returns the pending invites addressed to the currently signed-in business
+// user's email. Used by the business dashboard to surface one-tap accepts
+// for any creator who's reached out since they last logged in.
+export type PendingInviteForBusiness = {
+  invite_id: string;
+  token: string;
+  business_name: string;
+  city: string | null;
+  created_at: string;
+  expires_at: string;
+  creator: {
+    id: string;
+    username: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+  video: {
+    id: string;
+    title: string | null;
+    thumbnail_url: string | null;
+  } | null;
+};
+
+export const listPendingInvitesForCurrentBusiness = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PendingInviteForBusiness[]> => {
+    const { userId } = context;
+    const { data: actorRes } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const email = (actorRes?.user?.email ?? "").toLowerCase();
+    if (!email) return [];
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("business_invites")
+      .select("id, token, business_name, city, created_at, expires_at, creator_id, video_id")
+      .eq("contact_email", email)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw new Error(error.message);
+    const invites = (rows ?? []) as Array<{
+      id: string;
+      token: string;
+      business_name: string;
+      city: string | null;
+      created_at: string;
+      expires_at: string;
+      creator_id: string;
+      video_id: string;
+    }>;
+    if (invites.length === 0) return [];
+
+    const creatorIds = Array.from(new Set(invites.map((i) => i.creator_id)));
+    const videoIds = Array.from(new Set(invites.map((i) => i.video_id)));
+    const [{ data: creators }, { data: videos }] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", creatorIds),
+      supabaseAdmin
+        .from("videos")
+        .select("id, title, thumbnail_url")
+        .in("id", videoIds),
+    ]);
+    const creatorMap = new Map((creators ?? []).map((c: any) => [c.id, c]));
+    const videoMap = new Map((videos ?? []).map((v: any) => [v.id, v]));
+
+    // Filter out anything past its expiry window (we don't auto-update here).
+    const now = Date.now();
+    return invites
+      .filter((i) => new Date(i.expires_at).getTime() >= now)
+      .map((i) => ({
+        invite_id: i.id,
+        token: i.token,
+        business_name: i.business_name,
+        city: i.city,
+        created_at: i.created_at,
+        expires_at: i.expires_at,
+        creator: creatorMap.get(i.creator_id) ?? null,
+        video: videoMap.get(i.video_id) ?? null,
+      }));
+  });
