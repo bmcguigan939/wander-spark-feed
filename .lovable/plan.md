@@ -1,53 +1,49 @@
-The fork already exists as Step 0 of `/business/setup`, but the **entry surfaces around it still speak "property"-only**, so users (and you) reasonably think activities aren't supported up front. Two things to fix.
+## What's actually happening
 
-## 1. Dashboard entry — generic until type chosen, type-aware after
+The Stays-vs-Activities fork (`Step0BusinessType` in `src/routes/business.setup.tsx`) only renders when `profile.setup_business_type` is `null`. Test/existing business profiles already have it set to `"stay"` (that's why the dashboard checklist says "Add property photos" and the wizard drops you straight into Step 1), so the fork is effectively invisible — there's no way to reach it again, and the dashboard CTA doesn't expose the choice up front either.
 
-`src/routes/business.index.tsx` currently hardcodes:
+We'll fix this on two surfaces so the path choice is unmistakable from the start, and changeable later.
 
-- "Set up your property" / "Resume property setup"
-- `Step X / 16` (the stays path length)
+## 1. Dashboard — surface the fork directly, before the wizard
 
-Change it to:
+In `src/routes/business.index.tsx`, when `setup_business_type` is not yet set, replace the single "Set up your listing → Start" card with **two side-by-side choice cards**:
 
-- Before pick: **"Set up your listing"** with subline *"Stays or activities — pick your path"*. Button text "Start".
-- After pick (`setup_business_type === "stay"`): **"Resume stay setup"**, `Step X / 16`.
-- After pick (`setup_business_type === "activity"`): **"Resume activity setup"**, `Step X / 11`.
+- "I offer stays" — hotels, apartments, villas, B&Bs
+- "I run activities" — tours, classes, experiences, rentals
 
-Read `setup_business_type` and `setup_step_completed` from the existing `fetchSetup()` query — no new server call. Also rename the wizard `<head>` title from "Set up your property — Travidz" to "Set up your listing — Travidz" so the browser tab matches.
+Each card calls `saveSetupBusinessType` (already exists in `business-setup.functions.ts`) with the chosen value, invalidates `business-setup-state` + `bookable-status`, then navigates to `/business/setup`. That way the user can't miss the fork and lands in the correct path's Step 1 directly.
 
-## 2. New-deal form — derive category from the chosen path, don't re-ask
+Once `setup_business_type` is set, keep the existing "Resume stay setup / Resume activity setup" card unchanged — but add a small **"Change path"** link in its corner that routes to `/business/setup?changePath=1`.
 
-`src/components/business/DealForm.tsx` shows a freeform Category dropdown (Stay / Eat / Do / Tour / Transport / Other). For a business that already picked Stays in setup, "Do (activity, spa, experience)" is wrong and confusing (your second screenshot). Fix:
+## 2. Wizard — allow re-choosing the path
 
-- On mount, look up `profile.setup_business_type` (reuse `useAccountKind()` — already wired against the bookable query so it dedupes).
-- `kind === "stay"` → default `category = "stay"` and **hide the Category select** (render a small read-only "Category: Stay" line with a link back to `/business/setup` to switch paths).
-- `kind === "activity"` → default `category = "do"` and restrict the select to `do | tour | other` (drop Stay, Eat, Transport).
-- `kind === "unknown"` → keep current full dropdown (legacy / not-yet-onboarded fallback).
+In `src/routes/business.setup.tsx`:
 
-No DealForm callers need to change — the prop shape stays the same.
+- Honour `?changePath=1` (or a "Change path" button in the sticky header) by forcing `Step0BusinessType` to render even when `businessType` is already set. Pre-select the current value so it's clear what's in effect.
+- After the user re-picks the same value: no-op, just continue. After picking a different value: save it, reset `setup_step_completed` to 0 (via existing `saveSetupBusinessType` + a tiny extension to clear step), invalidate caches, jump to Step 1 of the new path.
+- Add a small "Change path" link in the sticky header next to "Save & exit" so the option is reachable mid-flow without losing your seat.
 
-## 3. Light copy sweep so "property" isn't the only word on the entry
+## 3. Light copy alignment
 
-- `business.index.tsx` "Set up your property" CTA → done above.
-- Wizard route `head.title` → done above.
-- `OnboardingChecklist` already branches on account kind for downstream rows, so no change there.
+- Dashboard empty-state already branches on `accountKind` — no change.
+- `OnboardingChecklist` rows ("Add property photos", "Add rooms / activity options") should switch their headline copy to match the chosen path ("Add property photos" for stays, "Add activity photos" for activities; "Add rooms & rates" vs "Add activity options"). Logic is unchanged.
 
-## What's intentionally **not** changing
+## Files to edit
 
-- Step 0 of the wizard itself — it already presents the Stays vs Activities cards.
-- The 11-vs-16 step counts and the underlying `saveSetupActivity*` / `saveSetup*` functions.
-- The DB schema, RLS, commission, or pricing logic.
-- The dashboard checklist gating logic.
+- `src/routes/business.index.tsx` — replace single CTA with two fork cards when type is unset; add "Change path" affordance when set.
+- `src/routes/business.setup.tsx` — let `?changePath=1` / header link re-show `Step0BusinessType`; on path change, reset step counter and refetch.
+- `src/lib/business-setup.functions.ts` — extend `saveSetupBusinessType` to optionally reset `setup_step_completed` to 0 when the type actually changes.
+- `src/components/business/OnboardingChecklist.tsx` — branch the two affected row titles on `accountKind`.
 
-## Files edited (no new files, no migration)
+## Out of scope
 
-- `src/routes/business.index.tsx` — generic CTA copy, type-aware resume label, dynamic step total.
-- `src/routes/business.setup.tsx` — `<head>` title text only.
-- `src/components/business/DealForm.tsx` — pull `useAccountKind()`, default + constrain the Category field.
+- Step 0 card visuals beyond what's already there.
+- 11-vs-16 step counts and the underlying save functions.
+- Any DB schema, RLS, commission, pricing changes.
+- DealForm — already path-aware from the previous turn.
 
 ## Acceptance check
 
-1. Brand-new business → dashboard says **"Set up your listing"**, opens wizard at Stay/Activity fork.
-2. Pick Activities → dashboard updates to **"Resume activity setup · Step X / 11"**.
-3. Create a new deal as an activity business → Category is pre-set to "Do" and Stay/Eat/Transport aren't offered.
-4. Stay business creating a deal → no Category dropdown at all; small "Category: Stay · Change path" link.
+1. Brand-new business → dashboard shows two fork cards ("I offer stays" / "I run activities"); picking one drops them into that path's Step 1.
+2. Existing test profile (already `"stay"`) → dashboard shows resume card with a visible "Change path" link; clicking it returns to Step 0 with "Stays" pre-selected; picking "Activities" resets the wizard to activity Step 1.
+3. The wizard sticky header always exposes a "Change path" link so the user is never locked in.
