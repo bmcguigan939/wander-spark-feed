@@ -1,27 +1,43 @@
-# Fix: setup wizard footer hidden behind bottom nav
+## Goal
 
-## What the user sees
-On Step 12 (Rooms & rates) there are `Save room` and `Save rate` buttons inside each card, but no visible way to move on to Step 13. In the screenshot the wizard's Back button is truncated to "Ba…" and a pink dot is peeking from under the bottom tab bar — those are the real Back / Continue buttons.
+When a user scrolls the feed, the next clip should start playing immediately with sound — no tap-to-unmute required (after the first interaction allows it).
 
-## Root cause
-- `business.setup.tsx` wraps the whole wizard in `<MobileShell>`, which renders the global `BottomNav` (`sticky bottom-0`, `z-50`).
-- Each step renders `<StickyFooter>` (`fixed inset-x-0 bottom-0`, `z-20`) with the Back + Continue buttons.
-- `BottomNav` sits on top of `StickyFooter`, so Back/Continue are visually covered. `Save room` / `Save rate` only persist a single card — they were never meant to advance the wizard.
+## Why it isn't already working
 
-## Change
+In `src/components/feed/VideoCard.tsx` the player is hard-coded to start muted:
 
-**File:** `src/routes/business.setup.tsx`
+- `useState(true)` for `muted`
+- `autoPlay={active ? "muted" : false}`
 
-Replace the `MobileShell` wrapper with a plain max-width column wrapper, so the global `BottomNav` is not rendered during the multi-step setup wizard:
-- Drop the `MobileShell` import.
-- Render the header + step content inside a simple `<div className="relative mx-auto flex min-h-dvh max-w-md flex-col bg-background">` (same container shape `MobileShell` uses, minus `<BottomNav />`).
-- Keep the existing sticky top header and per-step `<StickyFooter>` exactly as they are; with the bottom nav gone, Back and Continue become fully visible on every step, including Step 12.
+So every clip plays silent until the user taps to unmute. Browsers/iOS also block autoplay-with-sound until the page has received a user gesture — we have to handle that fallback.
 
-That's the only change needed — the per-step `StickyFooter` already implements the "next step" button (with label "Continue", or "Finish setup" on the last step) and is correctly wired to `next()` → `markSetupStepComplete`. The user's reported "no way to advance from Step 12" is purely a z-index / layout occlusion bug.
+## Plan
 
-## Why not add a new "Next" button in Step 12
-The `StickyFooter` Continue button already exists for Step 12 (see `Step12FirstUnit`, around line 1472). Adding a second next button would be duplicative — fixing the occlusion exposes the existing one and the same fix benefits every step of the wizard (not just 12), which today all have the same hidden footer on devices where the bottom nav overlaps.
+Edit only `src/components/feed/VideoCard.tsx` (frontend/presentation only).
+
+1. **Session-wide sound preference.** Replace the per-card `useState(true)` with a tiny shared store (module-level `let` + listener set, or a `useSyncExternalStore` hook in the same file) backed by `sessionStorage` key `travidz:feedSound` (default `"on"`). Once any clip is successfully unmuted, every other card mirrors that state immediately — no more re-muting between scrolls.
+
+2. **Try sound first, fall back to muted.** When `active` becomes true:
+   - Set the player muted to the current preference (`false` if sound is on).
+   - Call `playerRef.current.play()` in a `try/catch`. If it rejects (autoplay-with-sound blocked before first gesture), set muted to `true` and retry `play()`, and flip the shared preference to `"off"` so the UI shows the "tap for sound" affordance.
+   - When the card goes inactive, `pause()` it.
+
+3. **Tap toggles sound for the whole feed.** The existing `onClick={() => setMuted(m => !m)}` becomes `toggleFeedSound()` — updates the shared store, persists to `sessionStorage`, and unmutes/mutes the active player. First tap also "unlocks" autoplay-with-sound for subsequent scrolls.
+
+4. **One-time gesture unlock on the feed.** On mount, attach a one-shot `pointerdown`/`touchstart` listener on `window` that, if the preference is `"on"` but the active player is currently muted (because autoplay was blocked), unmutes and resumes it. Remove after fire.
+
+5. **Replace static `autoPlay` prop.** Drop `autoPlay={active ? "muted" : false}` in favour of imperatively driving `play()`/`pause()` + `muted` from the `active` effect — gives us the try-sound-then-fallback behaviour above. Keep `playsInline`, `loop`, `poster`.
+
+6. **Subtle "tap for sound" hint.** When the active card is muted *because* autoplay-with-sound was blocked (not because the user chose mute), show a small pill (e.g. "Tap for sound 🔊") near the existing right-rail buttons that disappears on first tap. Reuses existing Tailwind tokens — no new design system.
+
+No backend, schema, or server-function changes. No other components touched.
 
 ## Out of scope
-- Per-card `Save room` / `Save rate` buttons stay as-is — they are intentional "save this card" actions inside `RoomsAndRatesEditor`, distinct from the wizard's "go to next step" action.
-- No changes to `RoomsAndRatesEditor`, `UnitPhotosUploader`, or any other step's logic.
+
+- Per-creator default volume.
+- Remembering sound preference across sessions (sessionStorage only, matches existing `travidz:feedCollapsed` convention).
+- Background audio when the app is backgrounded.
+
+## Caveat to flag
+
+iOS Safari and most mobile browsers will still refuse autoplay-with-sound until the very first user gesture on the page. The first clip a fresh visitor sees may start muted with the "Tap for sound" hint; every clip after their first tap will play instantly with sound. This is a platform constraint, not something we can bypass.
