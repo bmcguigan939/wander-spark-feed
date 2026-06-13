@@ -111,6 +111,8 @@ function UploadFlowBody() {
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [resolvingPin, setResolvingPin] = useState(false);
+  const geocodeFn = useServerFn(geocodePlace);
 
   // Prefill from /map "Drop a pin" hand-off (only fills blanks).
   useEffect(() => {
