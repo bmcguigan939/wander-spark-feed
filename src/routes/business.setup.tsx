@@ -33,6 +33,7 @@ import {
   saveSetupOtaListings,
   saveSetupAddress,
   saveSetupChannelManager,
+  getMyChannelFeeds,
   saveSetupFacilities,
   saveSetupServices,
   saveSetupLanguages,
