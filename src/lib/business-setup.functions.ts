@@ -39,9 +39,36 @@ export const saveSetupBusinessType = createServerFn({ method: "POST" })
       .object({ setup_business_type: z.enum(["stay", "activity"]) })
       .parse(i)
   )
-  .handler(async ({ data, context }) =>
-    bumpStep(context.userId, 0, { setup_business_type: data.setup_business_type })
-  );
+  .handler(async ({ data, context }) => {
+    // If the user is switching paths, reset the step counter so the new
+    // path's Step 1 is the resume point instead of stranding them deep in
+    // the old path's numbering.
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("setup_business_type,setup_step_completed")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const prev = (existing as any)?.setup_business_type as
+      | "stay"
+      | "activity"
+      | null
+      | undefined;
+    const changed = !!prev && prev !== data.setup_business_type;
+    if (changed) {
+      const { error } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          setup_business_type: data.setup_business_type,
+          setup_step_completed: 0,
+        })
+        .eq("id", context.userId);
+      if (error) throw new Error(error.message);
+      return { ok: true, step: 0 };
+    }
+    return bumpStep(context.userId, 0, {
+      setup_business_type: data.setup_business_type,
+    });
+  });
 
 // Activity Step A: category + format
 export const saveSetupActivityBasics = createServerFn({ method: "POST" })
