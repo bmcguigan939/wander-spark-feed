@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import {
@@ -55,6 +56,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/business/setup")({
   head: () => ({ meta: [{ title: "Set up your listing — Travidz" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z
+      .object({ changePath: z.coerce.boolean().optional() })
+      .parse(s),
   component: BusinessSetupPage,
 });
 
@@ -69,6 +74,11 @@ function BusinessSetupPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const fetchState = useServerFn(getMySetupState);
+  const search = Route.useSearch();
+  const [forceFork, setForceFork] = useState<boolean>(!!search.changePath);
+  useEffect(() => {
+    if (search.changePath) setForceFork(true);
+  }, [search.changePath]);
 
   useEffect(() => {
     if (loading) return;
@@ -102,6 +112,8 @@ function BusinessSetupPage() {
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["business-setup-state"] });
+    qc.invalidateQueries({ queryKey: ["bookable-status"] });
+    qc.invalidateQueries({ queryKey: ["business-setup-state"] });
   }
 
   if (!user || !isBusiness) return null;
@@ -115,18 +127,33 @@ function BusinessSetupPage() {
           </Link>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {businessType ? `Step ${step} of ${total}` : "Choose your path"}
+              {forceFork || !businessType
+                ? "Choose your path"
+                : `Step ${step} of ${total}`}
             </p>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${businessType ? (step / total) * 100 : 0}%` }}
+                style={{
+                  width: `${forceFork || !businessType ? 0 : (step / total) * 100}%`,
+                }}
               />
             </div>
           </div>
-          <Link to="/business" className="text-xs text-muted-foreground">
-            Save & exit
-          </Link>
+          <div className="flex items-center gap-3">
+            {businessType && !forceFork && (
+              <button
+                type="button"
+                onClick={() => setForceFork(true)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Change path
+              </button>
+            )}
+            <Link to="/business" className="text-xs text-muted-foreground">
+              Save & exit
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -142,8 +169,13 @@ function BusinessSetupPage() {
             profile={data.profile}
             firstDeal={data.firstDeal}
             refresh={refresh}
-            businessType={businessType}
+            businessType={forceFork ? null : businessType}
             total={total}
+            currentBusinessType={businessType}
+            onForkResolved={() => {
+              setForceFork(false);
+              setStep(1);
+            }}
           />
         )}
       </div>
