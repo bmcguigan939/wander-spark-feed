@@ -119,7 +119,7 @@ function FeedPage() {
   }, [videos.length]);
 
   return (
-    <MobileShell>
+    <MobileShell fullBleed>
       <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/40 px-1 py-1 text-xs backdrop-blur-md">
           <TabBtn active={tab === "following"} onClick={() => {

@@ -21,10 +21,10 @@ export function BottomNav() {
   );
   return (
     <nav
-      className="fixed left-1/2 z-40 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 rounded-full border border-border/70 bg-background/95 shadow-lg shadow-black/25 backdrop-blur-2xl"
+      className="fixed left-1/2 z-40 w-[min(22rem,calc(100%-1.25rem))] -translate-x-1/2 rounded-full border border-border/70 bg-background/95 shadow-lg shadow-black/25 backdrop-blur-2xl"
       style={{ bottom: "max(env(safe-area-inset-bottom), 0.25rem)" }}
     >
-      <ul className="flex items-stretch justify-between px-2 py-1.5">
+      <ul className="flex items-stretch justify-between px-1.5 py-1">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
           const isPrimary = to === "/create" || to === "/studio";
@@ -32,18 +32,18 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center gap-1 py-1 text-[10px] font-medium tracking-wide"
+                className="flex flex-col items-center gap-0.5 py-0.5 text-[9px] font-medium tracking-wide"
               >
                 <span
                   className={
                     isPrimary
-                      ? "rounded-xl bg-aurora px-3 py-1.5 text-white shadow-soft"
+                      ? "rounded-lg bg-aurora px-2.5 py-1 text-white shadow-soft"
                       : active
                         ? "text-primary"
                         : "text-foreground"
                   }
                 >
-                  <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.4 : 1.8} />
                 </span>
                 <span className={`font-semibold ${active ? "text-primary" : "text-foreground"}`}>
                   {label}
@@ -69,7 +69,7 @@ export function MobileShell({
       <main
         className="flex-1"
         style={{
-          paddingTop: "env(safe-area-inset-top)",
+          paddingTop: fullBleed ? undefined : "env(safe-area-inset-top)",
           paddingBottom: fullBleed
             ? undefined
             : "calc(env(safe-area-inset-bottom) + 88px)",
