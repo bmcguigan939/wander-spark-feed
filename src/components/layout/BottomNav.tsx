@@ -21,7 +21,7 @@ export function BottomNav() {
   );
   return (
     <nav
-      className="fixed left-1/2 z-40 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 rounded-full border border-border/60 bg-background/85 shadow-lg shadow-black/25 backdrop-blur-2xl"
+      className="fixed left-1/2 z-40 w-[min(24rem,calc(100%-1.5rem))] -translate-x-1/2 rounded-full border border-border/70 bg-background/95 shadow-lg shadow-black/25 backdrop-blur-2xl"
       style={{ bottom: "max(env(safe-area-inset-bottom), 0.25rem)" }}
     >
       <ul className="flex items-stretch justify-between px-2 py-1.5">
@@ -40,12 +40,12 @@ export function BottomNav() {
                       ? "rounded-xl bg-aurora px-3 py-1.5 text-white shadow-soft"
                       : active
                         ? "text-primary"
-                        : "text-foreground/80"
+                        : "text-foreground"
                   }
                 >
                   <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
                 </span>
-                <span className={active ? "text-foreground" : "text-foreground/80"}>
+                <span className={`font-semibold ${active ? "text-primary" : "text-foreground"}`}>
                   {label}
                 </span>
               </Link>
