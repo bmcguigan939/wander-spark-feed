@@ -1,31 +1,27 @@
+# Fix: setup wizard footer hidden behind bottom nav
+
+## What the user sees
+On Step 12 (Rooms & rates) there are `Save room` and `Save rate` buttons inside each card, but no visible way to move on to Step 13. In the screenshot the wizard's Back button is truncated to "Ba…" and a pink dot is peeking from under the bottom tab bar — those are the real Back / Continue buttons.
+
 ## Root cause
+- `business.setup.tsx` wraps the whole wizard in `<MobileShell>`, which renders the global `BottomNav` (`sticky bottom-0`, `z-50`).
+- Each step renders `<StickyFooter>` (`fixed inset-x-0 bottom-0`, `z-20`) with the Back + Continue buttons.
+- `BottomNav` sits on top of `StickyFooter`, so Back/Continue are visually covered. `Save room` / `Save rate` only persist a single card — they were never meant to advance the wizard.
 
-`RoomsAndRatesEditor` only renders `RoomCard` (which contains `RoomPhotosUploader`) when the deal's category is `"stay"` (lodging). The wizard's Step 12 passes `firstDeal?.category` through. `ensureFirstDeal` derives `category = "stay"` only when **creating** a new draft — if a draft already existed with `category = "other"` (created before `setup_property_kind` was selected, or via `business.deals.new` with `accountKind` undefined), it's reused as-is. Result: the editor falls into the `!isLodging && !isActivity` branch and shows a flat "Rate plans" block with no rooms and no photo upload.
+## Change
 
-## Changes
+**File:** `src/routes/business.setup.tsx`
 
-1. **`src/lib/business-setup.functions.ts` — `ensureFirstDeal`**
-   - When an existing draft is found, recompute the expected `category` and `price_unit` from the profile (same logic already used in the create path).
-   - If the existing deal's `category` doesn't match (e.g. it's `"other"` but the host is a hotel/apartment/home/alternative), update the row to the correct `category` and `price_unit` before returning.
-   - Only normalize when the deal is still a draft (`status = 'draft'`), to avoid mutating live listings.
+Replace the `MobileShell` wrapper with a plain max-width column wrapper, so the global `BottomNav` is not rendered during the multi-step setup wizard:
+- Drop the `MobileShell` import.
+- Render the header + step content inside a simple `<div className="relative mx-auto flex min-h-dvh max-w-md flex-col bg-background">` (same container shape `MobileShell` uses, minus `<BottomNav />`).
+- Keep the existing sticky top header and per-step `<StickyFooter>` exactly as they are; with the bottom nav gone, Back and Continue become fully visible on every step, including Step 12.
 
-2. **`src/routes/business.setup.tsx` — `Step12FirstUnit`**
-   - Compute `expectedCategory` from `profile.setup_business_type` / `setup_property_kind` (mirror of the `ensureFirstDeal` logic).
-   - Pass `category={expectedCategory}` to `<RoomsAndRatesEditor>` instead of `firstDeal?.category`, so even before the loader refetches the corrected deal, the editor renders the lodging UI.
-   - After `ensure()` resolves, call `refresh()` (already happens) so `firstDeal.category` updates from the normalized row.
+That's the only change needed — the per-step `StickyFooter` already implements the "next step" button (with label "Continue", or "Finish setup" on the last step) and is correctly wired to `next()` → `markSetupStepComplete`. The user's reported "no way to advance from Step 12" is purely a z-index / layout occlusion bug.
 
-3. **No schema or UI changes to `RoomsAndRatesEditor`**
-   - Per-room photo upload (`RoomPhotosUploader`) is already wired into `RoomCard`; it just wasn't reachable because the wrong branch was rendering.
+## Why not add a new "Next" button in Step 12
+The `StickyFooter` Continue button already exists for Step 12 (see `Step12FirstUnit`, around line 1472). Adding a second next button would be duplicative — fixing the occlusion exposes the existing one and the same fix benefits every step of the wizard (not just 12), which today all have the same hidden footer on devices where the bottom nav overlaps.
 
 ## Out of scope
-
-- Non-hotel (apartment/villa/unit) flow — already covered by the previous turn's `UnitPhotosUploader`.
-- Activity packages — already render `PackageCard` with photo support.
-
-## Technical notes
-
-- `ensureFirstDeal` normalization: only mutate `category` and `price_unit` when `status = 'draft'` AND the derived values differ from the row's current values. Don't touch other fields.
-- Derived mapping (kept identical between server fn and Step 12):
-  - `setup_business_type === "activity"` → `activity_category === "tour" ? "tour" : "do"`, `price_unit = "per_person"`
-  - `setup_property_kind ∈ {hotel, apartment, home, alternative}` → `"stay"`, `price_unit = "per_night"`
-  - otherwise → leave alone (don't override to `"other"`).
+- Per-card `Save room` / `Save rate` buttons stay as-is — they are intentional "save this card" actions inside `RoomsAndRatesEditor`, distinct from the wizard's "go to next step" action.
+- No changes to `RoomsAndRatesEditor`, `UnitPhotosUploader`, or any other step's logic.
