@@ -207,6 +207,36 @@ function UploadFlowBody() {
     onError: (e: any) => toast(e.message ?? "Failed to save"),
   });
 
+  // Pre-publish guard: every video needs lat/lng so it shows on the map.
+  // If the user typed a destination/city/country we try to geocode it and seed
+  // the pin picker so they only have to confirm or nudge the pin.
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    if (lat && lng) {
+      finalizeM.mutate();
+      return;
+    }
+    const q = [destination, city, country].map((s) => s.trim()).filter(Boolean).join(", ");
+    if (q) {
+      setResolvingPin(true);
+      try {
+        const r = await geocodeFn({ data: { q } });
+        const hit = r.results?.[0];
+        if (hit) {
+          setLat(hit.center[1].toFixed(6));
+          setLng(hit.center[0].toFixed(6));
+        }
+      } catch {
+        /* ignore — fall through to picker */
+      } finally {
+        setResolvingPin(false);
+      }
+    }
+    toast("Drop a pin on the map so travellers can find this post");
+    setPickerOpen(true);
+  }
+
   return (
     <div className="mt-6">
         {publishedVideoId && (
