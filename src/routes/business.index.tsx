@@ -7,7 +7,6 @@ import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
 import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck, ShieldCheck, MessageSquare, Zap, Hotel, Mountain } from "lucide-react";
 import { Sparkline } from "@/components/business/Sparkline";
-import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
@@ -63,7 +62,6 @@ function BusinessDashboard() {
 
   return (
     <MobileShell>
-      <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
         {user && <BusinessLocationPrompt userId={user.id} />}
         {showSetupCta && (() => {
