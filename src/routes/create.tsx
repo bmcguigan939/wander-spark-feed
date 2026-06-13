@@ -324,6 +324,18 @@ function UploadFlowBody() {
                 </div>
               </div>
             </Field>
+            <Field label="Search a place (auto-fills location & map pin)">
+              <PlaceAutocomplete
+                onPick={(p: PlacePick) => {
+                  setDestination(p.destination);
+                  if (p.city) setCity(p.city);
+                  if (p.country) setCountry(p.country);
+                  setLat(p.lat.toFixed(6));
+                  setLng(p.lng.toFixed(6));
+                  toast(`Pinned: ${p.formattedAddress}`);
+                }}
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Country"><input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} /></Field>
               <Field label="City"><input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} /></Field>
