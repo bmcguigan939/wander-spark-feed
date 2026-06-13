@@ -213,7 +213,7 @@ function UploadFlowBody() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    if (lat && lng) {
+    if (lat && lng || publishMode === "draft") {
       finalizeM.mutate();
       return;
     }
