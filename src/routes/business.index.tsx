@@ -95,26 +95,30 @@ function BusinessDashboard() {
                   Pick the path that matches your business — the rest of setup is tailored to it.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to="/business/setup"
-                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  <button
+                    type="button"
+                    disabled={pickPath.isPending}
+                    onClick={() => pickPath.mutate("stay")}
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary disabled:opacity-60"
                   >
                     <Hotel className="h-5 w-5 text-primary" />
                     <span className="text-sm font-semibold">I offer stays</span>
                     <span className="text-[11px] text-muted-foreground">
                       Hotels, apartments, villas, B&amp;Bs
                     </span>
-                  </Link>
-                  <Link
-                    to="/business/setup"
-                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pickPath.isPending}
+                    onClick={() => pickPath.mutate("activity")}
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary disabled:opacity-60"
                   >
                     <Mountain className="h-5 w-5 text-primary" />
                     <span className="text-sm font-semibold">I run activities</span>
                     <span className="text-[11px] text-muted-foreground">
                       Tours, classes, experiences, rentals
                     </span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
