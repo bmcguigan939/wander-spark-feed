@@ -49,6 +49,7 @@ import {
 } from "@/lib/business-setup.functions";
 import { geocodePlace, type GeocodeResult } from "@/lib/map.functions";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
+import { AddressPicker, type AddressValue } from "@/components/business/AddressPicker";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
 import { DealForm } from "@/components/business/DealForm";
