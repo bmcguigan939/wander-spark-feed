@@ -154,21 +154,48 @@ export function DealForm({
         true,
         "Use the exact name shown on Booking.com / Expedia / GetYourGuide etc. Travellers and our price-match scanner match by name — mismatches break the match.",
       )}
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-muted-foreground">Category</span>
-        <select
-          value={v.category ?? "other"}
-          onChange={(e) => setV({ ...v, category: e.target.value as DealFormValues["category"] })}
-          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-        >
-          <option value="stay">Stay (hotel, villa, hostel)</option>
-          <option value="eat">Eat (restaurant, cafe, bar)</option>
-          <option value="do">Do (activity, spa, experience)</option>
-          <option value="tour">Tour (guide, excursion, cruise)</option>
-          <option value="transport">Transport (transfer, rental, flight)</option>
-          <option value="other">Other</option>
-        </select>
-      </label>
+      {accountKind === "stay" ? (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Category: <span className="font-medium text-foreground">Stay</span>
+          </span>
+          <a href="/business/setup" className="font-medium text-primary">
+            Change path
+          </a>
+        </div>
+      ) : accountKind === "activity" ? (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground">Category</span>
+          <select
+            value={v.category ?? "do"}
+            onChange={(e) => setV({ ...v, category: e.target.value as DealFormValues["category"] })}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          >
+            <option value="do">Do (activity, spa, experience)</option>
+            <option value="tour">Tour (guide, excursion, cruise)</option>
+            <option value="other">Other</option>
+          </select>
+          <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+            Set during your activity setup. <a href="/business/setup" className="text-primary">Change path</a>
+          </span>
+        </label>
+      ) : (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground">Category</span>
+          <select
+            value={v.category ?? "other"}
+            onChange={(e) => setV({ ...v, category: e.target.value as DealFormValues["category"] })}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          >
+            <option value="stay">Stay (hotel, villa, hostel)</option>
+            <option value="eat">Eat (restaurant, cafe, bar)</option>
+            <option value="do">Do (activity, spa, experience)</option>
+            <option value="tour">Tour (guide, excursion, cruise)</option>
+            <option value="transport">Transport (transfer, rental, flight)</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+      )}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Description</span>
         <textarea
