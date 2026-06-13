@@ -272,7 +272,27 @@ function UploadFlowBody() {
             <Field label="Destination / place"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} /></Field>
             <Field label="Activity tags (comma separated)"><input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="beach, hiking, food" className={inputCls} /></Field>
             <Field label="Map location (optional)">
-              <CoordsInput lat={lat} lng={lng} setLat={setLat} setLng={setLng} inputCls={inputCls} />
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-soft"
+              >
+                <MapPin className="h-4 w-4" />
+                {lat && lng ? "Edit pin on map" : "Pick on map"}
+              </button>
+              {lat && lng && (
+                <p className="mb-2 text-xs text-primary">
+                  ✓ Pinned at {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+                </p>
+              )}
+              <details className="rounded-xl border border-border bg-card/40 px-3 py-2">
+                <summary className="cursor-pointer text-xs text-muted-foreground">
+                  Or paste coordinates
+                </summary>
+                <div className="mt-2">
+                  <CoordsInput lat={lat} lng={lng} setLat={setLat} setLng={setLng} inputCls={inputCls} />
+                </div>
+              </details>
             </Field>
             <Field label="Budget">
               <div className="flex gap-2">
