@@ -276,12 +276,8 @@ function MapPage() {
             }}
             onSubmitText={(q) => setSearchParam({ q: q || undefined })}
           />
-          <CategoryChips
-            value={search.cat}
-            onChange={(v) => setSearchParam({ cat: v })}
-          />
           <div className="pointer-events-auto flex items-center justify-between gap-2">
-            <div className="inline-flex overflow-hidden rounded-full border border-border bg-background/85 p-1 backdrop-blur-xl">
+            <div className="inline-flex shrink-0 overflow-hidden rounded-full border border-border bg-background/85 p-1 backdrop-blur-xl">
               {(["both", "videos", "deals"] as const).map((l) => (
                 <button
                   key={l}
@@ -289,17 +285,21 @@ function MapPage() {
                   className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${
                     search.layer === l
                       ? "rounded-full bg-primary text-primary-foreground"
-                      : "text-muted-foreground"
+                      : "text-foreground"
                   }`}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            <span className="rounded-full border border-border bg-background/85 px-2.5 py-1 text-[10px] text-muted-foreground backdrop-blur-xl">
+            <span className="shrink-0 rounded-full border border-border bg-background/85 px-2.5 py-1 text-[10px] text-foreground backdrop-blur-xl">
               {isLoading ? "Loading…" : `${totalPins} here`}
             </span>
           </div>
+          <CategoryChips
+            value={search.cat}
+            onChange={(v) => setSearchParam({ cat: v })}
+          />
         </div>
         )}
 

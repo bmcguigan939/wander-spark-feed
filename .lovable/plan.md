@@ -1,12 +1,15 @@
-Two small accessibility fixes:
+Update the map controls so the category filter no longer runs off-screen.
 
-1. **Category filter chips (`src/components/map/CategoryChips.tsx`)** — make all six chips fit common phone widths instead of running off-screen.
-   - Tighten chip sizing (smaller horizontal padding, slightly smaller text and icon, smaller gap) so the full row fits at ~360–414px wide.
-   - Keep the existing horizontal scroll fallback so it still works on very narrow viewports or when labels are translated to longer strings.
+Plan:
+1. Move the category chips from above the Both / Videos / Deals bar to a new row underneath it.
+2. Keep the Both / Videos / Deals bar and the “37 here” count on the same row.
+3. Make the category row responsive:
+   - allow horizontal scrolling when needed,
+   - size chips compactly on small screens,
+   - prevent the last Travel chip from being clipped off-screen.
+4. Improve readability of unselected filter text by using solid foreground text instead of muted translucent text.
 
-2. **Bottom nav labels (`src/components/layout/BottomNav.tsx`)** — make inactive items fully readable on any background.
-   - Inactive icons and labels switch from `text-foreground/80` to solid `text-foreground` with `font-semibold` for stronger contrast.
-   - Raise nav background from `bg-background/85` to `bg-background/95` so labels never sit on a translucent wash.
-   - Active tab stays primary-colored; Create/Studio gradient pill unchanged.
-
-No layout, position, or routing changes.
+Technical details:
+- Edit `src/routes/map.tsx` to reorder the controls: search box, content-type row, category row.
+- Adjust the wrapper widths/min-width behavior so filter rows respect the viewport.
+- Edit `src/components/map/CategoryChips.tsx` only if needed for chip spacing and text contrast.
