@@ -608,14 +608,17 @@ function RatePlanRow({
         </div>
         {local.payment === "deposit_online_rest_at_property" && (
           <div>
-            <Label className="text-xs">Deposit %</Label>
+            <Label className="text-xs">Deposit % (min 11)</Label>
             <Input
               type="number"
-              min={1}
+              min={11}
               max={99}
               value={local.deposit}
               onChange={(e) => setLocal({ ...local, deposit: Number(e.target.value) })}
             />
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Minimum 11% so the deposit covers Travidz's commission.
+            </p>
           </div>
         )}
         {showBreakfast && (
