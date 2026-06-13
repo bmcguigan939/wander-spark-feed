@@ -225,6 +225,57 @@ export const geocodePlace = createServerFn({ method: "GET" })
     return { results };
   });
 
+// ---------- Reverse geocoding ----------
+const reverseInput = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
+export type ReverseGeocodeResult = {
+  place_name: string | null;
+  country: string | null;
+  city: string | null;
+  destination: string | null;
+};
+
+export const reverseGeocode = createServerFn({ method: "GET" })
+  .inputValidator((i: unknown) => reverseInput.parse(i))
+  .handler(async ({ data }): Promise<ReverseGeocodeResult> => {
+    const token = process.env.MAPBOX_TOKEN || MAPBOX_PUBLIC_TOKEN;
+    const params = new URLSearchParams({
+      access_token: token,
+      limit: "1",
+      types: "country,region,place,locality,neighborhood,address,poi",
+    });
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${data.lng},${data.lat}.json?${params.toString()}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { place_name: null, country: null, city: null, destination: null };
+    }
+    const json: any = await res.json();
+    const f = json.features?.[0];
+    if (!f) return { place_name: null, country: null, city: null, destination: null };
+    const ctx: any[] = Array.isArray(f.context) ? f.context : [];
+    const findCtx = (prefix: string) =>
+      ctx.find((c) => typeof c.id === "string" && c.id.startsWith(prefix))?.text ?? null;
+    // Mapbox feature types we care about:
+    //  - country, region, place (city), locality, neighborhood, address, poi
+    const country = findCtx("country") ?? (f.place_type?.[0] === "country" ? f.text : null);
+    const city =
+      findCtx("place") ??
+      findCtx("locality") ??
+      (["place", "locality"].includes(f.place_type?.[0]) ? f.text : null);
+    // "Destination" = the most specific recognisable label (POI/neighborhood/address)
+    const destination =
+      ["poi", "address", "neighborhood"].includes(f.place_type?.[0]) ? f.text : null;
+    return {
+      place_name: f.place_name ?? null,
+      country,
+      city,
+      destination,
+    };
+  });
+
 // ---------- Cluster detail ----------
 const clusterInput = z.object({
   ids: z.object({
