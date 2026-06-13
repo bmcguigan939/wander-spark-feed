@@ -15,6 +15,7 @@ import { SmartDealsSheet } from "@/components/create/SmartDealsSheet";
 import { TagBusinessSheet } from "@/components/studio/TagBusinessSheet";
 import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/lib/cross-links.functions";
 import { ShareToSocialsCard } from "@/components/create/ShareToSocialsCard";
+import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
@@ -95,6 +96,7 @@ function UploadFlowBody() {
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduleAt, setScheduleAt] = useState("");
   const [track, setTrack] = useState<MusicTrack | null>(null);
@@ -270,7 +272,27 @@ function UploadFlowBody() {
             <Field label="Destination / place"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} /></Field>
             <Field label="Activity tags (comma separated)"><input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="beach, hiking, food" className={inputCls} /></Field>
             <Field label="Map location (optional)">
-              <CoordsInput lat={lat} lng={lng} setLat={setLat} setLng={setLng} inputCls={inputCls} />
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-soft"
+              >
+                <MapPin className="h-4 w-4" />
+                {lat && lng ? "Edit pin on map" : "Pick on map"}
+              </button>
+              {lat && lng && (
+                <p className="mb-2 text-xs text-primary">
+                  ✓ Pinned at {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+                </p>
+              )}
+              <details className="rounded-xl border border-border bg-card/40 px-3 py-2">
+                <summary className="cursor-pointer text-xs text-muted-foreground">
+                  Or paste coordinates
+                </summary>
+                <div className="mt-2">
+                  <CoordsInput lat={lat} lng={lng} setLat={setLat} setLng={setLng} inputCls={inputCls} />
+                </div>
+              </details>
             </Field>
             <Field label="Budget">
               <div className="flex gap-2">
@@ -370,6 +392,21 @@ function UploadFlowBody() {
             if (!publishedVideoId) {
               navigate({ to: "/studio/videos", search: { filter: "all" } });
             }
+          }}
+        />
+        <LocationPickerSheet
+          open={pickerOpen}
+          initialLat={lat ? Number(lat) : null}
+          initialLng={lng ? Number(lng) : null}
+          onClose={() => setPickerOpen(false)}
+          onConfirm={(r) => {
+            setLat(r.lat.toFixed(6));
+            setLng(r.lng.toFixed(6));
+            // Only autofill blanks — never overwrite what the user typed.
+            if (r.country && !country) setCountry(r.country);
+            if (r.city && !city) setCity(r.city);
+            if (r.destination && !destination) setDestination(r.destination);
+            setPickerOpen(false);
           }}
         />
     </div>
