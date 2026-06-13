@@ -509,15 +509,6 @@ export const ensureFirstDeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const { data: existing } = await supabaseAdmin
-      .from("deals")
-      .select("id")
-      .eq("business_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (existing) return { id: (existing as any).id };
-
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select(
@@ -527,17 +518,52 @@ export const ensureFirstDeal = createServerFn({ method: "POST" })
       .maybeSingle();
     const p: any = profile ?? {};
     const isActivity = p.setup_business_type === "activity";
-    const category = isActivity
+    const isStayKind =
+      p.setup_property_kind === "hotel" ||
+      p.setup_property_kind === "apartment" ||
+      p.setup_property_kind === "home" ||
+      p.setup_property_kind === "alternative";
+    const derivedCategory: string | null = isActivity
       ? p.activity_category === "tour"
         ? "tour"
         : "do"
-      : p.setup_property_kind === "hotel" ||
-          p.setup_property_kind === "apartment" ||
-          p.setup_property_kind === "home" ||
-          p.setup_property_kind === "alternative"
+      : isStayKind
         ? "stay"
-        : "other";
-    const price_unit = isActivity ? "per_person" : "per_night";
+        : null;
+    const category = derivedCategory ?? "other";
+    const derivedPriceUnit: string | null = isActivity
+      ? "per_person"
+      : isStayKind
+        ? "per_night"
+        : null;
+    const price_unit = derivedPriceUnit ?? "per_night";
+
+    const { data: existing } = await supabaseAdmin
+      .from("deals")
+      .select("id,category,price_unit,status")
+      .eq("business_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      const ex: any = existing;
+      // Normalize the draft deal's category/price_unit if the profile now
+      // indicates a more specific kind (e.g. user picked "hotel" after the
+      // draft was created with category="other"). Only touch drafts and only
+      // when we have a derived value to apply.
+      if (ex.status === "draft" && derivedCategory) {
+        const patch: Record<string, unknown> = {};
+        if (ex.category !== derivedCategory) patch.category = derivedCategory;
+        if (derivedPriceUnit && ex.price_unit !== derivedPriceUnit) {
+          patch.price_unit = derivedPriceUnit;
+        }
+        if (Object.keys(patch).length > 0) {
+          await supabaseAdmin.from("deals").update(patch).eq("id", ex.id);
+        }
+      }
+      return { id: ex.id };
+    }
+
     const title = p.business_name || p.display_name || "My listing";
     const { data: row, error } = await supabaseAdmin
       .from("deals")
