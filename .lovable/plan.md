@@ -1,30 +1,39 @@
-# Make every video appear on the map
+## Current state
 
-## Root cause
-The create form treats `lat`/`lng` as optional. If the creator only types an address into Destination/City/Country, the post saves with NULL coordinates and the map filter excludes it. Linda's Prague upload (and 4 earlier posts) are in this state.
+The upload form (`src/routes/create.tsx`) has three plain text inputs — **Country**, **City**, and **Destination / place** — with no live suggestions. Geocoding only runs at publish time as a fallback. Linda's Prague post failed precisely because typed text never resolved to coordinates.
 
-## Fix
+Meanwhile, the project already ships two address-lookup building blocks:
 
-### 1. Prompt for a pin at publish time (`src/routes/create.tsx`)
-When the user taps Publish and `lat`/`lng` are empty:
-- If Destination/City/Country has text, call the existing `geocodePlace` server fn with that text and present a confirmation sheet: "Is this the right spot? — drop the pin here, adjust, or cancel."
-  - Accept → use the geocoded `lat`/`lng`, continue publishing.
-  - Adjust → open the existing `LocationPickerSheet`, seeded at the geocoded point.
-  - Cancel → block publish, show "Drop a pin on the map so travellers can find this post."
-- If no address text was entered either → block publish with the same message and open `LocationPickerSheet`.
+- `placesAutocomplete` + `placeDetails` (Google Places) — used by `src/components/business/AddressPicker.tsx` for business onboarding.
+- `geocodePlace` (Mapbox) — used by `src/components/map/SearchBox.tsx` for the map.
 
-Result: no future video can be saved without coordinates, and the user is never forced into a manual map step when their typed address geocodes cleanly.
+So smart lookup exists in the app, but it is **not wired into the creator upload flow**.
 
-### 2. Visual cue on the form
-Replace the silent optional state with an inline warning when `lat`/`lng` is empty: "This post won't show on the map until you drop a pin." Keep the existing "Pick on map" button as the primary action.
+## Plan
 
-### 3. Backfill Linda's 5 videos
-Run a one-off update: for each of her NULL-coordinate videos, geocode `destination + city + country` server-side via Mapbox and write `lat`/`lng`. Done as a manual `supabase--insert` UPDATE per row (or a small admin server fn if you'd like it reusable for any creator later — say the word and I'll add that instead).
+1. **New shared component `src/components/create/PlaceAutocomplete.tsx`**
+   - Single search input with a dropdown of Google Places suggestions (debounced ~250ms, `placesAutocomplete` server fn).
+   - On select → call `placeDetails` to get `{ lat, lng, name, city, country, formatted_address }`.
+   - Emits a structured result the parent can map to its existing state.
+   - Reuses the visual style of `AddressPicker` for consistency.
 
-## Files touched
-- `src/routes/create.tsx` — publish guard + geocode-confirm flow + warning banner.
-- (Optional) `src/lib/admin.functions.ts` — `backfillVideoCoordinates` admin fn, if you want a reusable tool rather than a one-off update.
+2. **Wire it into `src/routes/create.tsx`** (both the publish form and the draft-edit form — same fields appear twice in the file).
+   - Replace the three separate inputs with one **"Search a place"** autocomplete at the top of the location section.
+   - Picking a suggestion fills `destination`, `city`, `country`, `lat`, `lng` in one step and clears the "no map pin" warning.
+   - Keep the existing Country / City / Destination inputs visible underneath as **editable, pre-filled** fields so users can still tweak wording (e.g. "Hotel Augustine" instead of "Letenská 12/33").
+   - Keep the existing "Pick on map" button and `LocationPickerSheet` as the fallback when no suggestion matches.
+
+3. **Keep the publish-time guard already added last turn** as a safety net for users who skip the autocomplete entirely.
 
 ## Out of scope
-- Changing the map filter to show videos without coordinates (would require fake/approximate pins and degrade map quality).
-- Reverse-geocoding existing free-text into structured city/country — only `lat`/`lng` is being backfilled.
+
+- Replacing the map's Mapbox SearchBox with Google Places.
+- Touching the business AddressPicker.
+- Reworking the publish guard or the Linda backfill (already done).
+
+## Files
+
+- **Add:** `src/components/create/PlaceAutocomplete.tsx`
+- **Edit:** `src/routes/create.tsx` (two form sections)
+
+No DB, no new server functions, no new secrets — `GOOGLE_PLACES_API_KEY` is already configured for the existing `placesAutocomplete` fn.
