@@ -157,12 +157,13 @@ function InvitePage() {
   const { invite, creator, video } = data;
   const creatorName = creator?.display_name || creator?.username || "A Travidz creator";
 
-  const canAccept = agreed;
+  const isReturning = !!data.isReturningBusiness;
+  const canAccept = isReturning || agreed;
 
   const handleAcceptClick = () => {
     // eslint-disable-next-line no-console
     console.info("[acceptInvite] click", { canAccept, agreed, hasUser: !!user });
-    if (!agreed) {
+    if (!isReturning && !agreed) {
       toast.error("Please tick the agreement box to continue.");
       return;
     }
@@ -272,31 +273,62 @@ function InvitePage() {
         </div>
       ) : null}
 
-      <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-        <h2 className="font-display text-base font-semibold">The offer</h2>
-        <p className="mt-2 text-sm leading-relaxed">
-          {creatorName} would like to advertise your direct website on Travidz
-          for a <strong>{invite.commission_pct}% commission fee on any sales
-          directed through them</strong>.
-        </p>
-        <ul className="mt-3 space-y-1.5 text-[13px] text-muted-foreground">
-          <li>✓ No setup fee, no monthly cost</li>
-          <li>✓ You only pay when we send you a paying customer</li>
-          <li>✓ Your store lives on Travidz — no website needed; we host the booking page</li>
-          <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
-        </ul>
-      </div>
+      {isReturning ? (
+        <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Welcome back
+          </div>
+          <h2 className="mt-1 font-display text-base font-semibold">
+            One tap to add {creatorName} to your creators
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            No new setup. Your booking page, payouts and Best Price Guarantee
+            carry over. The same {invite.commission_pct}% commission applies —
+            only on bookings {creatorName} sends you.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <h2 className="font-display text-base font-semibold">The offer</h2>
+            <p className="mt-2 text-sm leading-relaxed">
+              {creatorName} would like to advertise your direct website on Travidz
+              for a <strong>{invite.commission_pct}% commission fee on any sales
+              directed through them</strong>.
+            </p>
+            <ul className="mt-3 space-y-1.5 text-[13px] text-muted-foreground">
+              <li>✓ No setup fee, no monthly cost</li>
+              <li>✓ You only pay when we send you a paying customer</li>
+              <li>✓ Your store lives on Travidz — no website needed; we host the booking page</li>
+              <li>✓ Best Price Guarantee — Travidz auto-matches any cheaper third-party rate (commission deducted) and shows you every match in your audit log</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+            <h2 className="font-display text-base font-semibold">
+              What happens after you accept
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">One setup, then it's just a tap.</span>{" "}
+              Once you accept, any other Travidz creator who features your
+              business can be added with a single tap from your dashboard — no
+              new forms, no new payout details, no new agreement.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">More creators = more global reach.</span>{" "}
+              Every additional creator you accept puts your listing in front of
+              their audience, in their language, in the cities they travel to.
+              There's no cap and no extra cost — you still only pay commission
+              on bookings we send you.
+            </p>
+          </div>
+        </>
+      )}
 
       <div className="mt-6 space-y-2">
-        <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-[13px] leading-snug">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-primary"
-          />
-          <span className="text-muted-foreground">
-            I have read and agree to the{" "}
+        {isReturning ? (
+          <p className="px-1 text-[12px] leading-snug text-muted-foreground">
+            You already accepted the{" "}
             <a
               href="/legal/business-agreement"
               target="_blank"
@@ -304,10 +336,31 @@ function InvitePage() {
               className="font-medium text-primary underline underline-offset-2"
             >
               Travidz Business Agreement
-            </a>
-            .
-          </span>
-        </label>
+            </a>{" "}
+            — it stays in force for new creator collabs.
+          </p>
+        ) : (
+          <label className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-[13px] leading-snug">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span className="text-muted-foreground">
+              I have read and agree to the{" "}
+              <a
+                href="/legal/business-agreement"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                Travidz Business Agreement
+              </a>
+              .
+            </span>
+          </label>
+        )}
 
         {user ? (
           wrongAccount ? (
@@ -322,7 +375,9 @@ function InvitePage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {acceptM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Accept & claim your listing
+            {isReturning
+              ? `Accept — add ${creatorName} to your creators`
+              : "Accept & claim your listing"}
           </button>
           )
         ) : (
