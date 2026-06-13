@@ -208,8 +208,8 @@ function MapPage() {
   };
 
   return (
-    <MobileShell>
-      <div className="relative h-[calc(100dvh-80px-env(safe-area-inset-top))] w-full">
+    <MobileShell fullBleed>
+      <div className="relative h-[calc(100dvh-env(safe-area-inset-top))] w-full">
         <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}
@@ -306,7 +306,8 @@ function MapPage() {
           type="button"
           onClick={() => setPickerOpen(true)}
           aria-label="Drop a pin to tag a photo or video"
-          className="absolute bottom-6 left-4 z-10 inline-flex items-center gap-2 rounded-full bg-aurora px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-primary/40 transition hover:scale-105"
+          className="absolute left-4 z-10 inline-flex items-center gap-2 rounded-full bg-aurora px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-primary/40 transition hover:scale-105"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 96px)" }}
         >
           <MapPin className="h-4 w-4" />
           Drop a pin
@@ -314,7 +315,10 @@ function MapPage() {
 
         {/* Search this area button */}
         {pendingBbox && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 flex justify-center px-6">
+          <div
+            className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-6"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 156px)" }}
+          >
             <button
               type="button"
               onClick={() => {
@@ -330,7 +334,10 @@ function MapPage() {
         )}
 
         {totalPins === 0 && !isLoading && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center px-6">
+          <div
+            className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-6"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 96px)" }}
+          >
             <div className="rounded-2xl border border-border bg-background/85 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur-xl">
               Nothing here yet. Try another location or category.
             </div>
