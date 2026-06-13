@@ -15,10 +15,12 @@ export function LegalPage({
   title,
   updated,
   children,
+  footer,
 }: {
   title: string;
   updated: string;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
   const router = useRouter();
   const handleBack = () => {
@@ -55,6 +57,7 @@ export function LegalPage({
           ))}
         </nav>
       </main>
+      {footer}
     </div>
   );
 }
