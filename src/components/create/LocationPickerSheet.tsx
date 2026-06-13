@@ -52,7 +52,7 @@ export function LocationPickerSheet({
     ) {
       return { latitude: initialLat, longitude: initialLng, zoom: 13 };
     }
-    return { latitude: 20, longitude: 0, zoom: 1.6 };
+    return { latitude: 20, longitude: 0, zoom: 2 };
   }, [initialLat, initialLng, open]);
 
   const [pin, setPin] = useState<Pin | null>(
@@ -63,6 +63,7 @@ export function LocationPickerSheet({
   const [placeLabel, setPlaceLabel] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [mapReady, setMapReady] = useState(false);
 
   // Reset state every time the sheet is reopened.
   useEffect(() => {
@@ -76,6 +77,27 @@ export function LocationPickerSheet({
     setSearchValue("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Force Mapbox to recompute its canvas size after the sheet opens.
+  // Without this, mounting inside a just-shown fixed overlay can leave
+  // the canvas at 0x0 (blank tiles) on iOS Safari and inside the preview iframe.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      mapRef.current?.getMap()?.resize();
+    };
+    const r1 = requestAnimationFrame(tick);
+    const t1 = setTimeout(tick, 100);
+    const t2 = setTimeout(tick, 400);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(r1);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [open, mapReady]);
 
   // Reverse-geocode whenever the pin changes (debounced).
   useEffect(() => {

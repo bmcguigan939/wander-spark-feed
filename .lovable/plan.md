@@ -1,25 +1,22 @@
-## Plan
+I found the remaining broken screen is the create/upload location picker, not the newer /map drop-pin overlay. It still mounts its own full-screen Mapbox instance (`LocationPickerSheet`), which is the one shown in your screenshot with “No location selected” and blank tiles.
 
-1. **Make drop-pin use the same working map path as current location**
-   - Replace the separate drop-pin map instance with the already-rendered map view underneath the picker overlay.
-   - When “Drop a pin” opens, keep the main `/map` Mapbox canvas visible instead of mounting a second Mapbox canvas that can render blank.
-   - Show the draggable pin, search, current-location, close, and confirm controls as an overlay on top of that working map.
+Plan:
+1. **Fix the create-flow picker map rendering**
+   - Rework `LocationPickerSheet` so the map is a stable fixed full-screen layer instead of an absolutely positioned map inside a flex panel.
+   - Force Mapbox to resize after open/load and after the first animation frame so Safari/mobile preview paints tiles reliably.
+   - Keep using the same working `streets-v12` style and token.
 
-2. **Keep the selected pin state synced with the main map**
-   - On opening drop-pin, initialize the pin from the current map/search coordinates.
-   - Tapping the map or dragging the pin updates the selected coordinates.
-   - Search result and current-location actions move the main map and update the pin.
+2. **Make drop-pin work immediately**
+   - Seed a default selected pin at the map center when there are no existing coordinates, instead of leaving “No location selected”.
+   - Let users move the pin by tapping the map or dragging the marker.
+   - Keep the current-location button behavior, but make it update the pin and re-center the map.
 
-3. **Fix bottom bar visibility on mobile**
-   - Move the picker confirmation area above the app bottom nav with safe-area-aware spacing.
-   - Keep the app bottom nav visible when using drop-pin, while keeping the picker’s “Confirm location” panel readable and tappable.
+3. **Fix bottom bar visibility/overlap**
+   - Move the confirm panel above the phone/browser bottom toolbar using safe-area-aware spacing.
+   - Keep the panel compact and ensure the confirm button is fully visible.
+   - Ensure the picker’s close/location buttons stay visible at the top and don’t run under the device/browser chrome.
 
-4. **Fix top controls clipping**
-   - Add mobile-safe top padding to the drop-pin overlay and constrain the search row so it does not run under browser/device chrome.
-   - Keep category/filter chips horizontally scrollable so the Travel chip remains reachable.
-
-5. **Verify behavior**
-   - Test `/map` at phone viewport.
-   - Open “Drop a pin” and confirm the base map remains visible.
-   - Check current location still recenters the map.
-   - Confirm the bottom nav and confirmation controls are both visible and not overlapping.
+4. **Verify on mobile preview**
+   - Test the create location picker at a phone viewport.
+   - Confirm the map tiles render before tapping current location.
+   - Confirm the pin, confirm button, and bottom area are visible and usable.
