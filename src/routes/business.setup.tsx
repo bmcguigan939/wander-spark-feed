@@ -15,8 +15,6 @@ import {
   Home,
   Tent,
   Loader2,
-  Search,
-  MapPin,
   Plus,
   Minus,
   Bed,
@@ -47,8 +45,8 @@ import {
   ensureFirstDeal,
   markSetupStepComplete,
 } from "@/lib/business-setup.functions";
-import { geocodePlace, type GeocodeResult } from "@/lib/map.functions";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
+import { AddressPicker, type AddressValue } from "@/components/business/AddressPicker";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
 import { DealForm } from "@/components/business/DealForm";
@@ -622,96 +620,36 @@ function Step3Ota({ profile, next, back, refresh }: StepProps) {
 
 // ---------- Step 4: Address ----------
 function Step4Address({ profile, next, back, refresh }: StepProps) {
-  const geocode = useServerFn(geocodePlace);
   const save = useServerFn(saveSetupAddress);
-  const [q, setQ] = useState(profile?.address ?? profile?.place_name ?? "");
-  const [results, setResults] = useState<GeocodeResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [pick, setPick] = useState<GeocodeResult | null>(
-    profile?.lat && profile?.lng
+  const [pick, setPick] = useState<AddressValue | null>(
+    profile?.address || profile?.place_name
       ? {
-          id: "existing",
+          address: profile.address ?? profile.place_name ?? "",
           place_name: profile.place_name ?? profile.address ?? "",
-          text: profile.place_name ?? profile.address ?? "",
-          center: [profile.lng, profile.lat],
+          city: profile.business_city ?? null,
+          country: profile.business_country ?? null,
+          lat: profile.lat ?? null,
+          lng: profile.lng ?? null,
         }
       : null
   );
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!q.trim() || q === pick?.place_name) {
-      setResults([]);
-      return;
-    }
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await geocode({ data: { q: q.trim() } });
-        setResults(r.results);
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
-
   return (
     <>
       <StepTitle
         title="Where is your property?"
-        sub="Start typing your address and pick the best match."
+        sub="Enter your postcode or start typing your address — then pick the best match."
       />
-      <div className="relative">
-        <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPick(null);
-          }}
-          placeholder="Street, city, postal code…"
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-3 text-sm outline-none focus:border-primary"
-        />
-        {searching && (
-          <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-muted-foreground" />
-        )}
-      </div>
-      {results.length > 0 && !pick && (
-        <ul className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
-          {results.map((r) => (
-            <li key={r.id}>
-              <button
-                className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-primary/5"
-                onClick={() => {
-                  setPick(r);
-                  setQ(r.place_name);
-                  setResults([]);
-                }}
-              >
-                <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <span>{r.place_name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {pick && (
-        <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 h-4 w-4 text-primary" />
-            <div>
-              <p className="font-medium">{pick.place_name}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Pin: {pick.center[1].toFixed(4)}, {pick.center[0].toFixed(4)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddressPicker
+        initial={{
+          address: profile?.address ?? null,
+          place_name: profile?.place_name ?? null,
+          lat: profile?.lat ?? null,
+          lng: profile?.lng ?? null,
+        }}
+        onConfirmedChange={setPick}
+      />
 
       <StickyFooter
         onBack={back}
@@ -721,18 +659,20 @@ function Step4Address({ profile, next, back, refresh }: StepProps) {
           if (!pick) return;
           setBusy(true);
           try {
-            // Parse city/country roughly from the place name
             const parts = pick.place_name.split(",").map((s) => s.trim());
-            const country = parts[parts.length - 1] ?? null;
-            const city = parts.length >= 3 ? parts[parts.length - 3] : parts[0] ?? null;
+            const country =
+              pick.country ?? (parts[parts.length - 1] ?? null);
+            const city =
+              pick.city ??
+              (parts.length >= 3 ? parts[parts.length - 3] : parts[0] ?? null);
             await save({
               data: {
                 address: pick.place_name,
                 place_name: pick.place_name,
                 business_city: city,
                 business_country: country,
-                lat: pick.center[1],
-                lng: pick.center[0],
+                lat: pick.lat,
+                lng: pick.lng,
               },
             });
             refresh();
@@ -1772,97 +1712,37 @@ function ActivityStep1Basics({ profile, next, refresh }: StepProps) {
 }
 
 function ActivityStep2Location({ profile, next, back, refresh }: StepProps) {
-  const geocode = useServerFn(geocodePlace);
   const save = useServerFn(saveSetupActivityLocation);
-  const [q, setQ] = useState(profile?.address ?? profile?.place_name ?? "");
-  const [results, setResults] = useState<GeocodeResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [pick, setPick] = useState<GeocodeResult | null>(
-    profile?.lat && profile?.lng
+  const [pick, setPick] = useState<AddressValue | null>(
+    profile?.address || profile?.place_name
       ? {
-          id: "existing",
+          address: profile.address ?? profile.place_name ?? "",
           place_name: profile.place_name ?? profile.address ?? "",
-          text: profile.place_name ?? profile.address ?? "",
-          center: [profile.lng, profile.lat],
+          city: profile.business_city ?? null,
+          country: profile.business_country ?? null,
+          lat: profile.lat ?? null,
+          lng: profile.lng ?? null,
         }
       : null
   );
   const [meeting, setMeeting] = useState<string>(profile?.activity_meeting_point ?? "");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!q.trim() || q === pick?.place_name) {
-      setResults([]);
-      return;
-    }
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await geocode({ data: { q: q.trim() } });
-        setResults(r.results);
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
-
   return (
     <>
       <StepTitle
         title="Where does your activity take place?"
-        sub="Pick the main address, then tell guests exactly where to meet you."
+        sub="Enter your postcode or address, then tell guests exactly where to meet you."
       />
-      <div className="relative">
-        <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPick(null);
-          }}
-          placeholder="Street, city, postal code…"
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-3 text-sm outline-none focus:border-primary"
-        />
-        {searching && (
-          <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-muted-foreground" />
-        )}
-      </div>
-      {results.length > 0 && !pick && (
-        <ul className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
-          {results.map((r) => (
-            <li key={r.id}>
-              <button
-                className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm hover:bg-primary/5"
-                onClick={() => {
-                  setPick(r);
-                  setQ(r.place_name);
-                  setResults([]);
-                }}
-              >
-                <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <span>{r.place_name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {pick && (
-        <div className="mt-3 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 h-4 w-4 text-primary" />
-            <div>
-              <p className="font-medium">{pick.place_name}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Pin: {pick.center[1].toFixed(4)}, {pick.center[0].toFixed(4)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddressPicker
+        initial={{
+          address: profile?.address ?? null,
+          place_name: profile?.place_name ?? null,
+          lat: profile?.lat ?? null,
+          lng: profile?.lng ?? null,
+        }}
+        onConfirmedChange={setPick}
+      />
       <Field
         label="Meeting point instructions"
         hint="What guests will see in their booking confirmation."
@@ -1884,16 +1764,19 @@ function ActivityStep2Location({ profile, next, back, refresh }: StepProps) {
           setBusy(true);
           try {
             const parts = pick.place_name.split(",").map((s) => s.trim());
-            const country = parts[parts.length - 1] ?? null;
-            const city = parts.length >= 3 ? parts[parts.length - 3] : parts[0] ?? null;
+            const country =
+              pick.country ?? (parts[parts.length - 1] ?? null);
+            const city =
+              pick.city ??
+              (parts.length >= 3 ? parts[parts.length - 3] : parts[0] ?? null);
             await save({
               data: {
                 address: pick.place_name,
                 place_name: pick.place_name,
                 business_city: city,
                 business_country: country,
-                lat: pick.center[1],
-                lng: pick.center[0],
+                lat: pick.lat,
+                lng: pick.lng,
                 activity_meeting_point: meeting || null,
               },
             });
