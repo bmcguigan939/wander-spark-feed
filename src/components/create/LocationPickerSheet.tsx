@@ -163,7 +163,7 @@ export function LocationPickerSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-50 flex min-h-0 flex-col bg-background">
       {/* Top bar */}
       <div className="relative z-10 flex items-start gap-2 border-b border-border bg-background/95 p-3 backdrop-blur">
         <div className="min-w-0 flex-1">
@@ -194,14 +194,14 @@ export function LocationPickerSheet({
       </div>
 
       {/* Map */}
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_PUBLIC_TOKEN}
           initialViewState={initialView}
           mapStyle="mapbox://styles/mapbox/dark-v11"
           onClick={handleMapClick}
-          style={{ position: "absolute", inset: 0 }}
+          style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           cursor="crosshair"
         >
           <NavigationControl position="bottom-right" showCompass={false} />
