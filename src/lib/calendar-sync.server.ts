@@ -110,6 +110,35 @@ async function fetchIcsWithTimeout(url: string): Promise<string> {
 }
 
 /**
+ * Replace one calendar row's blocked-date set with the given expanded dates.
+ * Shared by per-deal and per-business-feed sync paths.
+ */
+async function replaceBlockedDatesForCalendar(
+  calendarId: string,
+  dealId: string,
+  dates: Array<{ date: string; summary: string | null }>,
+): Promise<void> {
+  await supabaseAdmin
+    .from("deal_blocked_dates")
+    .delete()
+    .eq("external_calendar_id", calendarId);
+
+  if (dates.length > 0) {
+    const rows = dates.map((d) => ({
+      deal_id: dealId,
+      date: d.date,
+      source: "external_ical" as const,
+      external_calendar_id: calendarId,
+      summary: d.summary,
+    }));
+    const { error: insErr } = await supabaseAdmin
+      .from("deal_blocked_dates")
+      .insert(rows);
+    if (insErr) throw new Error(insErr.message);
+  }
+}
+
+/**
  * Pull the external feed, parse, and replace this feed's rows in
  * deal_blocked_dates with the freshly-expanded set. Updates last_synced_at /
  * last_status / last_error on the calendar row regardless of outcome.
@@ -132,25 +161,7 @@ export async function syncOneExternalCalendar(calendarId: string): Promise<{
     const ics = await fetchIcsWithTimeout(cal.ics_url);
     const dates = expandIcsToDates(ics);
 
-    // Replace strategy: delete this feed's existing rows, then insert fresh.
-    await supabaseAdmin
-      .from("deal_blocked_dates")
-      .delete()
-      .eq("external_calendar_id", cal.id);
-
-    if (dates.length > 0) {
-      const rows = dates.map((d) => ({
-        deal_id: cal.deal_id,
-        date: d.date,
-        source: "external_ical" as const,
-        external_calendar_id: cal.id,
-        summary: d.summary,
-      }));
-      const { error: insErr } = await supabaseAdmin
-        .from("deal_blocked_dates")
-        .insert(rows);
-      if (insErr) throw new Error(insErr.message);
-    }
+    await replaceBlockedDatesForCalendar(cal.id, cal.deal_id as string, dates);
 
     await supabaseAdmin
       .from("deal_external_calendars")
@@ -173,5 +184,120 @@ export async function syncOneExternalCalendar(calendarId: string): Promise<{
       })
       .eq("id", cal.id);
     return { ok: false, blockedCount: 0, error: msg };
+  }
+}
+
+/**
+ * Sync one business-level channel manager feed across every deal owned by
+ * that business. Ensures a mirror deal_external_calendars row exists for
+ * each deal (linked by business_feed_id), then replaces blocked dates from
+ * the freshly-fetched ICS. Stamps status on the feed row.
+ */
+export async function syncBusinessFeed(feedId: string): Promise<{
+  ok: boolean;
+  blockedCount: number;
+  dealCount: number;
+  error?: string;
+}> {
+  const { data: feed, error: feedErr } = await supabaseAdmin
+    .from("business_channel_feeds")
+    .select("id, business_id, label, feed_url")
+    .eq("id", feedId)
+    .maybeSingle();
+  if (feedErr || !feed) {
+    return {
+      ok: false,
+      blockedCount: 0,
+      dealCount: 0,
+      error: feedErr?.message ?? "Feed not found",
+    };
+  }
+
+  const stampFeed = async (patch: Record<string, unknown>) => {
+    await supabaseAdmin
+      .from("business_channel_feeds")
+      .update({ ...patch, last_synced_at: new Date().toISOString() })
+      .eq("id", feed.id);
+  };
+
+  try {
+    const ics = await fetchIcsWithTimeout(feed.feed_url);
+    const dates = expandIcsToDates(ics);
+
+    const { data: deals, error: dealsErr } = await supabaseAdmin
+      .from("deals")
+      .select("id")
+      .eq("business_id", feed.business_id);
+    if (dealsErr) throw new Error(dealsErr.message);
+    const dealIds = (deals ?? []).map((d) => d.id as string);
+
+    if (dealIds.length === 0) {
+      await stampFeed({
+        last_status: "ok",
+        last_error: null,
+        last_blocked_count: 0,
+      });
+      return { ok: true, blockedCount: 0, dealCount: 0 };
+    }
+
+    // Existing mirrors
+    const { data: existing, error: exErr } = await supabaseAdmin
+      .from("deal_external_calendars")
+      .select("id, deal_id")
+      .eq("business_feed_id", feed.id);
+    if (exErr) throw new Error(exErr.message);
+    const byDeal = new Map<string, string>();
+    for (const r of existing ?? []) byDeal.set(r.deal_id as string, r.id as string);
+
+    // Create missing mirrors, refresh URL on existing ones
+    const name = feed.label?.trim() || "Channel manager";
+    const toCreate = dealIds
+      .filter((id) => !byDeal.has(id))
+      .map((id) => ({
+        deal_id: id,
+        business_feed_id: feed.id,
+        name,
+        ics_url: feed.feed_url,
+      }));
+    if (toCreate.length) {
+      const { data: inserted, error: insErr } = await supabaseAdmin
+        .from("deal_external_calendars")
+        .insert(toCreate)
+        .select("id, deal_id");
+      if (insErr) throw new Error(insErr.message);
+      for (const r of inserted ?? []) byDeal.set(r.deal_id as string, r.id as string);
+    }
+
+    if (byDeal.size) {
+      await supabaseAdmin
+        .from("deal_external_calendars")
+        .update({ ics_url: feed.feed_url, name })
+        .eq("business_feed_id", feed.id);
+    }
+
+    // Replace blocks per mirror
+    for (const dealId of dealIds) {
+      const calId = byDeal.get(dealId)!;
+      await replaceBlockedDatesForCalendar(calId, dealId, dates);
+      await supabaseAdmin
+        .from("deal_external_calendars")
+        .update({
+          last_synced_at: new Date().toISOString(),
+          last_status: "ok",
+          last_error: null,
+        })
+        .eq("id", calId);
+    }
+
+    await stampFeed({
+      last_status: "ok",
+      last_error: null,
+      last_blocked_count: dates.length,
+    });
+    return { ok: true, blockedCount: dates.length, dealCount: dealIds.length };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await stampFeed({ last_status: "error", last_error: msg.slice(0, 500) });
+    return { ok: false, blockedCount: 0, dealCount: 0, error: msg };
   }
 }

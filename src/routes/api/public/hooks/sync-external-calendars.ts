@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { syncOneExternalCalendar } from "@/lib/calendar-sync.server";
+import {
+  syncBusinessFeed,
+  syncOneExternalCalendar,
+} from "@/lib/calendar-sync.server";
 
 export const Route = createFileRoute("/api/public/hooks/sync-external-calendars")({
   server: {
@@ -15,9 +18,11 @@ export const Route = createFileRoute("/api/public/hooks/sync-external-calendars"
           return new Response("Unauthorized", { status: 401 });
         }
 
+        // Per-deal calendars that aren't managed by a business feed.
         const { data: cals, error } = await supabaseAdmin
           .from("deal_external_calendars")
-          .select("id");
+          .select("id")
+          .is("business_feed_id", null);
         if (error) {
           console.error("[ical-sync] list failed", error);
           return Response.json({ ok: false, error: error.message }, { status: 500 });
@@ -35,12 +40,35 @@ export const Route = createFileRoute("/api/public/hooks/sync-external-calendars"
           }
         }
 
+        // Business-level channel manager feeds (fan out across each owner's deals).
+        const { data: feeds, error: feedsErr } = await supabaseAdmin
+          .from("business_channel_feeds")
+          .select("id");
+        if (feedsErr) {
+          console.error("[ical-sync] feed list failed", feedsErr);
+        }
+        let feedsOk = 0;
+        let feedsFailed = 0;
+        const feedErrors: Array<{ id: string; error: string }> = [];
+        for (const f of feeds ?? []) {
+          const r = await syncBusinessFeed(f.id as string);
+          if (r.ok) feedsOk += 1;
+          else {
+            feedsFailed += 1;
+            feedErrors.push({ id: f.id as string, error: r.error ?? "unknown" });
+          }
+        }
+
         return Response.json({
           ok: true,
           processed: (cals ?? []).length,
           succeeded: ok,
           failed,
           errors,
+          feedsProcessed: (feeds ?? []).length,
+          feedsSucceeded: feedsOk,
+          feedsFailed,
+          feedErrors,
         });
       },
     },
