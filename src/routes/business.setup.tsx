@@ -54,7 +54,7 @@ import { DealForm } from "@/components/business/DealForm";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/business/setup")({
-  head: () => ({ meta: [{ title: "Set up your property — Travidz" }] }),
+  head: () => ({ meta: [{ title: "Set up your listing — Travidz" }] }),
   component: BusinessSetupPage,
 });
 

@@ -10,6 +10,7 @@ import { DealCalendarSync } from "@/components/business/DealCalendarSync";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
 import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 import { useAuth } from "@/lib/auth";
+import { useAccountKind } from "@/lib/useAccountKind";
 import { ArrowLeft, Banknote, Check, Info, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,7 @@ function EditDealPage() {
   const [busy, setBusy] = useState(false);
   const [policy, setPolicy] = useState<PolicyCode>("travidz_standard");
   const [policyHydrated, setPolicyHydrated] = useState(false);
+  const accountKind = useAccountKind();
 
   useEffect(() => {
     if (loading) return;
@@ -176,6 +178,7 @@ function EditDealPage() {
                 submitLabel="Save changes"
                 busy={busy}
                 autoSaveOnBlur={isDraft}
+                accountKind={accountKind}
                 onSubmit={async (values) => {
                   setBusy(true);
                   try {
