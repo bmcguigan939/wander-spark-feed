@@ -1405,6 +1405,16 @@ function Step12FirstUnit({ profile, firstDeal, next, back, refresh }: StepProps)
 
   const kind = profile?.setup_property_kind;
   const isHotel = kind === "hotel";
+  const isActivity = profile?.setup_business_type === "activity";
+  // Derive expected category from the profile so the rooms editor renders
+  // the lodging UI even if the existing draft row still has category="other".
+  const expectedCategory = isActivity
+    ? (profile as any)?.activity_category === "tour"
+      ? "tour"
+      : "do"
+    : kind === "hotel" || kind === "apartment" || kind === "home" || kind === "alternative"
+      ? "stay"
+      : firstDeal?.category;
 
   useEffect(() => {
     if (dealId) return;
@@ -1456,7 +1466,7 @@ function Step12FirstUnit({ profile, firstDeal, next, back, refresh }: StepProps)
       )}
       {dealId && isHotel && (
         <div className="rounded-2xl border border-border bg-card p-3">
-          <RoomsAndRatesEditor dealId={dealId} category={firstDeal?.category} />
+          <RoomsAndRatesEditor dealId={dealId} category={expectedCategory} />
         </div>
       )}
       <StickyFooter

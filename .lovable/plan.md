@@ -1,34 +1,31 @@
-## Goal
+## Root cause
 
-Today the wizard's room/unit step (Step 12) only shows the `RoomsAndRatesEditor` (with its existing room-level photo uploader) when the host's property kind is `hotel`. Apartment, villa, B&B, and other non-hotel hosts see only a "Quick layout" placeholder telling them to finish details from the dashboard — so they can't upload unit photos during setup.
-
-We'll extend the non-hotel path so hosts can upload photos for their unit right in the wizard, matching the hotel flow.
+`RoomsAndRatesEditor` only renders `RoomCard` (which contains `RoomPhotosUploader`) when the deal's category is `"stay"` (lodging). The wizard's Step 12 passes `firstDeal?.category` through. `ensureFirstDeal` derives `category = "stay"` only when **creating** a new draft — if a draft already existed with `category = "other"` (created before `setup_property_kind` was selected, or via `business.deals.new` with `accountKind` undefined), it's reused as-is. Result: the editor falls into the `!isLodging && !isActivity` branch and shows a flat "Rate plans" block with no rooms and no photo upload.
 
 ## Changes
 
-1. **`src/routes/business.setup.tsx` — Step 12 (`Step12RoomsRates`)**
-   - Replace the non-hotel placeholder card with an inline per-unit photo uploader for the draft `dealId`.
-   - Keep the existing "Edit full details" deep-link below the uploader so hosts can still jump into the full editor for beds/amenities/etc.
-   - Hotel path remains unchanged (still shows full `RoomsAndRatesEditor`, which already supports room photos + rate plans).
-   - Update the step subtitle for non-hotel hosts to mention photos: e.g. "Add a few photos of your unit and the basics. You can refine details from your dashboard."
+1. **`src/lib/business-setup.functions.ts` — `ensureFirstDeal`**
+   - When an existing draft is found, recompute the expected `category` and `price_unit` from the profile (same logic already used in the create path).
+   - If the existing deal's `category` doesn't match (e.g. it's `"other"` but the host is a hotel/apartment/home/alternative), update the row to the correct `category` and `price_unit` before returning.
+   - Only normalize when the deal is still a draft (`status = 'draft'`), to avoid mutating live listings.
 
-2. **Photo uploader for a single unit (non-hotel)**
-   - Reuse the existing pattern from `RoomsAndRatesEditor` (Supabase `business-photos` bucket upload + `deal_rooms.photos` array), but for a single auto-created "Unit" room row on the draft deal.
-   - On step open, ensure a single `deal_rooms` row exists for this draft (create one named after the deal title / "Main unit" if missing) so the photos array has somewhere to live. This row is invisible UI-wise; only its `photos` field is exposed.
-   - Cap: 20 photos (same as hotel rooms), show count, allow remove, drag-free simple grid (mirroring current UX).
+2. **`src/routes/business.setup.tsx` — `Step12FirstUnit`**
+   - Compute `expectedCategory` from `profile.setup_business_type` / `setup_property_kind` (mirror of the `ensureFirstDeal` logic).
+   - Pass `category={expectedCategory}` to `<RoomsAndRatesEditor>` instead of `firstDeal?.category`, so even before the loader refetches the corrected deal, the editor renders the lodging UI.
+   - After `ensure()` resolves, call `refresh()` (already happens) so `firstDeal.category` updates from the normalized row.
 
-3. **No schema or RLS changes**
-   - `deal_rooms.photos` (text[]) already exists and is covered by existing owner-write policies.
-   - `business-photos` storage bucket and its policies are already in use by the hotel flow.
+3. **No schema or UI changes to `RoomsAndRatesEditor`**
+   - Per-room photo upload (`RoomPhotosUploader`) is already wired into `RoomCard`; it just wasn't reachable because the wrong branch was rendering.
 
 ## Out of scope
 
-- No changes to rate plans (per the user's choice — photos stay at room/unit level, not per rate plan).
-- No changes to Step 13 (business-level gallery) — that one is separate and stays.
-- Hotel flow is untouched.
+- Non-hotel (apartment/villa/unit) flow — already covered by the previous turn's `UnitPhotosUploader`.
+- Activity packages — already render `PackageCard` with photo support.
 
 ## Technical notes
 
-- The auto-create-one-unit helper can live inline in Step 12 using the existing `upsertRoom` server fn from `src/lib/rooms-rates.functions.ts`.
-- Photo persistence will reuse `upsertRoom` with `{ patch: { name, photos: next } }`, exactly like `RoomsAndRatesEditor.persist`.
-- File upload uses the browser `supabase` client → `business-photos` bucket, same path convention as today (`${userId}/rooms/${dealId}/...`).
+- `ensureFirstDeal` normalization: only mutate `category` and `price_unit` when `status = 'draft'` AND the derived values differ from the row's current values. Don't touch other fields.
+- Derived mapping (kept identical between server fn and Step 12):
+  - `setup_business_type === "activity"` → `activity_category === "tour" ? "tour" : "do"`, `price_unit = "per_person"`
+  - `setup_property_kind ∈ {hotel, apartment, home, alternative}` → `"stay"`, `price_unit = "per_night"`
+  - otherwise → leave alone (don't override to `"other"`).
