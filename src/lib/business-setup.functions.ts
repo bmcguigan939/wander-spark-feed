@@ -558,7 +558,7 @@ export const ensureFirstDeal = createServerFn({ method: "POST" })
           patch.price_unit = derivedPriceUnit;
         }
         if (Object.keys(patch).length > 0) {
-          await supabaseAdmin.from("deals").update(patch).eq("id", ex.id);
+          await supabaseAdmin.from("deals").update(patch as any).eq("id", ex.id);
         }
       }
       return { id: ex.id };
