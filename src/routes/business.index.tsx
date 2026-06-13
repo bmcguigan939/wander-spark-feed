@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { useAccountKind } from "@/lib/useAccountKind";
-import { getMySetupState } from "@/lib/business-setup.functions";
+import { getMySetupState, saveSetupBusinessType } from "@/lib/business-setup.functions";
 import { Rocket } from "lucide-react";
 
 export const Route = createFileRoute("/business/")({
@@ -25,7 +26,20 @@ function BusinessDashboard() {
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
   const fetchSetup = useServerFn(getMySetupState);
+  const saveType = useServerFn(saveSetupBusinessType);
+  const qc = useQueryClient();
   const accountKind = useAccountKind();
+  const pickPath = useMutation({
+    mutationFn: (kind: "stay" | "activity") =>
+      saveType({ data: { setup_business_type: kind } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-setup-state"] });
+      qc.invalidateQueries({ queryKey: ["account-kind"] });
+      navigate({ to: "/business/setup" });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save choice"),
+  });
+
 
   useEffect(() => {
     if (loading) return;
