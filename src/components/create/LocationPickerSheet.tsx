@@ -199,8 +199,13 @@ export function LocationPickerSheet({
           ref={mapRef}
           mapboxAccessToken={MAPBOX_PUBLIC_TOKEN}
           initialViewState={initialView}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle="mapbox://styles/mapbox/standard"
           onClick={handleMapClick}
+          onLoad={() => {
+            // Force a resize after the fixed-overlay layout settles so tiles
+            // paint even when the map mounted into a just-opened modal.
+            requestAnimationFrame(() => mapRef.current?.getMap()?.resize());
+          }}
           style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           cursor="crosshair"
         >
