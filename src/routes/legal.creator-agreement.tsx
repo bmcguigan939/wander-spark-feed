@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/layout/LegalPage";
 import { COMMISSION } from "@/lib/commission";
+import { AgreementAcceptBar } from "@/components/legal/AgreementAcceptBar";
 
 export const Route = createFileRoute("/legal/creator-agreement")({
   head: () => ({
@@ -17,7 +18,11 @@ export const Route = createFileRoute("/legal/creator-agreement")({
 
 function CreatorAgreementPage() {
   return (
-    <LegalPage title="Creator Agreement" updated="November 2026">
+    <LegalPage
+      title="Creator Agreement"
+      updated="November 2026"
+      footer={<AgreementAcceptBar kind="creator" />}
+    >
       <p>This agreement applies in addition to the <a href="/legal/terms">Terms of Service</a> when you publish travel content or participate in deals as a Creator on Travidz.</p>
       <h2>1. Original content and rights</h2>
       <p>You confirm that every video, photo, sound and itinerary you upload is yours, or that you have all the rights and releases needed to publish it (music sync, talent releases, location permits).</p>
