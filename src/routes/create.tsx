@@ -236,6 +236,11 @@ function UploadFlowBody() {
   // the pin picker so they only have to confirm or nudge the pin.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (publishMode !== "draft" && isJunkTitle(title)) {
+      toast("Give your video a title travellers will recognise");
+      titleRef.current?.focus();
+      return;
+    }
     if (!title.trim()) return;
     if (lat && lng || publishMode === "draft") {
       finalizeM.mutate();
