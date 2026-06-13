@@ -93,6 +93,7 @@ function UploadFlowBody() {
   const qc = useQueryClient();
   const createUploadFn = useServerFn(createDirectUpload);
   const finalizeFn = useServerFn(finalizeVideoMetadata);
+  const search = Route.useSearch();
 
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -109,6 +110,18 @@ function UploadFlowBody() {
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Prefill from /map "Drop a pin" hand-off (only fills blanks).
+  useEffect(() => {
+    if (typeof search.lat === "number" && typeof search.lng === "number") {
+      setLat((v) => v || search.lat!.toFixed(6));
+      setLng((v) => v || search.lng!.toFixed(6));
+    }
+    if (search.country) setCountry((v) => v || search.country!);
+    if (search.city) setCity((v) => v || search.city!);
+    if (search.destination) setDestination((v) => v || search.destination!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduleAt, setScheduleAt] = useState("");
   const [track, setTrack] = useState<MusicTrack | null>(null);
