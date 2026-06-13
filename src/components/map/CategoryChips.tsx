@@ -19,14 +19,14 @@ export function CategoryChips({
   onChange: (v: Value) => void;
 }) {
   return (
-    <div className="pointer-events-auto flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="pointer-events-auto flex gap-2 overflow-x-auto pb-1 pr-3 snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {ITEMS.map(({ value: v, label, Icon }) => {
         const active = value === v;
         return (
           <button
             key={v}
             onClick={() => onChange(v)}
-            className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+            className={`flex flex-shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
               active
                 ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30"
                 : "border-border bg-background/85 text-foreground backdrop-blur-xl hover:bg-muted"
