@@ -19,7 +19,7 @@ import { CategoryChips } from "@/components/map/CategoryChips";
 import { ClusteredSheet, type ClusterIds } from "@/components/map/ClusteredSheet";
 import { MapLayerSwitcher, LAYER_STYLES, type MapLayer } from "@/components/map/MapLayerSwitcher";
 import { MapPin } from "lucide-react";
-import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
+import { DropPinOverlay } from "@/components/map/DropPinOverlay";
 import { useAuth } from "@/lib/auth";
 
 const MAPBOX_TOKEN =
