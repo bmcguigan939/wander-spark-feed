@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck, ShieldCheck, MessageSquare, Zap } from "lucide-react";
+import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck, ShieldCheck, MessageSquare, Zap, Hotel, Mountain } from "lucide-react";
 import { Sparkline } from "@/components/business/Sparkline";
 import { AgreementBanner } from "@/components/AgreementBanner";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
@@ -72,33 +72,70 @@ function BusinessDashboard() {
             | "activity"
             | null
             | undefined;
+          if (!kind) {
+            return (
+              <div className="mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Rocket className="h-4 w-4" />
+                  Set up your listing
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Pick the path that matches your business — the rest of setup is tailored to it.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/business/setup"
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  >
+                    <Hotel className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-semibold">I offer stays</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Hotels, apartments, villas, B&amp;Bs
+                    </span>
+                  </Link>
+                  <Link
+                    to="/business/setup"
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  >
+                    <Mountain className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-semibold">I run activities</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Tours, classes, experiences, rentals
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            );
+          }
           const totalSteps = kind === "activity" ? 11 : 16;
-          const label = !kind
-            ? "Set up your listing"
-            : kind === "activity"
-              ? "Resume activity setup"
-              : "Resume stay setup";
-          const sub = !kind
-            ? "Start"
-            : `Step ${Math.min(setupStep + 1, totalSteps)} / ${totalSteps}`;
+          const label =
+            kind === "activity" ? "Resume activity setup" : "Resume stay setup";
+          const sub = `Step ${Math.min(setupStep + 1, totalSteps)} / ${totalSteps}`;
           return (
-            <Link
-              to="/business/setup"
-              className="mb-4 flex flex-col gap-1 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm"
-            >
-              <span className="flex items-center justify-between">
-                <span className="flex items-center gap-2 font-semibold text-primary">
+            <div className="mb-4 flex flex-col gap-1 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+              <div className="flex items-center justify-between">
+                <Link
+                  to="/business/setup"
+                  className="flex items-center gap-2 font-semibold text-primary"
+                >
                   <Rocket className="h-4 w-4" />
                   {label}
-                </span>
+                </Link>
                 <span className="text-xs font-medium text-primary">{sub}</span>
-              </span>
-              {!kind && (
-                <span className="text-xs text-muted-foreground">
-                  Stays or activities — pick your path
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  Path: {kind === "activity" ? "Activities" : "Stays"}
                 </span>
-              )}
-            </Link>
+                <Link
+                  to="/business/setup"
+                  search={{ changePath: true }}
+                  className="underline hover:text-foreground"
+                >
+                  Change path
+                </Link>
+              </div>
+            </div>
           );
         })()}
         <OnboardingChecklist />
