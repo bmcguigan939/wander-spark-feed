@@ -1,74 +1,77 @@
 ## Goal
 
-When the user picks "Yes" in **Step 5 — Do you use a channel manager?**, surface a connect sub-step where they pick their provider and paste one or more iCal sync URLs. "No" continues straight to Step 6 (facilities) unchanged. Total step count stays at 16 — the connect screen is an inline sub-view of Step 5, not a new top-level step (so the existing branching switch for Activity doesn't shift).
+Make the channel manager step actually manage bookings. Today `business_channel_feeds` is written by the setup wizard but never read. This plan wires those feeds into the existing per-deal availability system, gives owners a dashboard card to manage them, surfaces per-deal outbound `.ics` URLs so a channel manager can pull Travidz bookings, and adds per-feed sync status/error surfacing.
 
-## What the user sees
+## Scope
 
-Stays path, Step 5 becomes two views inside the same step:
+### 1. Backend sync: fan business feeds into per-deal blocks
 
-1. **View A — "Do you use a channel manager?"** (current cards). Copy change:
-   - "Yes — I'll connect it now" (was "Yes — I'll connect mine later")
-   - "No, I won't use a channel manager"
-   On "Continue":
-   - If **Yes** → save `channel_manager_planned: true` and switch to View B in place; **do not** advance to Step 6.
-   - If **No** → save `false` and advance to Step 6 as today.
-2. **View B — "Connect your channel manager"** (only when Yes was picked):
-   - Provider dropdown: SiteMinder, Cloudbeds, Hostaway, Lodgify, Smoobu, Beds24, Hostfully, Other (free text field appears when "Other" chosen).
-   - Repeating list of "Calendar feed URL" rows (start with one, "+ Add another feed"), each with an optional label (e.g. "Airbnb", "Booking.com"). At least one row must have a valid URL (`https://…` or `webcal://…`, max 500 chars) to enable Continue.
-   - Helper text + a "How do I find this?" disclosure that lists the per-provider menu paths (short bullets, no external links needed).
-   - Footer buttons: **Back** (returns to View A, leaves data intact), **Skip for now** (saves what's entered, marks `channel_manager_connect_skipped_at = now()`, advances), **Continue** (saves URLs + advances).
-   - On Continue, persist via a new server function (see below), invalidate setup state, then `next()`.
+Reuse the existing `deal_blocked_dates` / `deal_external_calendars` machinery instead of inventing a parallel one — the booking UI, public read policies, and ICS generation already key off those tables.
 
-Activity path is unchanged (no channel-manager step there today).
+**Schema (single migration):**
+- `business_channel_feeds`: add `label` already exists; add `last_synced_at timestamptz`, `last_status text`, `last_error text`, `last_blocked_count int`. Fix the FK: it currently references `auth.users(id)` but should logically reference the owner; keep as-is (owner = `auth.uid()`), just document.
+- `deal_external_calendars`: add nullable `business_feed_id uuid references business_channel_feeds(id) on delete cascade` + index. When set, the row is a managed mirror of a business feed (owner UI hides it from per-deal editor; sync is driven by the business feed).
+- Add unique partial index `(deal_id, business_feed_id)` where `business_feed_id is not null` so we don't double-attach.
 
-## Data
+**New server logic (`src/lib/calendar-sync.server.ts`):**
+- `syncBusinessFeed(feedId)`: fetch feed once, expand to dates once, then for every deal owned by `feed.business_id` ensure a `deal_external_calendars` row exists with `business_feed_id = feedId` and `ics_url = feed.feed_url`, and replace that calendar's `deal_blocked_dates` rows with the expanded set. On feed deletion the cascade removes the mirror calendars and their blocks. Update `last_synced_at/last_status/last_error/last_blocked_count` on the feed row.
+- Cleanup pass inside the same function: when a deal is added later, the next sync creates its mirror; when a deal is removed/archived, the mirror cascades from `deals` delete and `last_status` stays consistent.
 
-New columns on `profiles`:
-- `channel_manager_provider text` — provider key (e.g. `siteminder`, `other`)
-- `channel_manager_provider_other text` — free-text when provider is `other`
-- `channel_manager_connect_skipped_at timestamptz`
+**Cron hook (`src/routes/api/public/hooks/sync-external-calendars.ts`):**
+- After existing per-deal loop, also `select id from business_channel_feeds` and call `syncBusinessFeed` for each. Aggregate counts in the response.
 
-New table `business_channel_feeds` (one row per iCal URL):
-- `id uuid pk default gen_random_uuid()`
-- `business_id uuid references auth.users(id) on delete cascade`
-- `label text` (nullable, e.g. "Airbnb")
-- `feed_url text not null` (CHECK length ≤ 500)
-- `created_at`, `updated_at` (with updated_at trigger)
-- Unique `(business_id, feed_url)`
+### 2. Owner-facing server functions (`src/lib/business-channel-feeds.functions.ts`, new)
 
-Migration includes the standard four-step pattern: CREATE TABLE → GRANT (`authenticated` full, `service_role` all; no `anon`) → ENABLE RLS → policies: a business may select/insert/update/delete only rows where `business_id = auth.uid()`; admins may select all via `has_role(auth.uid(),'admin')`.
+All `.middleware([requireSupabaseAuth])`, scoped to `business_id = userId`:
+- `listMyChannelFeeds()` → feeds + sync status + affected deal count.
+- `addMyChannelFeed({ label?, feed_url })` → insert, then immediately call `syncBusinessFeed`.
+- `updateMyChannelFeed({ id, label?, feed_url? })` → update, re-sync if URL changed.
+- `removeMyChannelFeed({ id })` → delete (cascade removes mirror calendars/blocks).
+- `syncMyChannelFeedNow({ id })` → run `syncBusinessFeed` and return summary.
+- `listMyDealIcalUrls()` → for each owned deal, return `{ dealId, title, feedUrl }` built from the same token logic used by `DealCalendarSync` (centralize the token builder in a shared server-only helper if not already).
 
-## Server fns (`src/lib/business-setup.functions.ts`)
+Replace the existing `getMyChannelFeeds` in `business-setup.functions.ts` with `listMyChannelFeeds` (or have setup call the new fn) to avoid duplication. Setup wizard saves go through the new add/update fns so newly entered feeds sync immediately rather than waiting for cron.
 
-- Extend `saveSetupChannelManager` input to:
-  `{ channel_manager_planned: boolean, provider?: string|null, provider_other?: string|null, feeds?: { label?: string|null, feed_url: string }[], skipped?: boolean }`.
-  Handler:
-  1. Always update `profiles.channel_manager_planned` (and provider fields + `channel_manager_connect_skipped_at` when supplied).
-  2. If `feeds` is provided, replace the user's `business_channel_feeds` rows in one transaction (delete existing rows for this user, insert provided ones — keeps the editor idempotent).
-  3. Bump setup step to 5 only when advancing (when `planned === false` or feeds/skipped is supplied); when just saving the "Yes" choice without feeds yet, leave the step where it is.
-- New `getMyChannelFeeds` server fn to hydrate View B on revisit.
+### 3. Dashboard card (`src/components/business/ChannelManagerCard.tsx`, new)
 
-Validation: feed URLs parsed with `z.string().url()` plus an allowlist of protocols (`https:`, `http:`, `webcal:`). Cap feeds at 10.
+Rendered on `business.index.tsx` (and linked from `OnboardingChecklist` as "Connect channel manager" if not yet set). Mirrors `DealCalendarSync` look-and-feel but operates at business scope:
 
-## Frontend (`src/routes/business.setup.tsx`)
+- **Header:** "Channel manager" + provider badge (from `profiles.channel_manager_provider`), with an "Edit provider" inline action.
+- **Section A — Feeds you're importing:** list `business_channel_feeds` with label, truncated URL, last-sync relative time, status pill (ok / error / pending), affected deal count, per-row "Sync now" and "Remove" buttons. Add form for label + URL. Uses the new server fns via `useMutation` + query invalidation on key `["business-channel-feeds"]`.
+- **Section B — Outbound calendar URLs (per deal):** list each of the owner's deals with the public `.ics` URL and Copy button, plus a "Bulk copy as CSV" action so they can paste into their channel manager's "Add iCal" screen. Empty state when the owner has no published deals yet.
+- **Footer:** "Sync runs automatically every hour. Last automatic run: …" (read from max `last_synced_at` across feeds).
 
-- Split `Step5ChannelManager` into a small wrapper state machine: `view: "ask" | "connect"`, default `"ask"`.
-- Picking "Yes" + Continue saves the boolean (and provider when set later), then setView("connect"). Existing wizard "Back" button in View B returns to View A without leaving the step.
-- View B renders the provider select, feed-URL editor (reuse existing `Field` and input styling from `Step5ChannelManager`/`Step6Facilities` to match the visual language; no new component file unless this exceeds ~120 lines).
-- Hydrate initial state from `profile.channel_manager_provider`, `provider_other`, and a new query against `getMyChannelFeeds`.
-- "Skip for now" sets `skipped: true`, advances; the dashboard onboarding checklist (out of scope here) can later prompt them to finish.
+### 4. Setup wizard adjustments (`src/routes/business.setup.tsx`)
 
-No changes to step count, the activity branch, or other steps.
+- After Step 5 saves feeds, trigger an immediate sync (server fn already does it) and surface inline status ("Connected · N dates blocked across M deals" or error).
+- "Manage later from your dashboard" link goes to `/business#channel-manager`.
 
-## Out of scope
+### 5. Out of scope
 
-- Real OAuth/API integration with any channel manager (this is iCal feeds only; same primitive already used at the deal level).
-- Background sync scheduling — feeds are stored now, sync wiring can be a follow-up.
-- Dashboard "Connect channel manager" card.
+- Real provider OAuth (SiteMinder/Cloudbeds API) — still iCal only.
+- Per-feed deal allow-list (all owner's deals are mirrored by default).
+- Rate-plan / pricing sync — availability only.
+- Editing the provider list (stays as fixed dropdown from setup).
 
-## Steps to execute (after approval)
+## Technical notes
 
-1. Run migration: add three profile columns, create `business_channel_feeds` table with GRANT/RLS as above.
-2. Update `saveSetupChannelManager` and add `getMyChannelFeeds` in `business-setup.functions.ts`; expand the selected `profiles` column list to include the new fields.
-3. Refactor `Step5ChannelManager` in `business.setup.tsx` to the two-view flow with the provider/feed editor.
-4. Manual QA in preview: Yes → connect view → save feeds → next; Yes → skip → next; No → next; revisit Step 5 and confirm feeds reappear.
+- Use existing `expandIcsToDates` and the replace strategy from `syncOneExternalCalendar`; factor the shared inner body into a helper that takes `{ calendarId, dealId, icsUrl }` so per-deal and per-business paths share code.
+- Mirror calendars created by `syncBusinessFeed` get `name = feed.label ?? 'Channel manager'` so `DealCalendarSync` shows them but the existing remove button on those rows should be disabled when `business_feed_id is not null` (managed centrally). Add a small UI guard there.
+- Cron route stays at `/api/public/hooks/sync-external-calendars`; no new cron job needed.
+- All new RLS policies on `business_channel_feeds` columns are already covered by the existing owner policy; the new `business_feed_id` column on `deal_external_calendars` doesn't change policy semantics (existing per-deal owner policies still apply).
+- Public read of `deal_blocked_dates` already works for the outbound `.ics`, so no change for the consumer side.
+
+## Files
+
+```text
+supabase/migrations/<new>.sql            (schema additions + index)
+src/lib/calendar-sync.server.ts          (add syncBusinessFeed, refactor shared body)
+src/routes/api/public/hooks/sync-external-calendars.ts  (also iterate feeds)
+src/lib/business-channel-feeds.functions.ts             (new server fns)
+src/lib/business-setup.functions.ts      (delegate feed CRUD to new fns; immediate sync on save)
+src/components/business/ChannelManagerCard.tsx          (new)
+src/components/business/DealCalendarSync.tsx            (disable remove on managed rows)
+src/components/business/OnboardingChecklist.tsx         (link to dashboard card if not set)
+src/routes/business.index.tsx            (mount the card with #channel-manager anchor)
+src/routes/business.setup.tsx            (post-save status + dashboard link)
+```

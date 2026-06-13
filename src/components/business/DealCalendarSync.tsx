@@ -187,11 +187,17 @@ export function DealCalendarSync({ dealId }: { dealId: string }) {
                         </button>
                         <button
                           type="button"
+                          disabled={!!(c as any).business_feed_id}
+                          title={
+                            (c as any).business_feed_id
+                              ? "Managed centrally from your channel manager card"
+                              : "Remove"
+                          }
                           onClick={() => {
+                            if ((c as any).business_feed_id) return;
                             if (confirm(`Remove "${c.name}"?`)) removeM.mutate(c.id);
                           }}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-border text-destructive"
-                          title="Remove"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-border text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

@@ -299,10 +299,23 @@ export const saveSetupChannelManager = createServerFn({ method: "POST" })
           label: f.label?.trim() || null,
         }));
       if (rows.length) {
-        const { error: insErr } = await supabaseAdmin
+        const { data: inserted, error: insErr } = await supabaseAdmin
           .from("business_channel_feeds")
-          .insert(rows);
+          .insert(rows)
+          .select("id");
         if (insErr) throw new Error(insErr.message);
+        // Sync each inserted feed immediately so the user sees results
+        // without waiting for the hourly cron. Failures don't block the wizard.
+        try {
+          const { syncBusinessFeed } = await import(
+            "@/lib/calendar-sync.server"
+          );
+          for (const r of inserted ?? []) {
+            await syncBusinessFeed(r.id as string);
+          }
+        } catch (e) {
+          console.error("[setup] immediate channel feed sync failed", e);
+        }
       }
     }
 
