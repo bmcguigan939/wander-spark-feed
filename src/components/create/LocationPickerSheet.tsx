@@ -185,7 +185,8 @@ export function LocationPickerSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-background">
+    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-background"
+         style={{ height: "100dvh" }}>
       {/* Top bar */}
       <div className="relative z-10 flex items-start gap-2 border-b border-border bg-background/95 p-3 backdrop-blur">
         <div className="min-w-0 flex-1">
@@ -224,9 +225,15 @@ export function LocationPickerSheet({
           mapStyle="mapbox://styles/mapbox/streets-v12"
           onClick={handleMapClick}
           onLoad={() => {
-            // Force a resize after the fixed-overlay layout settles so tiles
-            // paint even when the map mounted into a just-opened modal.
+            setMapReady(true);
             requestAnimationFrame(() => mapRef.current?.getMap()?.resize());
+            // Seed a default pin at the visible center if none was passed in,
+            // so "Confirm location" works without requiring a tap.
+            const m = mapRef.current?.getMap();
+            if (m && !pin) {
+              const c = m.getCenter();
+              setPin({ lat: c.lat, lng: c.lng });
+            }
           }}
           style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           cursor="crosshair"
