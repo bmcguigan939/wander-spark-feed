@@ -15,7 +15,6 @@ import {
   Home,
   Tent,
   Loader2,
-  Search,
   MapPin,
   Plus,
   Minus,
@@ -47,7 +46,6 @@ import {
   ensureFirstDeal,
   markSetupStepComplete,
 } from "@/lib/business-setup.functions";
-import { geocodePlace, type GeocodeResult } from "@/lib/map.functions";
 import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor";
 import { AddressPicker, type AddressValue } from "@/components/business/AddressPicker";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
