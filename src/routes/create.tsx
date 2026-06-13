@@ -171,8 +171,15 @@ function UploadFlowBody() {
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(f);
       });
-      setTitle(f.name.replace(/\.[^.]+$/, ""));
-      toast("Upload complete — add details");
+      const guessed = f.name.replace(/\.[^.]+$/, "");
+      if (isJunkTitle(guessed)) {
+        setTitle("");
+        toast("Upload complete — give your video a title");
+        requestAnimationFrame(() => titleRef.current?.focus());
+      } else {
+        setTitle(guessed);
+        toast("Upload complete — add details");
+      }
     } catch (e: any) {
       const msg = e?.message ?? "Upload failed";
       setUploadError(msg);
