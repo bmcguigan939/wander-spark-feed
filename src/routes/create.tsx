@@ -737,7 +737,14 @@ function ImportFlow() {
       )}
 
       {preview && (
-        <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) importM.mutate(); }} className="space-y-3">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (isJunkTitle(title)) {
+            toast("Give your video a title travellers will recognise");
+            return;
+          }
+          if (title.trim()) importM.mutate();
+        }} className="space-y-3">
           <div className="overflow-hidden rounded-3xl border border-border bg-card">
             {preview.thumbnail && (
               <img src={preview.thumbnail} alt="" className="h-44 w-full object-cover" />
@@ -772,6 +779,11 @@ function ImportFlow() {
 
           <Field label="Title">
             <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} />
+            {isJunkTitle(title) && (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                Required — name this so travellers can find it on the map.
+              </p>
+            )}
           </Field>
           <Field label="Description">
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} />
@@ -811,7 +823,7 @@ function ImportFlow() {
           </label>
 
           <button
-            disabled={importM.isPending || !title.trim() || !ownership}
+            disabled={importM.isPending || isJunkTitle(title) || !ownership}
             className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {importM.isPending ? "Publishing…" : "Publish linked post"}
