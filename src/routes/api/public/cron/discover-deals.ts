@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runDiscoveryCycle } from "@/lib/discovery.functions";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/cron/discover-deals")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
         try {
           const out = await runDiscoveryCycle();
           return new Response(JSON.stringify(out), {

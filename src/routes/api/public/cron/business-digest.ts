@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 import React from "react";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
@@ -18,19 +19,8 @@ import { BusinessDigestEmail } from "@/lib/email-templates/business-digest";
 export const Route = createFileRoute("/api/public/cron/business-digest")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const apiKey =
-          request.headers.get("apikey") ?? request.headers.get("Apikey");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ??
-          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!apiKey || !expected || apiKey !== expected) {
-          return new Response(JSON.stringify({ error: "unauthorized" }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
-        }
-
+      POST: async ({ request }) => {        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
         const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 
         // Pull all active businesses (profiles with a business role)

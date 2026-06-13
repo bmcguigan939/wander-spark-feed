@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 
 /**
  * Refreshes every creator's rolling-12mo GBV and permanently locks any
@@ -10,7 +11,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const Route = createFileRoute("/api/public/cron/refresh-creator-tiers")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
         const { data, error } = await supabaseAdmin.rpc("refresh_creator_tiers");
         if (error) {
           return new Response(JSON.stringify({ ok: false, error: error.message }), {
