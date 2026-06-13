@@ -1,24 +1,25 @@
 ## Plan
 
-1. **Fix the white/blank map tiles**
-   - Replace the Mapbox `standard` style with a stable classic style (`mapbox://styles/mapbox/streets-v12`) for the default map layer.
-   - Use the same default style in the drop-pin location picker so both map views render consistently.
-   - Keep the existing resize-on-load safeguard for the picker.
+1. **Make drop-pin use the same working map path as current location**
+   - Replace the separate drop-pin map instance with the already-rendered map view underneath the picker overlay.
+   - When “Drop a pin” opens, keep the main `/map` Mapbox canvas visible instead of mounting a second Mapbox canvas that can render blank.
+   - Show the draggable pin, search, current-location, close, and confirm controls as an overlay on top of that working map.
 
-2. **Stop the app bottom nav from covering the drop-pin sheet**
-   - Raise the drop-pin picker above the app nav by increasing its overlay z-index.
-   - Convert the picker bottom area into a floating bottom action panel with safe-area padding so **Confirm location** is fully visible and not trapped behind the nav.
+2. **Keep the selected pin state synced with the main map**
+   - On opening drop-pin, initialize the pin from the current map/search coordinates.
+   - Tapping the map or dragging the pin updates the selected coordinates.
+   - Search result and current-location actions move the main map and update the pin.
 
-3. **Fix the top travel filter/search layout**
-   - Give the top map controls stronger mobile-safe spacing from the status bar/notch.
-   - Constrain the horizontal category chips so the “Travel” filter stays scrollable inside the viewport instead of appearing off-screen.
-   - Keep the controls compact so the map still feels large.
+3. **Fix bottom bar visibility on mobile**
+   - Move the picker confirmation area above the app bottom nav with safe-area-aware spacing.
+   - Keep the app bottom nav visible when using drop-pin, while keeping the picker’s “Confirm location” panel readable and tappable.
 
-4. **Lower and lighten the bottom navigation on the map**
-   - Make the bottom nav more transparent and slightly lower using safe-area-aware positioning.
-   - Ensure map floating buttons sit above it with enough clearance.
+4. **Fix top controls clipping**
+   - Add mobile-safe top padding to the drop-pin overlay and constrain the search row so it does not run under browser/device chrome.
+   - Keep category/filter chips horizontally scrollable so the Travel chip remains reachable.
 
-5. **Verify in mobile preview**
-   - Check `/map` at phone width.
-   - Open **Drop a pin**.
-   - Confirm map tiles render, top controls are fully visible, and the confirm button/bottom nav no longer overlap.
+5. **Verify behavior**
+   - Test `/map` at phone viewport.
+   - Open “Drop a pin” and confirm the base map remains visible.
+   - Check current location still recenters the map.
+   - Confirm the bottom nav and confirmation controls are both visible and not overlapping.
