@@ -478,7 +478,13 @@ function UploadFlowBody() {
               </div>
             </Field>
             <button
-              disabled={finalizeM.isPending || resolvingPin || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
+              disabled={
+                finalizeM.isPending ||
+                resolvingPin ||
+                (publishMode !== "draft" && isJunkTitle(title)) ||
+                !title.trim() ||
+                (publishMode === "schedule" && !scheduleAt)
+              }
               className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
             >
               {resolvingPin ? "Finding location…" :
