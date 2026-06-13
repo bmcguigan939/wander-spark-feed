@@ -66,20 +66,41 @@ function BusinessDashboard() {
       <AgreementBanner kind="business" />
       <div className="px-4 pt-6">
         {user && <BusinessLocationPrompt userId={user.id} />}
-        {showSetupCta && (
-          <Link
-            to="/business/setup"
-            className="mb-4 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm"
-          >
-            <span className="flex items-center gap-2 font-semibold text-primary">
-              <Rocket className="h-4 w-4" />
-              {setupStep > 0 ? "Resume property setup" : "Set up your property"}
-            </span>
-            <span className="text-xs font-medium text-primary">
-              {setupStep > 0 ? `Step ${Math.min(setupStep + 1, 16)} / 16` : "Start"}
-            </span>
-          </Link>
-        )}
+        {showSetupCta && (() => {
+          const kind = (setupState?.profile as any)?.setup_business_type as
+            | "stay"
+            | "activity"
+            | null
+            | undefined;
+          const totalSteps = kind === "activity" ? 11 : 16;
+          const label = !kind
+            ? "Set up your listing"
+            : kind === "activity"
+              ? "Resume activity setup"
+              : "Resume stay setup";
+          const sub = !kind
+            ? "Start"
+            : `Step ${Math.min(setupStep + 1, totalSteps)} / ${totalSteps}`;
+          return (
+            <Link
+              to="/business/setup"
+              className="mb-4 flex flex-col gap-1 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm"
+            >
+              <span className="flex items-center justify-between">
+                <span className="flex items-center gap-2 font-semibold text-primary">
+                  <Rocket className="h-4 w-4" />
+                  {label}
+                </span>
+                <span className="text-xs font-medium text-primary">{sub}</span>
+              </span>
+              {!kind && (
+                <span className="text-xs text-muted-foreground">
+                  Stays or activities — pick your path
+                </span>
+              )}
+            </Link>
+          );
+        })()}
         <OnboardingChecklist />
         <div className="mb-4">
           <PayoutMethodCard />
