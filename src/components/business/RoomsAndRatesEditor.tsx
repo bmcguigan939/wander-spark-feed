@@ -129,7 +129,14 @@ export function RoomsAndRatesEditor({ dealId, category }: { dealId: string; cate
             <Tag className="h-4 w-4" /> Rate plans
           </div>
           {flatRates.map((rp) => (
-            <RatePlanRow key={rp.id} rate={rp} dealId={dealId} onChange={invalidate} showBreakfast={false} />
+            <RatePlanRow
+              key={rp.id}
+              rate={rp}
+              dealId={dealId}
+              onChange={invalidate}
+              showBreakfast={false}
+              isLodging={false}
+            />
           ))}
           <AddRateButton dealId={dealId} roomId={null} onAdded={invalidate} />
         </div>
@@ -461,11 +468,13 @@ function RatePlanRow({
   dealId,
   onChange,
   showBreakfast = true,
+  isLodging = true,
 }: {
   rate: RatePlan;
   dealId: string;
   onChange: () => void;
   showBreakfast?: boolean;
+  isLodging?: boolean;
 }) {
   const upsert = useServerFn(upsertRatePlan);
   const del = useServerFn(deleteRatePlan);
