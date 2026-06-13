@@ -20,6 +20,22 @@ import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 import { geocodePlace } from "@/lib/map.functions";
 import { PlaceAutocomplete, type PlacePick } from "@/components/create/PlaceAutocomplete";
 
+// Detects auto-generated camera/screen-recorder filenames so we never let them
+// reach the feed as a published title (e.g. F16F66FC-507C-4493-A084-...).
+function isJunkTitle(raw: string): boolean {
+  const s = raw.trim();
+  if (s.length < 3) return true;
+  // Raw UUID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return true;
+  // Camera roll / screen recorder patterns
+  if (/^(IMG|VID|MOV|MVI|DSC|DSCN|PXL|GOPR|GH0\d|DJI|RPReplay|ScreenRecording|Screen[_ ]?Shot|trim\.)[_\- ]?/i.test(s)) return true;
+  // No letters at all (pure digits / hex / punctuation)
+  if (!/[a-z]/i.test(s)) return true;
+  // Long hex-ish blob with no spaces
+  if (s.length >= 16 && /^[0-9a-f\-]+$/i.test(s) && !s.includes(" ")) return true;
+  return false;
+}
+
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
   validateSearch: (s: Record<string, unknown>) =>
@@ -155,8 +171,15 @@ function UploadFlowBody() {
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(f);
       });
-      setTitle(f.name.replace(/\.[^.]+$/, ""));
-      toast("Upload complete — add details");
+      const guessed = f.name.replace(/\.[^.]+$/, "");
+      if (isJunkTitle(guessed)) {
+        setTitle("");
+        toast("Upload complete — give your video a title");
+        requestAnimationFrame(() => titleRef.current?.focus());
+      } else {
+        setTitle(guessed);
+        toast("Upload complete — add details");
+      }
     } catch (e: any) {
       const msg = e?.message ?? "Upload failed";
       setUploadError(msg);
@@ -213,6 +236,11 @@ function UploadFlowBody() {
   // the pin picker so they only have to confirm or nudge the pin.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (publishMode !== "draft" && isJunkTitle(title)) {
+      toast("Give your video a title travellers will recognise");
+      titleRef.current?.focus();
+      return;
+    }
     if (!title.trim()) return;
     if (lat && lng || publishMode === "draft") {
       finalizeM.mutate();
@@ -311,6 +339,11 @@ function UploadFlowBody() {
                   }} />
                 </div>
               </div>
+              {isJunkTitle(title) && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  Required — name this so travellers can find it on the map.
+                </p>
+              )}
             </Field>
             <Field label="Description">
               <div className="relative">
@@ -445,7 +478,13 @@ function UploadFlowBody() {
               </div>
             </Field>
             <button
-              disabled={finalizeM.isPending || resolvingPin || !title.trim() || (publishMode === "schedule" && !scheduleAt)}
+              disabled={
+                finalizeM.isPending ||
+                resolvingPin ||
+                (publishMode !== "draft" && isJunkTitle(title)) ||
+                !title.trim() ||
+                (publishMode === "schedule" && !scheduleAt)
+              }
               className="mt-2 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
             >
               {resolvingPin ? "Finding location…" :
@@ -698,7 +737,14 @@ function ImportFlow() {
       )}
 
       {preview && (
-        <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) importM.mutate(); }} className="space-y-3">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (isJunkTitle(title)) {
+            toast("Give your video a title travellers will recognise");
+            return;
+          }
+          if (title.trim()) importM.mutate();
+        }} className="space-y-3">
           <div className="overflow-hidden rounded-3xl border border-border bg-card">
             {preview.thumbnail && (
               <img src={preview.thumbnail} alt="" className="h-44 w-full object-cover" />
@@ -733,6 +779,11 @@ function ImportFlow() {
 
           <Field label="Title">
             <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} className={inputCls} />
+            {isJunkTitle(title) && (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                Required — name this so travellers can find it on the map.
+              </p>
+            )}
           </Field>
           <Field label="Description">
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} />
@@ -772,7 +823,7 @@ function ImportFlow() {
           </label>
 
           <button
-            disabled={importM.isPending || !title.trim() || !ownership}
+            disabled={importM.isPending || isJunkTitle(title) || !ownership}
             className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft disabled:opacity-50"
           >
             {importM.isPending ? "Publishing…" : "Publish linked post"}
