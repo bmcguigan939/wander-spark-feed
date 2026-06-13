@@ -48,6 +48,7 @@ function EditDealPage() {
   const [busy, setBusy] = useState(false);
   const [policy, setPolicy] = useState<PolicyCode>("travidz_standard");
   const [policyHydrated, setPolicyHydrated] = useState(false);
+  const accountKind = useAccountKind();
 
   useEffect(() => {
     if (loading) return;
@@ -177,6 +178,7 @@ function EditDealPage() {
                 submitLabel="Save changes"
                 busy={busy}
                 autoSaveOnBlur={isDraft}
+                accountKind={accountKind}
                 onSubmit={async (values) => {
                   setBusy(true);
                   try {
