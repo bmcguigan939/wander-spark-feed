@@ -117,7 +117,7 @@ export const updateMyChannelFeed = createServerFn({ method: "POST" })
     if (Object.keys(patch).length === 0) return { ok: true };
     const { error } = await supabaseAdmin
       .from("business_channel_feeds")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id)
       .eq("business_id", context.userId);
     if (error) throw new Error(error.message);
