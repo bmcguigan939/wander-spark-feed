@@ -262,7 +262,8 @@ function MapPage() {
 
         <MapLayerSwitcher value={layer} onChange={setLayerPersist} />
 
-        {/* Top: search + filters */}
+        {/* Top: search + filters (hidden while pin picker is open) */}
+        {!pickerOpen && (
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-3 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
           <SearchBox
             value={qText}
@@ -300,8 +301,10 @@ function MapPage() {
             </span>
           </div>
         </div>
+        )}
 
         {/* Drop-pin FAB */}
+        {!pickerOpen && (
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
@@ -312,6 +315,7 @@ function MapPage() {
           <MapPin className="h-4 w-4" />
           Drop a pin
         </button>
+        )}
 
         {/* Search this area button */}
         {pendingBbox && (
@@ -352,10 +356,9 @@ function MapPage() {
         title={selected?.title ?? ""}
       />
 
-      <LocationPickerSheet
+      <DropPinOverlay
         open={pickerOpen}
-        initialLat={search.lat}
-        initialLng={search.lng}
+        mapRef={mapRef}
         onClose={() => setPickerOpen(false)}
         onConfirm={(r) => {
           setPickerOpen(false);
