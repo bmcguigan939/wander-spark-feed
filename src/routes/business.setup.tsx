@@ -435,16 +435,6 @@ function Step1Type({ profile, next, refresh }: StepProps) {
 function Step2Count({ profile, next, back, refresh }: StepProps) {
   const kind = profile?.setup_property_kind;
   const isHotel = kind === "hotel";
-  // Derive the expected deal category from the profile so the editor renders
-  // the lodging UI even if the existing draft row still has category="other".
-  const isActivity = profile?.setup_business_type === "activity";
-  const expectedCategory = isActivity
-    ? (profile as any)?.activity_category === "tour"
-      ? "tour"
-      : "do"
-    : kind === "hotel" || kind === "apartment" || kind === "home" || kind === "alternative"
-      ? "stay"
-      : firstDeal?.category;
   const save = useServerFn(saveSetupCount);
   const [count, setCount] = useState<number>(profile?.setup_unit_count ?? 1);
   const [sameAddress, setSameAddress] = useState<boolean | null>(
