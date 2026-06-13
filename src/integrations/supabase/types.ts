@@ -566,6 +566,10 @@ export type Database = {
           feed_url: string
           id: string
           label: string | null
+          last_blocked_count: number | null
+          last_error: string | null
+          last_status: string | null
+          last_synced_at: string | null
           updated_at: string
         }
         Insert: {
@@ -574,6 +578,10 @@ export type Database = {
           feed_url: string
           id?: string
           label?: string | null
+          last_blocked_count?: number | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -582,6 +590,10 @@ export type Database = {
           feed_url?: string
           id?: string
           label?: string | null
+          last_blocked_count?: number | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1704,6 +1716,7 @@ export type Database = {
       }
       deal_external_calendars: {
         Row: {
+          business_feed_id: string | null
           created_at: string
           deal_id: string
           ics_url: string
@@ -1714,6 +1727,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          business_feed_id?: string | null
           created_at?: string
           deal_id: string
           ics_url: string
@@ -1724,6 +1738,7 @@ export type Database = {
           name: string
         }
         Update: {
+          business_feed_id?: string | null
           created_at?: string
           deal_id?: string
           ics_url?: string
@@ -1734,6 +1749,13 @@ export type Database = {
           name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "deal_external_calendars_business_feed_id_fkey"
+            columns: ["business_feed_id"]
+            isOneToOne: false
+            referencedRelation: "business_channel_feeds"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deal_external_calendars_deal_id_fkey"
             columns: ["deal_id"]
