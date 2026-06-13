@@ -18,6 +18,7 @@ import { CROSS_LINK_PLATFORMS, type CrossLinkPlatform, type CrossLink } from "@/
 import { ShareToSocialsCard } from "@/components/create/ShareToSocialsCard";
 import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 import { geocodePlace } from "@/lib/map.functions";
+import { PlaceAutocomplete, type PlacePick } from "@/components/create/PlaceAutocomplete";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
