@@ -593,10 +593,18 @@ function RatePlanRow({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="pay_online">Pay online now</SelectItem>
-              <SelectItem value="pay_at_property">Pay at property</SelectItem>
+              {isLodging && (
+                <SelectItem value="pay_at_property">Pay at property</SelectItem>
+              )}
               <SelectItem value="deposit_online_rest_at_property">Deposit now, rest at property</SelectItem>
             </SelectContent>
           </Select>
+          {local.payment === "pay_at_property" && (
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Guest pays an 11% deposit online now (Travidz commission) and the
+              remaining 89% to you on arrival.
+            </p>
+          )}
         </div>
         {local.payment === "deposit_online_rest_at_property" && (
           <div>
