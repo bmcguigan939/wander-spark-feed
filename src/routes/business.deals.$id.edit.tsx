@@ -10,6 +10,7 @@ import { DealCalendarSync } from "@/components/business/DealCalendarSync";
 import { RoomsAndRatesEditor } from "@/components/business/RoomsAndRatesEditor";
 import { CompetitorUrlsEditor } from "@/components/business/CompetitorUrlsEditor";
 import { useAuth } from "@/lib/auth";
+import { useAccountKind } from "@/lib/useAccountKind";
 import { ArrowLeft, Banknote, Check, Info, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
