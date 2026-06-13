@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef } from "react";
+import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
@@ -19,6 +20,17 @@ import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z
+      .object({
+        lat: z.coerce.number().optional(),
+        lng: z.coerce.number().optional(),
+        country: z.string().optional(),
+        city: z.string().optional(),
+        destination: z.string().optional(),
+        place: z.string().optional(),
+      })
+      .parse(s),
   component: CreatePage,
 });
 
