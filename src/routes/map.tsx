@@ -209,7 +209,7 @@ function MapPage() {
 
   return (
     <MobileShell fullBleed>
-      <div className="relative h-[calc(100dvh-env(safe-area-inset-top))] w-full">
+      <div className="relative h-dvh w-full">
         <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}
