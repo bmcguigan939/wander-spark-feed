@@ -559,6 +559,33 @@ export type Database = {
           },
         ]
       }
+      business_channel_feeds: {
+        Row: {
+          business_id: string
+          created_at: string
+          feed_url: string
+          id: string
+          label: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          feed_url: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          feed_url?: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_clicks: {
         Row: {
           business_id: string
@@ -3171,7 +3198,10 @@ export type Database = {
           business_rating_count: number
           business_rating_refreshed_at: string | null
           business_website_url: string | null
+          channel_manager_connect_skipped_at: string | null
           channel_manager_planned: boolean
+          channel_manager_provider: string | null
+          channel_manager_provider_other: string | null
           cookie_consent: string | null
           cookie_consent_at: string | null
           created_at: string
@@ -3252,7 +3282,10 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          channel_manager_connect_skipped_at?: string | null
           channel_manager_planned?: boolean
+          channel_manager_provider?: string | null
+          channel_manager_provider_other?: string | null
           cookie_consent?: string | null
           cookie_consent_at?: string | null
           created_at?: string
@@ -3333,7 +3366,10 @@ export type Database = {
           business_rating_count?: number
           business_rating_refreshed_at?: string | null
           business_website_url?: string | null
+          channel_manager_connect_skipped_at?: string | null
           channel_manager_planned?: boolean
+          channel_manager_provider?: string | null
+          channel_manager_provider_other?: string | null
           cookie_consent?: string | null
           cookie_consent_at?: string | null
           created_at?: string
