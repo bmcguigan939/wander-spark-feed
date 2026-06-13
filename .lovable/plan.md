@@ -1,46 +1,32 @@
-# Drop-pin location picker for photo/video uploads
+# Fix Map header overlap + add drop-pin on Map
 
-Today the create-video form (`src/routes/create.tsx`) collects `lat`/`lng` via two number fields and a paste-a-Google-Maps-URL helper (`CoordsInput`). Most users won't type coords. Add a real map picker.
+## 1. Safe-area top padding (global)
 
-## What we'll add
+The map's top controls sit at `top-0` so iOS status bar (clock, signal, battery) covers the search box. Same risk on any other full-screen route.
 
-A new "Pick on map" button next to the coordinates field that opens a full-screen sheet with a Mapbox map. The user can:
+- `src/components/layout/BottomNav.tsx` → `MobileShell`: wrap content in a container that applies `padding-top: env(safe-area-inset-top)` so every page using the shell is pushed below the status bar automatically. Map page already fills `100dvh - 80px`; height calc updated to also subtract the safe-area inset so the map still reaches the bottom nav.
+- `src/routes/map.tsx`: remove the now-redundant `top-0` reliance — the floating top stack (`SearchBox`, category chips, layer toggle) inherits the inset. Keep the existing `p-3` for breathing room.
+- `src/routes/__root.tsx`: add `viewport-fit=cover` to the viewport meta if not already present, so `env(safe-area-inset-*)` actually resolves on iOS.
 
-- **Tap anywhere** on the map → drops/moves a pin there.
-- **Drag the pin** to fine-tune.
-- **Search a place** (reuses the existing `src/components/map/SearchBox.tsx` Mapbox geocoder) → recentres and drops a pin.
-- **Use my location** (browser geolocation) → recentres + drops a pin.
-- **Confirm** → writes `lat`, `lng` back to the form, and best-effort fills `country`, `city`, `destination` from Mapbox reverse geocoding (only fills blanks — never overwrites what the user typed).
+## 2. Drop-pin on the Map page
 
-If the user already entered coords or chose a pin previously, the picker opens centred there. Otherwise it opens at the device's last known location or, failing that, the current map default (`lng:0, lat:20, zoom:1.6`).
+Reuse the existing `LocationPickerSheet` (already used on `/create`) so behaviour is identical.
 
-## UX details
-
-- Bottom-sheet style (consistent with existing `ClusteredSheet`, `MusicPickerSheet`), full-height on mobile.
-- Mapbox dark style matching the app theme (`mapbox://styles/mapbox/dark-v11`).
-- Pin = primary-coloured (`#3B82F6`) `MapPin` lucide icon, draggable, with a subtle drop-shadow.
-- Sticky top bar: search box on the left, "Use my location" icon-button on the right, close (X) on the far right.
-- Sticky bottom bar: shows current coords + resolved place name; "Confirm location" primary button (disabled until a pin is placed); "Clear" secondary.
-- Coordinates input below the map button stays editable for power users who want to type or paste.
+- Add a floating "Drop a pin" FAB on `/map`, bottom-right above the bottom nav (offset by `env(safe-area-inset-bottom) + 96px`), using the `MapPin` icon and primary gradient.
+- Tapping it opens `LocationPickerSheet` seeded with the current map center (`search.lat`, `search.lng`).
+- On confirm:
+  - If the user is signed in → navigate to `/create?lat=…&lng=…&country=…&city=…&destination=…&place=…` so they can attach a photo/video to the dropped pin. `create.tsx` already reads form state from local state; extend it to hydrate from these query params on mount (only when the fields are empty).
+  - If signed out → route to `/login?redirect=/create?lat=…&lng=…` (existing redirect pattern).
 
 ## Files touched
 
-1. **New `src/components/create/LocationPickerSheet.tsx`** — the sheet. Owns its own `MapboxMap`, marker state, search, reverse-geocode call. Props: `open`, `initialLat`, `initialLng`, `onClose`, `onConfirm({ lat, lng, country?, city?, destination? })`.
-2. **`src/routes/create.tsx`** — add a "Pick on map" button beside `CoordsInput`. Wires sheet open/close, applies confirm to existing `lat`/`lng`/`country`/`city`/`destination` state setters.
-3. **`src/lib/map.functions.ts`** — add a small `reverseGeocode` server function wrapping Mapbox's `/geocoding/v5/mapbox.places/{lng},{lat}.json` endpoint so the token stays server-side and we can rate-limit later. Returns `{ country, city, place }`.
-
-No DB changes. The videos table already stores `lat`/`lng` (and the form already submits them).
-
-## Technical notes
-
-- Reuse the existing Mapbox public token already in `src/routes/map.tsx` (it's a `pk.` publishable token, safe in client bundles). We'll lift it to `src/lib/mapbox-token.ts` so both `map.tsx` and the new sheet import from one place.
-- Reverse geocoding is server-side so we can switch to a secret token later without code changes. It uses Mapbox's free tier (100k req/mo) — fine for current volume.
-- The `SearchBox` component already exists and emits `{ lng, lat, place_name }`; we'll reuse it inside the sheet.
-- The picker writes `lat`/`lng` as strings (matching `create.tsx`'s current state shape) to avoid type churn.
-- Marker drag uses `react-map-gl` `<Marker draggable onDragEnd={...}>`.
+- `src/components/layout/BottomNav.tsx` — apply safe-area inset top to `MobileShell` wrapper.
+- `src/routes/__root.tsx` — ensure `viewport-fit=cover`.
+- `src/routes/map.tsx` — add Drop-pin FAB, wire `LocationPickerSheet`, navigate to `/create` on confirm. Adjust map height calc for the new top inset.
+- `src/routes/create.tsx` — read optional `lat/lng/country/city/destination/place` from search params and prefill empty fields.
 
 ## Out of scope
 
-- Saving an address string separately on the video row (we already have `destination`, `city`, `country`).
-- Applying the picker to other surfaces (business `AddressPicker`, deal locations) — those already have their own pickers. Could be unified later.
-- Offline / cached map tiles.
+- Saving a pin without attaching media (no "anonymous pins" table).
+- Reordering category chips / changing the search box visuals beyond the inset fix.
+- Re-theming the layer switcher.
