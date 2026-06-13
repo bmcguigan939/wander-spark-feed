@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { useAccountKind } from "@/lib/useAccountKind";
-import { getMySetupState } from "@/lib/business-setup.functions";
+import { getMySetupState, saveSetupBusinessType } from "@/lib/business-setup.functions";
 import { Rocket } from "lucide-react";
 
 export const Route = createFileRoute("/business/")({
@@ -25,7 +26,20 @@ function BusinessDashboard() {
   const fetchDeals = useServerFn(listMyDeals);
   const fetchStats = useServerFn(getDealStats);
   const fetchSetup = useServerFn(getMySetupState);
+  const saveType = useServerFn(saveSetupBusinessType);
+  const qc = useQueryClient();
   const accountKind = useAccountKind();
+  const pickPath = useMutation({
+    mutationFn: (kind: "stay" | "activity") =>
+      saveType({ data: { setup_business_type: kind } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-setup-state"] });
+      qc.invalidateQueries({ queryKey: ["account-kind"] });
+      navigate({ to: "/business/setup" });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not save choice"),
+  });
+
 
   useEffect(() => {
     if (loading) return;
@@ -81,26 +95,30 @@ function BusinessDashboard() {
                   Pick the path that matches your business — the rest of setup is tailored to it.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to="/business/setup"
-                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  <button
+                    type="button"
+                    disabled={pickPath.isPending}
+                    onClick={() => pickPath.mutate("stay")}
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary disabled:opacity-60"
                   >
                     <Hotel className="h-5 w-5 text-primary" />
                     <span className="text-sm font-semibold">I offer stays</span>
                     <span className="text-[11px] text-muted-foreground">
                       Hotels, apartments, villas, B&amp;Bs
                     </span>
-                  </Link>
-                  <Link
-                    to="/business/setup"
-                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary"
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pickPath.isPending}
+                    onClick={() => pickPath.mutate("activity")}
+                    className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left hover:border-primary disabled:opacity-60"
                   >
                     <Mountain className="h-5 w-5 text-primary" />
                     <span className="text-sm font-semibold">I run activities</span>
                     <span className="text-[11px] text-muted-foreground">
                       Tours, classes, experiences, rentals
                     </span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
