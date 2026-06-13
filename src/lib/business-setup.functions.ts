@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // only the columns it owns. Resume is driven by setup_step_completed.
 
 const setupSelect =
-  "id,setup_business_type,activity_category,activity_format,activity_meeting_point,setup_property_kind,setup_unit_count,setup_units_same_address,setup_step_completed,setup_completed_at,ota_listings,channel_manager_planned,facilities,breakfast_offered,parking_offered,languages_spoken,neighbourhood_blurb,default_booking_model,pay_at_property_enabled,long_stays_enabled,legal_entity_type,legal_entity_name,legal_contact_email,legal_contact_phone,display_name,bio,address,place_name,lat,lng,business_name,business_website_url,business_country,business_city,business_agreement_accepted_at,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,payout_method";
+  "id,setup_business_type,activity_category,activity_format,activity_meeting_point,setup_property_kind,setup_unit_count,setup_units_same_address,setup_step_completed,setup_completed_at,ota_listings,channel_manager_planned,channel_manager_provider,channel_manager_provider_other,channel_manager_connect_skipped_at,facilities,breakfast_offered,parking_offered,languages_spoken,neighbourhood_blurb,default_booking_model,pay_at_property_enabled,long_stays_enabled,legal_entity_type,legal_entity_name,legal_contact_email,legal_contact_phone,display_name,bio,address,place_name,lat,lng,business_name,business_website_url,business_country,business_city,business_agreement_accepted_at,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,payout_method";
 
 export const getMySetupState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -247,11 +247,90 @@ export const saveSetupAddress = createServerFn({ method: "POST" })
 export const saveSetupChannelManager = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ channel_manager_planned: z.boolean() }).parse(i)
+    z
+      .object({
+        channel_manager_planned: z.boolean(),
+        provider: z.string().trim().max(60).optional().nullable(),
+        provider_other: z.string().trim().max(120).optional().nullable(),
+        skipped: z.boolean().optional(),
+        feeds: z
+          .array(
+            z.object({
+              label: z.string().trim().max(80).optional().nullable(),
+              feed_url: z
+                .string()
+                .trim()
+                .min(5)
+                .max(500)
+                .refine(
+                  (v) => /^(https?:|webcal:)\/\//i.test(v),
+                  "Feed URL must start with https://, http:// or webcal://",
+                ),
+            }),
+          )
+          .max(10)
+          .optional(),
+        /** when true, advance to the next wizard step; when false, stay on step 5 */
+        advance: z.boolean().optional(),
+      })
+      .parse(i)
   )
-  .handler(async ({ data, context }) =>
-    bumpStep(context.userId, 5, { channel_manager_planned: data.channel_manager_planned })
-  );
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const patch: Record<string, unknown> = {
+      channel_manager_planned: data.channel_manager_planned,
+    };
+    if (data.provider !== undefined) patch.channel_manager_provider = data.provider || null;
+    if (data.provider_other !== undefined)
+      patch.channel_manager_provider_other = data.provider_other || null;
+    if (data.skipped) patch.channel_manager_connect_skipped_at = new Date().toISOString();
+
+    if (data.feeds) {
+      const { error: delErr } = await supabaseAdmin
+        .from("business_channel_feeds")
+        .delete()
+        .eq("business_id", userId);
+      if (delErr) throw new Error(delErr.message);
+      const rows = data.feeds
+        .filter((f) => f.feed_url.trim().length > 0)
+        .map((f) => ({
+          business_id: userId,
+          feed_url: f.feed_url.trim(),
+          label: f.label?.trim() || null,
+        }));
+      if (rows.length) {
+        const { error: insErr } = await supabaseAdmin
+          .from("business_channel_feeds")
+          .insert(rows);
+        if (insErr) throw new Error(insErr.message);
+      }
+    }
+
+    const advance = data.advance ?? data.channel_manager_planned === false;
+    if (advance) {
+      return bumpStep(userId, 5, patch);
+    }
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as any)
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, step: null as number | null };
+  });
+
+export const getMyChannelFeeds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await supabaseAdmin
+      .from("business_channel_feeds")
+      .select("id,label,feed_url,created_at")
+      .eq("business_id", context.userId)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { feeds: data ?? [] };
+  });
+
+// (Step 5 legacy alias kept above; nothing else changes.)
 
 // Step 6: facilities
 export const saveSetupFacilities = createServerFn({ method: "POST" })

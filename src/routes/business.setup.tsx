@@ -33,6 +33,7 @@ import {
   saveSetupOtaListings,
   saveSetupAddress,
   saveSetupChannelManager,
+  getMyChannelFeeds,
   saveSetupFacilities,
   saveSetupServices,
   saveSetupLanguages,
@@ -689,43 +690,284 @@ function Step4Address({ profile, next, back, refresh }: StepProps) {
 }
 
 // ---------- Step 5: Channel manager ----------
+const CHANNEL_MANAGERS: { key: string; label: string; hint: string }[] = [
+  { key: "siteminder", label: "SiteMinder", hint: "Channels → Calendar / iCal feed" },
+  { key: "cloudbeds", label: "Cloudbeds", hint: "myfrontdesk → Distribution → iCal feeds" },
+  { key: "hostaway", label: "Hostaway", hint: "Channel Manager → iCal Sync" },
+  { key: "lodgify", label: "Lodgify", hint: "Calendar → Sync calendars" },
+  { key: "smoobu", label: "Smoobu", hint: "Settings → Channel manager → iCal" },
+  { key: "beds24", label: "Beds24", hint: "Settings → Channel Manager → iCal" },
+  { key: "hostfully", label: "Hostfully", hint: "Property → Channels → iCal" },
+  { key: "other", label: "Other", hint: "Paste any iCal calendar URL" },
+];
+
+type FeedRow = { id: string; label: string; feed_url: string };
+const newFeed = (): FeedRow => ({
+  id: Math.random().toString(36).slice(2),
+  label: "",
+  feed_url: "",
+});
+
 function Step5ChannelManager({ profile, next, back, refresh }: StepProps) {
   const save = useServerFn(saveSetupChannelManager);
-  const [pick, setPick] = useState<boolean | null>(profile?.channel_manager_planned ?? null);
+  const fetchFeeds = useServerFn(getMyChannelFeeds);
+  const initialPick =
+    profile?.channel_manager_planned === true
+      ? true
+      : profile?.channel_manager_planned === false
+        ? false
+        : null;
+  const [pick, setPick] = useState<boolean | null>(initialPick);
+  const [view, setView] = useState<"ask" | "connect">("ask");
   const [busy, setBusy] = useState(false);
+
+  const [provider, setProvider] = useState<string>(
+    (profile as any)?.channel_manager_provider ?? "",
+  );
+  const [providerOther, setProviderOther] = useState<string>(
+    (profile as any)?.channel_manager_provider_other ?? "",
+  );
+  const [feeds, setFeeds] = useState<FeedRow[]>([newFeed()]);
+  const [feedsLoaded, setFeedsLoaded] = useState(false);
+
+  // Load existing feeds when entering the connect view
+  useEffect(() => {
+    if (view !== "connect" || feedsLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetchFeeds({ data: undefined as any });
+        if (cancelled) return;
+        if (r.feeds.length) {
+          setFeeds(
+            r.feeds.map((f: any) => ({
+              id: f.id,
+              label: f.label ?? "",
+              feed_url: f.feed_url,
+            })),
+          );
+        }
+      } catch {
+        /* ignore — keep empty row */
+      } finally {
+        if (!cancelled) setFeedsLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  const validFeeds = feeds.filter((f) => /^(https?:|webcal:)\/\//i.test(f.feed_url.trim()));
+  const canContinue = !!provider && validFeeds.length > 0;
+
+  const persist = async (opts: { skipped: boolean }) => {
+    setBusy(true);
+    try {
+      await save({
+        data: {
+          channel_manager_planned: true,
+          provider: provider || null,
+          provider_other: provider === "other" ? providerOther || null : null,
+          feeds: validFeeds.map((f) => ({
+            label: f.label.trim() || null,
+            feed_url: f.feed_url.trim(),
+          })),
+          skipped: opts.skipped,
+          advance: true,
+        },
+      });
+      refresh();
+      next();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (view === "ask") {
+    return (
+      <>
+        <StepTitle
+          title="Do you use a channel manager?"
+          sub="A channel manager syncs rates and availability across booking sites."
+        />
+        <div className="space-y-3">
+          <Card onClick={() => setPick(true)} selected={pick === true}>
+            <div className="flex-1 text-sm font-medium">Yes — I'll connect it now</div>
+            {pick === true && <Check className="h-4 w-4 text-primary" />}
+          </Card>
+          <Card onClick={() => setPick(false)} selected={pick === false}>
+            <div className="flex-1 text-sm font-medium">No, I won't use a channel manager</div>
+            {pick === false && <Check className="h-4 w-4 text-primary" />}
+          </Card>
+        </div>
+        <StickyFooter
+          onBack={back}
+          busy={busy}
+          disabled={pick === null}
+          onContinue={async () => {
+            if (pick === null) return;
+            if (pick === true) {
+              // Save the intent now; advancing happens after the connect view.
+              setBusy(true);
+              try {
+                await save({
+                  data: { channel_manager_planned: true, advance: false },
+                });
+                refresh();
+                setView("connect");
+              } catch (e: any) {
+                toast.error(e?.message ?? "Could not save");
+              } finally {
+                setBusy(false);
+              }
+              return;
+            }
+            // pick === false → advance immediately
+            setBusy(true);
+            try {
+              await save({
+                data: { channel_manager_planned: false, advance: true },
+              });
+              refresh();
+              next();
+            } catch (e: any) {
+              toast.error(e?.message ?? "Could not save");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  // view === "connect"
+  const providerMeta = CHANNEL_MANAGERS.find((c) => c.key === provider);
   return (
     <>
       <StepTitle
-        title="Do you use a channel manager?"
-        sub="A channel manager syncs rates and availability across booking sites. You can connect yours after registration."
+        title="Connect your channel manager"
+        sub="Pick your provider and paste the iCal calendar feed URL(s) so we can keep availability in sync."
       />
+
+      <Field label="Your channel manager">
+        <select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value)}
+          className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+        >
+          <option value="">Select…</option>
+          {CHANNEL_MANAGERS.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      {provider === "other" && (
+        <Field label="Provider name">
+          <input
+            value={providerOther}
+            onChange={(e) => setProviderOther(e.target.value)}
+            placeholder="Which channel manager do you use?"
+            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+        </Field>
+      )}
+
+      {providerMeta && (
+        <p className="-mt-1 mb-1 text-xs text-muted-foreground">
+          Tip: in {providerMeta.label}, look under <span className="font-medium">{providerMeta.hint}</span>.
+        </p>
+      )}
+
       <div className="space-y-3">
-        <Card onClick={() => setPick(true)} selected={pick === true}>
-          <div className="flex-1 text-sm font-medium">Yes — I'll connect mine later</div>
-          {pick === true && <Check className="h-4 w-4 text-primary" />}
-        </Card>
-        <Card onClick={() => setPick(false)} selected={pick === false}>
-          <div className="flex-1 text-sm font-medium">No, I won't use a channel manager</div>
-          {pick === false && <Check className="h-4 w-4 text-primary" />}
-        </Card>
+        {feeds.map((f, i) => (
+          <div key={f.id} className="rounded-xl border border-border bg-card p-3">
+            <div className="grid grid-cols-1 gap-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Label {i === 0 ? "(optional)" : ""}
+                </span>
+                <input
+                  value={f.label}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFeeds((prev) =>
+                      prev.map((row) => (row.id === f.id ? { ...row, label: v } : row)),
+                    );
+                  }}
+                  placeholder="e.g. Airbnb, Booking.com"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Calendar feed URL
+                </span>
+                <input
+                  value={f.feed_url}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFeeds((prev) =>
+                      prev.map((row) => (row.id === f.id ? { ...row, feed_url: v } : row)),
+                    );
+                  }}
+                  placeholder="https://… or webcal://…"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+              </label>
+              {feeds.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setFeeds((prev) => prev.filter((row) => row.id !== f.id))}
+                  className="self-end text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {feeds.length < 10 && (
+          <button
+            type="button"
+            onClick={() => setFeeds((prev) => [...prev, newFeed()])}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+          >
+            <Plus className="h-3 w-3" /> Add another feed
+          </button>
+        )}
       </div>
+
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setView("ask")}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          ← Change answer
+        </button>
+        <button
+          type="button"
+          onClick={() => persist({ skipped: true })}
+          disabled={busy}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
+        >
+          Skip for now
+        </button>
+      </div>
+
       <StickyFooter
-        onBack={back}
+        onBack={() => setView("ask")}
         busy={busy}
-        disabled={pick === null}
-        onContinue={async () => {
-          if (pick === null) return;
-          setBusy(true);
-          try {
-            await save({ data: { channel_manager_planned: pick } });
-            refresh();
-            next();
-          } catch (e: any) {
-            toast.error(e?.message ?? "Could not save");
-          } finally {
-            setBusy(false);
-          }
-        }}
+        disabled={!canContinue}
+        onContinue={() => persist({ skipped: false })}
       />
     </>
   );

@@ -1,63 +1,74 @@
 ## Goal
 
-In `src/routes/business.setup.tsx`, replace the free-text Mapbox geocoder used in the two location steps (Step 4 "Where is your property?" for stays around line 624, and the equivalent activity location step around line 1775) with a Google Places (New) postcode/address autocomplete plus a manual-entry fallback. No changes to other screens (dashboard banner, map search) — Mapbox stays put there.
+When the user picks "Yes" in **Step 5 — Do you use a channel manager?**, surface a connect sub-step where they pick their provider and paste one or more iCal sync URLs. "No" continues straight to Step 6 (facilities) unchanged. Total step count stays at 16 — the connect screen is an inline sub-view of Step 5, not a new top-level step (so the existing branching switch for Activity doesn't shift).
 
 ## What the user sees
 
-1. **Search field** labelled "Postcode or address" with a magnifier icon. As they type (debounced 250 ms), a suggestions list appears below, each row showing the formatted address. Picking a row fills the field, drops a confirmed pin card, and enables Continue.
-2. **"Can't find it? Enter address manually"** link under the field. Clicking switches the panel to a small form:
-   - Address line 1 (required)
-   - Address line 2 (optional)
-   - City (required)
-   - Postcode (required)
-   - Country (required, default = previously detected if any)
-   - "Back to search" link to return to autocomplete mode.
-   On Continue, the manual address is saved as-is; in the background we fire a single Google geocode call to attach `lat/lng/place_name` so the business still appears on the map. If geocoding fails we save without coords and show a small inline note ("We couldn't pin this on the map yet — you can set it later from Settings"). Continue is **not** blocked by the geocode result.
-3. Existing saved address pre-fills the search field as before.
+Stays path, Step 5 becomes two views inside the same step:
 
-## Provider wiring
+1. **View A — "Do you use a channel manager?"** (current cards). Copy change:
+   - "Yes — I'll connect it now" (was "Yes — I'll connect mine later")
+   - "No, I won't use a channel manager"
+   On "Continue":
+   - If **Yes** → save `channel_manager_planned: true` and switch to View B in place; **do not** advance to Step 6.
+   - If **No** → save `false` and advance to Step 6 as today.
+2. **View B — "Connect your channel manager"** (only when Yes was picked):
+   - Provider dropdown: SiteMinder, Cloudbeds, Hostaway, Lodgify, Smoobu, Beds24, Hostfully, Other (free text field appears when "Other" chosen).
+   - Repeating list of "Calendar feed URL" rows (start with one, "+ Add another feed"), each with an optional label (e.g. "Airbnb", "Booking.com"). At least one row must have a valid URL (`https://…` or `webcal://…`, max 500 chars) to enable Continue.
+   - Helper text + a "How do I find this?" disclosure that lists the per-provider menu paths (short bullets, no external links needed).
+   - Footer buttons: **Back** (returns to View A, leaves data intact), **Skip for now** (saves what's entered, marks `channel_manager_connect_skipped_at = now()`, advances), **Continue** (saves URLs + advances).
+   - On Continue, persist via a new server function (see below), invalidate setup state, then `next()`.
 
-- Use the **Google Maps Platform** connector (gateway-enabled). Link it via `standard_connectors--connect({ connector_id: "google_maps" })` so `LOVABLE_API_KEY` and `GOOGLE_MAPS_API_KEY` are present in the server runtime.
-- All calls go through the connector gateway (never direct to Google). Browser key is not needed — both autocomplete and geocoding will be server-function calls.
+Activity path is unchanged (no channel-manager step there today).
 
-## Technical changes
+## Data
 
-### New server functions — `src/lib/google-places.functions.ts`
+New columns on `profiles`:
+- `channel_manager_provider text` — provider key (e.g. `siteminder`, `other`)
+- `channel_manager_provider_other text` — free-text when provider is `other`
+- `channel_manager_connect_skipped_at timestamptz`
 
-- `placesAutocomplete({ input, sessionToken, countryBias? })` → `POST https://connector-gateway.lovable.dev/google_maps/places/v1/places:autocomplete` with field mask `suggestions.placePrediction.placeId,suggestions.placePrediction.text`. Returns `{ suggestions: { placeId, text }[] }`. Zod-validate input (1–120 chars).
-- `placeDetails({ placeId, sessionToken })` → `GET https://connector-gateway.lovable.dev/google_maps/places/v1/places/{placeId}` with field mask `id,formattedAddress,location,addressComponents,displayName`. Returns `{ formattedAddress, lat, lng, components: { line1, city, postcode, country, region } }` (mapped from `addressComponents` by type).
-- `geocodeAddress({ line1, line2?, city, postcode, country })` → same `/places:searchText` endpoint with the joined address as `textQuery`, field mask `places.location,places.formattedAddress`. Returns `{ lat, lng, formattedAddress } | null`.
+New table `business_channel_feeds` (one row per iCal URL):
+- `id uuid pk default gen_random_uuid()`
+- `business_id uuid references auth.users(id) on delete cascade`
+- `label text` (nullable, e.g. "Airbnb")
+- `feed_url text not null` (CHECK length ≤ 500)
+- `created_at`, `updated_at` (with updated_at trigger)
+- Unique `(business_id, feed_url)`
 
-All three: `createServerFn({ method: "POST" })` with Zod `inputValidator`, no auth middleware (read-only public lookup), throw on non-2xx with status + body.
+Migration includes the standard four-step pattern: CREATE TABLE → GRANT (`authenticated` full, `service_role` all; no `anon`) → ENABLE RLS → policies: a business may select/insert/update/delete only rows where `business_id = auth.uid()`; admins may select all via `has_role(auth.uid(),'admin')`.
 
-### New component — `src/components/business/AddressPicker.tsx`
+## Server fns (`src/lib/business-setup.functions.ts`)
 
-Reusable, accepts `{ initial?: { address, place_name, lat, lng }, onConfirm: (v: { address, place_name, city, country, lat, lng }) => Promise<void>, busy: boolean }`. Owns:
-- a stable Places session token (UUID, regenerated after each confirm),
-- search vs manual mode state,
-- debounced autocomplete query,
-- suggestions list rendering and pick → `placeDetails` to populate the confirm card,
-- manual form with Zod validation, calling `geocodeAddress` then `onConfirm` regardless of geocode outcome.
+- Extend `saveSetupChannelManager` input to:
+  `{ channel_manager_planned: boolean, provider?: string|null, provider_other?: string|null, feeds?: { label?: string|null, feed_url: string }[], skipped?: boolean }`.
+  Handler:
+  1. Always update `profiles.channel_manager_planned` (and provider fields + `channel_manager_connect_skipped_at` when supplied).
+  2. If `feeds` is provided, replace the user's `business_channel_feeds` rows in one transaction (delete existing rows for this user, insert provided ones — keeps the editor idempotent).
+  3. Bump setup step to 5 only when advancing (when `planned === false` or feeds/skipped is supplied); when just saving the "Yes" choice without feeds yet, leave the step where it is.
+- New `getMyChannelFeeds` server fn to hydrate View B on revisit.
 
-### `src/routes/business.setup.tsx`
+Validation: feed URLs parsed with `z.string().url()` plus an allowlist of protocols (`https:`, `http:`, `webcal:`). Cap feeds at 10.
 
-- Replace the body of `Step4Address` (stays path, ~624) and the activity location step (~1775) with `<AddressPicker ... onConfirm={...} />`. Keep their existing `StepTitle`, `StickyFooter`, `saveSetupAddress` call (unchanged), back/refresh wiring, and city/country derivation (use `components.city`/`components.country` when present, fall back to splitting `formattedAddress`).
-- Drop the local Mapbox `geocode` usage from those two functions only. Leave the Mapbox `geocodePlace` server fn and its other consumers (`BusinessLocationPrompt`, map `SearchBox`) untouched.
+## Frontend (`src/routes/business.setup.tsx`)
 
-### No DB / schema changes
+- Split `Step5ChannelManager` into a small wrapper state machine: `view: "ask" | "connect"`, default `"ask"`.
+- Picking "Yes" + Continue saves the boolean (and provider when set later), then setView("connect"). Existing wizard "Back" button in View B returns to View A without leaving the step.
+- View B renders the provider select, feed-URL editor (reuse existing `Field` and input styling from `Step5ChannelManager`/`Step6Facilities` to match the visual language; no new component file unless this exceeds ~120 lines).
+- Hydrate initial state from `profile.channel_manager_provider`, `provider_other`, and a new query against `getMyChannelFeeds`.
+- "Skip for now" sets `skipped: true`, advances; the dashboard onboarding checklist (out of scope here) can later prompt them to finish.
 
-`saveSetupAddress` already accepts `address, place_name, business_city, business_country, lat, lng` — same payload shape after the swap.
+No changes to step count, the activity branch, or other steps.
 
 ## Out of scope
 
-- Mapbox is not removed; it still powers the map search and the dashboard banner.
-- No edits to map search, dashboard location prompt, or settings screens.
-- No browser-side Google JS API (`PlaceAutocompleteElement`) — gateway-only keeps auth/credentials server-side and avoids the Maps JS bundle.
+- Real OAuth/API integration with any channel manager (this is iCal feeds only; same primitive already used at the deal level).
+- Background sync scheduling — feeds are stored now, sync wiring can be a follow-up.
+- Dashboard "Connect channel manager" card.
 
 ## Steps to execute (after approval)
 
-1. Call `standard_connectors--connect({ connector_id: "google_maps" })` and wait for the user to pick/create a connection.
-2. Add `src/lib/google-places.functions.ts`.
-3. Add `src/components/business/AddressPicker.tsx`.
-4. Patch the two location steps in `src/routes/business.setup.tsx` to use it.
-5. Quick manual QA in the preview wizard on the stays path and the activity path.
+1. Run migration: add three profile columns, create `business_channel_feeds` table with GRANT/RLS as above.
+2. Update `saveSetupChannelManager` and add `getMyChannelFeeds` in `business-setup.functions.ts`; expand the selected `profiles` column list to include the new fields.
+3. Refactor `Step5ChannelManager` in `business.setup.tsx` to the two-view flow with the provider/feed editor.
+4. Manual QA in preview: Yes → connect view → save feeds → next; Yes → skip → next; No → next; revisit Step 5 and confirm feeds reappear.
