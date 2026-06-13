@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/layout/LegalPage";
 import { COMMISSION } from "@/lib/commission";
+import { AgreementAcceptBar } from "@/components/legal/AgreementAcceptBar";
 
 export const Route = createFileRoute("/legal/business-agreement")({
   head: () => ({
@@ -17,7 +18,11 @@ export const Route = createFileRoute("/legal/business-agreement")({
 
 function BusinessAgreementPage() {
   return (
-    <LegalPage title="Business Agreement" updated="November 2026">
+    <LegalPage
+      title="Business Agreement"
+      updated="November 2026"
+      footer={<AgreementAcceptBar kind="business" />}
+    >
       <p>This agreement applies in addition to the <a href="/legal/terms">Terms of Service</a> when you list deals or partner with creators on Travidz as a Business.</p>
       <h2>1. Your listings</h2>
       <p>You confirm the deals you publish are bookable, honest, and not misleading. You're responsible for inventory, fulfilment, pricing, taxes, and any local consumer-protection rules that apply.</p>

@@ -9,6 +9,7 @@ import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
 import { refreshConnectStatus } from "@/lib/stripe-connect.functions";
 import { listMyDeals } from "@/lib/deals.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { StepCompleteBanner } from "@/components/business/StepCompleteBanner";
 
 export const Route = createFileRoute("/business/onboarding/payout")({
   head: () => ({ meta: [{ title: "Payouts — Travidz" }] }),
@@ -75,6 +76,13 @@ function PayoutSetupPage() {
           your share straight to your bank — we keep our 11% fee. No invoicing,
           no manual transfers.
         </p>
+
+        <div className="mt-4">
+          <StepCompleteBanner
+            gate="payouts"
+            doneLabel="Payouts connected — this step is complete"
+          />
+        </div>
 
         <div className="mt-5">
           <PayoutMethodCard />
