@@ -5,6 +5,7 @@ import { BusinessPhotosEditor } from "@/components/business/BusinessPhotosEditor
 import { useAuth } from "@/lib/auth";
 import { useAccountKind } from "@/lib/useAccountKind";
 import { ArrowLeft, Check } from "lucide-react";
+import { StepCompleteBanner } from "@/components/business/StepCompleteBanner";
 
 export const Route = createFileRoute("/business/photos")({
   head: () => ({ meta: [{ title: "Property Photos — Travidz" }] }),
@@ -39,6 +40,11 @@ function BusinessPhotosPage() {
           Add at least 3 photos showing your {isActivity ? "activity or meeting location" : "property"} so
           travellers can preview before booking. Tap the star to choose your cover photo.
         </p>
+        <StepCompleteBanner
+          gate="photos"
+          doneLabel={`Photos saved — your ${isActivity ? "activity" : "property"} step is complete`}
+          pendingLabel="Add at least 3 photos to tick this step off your setup checklist."
+        />
 
         <BusinessPhotosEditor businessId={user.id} kind={photosKind} />
 
