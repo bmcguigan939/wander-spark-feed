@@ -1622,9 +1622,16 @@ function Step16GoLive({ profile, firstDeal, back, refresh }: StepProps) {
 // Step 0 + Activity path components
 // ============================================================
 
-function Step0BusinessType({ refresh }: StepProps) {
+function Step0BusinessType({
+  refresh,
+  initialPick,
+  onResolved,
+}: StepProps & {
+  initialPick?: "stay" | "activity" | null;
+  onResolved?: () => void;
+}) {
   const save = useServerFn(saveSetupBusinessType);
-  const [pick, setPick] = useState<"stay" | "activity" | null>(null);
+  const [pick, setPick] = useState<"stay" | "activity" | null>(initialPick ?? null);
   const [busy, setBusy] = useState(false);
   return (
     <>
@@ -1669,6 +1676,7 @@ function Step0BusinessType({ refresh }: StepProps) {
           try {
             await save({ data: { setup_business_type: pick } });
             refresh();
+            onResolved?.();
           } catch (e: any) {
             toast.error(e?.message ?? "Could not save");
           } finally {
