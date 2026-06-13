@@ -227,13 +227,6 @@ export function LocationPickerSheet({
           onLoad={() => {
             setMapReady(true);
             requestAnimationFrame(() => mapRef.current?.getMap()?.resize());
-            // Seed a default pin at the visible center if none was passed in,
-            // so "Confirm location" works without requiring a tap.
-            const m = mapRef.current?.getMap();
-            if (m && !pin) {
-              const c = m.getCenter();
-              setPin({ lat: c.lat, lng: c.lng });
-            }
           }}
           style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           cursor="crosshair"
