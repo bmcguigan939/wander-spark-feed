@@ -1436,13 +1436,14 @@ function Step12FirstUnit({ profile, firstDeal, next, back, refresh }: StepProps)
       )}
       {dealId && !isHotel && (
         <div className="rounded-2xl border border-border bg-card p-4 text-sm">
-          <p className="mb-2 inline-flex items-center gap-2 font-semibold">
-            <Bed className="h-4 w-4 text-primary" /> Quick layout
+          <p className="mb-1 inline-flex items-center gap-2 font-semibold">
+            <Bed className="h-4 w-4 text-primary" /> Your unit
           </p>
-          <p className="text-xs text-muted-foreground">
-            We've created a draft listing using your address and host name. You can refine all the
-            details (beds, bathrooms, amenities, description) from your dashboard after this setup.
+          <p className="mb-3 text-xs text-muted-foreground">
+            We've created a draft listing using your address and host name. Add a few photos of
+            your unit below — beds, amenities and description can be refined from your dashboard.
           </p>
+          <UnitPhotosUploader dealId={dealId} />
           <Link
             to="/business/deals/$id/edit"
             params={{ id: dealId }}
