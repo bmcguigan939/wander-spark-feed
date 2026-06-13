@@ -1,30 +1,65 @@
-## Goal
+# Confirming the flow, then making it visibly one-tap
 
-Make giving a real title a required step before a video can be published — never let auto-filled filenames like `F16F66FC-507C-4493-A084-02B08B4A48AF` or `IMG_1234` reach the feed/map.
+## What the code does today (your question first)
 
-## Changes
+Short answer: **almost yes, but not quite one-tap yet.**
 
-### 1. `src/routes/create.tsx` — Upload flow
-- **Don't pre-fill junk titles.** In `startUpload`, run the filename through an `isJunkTitle()` check. If it matches, leave `title` empty and focus the Title field after upload completes. If it's a real name (e.g. "prague-hotel.mp4"), keep the current behaviour of pre-filling it.
-- **Junk patterns to detect:**
-  - Raw UUIDs (`F16F66FC-507C-4493-A084-02B08B4A48AF`)
-  - Camera roll patterns: `IMG_####`, `VID_####`, `MOV_####`, `DSC_####`, `PXL_…`, `RPReplay_Final…`, `ScreenRecording_…`, `trim.XXXX`
-  - Pure hex / pure digits / strings with no letters
-- **Block publish on junk titles.** Extend `handleSubmit` (and the import form's submit) to refuse finalize when the trimmed title is empty, under 3 chars, or still matches `isJunkTitle()`. Show toast: *"Give your video a title travellers will recognise."* and focus the Title field. Drafts are still allowed (so users can park work-in-progress).
-- **Visible hint on the Title field** when it's empty or junk: small amber helper text *"Required — name this so people can find it on the map."*
-- **Publish button stays disabled** until title passes the check (mirroring existing `!title.trim()` guard).
+What actually happens when a second (or third, or tenth) creator sends a Travidz collab request to a business that's already set up:
 
-### 2. Backfill Linda's existing video
-- One-off UPDATE on video `13cf89cd-961c-4fc1-998f-65db81f780ae`: set `title = 'Hotel Krystal, Prague'` (derived from existing `destination` + `city`) so the map stops showing the UUID immediately.
+1. The creator fills the "Invite a business" sheet on their video (`TagBusinessSheet.tsx`), which calls `createBusinessInvite`. This always creates a **new** `business_invites` row tied to that video + that creator.
+2. The business gets an email and a unique invite link `/business/invite/{token}`.
+3. The landing page (`src/routes/business.invite.$token.tsx`) shows:
+   - the offer copy ("X% commission, no setup fee, no monthly cost…"),
+   - a **Travidz Business Agreement** checkbox they must tick,
+   - then the **"Accept & claim your listing"** button.
+4. Accepting calls `acceptInvite`, which creates a fresh `deal` row pointing at their site, auto-approves a `deal_application` so the creator earns commission, attaches the deal to that creator's matching videos, and writes a row to `business_agreement_acceptances`.
 
-### 3. Optional sweep (same migration)
-- Run a one-off UPDATE across `videos` where `title ~ '^[0-9A-Fa-f-]{20,}$'` OR `title ~* '^(IMG|VID|MOV|DSC|PXL|RPReplay)[_-]'`, setting `title = coalesce(destination, city, country, 'Untitled')`. Confirms no other published videos display junk.
+So functionally the business doesn't have to set anything up again — no new payout details, no new pages, the same Travidz-hosted store keeps serving — but **the UI still shows them the full offer + legal checkbox every time**, which makes it feel like onboarding all over again. There is also no copy anywhere that tells a first-time business "after this, future creators are one-tap."
+
+## What to change
+
+### 1. Make the repeat-invite landing actually one-tap
+
+In `src/routes/business.invite.$token.tsx` (and a small read helper in `business-invites.functions.ts`):
+
+- Extend `getInviteByToken` (or add a sibling fn) to also return:
+  - `isReturningBusiness: boolean` — true if the signed-in user (or the invite email) already has at least one `business_agreement_acceptances` row.
+  - `priorAcceptedInvites: number` — count of prior accepted invites by this business email.
+- When `isReturningBusiness` is true on the landing page:
+  - Replace the "The offer" block with a compact **"Welcome back — {creatorName} wants to feature you"** card.
+  - Hide the agreement checkbox (still record a new `business_agreement_acceptances` row server-side so the audit trail stays complete), and skip the `agreed` gate in `handleAcceptClick`.
+  - Rename the CTA to **"Accept — add {creatorName} to your creators"**.
+  - Add a one-line reassurance: *"No new setup. Your booking page, payouts and Best Price Guarantee carry over."*
+- Keep the full agreement + offer copy exactly as it is today for first-time businesses.
+
+### 2. Tell first-time businesses this on the very first invite
+
+Also in the landing page (first-time path) and in the outreach email body builder (`fallbackInviteDraft` in `src/lib/outreach.functions.ts`, plus the AI prompt's `instructions` string just above it):
+
+- Add a short "What happens after you accept" section to the landing page, just under the offer card:
+  > **One setup, then it's just a tap.** Once you accept, any other Travidz creator who features your business can be added with a single tap from your dashboard — no new forms, no new payout details, no new agreement.
+  >
+  > **More creators = more global reach.** Every additional creator you accept puts your listing in front of their audience, in their language, in the cities they travel to. There's no cap and no extra cost — you still only pay commission on bookings we send you.
+- Mirror the same two ideas (one short paragraph each) into the AI outreach prompt and the fallback email template so the message lands before the business even clicks the link.
+
+### 3. Surface incoming creator requests in the business dashboard
+
+So returning businesses don't have to dig through email to find new creator requests:
+
+- On `src/routes/business.index.tsx`, add a "Creators waiting on you" strip that lists `business_invites` where `contact_email = current user's email` AND `status = 'pending'`. Each row has the creator name + video thumb + a single **Accept** button that hits `acceptInvite` inline (no redirect to the token page needed when they're already signed in as that business).
+- Same accept call as the landing page, so all the existing deal-creation / commission-application logic is reused — nothing new server-side beyond the read in step 1.
 
 ## Out of scope
-- Reading EXIF/metadata to suggest a title.
-- AI-generated title suggestions.
-- Renaming the underlying storage file.
 
-## Files
-- **Edit:** `src/routes/create.tsx` (Upload + Import flows + shared `isJunkTitle` helper)
-- **DB:** one targeted UPDATE for Linda's row, plus optional sweep UPDATE
+- The separate `deal_applications` / auto-accept-rules system in `collabs.functions.ts` (that's for creators applying to an existing public deal, not for direct invites). No changes there.
+- Any change to commission %, payout flow, or the agreement itself.
+- Email template visual redesign — copy edits only.
+
+## Files touched
+
+- `src/routes/business.invite.$token.tsx` — returning-business branch, copy additions.
+- `src/lib/business-invites.functions.ts` — extend `getInviteByToken` return shape, drop the agreement-checkbox requirement server-side when the business already has a prior acceptance (still record a new row), add a small `listPendingInvitesForCurrentBusiness` fn.
+- `src/lib/outreach.functions.ts` — extend AI prompt + `fallbackInviteDraft` copy.
+- `src/routes/business.index.tsx` — "Creators waiting on you" strip.
+
+No DB migrations needed (we reuse `business_agreement_acceptances` and `business_invites`).
