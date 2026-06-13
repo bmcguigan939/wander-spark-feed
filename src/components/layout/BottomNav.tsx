@@ -57,7 +57,12 @@ export function BottomNav() {
 export function MobileShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto flex min-h-dvh max-w-md flex-col bg-background">
-      <main className="flex-1">{children}</main>
+      <main
+        className="flex-1"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        {children}
+      </main>
       <BottomNav />
     </div>
   );

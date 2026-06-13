@@ -18,6 +18,9 @@ import { SearchBox } from "@/components/map/SearchBox";
 import { CategoryChips } from "@/components/map/CategoryChips";
 import { ClusteredSheet, type ClusterIds } from "@/components/map/ClusteredSheet";
 import { MapLayerSwitcher, LAYER_STYLES, type MapLayer } from "@/components/map/MapLayerSwitcher";
+import { MapPin } from "lucide-react";
+import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
+import { useAuth } from "@/lib/auth";
 
 const MAPBOX_TOKEN =
   "pk.eyJ1IjoiYm1jZ3VpZ2FuOTM5IiwiYSI6ImNtcDhhZGswdDBhNWYyc3NjdngycDAxZ28ifQ.X9A6bOGFB5bz6xljmJBwQg";
@@ -93,6 +96,8 @@ function MapPage() {
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   const [pendingBbox, setPendingBbox] = useState<[number, number, number, number] | null>(null);
   const [selected, setSelected] = useState<{ ids: ClusterIds; title: string } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const { user } = useAuth();
   const [layer, setLayer] = useState<MapLayer>(() => {
     if (typeof window === "undefined") return "default";
     const v = window.localStorage.getItem("map.layer") as MapLayer | null;
@@ -204,7 +209,7 @@ function MapPage() {
 
   return (
     <MobileShell>
-      <div className="relative h-[calc(100dvh-80px)] w-full">
+      <div className="relative h-[calc(100dvh-80px-env(safe-area-inset-top))] w-full">
         <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}
@@ -258,7 +263,7 @@ function MapPage() {
         <MapLayerSwitcher value={layer} onChange={setLayerPersist} />
 
         {/* Top: search + filters */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-3 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
           <SearchBox
             value={qText}
             onChange={setQText}
@@ -296,6 +301,17 @@ function MapPage() {
           </div>
         </div>
 
+        {/* Drop-pin FAB */}
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          aria-label="Drop a pin to tag a photo or video"
+          className="absolute bottom-6 left-4 z-10 inline-flex items-center gap-2 rounded-full bg-aurora px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-primary/40 transition hover:scale-105"
+        >
+          <MapPin className="h-4 w-4" />
+          Drop a pin
+        </button>
+
         {/* Search this area button */}
         {pendingBbox && (
           <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 flex justify-center px-6">
@@ -327,6 +343,30 @@ function MapPage() {
         onClose={() => setSelected(null)}
         ids={selected?.ids ?? { deal_ids: [], video_ids: [], business_ids: [] }}
         title={selected?.title ?? ""}
+      />
+
+      <LocationPickerSheet
+        open={pickerOpen}
+        initialLat={search.lat}
+        initialLng={search.lng}
+        onClose={() => setPickerOpen(false)}
+        onConfirm={(r) => {
+          setPickerOpen(false);
+          const params = {
+            lat: r.lat.toFixed(6),
+            lng: r.lng.toFixed(6),
+            ...(r.country ? { country: r.country } : {}),
+            ...(r.city ? { city: r.city } : {}),
+            ...(r.destination ? { destination: r.destination } : {}),
+            ...(r.place_name ? { place: r.place_name } : {}),
+          };
+          if (!user) {
+            const qs = new URLSearchParams(params).toString();
+            navigate({ to: "/login", search: { redirect: `/create?${qs}` } as any });
+            return;
+          }
+          navigate({ to: "/create", search: params as any });
+        }}
       />
     </MobileShell>
   );

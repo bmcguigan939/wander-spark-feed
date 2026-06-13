@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef } from "react";
+import { z } from "zod";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { useAuth } from "@/lib/auth";
 import { becomeCreator, createDirectUpload, finalizeVideoMetadata } from "@/lib/mux.functions";
@@ -19,6 +20,17 @@ import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z
+      .object({
+        lat: z.coerce.number().optional(),
+        lng: z.coerce.number().optional(),
+        country: z.string().optional(),
+        city: z.string().optional(),
+        destination: z.string().optional(),
+        place: z.string().optional(),
+      })
+      .parse(s),
   component: CreatePage,
 });
 
@@ -81,6 +93,7 @@ function UploadFlowBody() {
   const qc = useQueryClient();
   const createUploadFn = useServerFn(createDirectUpload);
   const finalizeFn = useServerFn(finalizeVideoMetadata);
+  const search = Route.useSearch();
 
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -97,6 +110,18 @@ function UploadFlowBody() {
   const [lat, setLat] = useState<string>("");
   const [lng, setLng] = useState<string>("");
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Prefill from /map "Drop a pin" hand-off (only fills blanks).
+  useEffect(() => {
+    if (typeof search.lat === "number" && typeof search.lng === "number") {
+      setLat((v) => v || search.lat!.toFixed(6));
+      setLng((v) => v || search.lng!.toFixed(6));
+    }
+    if (search.country) setCountry((v) => v || search.country!);
+    if (search.city) setCity((v) => v || search.city!);
+    if (search.destination) setDestination((v) => v || search.destination!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduleAt, setScheduleAt] = useState("");
   const [track, setTrack] = useState<MusicTrack | null>(null);
