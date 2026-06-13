@@ -597,6 +597,8 @@ function ImportFlow() {
   const [tagsInput, setTagsInput] = useState("");
   const [budget, setBudget] = useState<typeof BUDGETS[number] | "">("");
   const [ownership, setOwnership] = useState(false);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
 
   const previewM = useMutation({
     mutationFn: (u: string) => previewFn({ data: { url: u } }),
@@ -617,6 +619,8 @@ function ImportFlow() {
       destination: destination || undefined,
       country: country || undefined,
       city: city || undefined,
+      lat: lat ?? undefined,
+      lng: lng ?? undefined,
       activity_tags: tagsInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean),
       budget_tag: budget || undefined,
       ownership_confirmed: ownership,
@@ -732,6 +736,18 @@ function ImportFlow() {
           </Field>
           <Field label="Description">
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} className={inputCls} />
+          </Field>
+          <Field label="Search a place (auto-fills location & map pin)">
+            <PlaceAutocomplete
+              onPick={(p: PlacePick) => {
+                setDestination(p.destination);
+                if (p.city) setCity(p.city);
+                if (p.country) setCountry(p.country);
+                setLat(p.lat);
+                setLng(p.lng);
+                toast(`Pinned: ${p.formattedAddress}`);
+              }}
+            />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Country"><input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} /></Field>
