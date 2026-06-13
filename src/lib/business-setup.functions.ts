@@ -312,7 +312,7 @@ export const saveSetupChannelManager = createServerFn({ method: "POST" })
     }
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update(patch)
+      .update(patch as any)
       .eq("id", userId);
     if (error) throw new Error(error.message);
     return { ok: true, step: null as number | null };
