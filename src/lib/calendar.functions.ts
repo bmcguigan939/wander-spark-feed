@@ -55,7 +55,9 @@ export const getDealCalendarSettings = createServerFn({ method: "GET" })
 
     const { data: cals, error: calsErr } = await supabaseAdmin
       .from("deal_external_calendars")
-      .select("id, name, ics_url, last_synced_at, last_status, last_error, created_at")
+      .select(
+        "id, name, ics_url, last_synced_at, last_status, last_error, created_at, business_feed_id",
+      )
       .eq("deal_id", data.dealId)
       .order("created_at", { ascending: true });
     if (calsErr) throw new Error(calsErr.message);
