@@ -6,7 +6,11 @@ import { toast } from "sonner";
 import { MobileShell } from "@/components/layout/BottomNav";
 import { listMyDeals, getDealStats } from "@/lib/deals.functions";
 import { useAuth } from "@/lib/auth";
-import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck, ShieldCheck, MessageSquare, Zap, Hotel, Mountain } from "lucide-react";
+import { Plus, Briefcase, Eye, Pencil, TrendingUp, TrendingDown, Users, Calculator, BadgeCheck, ShieldCheck, MessageSquare, Zap, Hotel, Mountain, Sparkles, Loader2 } from "lucide-react";
+import {
+  listPendingInvitesForCurrentBusiness,
+  acceptInvite,
+} from "@/lib/business-invites.functions";
 import { Sparkline } from "@/components/business/Sparkline";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
@@ -28,6 +32,8 @@ function BusinessDashboard() {
   const fetchStats = useServerFn(getDealStats);
   const fetchSetup = useServerFn(getMySetupState);
   const saveType = useServerFn(saveSetupBusinessType);
+  const fetchPendingInvites = useServerFn(listPendingInvitesForCurrentBusiness);
+  const acceptInviteFn = useServerFn(acceptInvite);
   const qc = useQueryClient();
   const accountKind = useAccountKind();
   const pickPath = useMutation({
@@ -60,6 +66,25 @@ function BusinessDashboard() {
     queryFn: () => fetchSetup(),
     enabled: !!user && isBusiness,
   });
+
+  const pendingInvitesQ = useQuery({
+    queryKey: ["business-pending-invites"],
+    queryFn: () => fetchPendingInvites(),
+    enabled: !!user && isBusiness,
+    refetchInterval: 60_000,
+  });
+  const pendingInvites = pendingInvitesQ.data ?? [];
+
+  const acceptM = useMutation({
+    mutationFn: (token: string) => acceptInviteFn({ data: { token } }),
+    onSuccess: () => {
+      toast.success("Creator added — they'll see it in their messages");
+      qc.invalidateQueries({ queryKey: ["business-pending-invites"] });
+      qc.invalidateQueries({ queryKey: ["my-deals"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Couldn't accept"),
+  });
+
   const setupStep = (setupState?.profile as any)?.setup_step_completed ?? 0;
   const setupDone = !!(setupState?.profile as any)?.setup_completed_at;
   const showSetupCta = !setupDone;
@@ -79,6 +104,60 @@ function BusinessDashboard() {
     <MobileShell>
       <div className="px-4 pt-6">
         {setupDone && user && <BusinessLocationPrompt userId={user.id} />}
+        {setupDone && pendingInvites.length > 0 && (
+          <div className="mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-primary">
+              <Sparkles className="h-4 w-4" />
+              {pendingInvites.length === 1
+                ? "1 creator wants to feature you"
+                : `${pendingInvites.length} creators want to feature you`}
+            </div>
+            <p className="mb-3 text-[11px] text-muted-foreground">
+              One tap to add them — no new setup, same commission, more reach.
+            </p>
+            <ul className="space-y-2">
+              {pendingInvites.map((p) => {
+                const name =
+                  p.creator?.display_name ||
+                  (p.creator?.username ? `@${p.creator.username}` : "A Travidz creator");
+                const isThisOne = acceptM.isPending && acceptM.variables === p.token;
+                return (
+                  <li
+                    key={p.invite_id}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card p-2"
+                  >
+                    {p.video?.thumbnail_url ? (
+                      <img
+                        src={p.video.thumbnail_url}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 shrink-0 rounded-lg bg-secondary" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-semibold">{name}</div>
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        {p.video?.title || "Featured your business"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={acceptM.isPending}
+                      onClick={() => acceptM.mutate(p.token)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground disabled:opacity-60"
+                    >
+                      {isThisOne ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : null}
+                      {isThisOne ? "Accepting…" : "Accept"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
         {showSetupCta && (() => {
           const kind = (setupState?.profile as any)?.setup_business_type as
             | "stay"
