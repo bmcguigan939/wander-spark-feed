@@ -20,6 +20,22 @@ import { LocationPickerSheet } from "@/components/create/LocationPickerSheet";
 import { geocodePlace } from "@/lib/map.functions";
 import { PlaceAutocomplete, type PlacePick } from "@/components/create/PlaceAutocomplete";
 
+// Detects auto-generated camera/screen-recorder filenames so we never let them
+// reach the feed as a published title (e.g. F16F66FC-507C-4493-A084-...).
+function isJunkTitle(raw: string): boolean {
+  const s = raw.trim();
+  if (s.length < 3) return true;
+  // Raw UUID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return true;
+  // Camera roll / screen recorder patterns
+  if (/^(IMG|VID|MOV|MVI|DSC|DSCN|PXL|GOPR|GH0\d|DJI|RPReplay|ScreenRecording|Screen[_ ]?Shot|trim\.)[_\- ]?/i.test(s)) return true;
+  // No letters at all (pure digits / hex / punctuation)
+  if (!/[a-z]/i.test(s)) return true;
+  // Long hex-ish blob with no spaces
+  if (s.length >= 16 && /^[0-9a-f\-]+$/i.test(s) && !s.includes(" ")) return true;
+  return false;
+}
+
 export const Route = createFileRoute("/create")({
   head: () => ({ meta: [{ title: "Upload — Travidz" }] }),
   validateSearch: (s: Record<string, unknown>) =>
