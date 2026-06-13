@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runParityCheck } from "@/lib/price-compare.server";
 import { issueMatchCode } from "@/lib/match-codes.server";
@@ -13,19 +14,8 @@ import { issueMatchCode } from "@/lib/match-codes.server";
 export const Route = createFileRoute("/api/public/cron/parity-sweep")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const apiKey =
-          request.headers.get("apikey") ?? request.headers.get("Apikey");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ??
-          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!apiKey || !expected || apiKey !== expected) {
-          return new Response(JSON.stringify({ error: "unauthorized" }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
-        }
-
+      POST: async ({ request }) => {        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
         const { data: links } = await supabaseAdmin
           .from("affiliate_links")
           .select("id,label,business_id,parity_exempt")

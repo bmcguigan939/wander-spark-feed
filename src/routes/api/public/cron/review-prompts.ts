@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { checkCronAuth } from "@/lib/cron-auth.server";
 import React from "react";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
@@ -17,19 +18,8 @@ import { ReviewPromptEmail } from "@/lib/email-templates/review-prompt";
 export const Route = createFileRoute("/api/public/cron/review-prompts")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const apiKey =
-          request.headers.get("apikey") ?? request.headers.get("Apikey");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ??
-          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!apiKey || !expected || apiKey !== expected) {
-          return new Response(JSON.stringify({ error: "unauthorized" }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
-        }
-
+      POST: async ({ request }) => {        const authFail = checkCronAuth(request);
+        if (authFail) return authFail;
         const today = new Date().toISOString().slice(0, 10);
 
         // 1. Mark bookings completed when travel_date has passed.
