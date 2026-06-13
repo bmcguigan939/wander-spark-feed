@@ -193,6 +193,8 @@ function StepRouter({
   refresh,
   businessType,
   total,
+  currentBusinessType,
+  onForkResolved,
 }: {
   step: number;
   setStep: (n: number) => void;
@@ -201,13 +203,21 @@ function StepRouter({
   refresh: () => void;
   businessType: "stay" | "activity" | null;
   total: number;
+  currentBusinessType?: "stay" | "activity" | null;
+  onForkResolved?: () => void;
 }) {
   const next = (n?: number) => setStep(n ?? Math.min(total, step + 1));
   const back = () => setStep(Math.max(1, step - 1));
   const common = { profile, firstDeal, next, back, refresh };
 
   if (!businessType) {
-    return <Step0BusinessType {...common} />;
+    return (
+      <Step0BusinessType
+        {...common}
+        initialPick={currentBusinessType ?? null}
+        onResolved={onForkResolved}
+      />
+    );
   }
 
   if (businessType === "activity") {
