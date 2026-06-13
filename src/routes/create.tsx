@@ -394,6 +394,21 @@ function UploadFlowBody() {
             }
           }}
         />
+        <LocationPickerSheet
+          open={pickerOpen}
+          initialLat={lat ? Number(lat) : null}
+          initialLng={lng ? Number(lng) : null}
+          onClose={() => setPickerOpen(false)}
+          onConfirm={(r) => {
+            setLat(r.lat.toFixed(6));
+            setLng(r.lng.toFixed(6));
+            // Only autofill blanks — never overwrite what the user typed.
+            if (r.country && !country) setCountry(r.country);
+            if (r.city && !city) setCity(r.city);
+            if (r.destination && !destination) setDestination(r.destination);
+            setPickerOpen(false);
+          }}
+        />
     </div>
   );
 }
