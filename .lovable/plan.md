@@ -1,50 +1,34 @@
 ## Goal
 
-The 16-step setup wizard is the single source of truth during onboarding. All overlapping dashboard surfaces stay hidden until `profiles.setup_completed_at` is set. After completion they re-appear as ongoing **management** cards (no longer onboarding prompts).
+Today the wizard's room/unit step (Step 12) only shows the `RoomsAndRatesEditor` (with its existing room-level photo uploader) when the host's property kind is `hotel`. Apartment, villa, B&B, and other non-hotel hosts see only a "Quick layout" placeholder telling them to finish details from the dashboard — so they can't upload unit photos during setup.
 
-## Duplications being resolved
-
-| Topic | Wizard step | Dashboard surface (hide until setup done) |
-|---|---|---|
-| Channel manager / iCal | Step 5 | `ChannelManagerCard` |
-| Property photos | Step 13 | "Add property photos" row in checklist |
-| Rooms / pricing / cancellation | Steps 12 + 14 | "Add rooms / activity options" row |
-| Stripe payouts / bank | Step 11 | `PayoutMethodCard`, "Connect bank with Stripe" amber card, "Set up payouts" checklist row |
-| Business agreement | Step 15 (legal entity) | "Accept business agreement" checklist row |
-| Business address | Step 4 | `BusinessLocationPrompt` banner |
+We'll extend the non-hotel path so hosts can upload photos for their unit right in the wizard, matching the hotel flow.
 
 ## Changes
 
-### `src/routes/business.index.tsx`
-- Compute `setupDone = !!profile.setup_completed_at` (already in the file as `setupDone`).
-- While **not** `setupDone`:
-  - Keep showing the "Resume stay/activity setup" CTA and the path-picker (the wizard entry point).
-  - **Hide** `OnboardingChecklist`, `BusinessLocationPrompt`, `PayoutMethodCard`, `ChannelManagerCard`.
-- When `setupDone`:
-  - Hide the "Resume setup" CTA.
-  - Show `PayoutMethodCard`, `ChannelManagerCard`, `BusinessLocationPrompt` (if location still missing) as management cards.
-  - Drop `OnboardingChecklist` entirely (its steps are now wizard-owned). Component file stays in repo but no longer mounted; safe to delete in a follow-up.
+1. **`src/routes/business.setup.tsx` — Step 12 (`Step12RoomsRates`)**
+   - Replace the non-hotel placeholder card with an inline per-unit photo uploader for the draft `dealId`.
+   - Keep the existing "Edit full details" deep-link below the uploader so hosts can still jump into the full editor for beds/amenities/etc.
+   - Hotel path remains unchanged (still shows full `RoomsAndRatesEditor`, which already supports room photos + rate plans).
+   - Update the step subtitle for non-hotel hosts to mention photos: e.g. "Add a few photos of your unit and the basics. You can refine details from your dashboard."
 
-### `src/components/business/ChannelManagerCard.tsx`
-- No behavioural change; it now renders only post-setup, so copy can shift from "Connect your hotel/PMS once…" (onboarding tone) to "Manage your channel-manager feeds" (management tone). Outbound iCal URL list and "Sync now" remain.
+2. **Photo uploader for a single unit (non-hotel)**
+   - Reuse the existing pattern from `RoomsAndRatesEditor` (Supabase `business-photos` bucket upload + `deal_rooms.photos` array), but for a single auto-created "Unit" room row on the draft deal.
+   - On step open, ensure a single `deal_rooms` row exists for this draft (create one named after the deal title / "Main unit" if missing) so the photos array has somewhere to live. This row is invisible UI-wise; only its `photos` field is exposed.
+   - Cap: 20 photos (same as hotel rooms), show count, allow remove, drag-free simple grid (mirroring current UX).
 
-### `src/components/business/PayoutMethodCard.tsx`
-- Same idea — adjust headline to "Payout method" management framing (no "Set up payouts" CTA copy).
+3. **No schema or RLS changes**
+   - `deal_rooms.photos` (text[]) already exists and is covered by existing owner-write policies.
+   - `business-photos` storage bucket and its policies are already in use by the hotel flow.
 
-### `src/components/business/OnboardingChecklist.tsx`
-- Stop mounting it. No file edit required this PR; leave for cleanup once the new flow is validated.
+## Out of scope
 
-### Wizard (`src/routes/business.setup.tsx`)
-- No structural changes. Step 5 (channel manager), Step 11 (payments/Stripe), Steps 12–14 (units/photos/pricing), Step 15 (legal/agreement) remain as the single onboarding path.
+- No changes to rate plans (per the user's choice — photos stay at room/unit level, not per rate plan).
+- No changes to Step 13 (business-level gallery) — that one is separate and stays.
+- Hotel flow is untouched.
 
-## Non-goals (deferred)
+## Technical notes
 
-- Deleting `OnboardingChecklist.tsx`, the amber "Connect bank with Stripe" card, or any wizard step files. Keep them around one release in case we need to roll back.
-- Changing the wizard step count or copy.
-- Touching the activity (11-step) path independently — the same `setupDone` gate covers both because both paths set `setup_completed_at` in Step 16/Step 11 Go-Live.
-
-## Acceptance
-
-- A brand-new business sees: path picker → "Resume setup" CTA only. No checklist, no channel-manager card, no payout card, no location prompt.
-- A business mid-wizard sees the same — just the resume CTA.
-- A business that finished the wizard sees: payout card, channel-manager card, location prompt (if applicable), and the rest of the dashboard (deals list, creator apps, messages, etc.). No "Resume setup" CTA, no checklist.
+- The auto-create-one-unit helper can live inline in Step 12 using the existing `upsertRoom` server fn from `src/lib/rooms-rates.functions.ts`.
+- Photo persistence will reuse `upsertRoom` with `{ patch: { name, photos: next } }`, exactly like `RoomsAndRatesEditor.persist`.
+- File upload uses the browser `supabase` client → `business-photos` bucket, same path convention as today (`${userId}/rooms/${dealId}/...`).
