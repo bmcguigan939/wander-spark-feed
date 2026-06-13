@@ -1,7 +1,7 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook, Twitter, ChevronDown, ChevronUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Heart, Bookmark, MessageCircle, Share2, MapPin, Play, Tag, Captions, CaptionsOff, Music, ExternalLink, Youtube, Instagram, Facebook, Twitter, ChevronDown, ChevronUp, Volume2 } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { FeedVideo } from "@/lib/feed.functions";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,8 +17,42 @@ import { CommentsSheet } from "@/components/feed/CommentsSheet";
 import { getPlatformStyle } from "@/lib/platform-style";
 import { haptic, nativeShare } from "@/lib/native";
 
+// ---------------------------------------------------------------------------
+// Feed-wide sound preference (shared across every VideoCard so toggling on
+// one clip persists as the user scrolls). Backed by sessionStorage. Browsers
+// block autoplay-with-sound until the first user gesture, so we default to
+// "on" but fall back to muted-with-hint when play() rejects, and unlock on
+// the first tap anywhere in the feed.
+// ---------------------------------------------------------------------------
+let feedSoundOn: boolean = (() => {
+  if (typeof window === "undefined") return true;
+  const v = window.sessionStorage.getItem("travidz:feedSound");
+  return v === null ? true : v === "on";
+})();
+const feedSoundListeners = new Set<() => void>();
+function setFeedSound(on: boolean) {
+  if (feedSoundOn === on) return;
+  feedSoundOn = on;
+  try { window.sessionStorage.setItem("travidz:feedSound", on ? "on" : "off"); } catch {}
+  feedSoundListeners.forEach((l) => l());
+}
+function subscribeFeedSound(cb: () => void) {
+  feedSoundListeners.add(cb);
+  return () => { feedSoundListeners.delete(cb); };
+}
+function useFeedSound() {
+  return useSyncExternalStore(
+    subscribeFeedSound,
+    () => feedSoundOn,
+    () => true,
+  );
+}
+
 export function VideoCard({ video, active }: { video: FeedVideo; active: boolean }) {
-  const [muted, setMuted] = useState(true);
+  const soundOn = useFeedSound();
+  // True only when autoplay-with-sound was blocked on THIS card so we can
+  // surface a "Tap for sound" hint without showing it on user-muted cards.
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   // Local mirror of viewer's like/save state. Seeded from the feed payload
@@ -30,6 +64,68 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   useEffect(() => { setLiked(!!video.viewer_liked); }, [video.viewer_liked]);
   useEffect(() => { setSaved(!!video.viewer_saved); }, [video.viewer_saved]);
   const playerRef = useRef<any>(null);
+
+  // Drive playback imperatively when this card becomes active: try sound
+  // first, fall back to muted if the browser blocks autoplay-with-sound.
+  useEffect(() => {
+    const el = playerRef.current as HTMLMediaElement | null;
+    if (!el) return;
+    if (!active) {
+      try { el.pause(); } catch {}
+      setAutoplayBlocked(false);
+      return;
+    }
+    let cancelled = false;
+    const wantSound = feedSoundOn;
+    el.muted = !wantSound;
+    (el as any).volume = 1;
+    const tryPlay = async () => {
+      try {
+        await el.play();
+        if (!cancelled && wantSound) setAutoplayBlocked(false);
+      } catch {
+        if (cancelled) return;
+        // Autoplay-with-sound rejected → mute and retry so something plays.
+        el.muted = true;
+        try { await el.play(); } catch {}
+        if (wantSound) setAutoplayBlocked(true);
+      }
+    };
+    tryPlay();
+    return () => { cancelled = true; };
+  }, [active, soundOn, video.mux_playback_id]);
+
+  // First user gesture anywhere unlocks autoplay-with-sound: if the active
+  // player is muted only because autoplay was blocked, unmute it now.
+  useEffect(() => {
+    if (!active || !autoplayBlocked) return;
+    const unlock = () => {
+      const el = playerRef.current as HTMLMediaElement | null;
+      if (el && feedSoundOn) {
+        el.muted = false;
+        el.play().catch(() => {});
+      }
+      setAutoplayBlocked(false);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+    window.addEventListener("touchstart", unlock, { once: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+  }, [active, autoplayBlocked]);
+
+  function toggleFeedSound() {
+    const next = !feedSoundOn;
+    setFeedSound(next);
+    setAutoplayBlocked(false);
+    const el = playerRef.current as HTMLMediaElement | null;
+    if (el) {
+      el.muted = !next;
+      if (next) el.play().catch(() => {});
+    }
+  }
+
   const [ccAvailable, setCcAvailable] = useState(false);
   const [ccOn, setCcOn] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -278,18 +374,25 @@ export function VideoCard({ video, active }: { video: FeedVideo; active: boolean
   return (
     <section className="feed-snap relative h-dvh w-full overflow-hidden bg-black">
       {video.mux_playback_id ? (
-        <div className="absolute inset-0" onClick={() => setMuted((m) => !m)}>
+        <div className="absolute inset-0" onClick={toggleFeedSound}>
           <MuxPlayer
             ref={playerRef}
             streamType="on-demand"
             playbackId={video.mux_playback_id}
-            autoPlay={active ? "muted" : false}
-            muted={muted}
+            muted={!soundOn}
             loop
             playsInline
             style={styleAny}
             poster={video.thumbnail_url ?? undefined}
           />
+          {active && autoplayBlocked && (
+            <div className="pointer-events-none absolute left-1/2 top-6 z-10 -translate-x-1/2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md ring-1 ring-white/20">
+                <Volume2 className="h-3.5 w-3.5" />
+                Tap for sound
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         <div className={`absolute inset-0 flex items-center justify-center ${platformStyle.gradient}`}>
