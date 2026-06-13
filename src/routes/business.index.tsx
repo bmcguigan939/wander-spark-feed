@@ -11,6 +11,7 @@ import { Sparkline } from "@/components/business/Sparkline";
 import { OnboardingChecklist } from "@/components/business/OnboardingChecklist";
 import { BusinessLocationPrompt } from "@/components/business/BusinessLocationPrompt";
 import { PayoutMethodCard } from "@/components/business/PayoutMethodCard";
+import { ChannelManagerCard } from "@/components/business/ChannelManagerCard";
 import { useAccountKind } from "@/lib/useAccountKind";
 import { getMySetupState, saveSetupBusinessType } from "@/lib/business-setup.functions";
 import { Rocket } from "lucide-react";
@@ -158,6 +159,7 @@ function BusinessDashboard() {
         <div className="mb-4">
           <PayoutMethodCard />
         </div>
+        <ChannelManagerCard />
         {/* Property photos moved to /business/photos */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
