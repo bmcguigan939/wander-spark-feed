@@ -194,14 +194,14 @@ export function LocationPickerSheet({
       </div>
 
       {/* Map */}
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <MapboxMap
           ref={mapRef}
           mapboxAccessToken={MAPBOX_PUBLIC_TOKEN}
           initialViewState={initialView}
           mapStyle="mapbox://styles/mapbox/dark-v11"
           onClick={handleMapClick}
-          style={{ position: "absolute", inset: 0 }}
+          style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           cursor="crosshair"
         >
           <NavigationControl position="bottom-right" showCompass={false} />
